@@ -1,49 +1,39 @@
-import { useCallback, RefObject } from "react";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
+import { useCallback, createElement } from "react";
+import { pdf } from "@react-pdf/renderer";
+import { PdfDocument } from "@/components/PdfDocument";
+import { Chunk } from "@/lib/chunk-utils";
 
-export function usePdfExport(ref: RefObject<HTMLDivElement>) {
-  const exportToPdf = useCallback(async (filename: string = "worksheet.pdf") => {
-    if (!ref.current) return;
+interface SentenceResult {
+  id: number;
+  original: string;
+  englishChunks: Chunk[];
+  koreanLiteralChunks: Chunk[];
+  koreanNatural: string;
+}
 
-    const element = ref.current;
-    
-    // A4 dimensions in mm
-    const a4Width = 210;
-    const a4Height = 297;
-    
-    const canvas = await html2canvas(element, {
-      scale: 4,
-      useCORS: true,
-      logging: false,
-      backgroundColor: "#ffffff",
-    });
+export function usePdfExport() {
+  const exportToPdf = useCallback(
+    async (
+      results: SentenceResult[],
+      title: string,
+      subtitle: string,
+      filename: string = "worksheet.pdf"
+    ) => {
+      const pdfDocument = createElement(PdfDocument, { results, title, subtitle });
+      const blob = await pdf(pdfDocument).toBlob();
 
-    const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF({
-      orientation: "portrait",
-      unit: "mm",
-      format: "a4",
-    });
-
-    const imgWidth = a4Width;
-    const imgHeight = (canvas.height * a4Width) / canvas.width;
-
-    let heightLeft = imgHeight;
-    let position = 0;
-
-    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-    heightLeft -= a4Height;
-
-    while (heightLeft >= 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-      heightLeft -= a4Height;
-    }
-
-    pdf.save(filename);
-  }, [ref]);
+      // 다운로드
+      const url = URL.createObjectURL(blob);
+      const link = window.document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      window.document.body.appendChild(link);
+      link.click();
+      window.document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    },
+    []
+  );
 
   return { exportToPdf };
 }
