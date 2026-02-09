@@ -10,6 +10,14 @@ function countTags(tagged: string): number {
   return (tagged.match(/<c\d+>/g) || []).length;
 }
 
+function extractText(tagged: string): string {
+  return tagged.replace(/<\/?c\d+>/g, "");
+}
+
+function normalize(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -102,7 +110,7 @@ You MUST respond by calling the "analysis_result" function with the structured o
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: "google/gemini-2.5-pro",
           messages,
           tools,
           tool_choice: { type: "function", function: { name: "analysis_result" } },
@@ -134,12 +142,32 @@ You MUST respond by calling the "analysis_result" function with the structured o
       const enCount = countTags(lastResult.english_tagged);
       const krCount = countTags(lastResult.korean_literal_tagged);
 
-      if (enCount === krCount) {
-        console.log(`Chunk validation passed on attempt ${attempt + 1} (${enCount} chunks)`);
+      const tagMatch = enCount === krCount;
+      const reconstructed = normalize(extractText(lastResult.english_tagged));
+      const original = normalize(sentence);
+      const contentMatch = reconstructed === original;
+
+      if (tagMatch && contentMatch) {
+        console.log(`Validation passed on attempt ${attempt + 1} (${enCount} chunks)`);
         break;
       }
 
-      console.warn(`Attempt ${attempt + 1}: tag mismatch (en=${enCount}, kr=${krCount}), ${attempt < MAX_ATTEMPTS - 1 ? "retrying..." : "using last result"}`);
+      if (!tagMatch) {
+        console.warn(`Attempt ${attempt + 1}: tag mismatch (en=${enCount}, kr=${krCount})`);
+      }
+      if (!contentMatch) {
+        console.warn(`Attempt ${attempt + 1}: content mismatch.\nOriginal:      "${original}"\nReconstructed: "${reconstructed}"`);
+      }
+
+      if (attempt < MAX_ATTEMPTS - 1) {
+        // Add specific feedback for retry
+        const feedback: string[] = [];
+        if (!tagMatch) feedback.push(`Tag count mismatch: ${enCount} English vs ${krCount} Korean chunks.`);
+        if (!contentMatch) feedback.push(`Your chunks are missing words. Original: "${original}" but your chunks give: "${reconstructed}". EVERY word must appear in exactly one chunk.`);
+        messages.push({ role: "user", content: feedback.join(" ") + " Please redo carefully." });
+      } else {
+        console.warn("Max attempts reached, using last result.");
+      }
     }
 
     const toSlash = (tagged: string) =>
