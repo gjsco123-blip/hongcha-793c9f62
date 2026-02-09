@@ -6,7 +6,7 @@ import { PrintableWorksheet } from "@/components/PrintableWorksheet";
 import { Chunk, parseTagged, chunksToTagged } from "@/lib/chunk-utils";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { toast } from "sonner";
-import { FileDown, Printer } from "lucide-react";
+import { FileDown } from "lucide-react";
 
 type Preset = "고1" | "고2" | "수능";
 
@@ -132,7 +132,6 @@ export default function Index() {
 
   const handleExportPdf = async () => {
     setShowPreview(true);
-    // Wait for render
     setTimeout(async () => {
       await exportToPdf("syntax-worksheet.pdf");
       toast.success("PDF가 저장되었습니다.");
@@ -226,7 +225,7 @@ export default function Index() {
               >
                 {/* Sentence with number */}
                 <div className="flex gap-3 mb-4">
-                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-foreground text-xs font-medium shrink-0">
+                  <span className="text-sm font-semibold shrink-0 w-6">
                     {String(index + 1).padStart(2, "0")}
                   </span>
                   <p className="font-english text-base leading-relaxed text-foreground">
@@ -283,29 +282,6 @@ export default function Index() {
                 )}
               </div>
             ))}
-          </div>
-        )}
-
-        {/* Before / After / Memo section */}
-        {results.length > 0 && (
-          <div className="mt-6 grid grid-cols-3 gap-3">
-            <div className="col-span-2 space-y-3">
-              <div className="bg-muted border border-border p-3 min-h-[80px]">
-                <div className="text-xs mb-2">
-                  <span className="font-medium">Before</span>
-                  <span className="text-muted-foreground ml-2">| 수업 전 스스로 해석 해보기</span>
-                </div>
-              </div>
-              <div className="bg-muted border border-border p-3 min-h-[80px]">
-                <div className="text-xs mb-2">
-                  <span className="font-medium">After</span>
-                  <span className="text-muted-foreground ml-2">| 수업 후 해석해보고 비교하기</span>
-                </div>
-              </div>
-            </div>
-            <div className="bg-card border-2 border-foreground p-3 min-h-[172px]">
-              <div className="text-xs font-medium mb-2">MEMO</div>
-            </div>
           </div>
         )}
       </main>
