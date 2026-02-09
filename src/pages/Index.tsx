@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChunkEditor } from "@/components/ChunkEditor";
 import { ResultDisplay } from "@/components/ResultDisplay";
+import { PrintableWorksheet } from "@/components/PrintableWorksheet";
 import { Chunk, parseTagged, chunksToTagged } from "@/lib/chunk-utils";
+import { usePdfExport } from "@/hooks/usePdfExport";
 import { toast } from "sonner";
+import { FileDown, Printer } from "lucide-react";
 
 type Preset = "고1" | "고2" | "수능";
 
@@ -33,6 +36,10 @@ export default function Index() {
   const [results, setResults] = useState<SentenceResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
+  const [showPreview, setShowPreview] = useState(false);
+
+  const printRef = useRef<HTMLDivElement>(null);
+  const { exportToPdf } = usePdfExport(printRef);
 
   const handleAnalyze = async () => {
     const sentences = splitIntoSentences(passage);
@@ -123,25 +130,30 @@ export default function Index() {
     }
   };
 
+  const handleExportPdf = async () => {
+    setShowPreview(true);
+    // Wait for render
+    setTimeout(async () => {
+      await exportToPdf("syntax-worksheet.pdf");
+      toast.success("PDF가 저장되었습니다.");
+    }, 100);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-card border-b-2 border-primary">
-        <div className="max-w-5xl mx-auto px-8 py-6">
-          <div className="flex items-center gap-6">
+      <header className="bg-card border-b-2 border-foreground no-print">
+        <div className="max-w-4xl mx-auto px-6 py-5">
+          <div className="flex items-center gap-5">
             {/* Unit badge */}
-            <div className="bg-primary text-primary-foreground px-5 py-4 rounded-sm">
-              <div className="text-xs tracking-widest font-medium">UNIT</div>
-              <div className="text-3xl font-bold leading-none mt-1">01</div>
+            <div className="bg-foreground text-background px-4 py-3 text-center">
+              <div className="text-[10px] tracking-widest font-medium">UNIT</div>
+              <div className="text-2xl font-bold leading-none mt-0.5">01</div>
             </div>
             {/* Title */}
             <div>
-              <h1 className="text-2xl font-bold text-primary tracking-wide">
-                SYNTAX
-              </h1>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                문장 해석 연습
-              </p>
+              <h1 className="text-xl font-bold tracking-wide">SYNTAX</h1>
+              <p className="text-xs text-muted-foreground mt-0.5">문장 해석 연습</p>
             </div>
             {/* Spacer */}
             <div className="flex-1" />
@@ -151,11 +163,11 @@ export default function Index() {
                 <button
                   key={p}
                   onClick={() => setPreset(p)}
-                  className={`px-4 py-2 rounded-sm text-sm font-medium transition-colors border
+                  className={`px-3 py-1.5 text-xs font-medium transition-colors border
                     ${
                       preset === p
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-card text-foreground border-border hover:border-primary/50"
+                        ? "bg-foreground text-background border-foreground"
+                        : "bg-card text-foreground border-border hover:border-foreground"
                     }`}
                 >
                   {p}
@@ -166,62 +178,71 @@ export default function Index() {
         </div>
       </header>
 
-      <div className="border-t border-border" />
-
       {/* Main */}
-      <main className="max-w-5xl mx-auto px-8 py-8">
+      <main className="max-w-4xl mx-auto px-6 py-6 no-print">
         {/* Input Section */}
-        <div className="mb-8">
+        <div className="mb-6">
           <textarea
             value={passage}
             onChange={(e) => setPassage(e.target.value)}
             placeholder="영어 지문을 입력하세요..."
-            rows={6}
-            className="w-full bg-card border border-border rounded-sm px-5 py-4 text-base font-english leading-relaxed text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary transition-colors resize-y"
+            rows={5}
+            className="w-full bg-card border border-border px-4 py-3 text-sm font-english leading-relaxed text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-foreground transition-colors resize-y"
           />
-          <div className="flex items-center justify-between mt-3">
-            <span className="text-sm text-muted-foreground">
+          <div className="flex items-center justify-between mt-2">
+            <span className="text-xs text-muted-foreground">
               {splitIntoSentences(passage).length}개 문장
             </span>
-            <button
-              onClick={handleAnalyze}
-              disabled={loading || splitIntoSentences(passage).length === 0}
-              className="px-6 py-2.5 bg-primary text-primary-foreground rounded-sm text-sm font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
-            >
-              {loading
-                ? `분석 중... (${progress.current}/${progress.total})`
-                : "분석하기"}
-            </button>
+            <div className="flex gap-2">
+              {results.length > 0 && (
+                <button
+                  onClick={handleExportPdf}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors"
+                >
+                  <FileDown className="w-3.5 h-3.5" />
+                  PDF 저장
+                </button>
+              )}
+              <button
+                onClick={handleAnalyze}
+                disabled={loading || splitIntoSentences(passage).length === 0}
+                className="px-5 py-2 bg-foreground text-background text-xs font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+              >
+                {loading
+                  ? `분석 중... (${progress.current}/${progress.total})`
+                  : "분석하기"}
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Results */}
         {results.length > 0 && (
-          <div className="space-y-0 border-t-2 border-primary">
+          <div className="space-y-0 border-t-2 border-foreground">
             {results.map((result, index) => (
               <div
                 key={result.id}
-                className="border-b border-border py-6 animate-fade-in"
+                className="border-b border-border py-5 animate-fade-in"
               >
                 {/* Sentence with number */}
-                <div className="flex gap-4 mb-5">
-                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-muted text-muted-foreground text-sm font-medium shrink-0">
+                <div className="flex gap-3 mb-4">
+                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-foreground text-xs font-medium shrink-0">
                     {String(index + 1).padStart(2, "0")}
                   </span>
-                  <p className="font-english text-lg leading-relaxed text-foreground">
+                  <p className="font-english text-base leading-relaxed text-foreground">
                     {result.original}
                   </p>
                 </div>
 
                 {result.englishChunks.length > 0 ? (
-                  <div className="ml-12 space-y-5">
+                  <div className="ml-9 space-y-4">
                     {/* English chunks */}
-                    <div className="bg-muted/50 rounded-sm p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="text-xs font-medium text-accent uppercase tracking-wide">
+                    <div className="bg-muted/50 border border-border p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
                           Chunking
                         </span>
-                        <span className="text-[10px] text-muted-foreground">
+                        <span className="text-[9px] text-muted-foreground">
                           더블클릭으로 편집 · " / "로 분할
                         </span>
                       </div>
@@ -233,10 +254,10 @@ export default function Index() {
                     </div>
 
                     {/* Korean literal */}
-                    <div className="bg-muted/50 rounded-sm p-4 relative">
+                    <div className="bg-muted/50 border border-border p-3 relative">
                       {result.regenerating && (
-                        <div className="absolute inset-0 bg-muted/80 flex items-center justify-center rounded-sm z-10">
-                          <span className="text-sm text-muted-foreground animate-pulse">
+                        <div className="absolute inset-0 bg-muted/80 flex items-center justify-center z-10">
+                          <span className="text-xs text-muted-foreground animate-pulse">
                             재생성 중...
                           </span>
                         </div>
@@ -249,7 +270,7 @@ export default function Index() {
                     </div>
 
                     {/* Korean natural */}
-                    <div className="bg-muted/50 rounded-sm p-4">
+                    <div className="bg-muted/50 border border-border p-3">
                       <ResultDisplay
                         label="의역"
                         text={result.koreanNatural}
@@ -258,9 +279,7 @@ export default function Index() {
                     </div>
                   </div>
                 ) : (
-                  <div className="ml-12 text-sm text-destructive">
-                    분석 실패
-                  </div>
+                  <div className="ml-9 text-xs text-destructive">분석 실패</div>
                 )}
               </div>
             ))}
@@ -269,27 +288,34 @@ export default function Index() {
 
         {/* Before / After / Memo section */}
         {results.length > 0 && (
-          <div className="mt-8 grid grid-cols-3 gap-4">
-            <div className="col-span-2 space-y-4">
-              <div className="bg-muted rounded-sm p-4 min-h-[100px]">
-                <div className="text-sm mb-2">
-                  <span className="text-accent font-medium">Before</span>
+          <div className="mt-6 grid grid-cols-3 gap-3">
+            <div className="col-span-2 space-y-3">
+              <div className="bg-muted border border-border p-3 min-h-[80px]">
+                <div className="text-xs mb-2">
+                  <span className="font-medium">Before</span>
                   <span className="text-muted-foreground ml-2">| 수업 전 스스로 해석 해보기</span>
                 </div>
               </div>
-              <div className="bg-muted rounded-sm p-4 min-h-[100px]">
-                <div className="text-sm mb-2">
-                  <span className="text-accent font-medium">After</span>
+              <div className="bg-muted border border-border p-3 min-h-[80px]">
+                <div className="text-xs mb-2">
+                  <span className="font-medium">After</span>
                   <span className="text-muted-foreground ml-2">| 수업 후 해석해보고 비교하기</span>
                 </div>
               </div>
             </div>
-            <div className="bg-card border border-border rounded-sm p-4 min-h-[216px]">
-              <div className="text-sm font-medium text-primary mb-2">MEMO</div>
+            <div className="bg-card border-2 border-foreground p-3 min-h-[172px]">
+              <div className="text-xs font-medium mb-2">MEMO</div>
             </div>
           </div>
         )}
       </main>
+
+      {/* Hidden printable worksheet */}
+      {showPreview && (
+        <div className="fixed left-[-9999px] top-0">
+          <PrintableWorksheet ref={printRef} results={results} />
+        </div>
+      )}
     </div>
   );
 }

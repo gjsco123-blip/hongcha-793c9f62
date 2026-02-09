@@ -6,97 +6,98 @@
 
 @layer base {
   :root {
-    --background: 40 20% 98%;
-    --foreground: 220 25% 15%;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 25% 15%;
+    --card-foreground: 0 0% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 25% 15%;
+    --popover-foreground: 0 0% 10%;
 
-    --primary: 225 40% 28%;
+    --primary: 0 0% 15%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 15% 94%;
-    --secondary-foreground: 220 25% 25%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 20%;
 
-    --muted: 220 10% 92%;
-    --muted-foreground: 220 10% 45%;
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 45%;
 
-    --accent: 200 70% 45%;
+    --accent: 0 0% 30%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 70% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 15% 85%;
-    --input: 220 15% 88%;
-    --ring: 225 40% 28%;
+    --border: 0 0% 75%;
+    --input: 0 0% 88%;
+    --ring: 0 0% 15%;
 
-    --radius: 0.375rem;
+    --radius: 0.125rem;
 
-    --chunk-1: 225 50% 45%;
-    --chunk-2: 160 50% 38%;
-    --chunk-3: 30 70% 50%;
-    --chunk-4: 340 55% 48%;
-    --chunk-5: 270 45% 50%;
-    --chunk-6: 190 60% 40%;
+    /* Grayscale chunk colors for print */
+    --chunk-1: 0 0% 20%;
+    --chunk-2: 0 0% 35%;
+    --chunk-3: 0 0% 50%;
+    --chunk-4: 0 0% 25%;
+    --chunk-5: 0 0% 40%;
+    --chunk-6: 0 0% 55%;
 
     --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-foreground: 0 0% 26%;
+    --sidebar-primary: 0 0% 10%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 0 0% 96%;
+    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-border: 0 0% 91%;
+    --sidebar-ring: 0 0% 59%;
   }
 
   .dark {
-    --background: 220 20% 7%;
-    --foreground: 220 15% 90%;
+    --background: 0 0% 7%;
+    --foreground: 0 0% 90%;
 
-    --card: 220 20% 10%;
-    --card-foreground: 220 15% 90%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 90%;
 
-    --popover: 220 20% 10%;
-    --popover-foreground: 220 15% 90%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 90%;
 
-    --primary: 225 50% 55%;
-    --primary-foreground: 220 20% 5%;
+    --primary: 0 0% 85%;
+    --primary-foreground: 0 0% 5%;
 
-    --secondary: 220 15% 15%;
-    --secondary-foreground: 220 15% 85%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 85%;
 
-    --muted: 220 15% 15%;
-    --muted-foreground: 220 10% 55%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 55%;
 
-    --accent: 200 70% 50%;
-    --accent-foreground: 220 20% 5%;
+    --accent: 0 0% 70%;
+    --accent-foreground: 0 0% 5%;
 
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 220 15% 18%;
-    --input: 220 15% 18%;
-    --ring: 225 50% 55%;
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 0 0% 85%;
 
-    --chunk-1: 225 60% 60%;
-    --chunk-2: 160 55% 50%;
-    --chunk-3: 30 75% 55%;
-    --chunk-4: 340 60% 55%;
-    --chunk-5: 270 50% 60%;
-    --chunk-6: 190 65% 50%;
+    --chunk-1: 0 0% 70%;
+    --chunk-2: 0 0% 60%;
+    --chunk-3: 0 0% 50%;
+    --chunk-4: 0 0% 75%;
+    --chunk-5: 0 0% 55%;
+    --chunk-6: 0 0% 45%;
 
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-background: 0 0% 10%;
+    --sidebar-foreground: 0 0% 96%;
+    --sidebar-primary: 0 0% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 0 0% 16%;
+    --sidebar-accent-foreground: 0 0% 96%;
+    --sidebar-border: 0 0% 16%;
+    --sidebar-ring: 0 0% 60%;
   }
 }
 
@@ -114,5 +115,17 @@
 @layer components {
   .font-english {
     font-family: 'Noto Serif', Georgia, serif;
+  }
+}
+
+/* Print styles */
+@media print {
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .no-print {
+    display: none !important;
   }
 }
