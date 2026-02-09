@@ -11,7 +11,7 @@ function countTags(tagged: string): number {
 }
 
 function extractText(tagged: string): string {
-  return tagged.replace(/<\/?c\d+>/g, "");
+  return tagged.replace(/<\/?c\d+>/g, "").replace(/<\/?v>/g, "");
 }
 
 function normalize(text: string): string {
@@ -84,6 +84,8 @@ CRITICAL RULES:
 - EVERY word in the original sentence MUST appear in exactly one chunk. No word may be omitted.
 - Conjunctions (while, but, although, because, however, etc.) MUST be included as part of a chunk, never dropped.
 - Concatenating all english chunks (removing tags) must reconstruct the original sentence exactly.
+- Within each English chunk, wrap the main verb or verb phrase with <v>...</v> tags. Include main verbs, auxiliary+main verb combinations (e.g., <v>has been working</v>), and modal+verb combinations (e.g., <v>can affect</v>). Do NOT tag gerunds used as nouns, infinitives used as nouns/adjectives, or participles used purely as adjectives.
+- The <v> tags go INSIDE the <c> tags. Example: <c1>The researchers <v>discovered</v></c1>
 
 You MUST respond by calling the "analysis_result" function with the structured output.`;
 
@@ -98,7 +100,7 @@ You MUST respond by calling the "analysis_result" function with the structured o
             properties: {
               english_tagged: {
                 type: "string",
-                description: "English sentence with <c1>...</c1> <c2>...</c2> tags around each chunk",
+                description: "English sentence with <c1>...</c1> <c2>...</c2> tags around each chunk. Main verbs within chunks are wrapped with <v>...</v> tags.",
               },
               korean_literal_tagged: {
                 type: "string",
