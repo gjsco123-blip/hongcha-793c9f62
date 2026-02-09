@@ -142,39 +142,24 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
+      {/* Header - 간소화 */}
       <header className="bg-card border-b-2 border-foreground no-print">
         <div className="max-w-4xl mx-auto px-6 py-5">
-          <div className="flex items-center gap-5">
-            {/* Unit badge */}
-            <div className="bg-foreground text-background px-4 py-3 text-center">
-              <div className="text-[10px] tracking-widest font-medium">UNIT</div>
-              <div className="text-2xl font-bold leading-none mt-0.5">01</div>
-            </div>
-            {/* Title */}
-            <div>
-              <h1 className="text-xl font-bold tracking-wide">SYNTAX</h1>
-              <p className="text-xs text-muted-foreground mt-0.5">문장 해석 연습</p>
-            </div>
-            {/* Spacer */}
-            <div className="flex-1" />
-            {/* Preset buttons */}
-            <div className="flex gap-2">
-              {PRESETS.map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPreset(p)}
-                  className={`px-3 py-1.5 text-xs font-medium transition-colors border
-                    ${
-                      preset === p
-                        ? "bg-foreground text-background border-foreground"
-                        : "bg-card text-foreground border-border hover:border-foreground"
-                    }`}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
+          <div className="flex flex-col gap-1">
+            <input
+              type="text"
+              value={pdfTitle}
+              onChange={(e) => setPdfTitle(e.target.value)}
+              placeholder="제목"
+              className="text-xl font-bold tracking-wide bg-transparent outline-none border-none text-foreground placeholder:text-muted-foreground/50 w-full"
+            />
+            <input
+              type="text"
+              value={pdfSubtitle}
+              onChange={(e) => setPdfSubtitle(e.target.value)}
+              placeholder="부제목"
+              className="text-xs text-muted-foreground bg-transparent outline-none border-none placeholder:text-muted-foreground/50 w-full"
+            />
           </div>
         </div>
       </header>
@@ -196,29 +181,13 @@ export default function Index() {
             </span>
             <div className="flex gap-2 items-center">
               {results.length > 0 && (
-                <>
-                  <input
-                    type="text"
-                    value={pdfTitle}
-                    onChange={(e) => setPdfTitle(e.target.value)}
-                    placeholder="제목"
-                    className="w-24 px-2 py-1.5 border border-border text-xs bg-card text-foreground outline-none focus:border-foreground"
-                  />
-                  <input
-                    type="text"
-                    value={pdfSubtitle}
-                    onChange={(e) => setPdfSubtitle(e.target.value)}
-                    placeholder="부제목"
-                    className="w-28 px-2 py-1.5 border border-border text-xs bg-card text-foreground outline-none focus:border-foreground"
-                  />
-                  <button
-                    onClick={handleExportPdf}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors"
-                  >
-                    <FileDown className="w-3.5 h-3.5" />
-                    PDF 저장
-                  </button>
-                </>
+                <button
+                  onClick={handleExportPdf}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors"
+                >
+                  <FileDown className="w-3.5 h-3.5" />
+                  PDF 저장
+                </button>
               )}
               <button
                 onClick={handleAnalyze}
