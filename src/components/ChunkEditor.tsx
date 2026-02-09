@@ -1,24 +1,6 @@
 import { useState } from "react";
 import { Chunk } from "@/lib/chunk-utils";
 
-const CHUNK_HSL: string[] = [
-  "var(--chunk-1)",
-  "var(--chunk-2)",
-  "var(--chunk-3)",
-  "var(--chunk-4)",
-  "var(--chunk-5)",
-  "var(--chunk-6)",
-];
-
-function getChunkStyle(index: number) {
-  const hsl = CHUNK_HSL[index % CHUNK_HSL.length];
-  return {
-    color: `hsl(${hsl})`,
-    backgroundColor: `hsl(${hsl} / 0.08)`,
-    borderColor: `hsl(${hsl} / 0.25)`,
-  };
-}
-
 interface ChunkEditorProps {
   chunks: Chunk[];
   onChange: (chunks: Chunk[]) => void;
@@ -68,9 +50,9 @@ export function ChunkEditor({ chunks, onChange, disabled }: ChunkEditorProps) {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-1.5">
       {chunks.map((chunk, i) => (
-        <div key={`${chunk.tag}-${i}`} className="flex items-center gap-1.5">
+        <div key={`${chunk.tag}-${i}`} className="flex items-center gap-1">
           {editingIndex === i ? (
             <input
               autoFocus
@@ -81,15 +63,14 @@ export function ChunkEditor({ chunks, onChange, disabled }: ChunkEditorProps) {
                 if (e.key === "Enter") handleSave();
                 if (e.key === "Escape") setEditingIndex(null);
               }}
-              className="bg-card border border-primary rounded-sm px-2 py-1 text-sm font-english text-foreground outline-none min-w-[100px]"
+              className="bg-card border border-foreground px-2 py-1 text-xs font-english text-foreground outline-none min-w-[80px]"
             />
           ) : (
             <span
               onDoubleClick={() => handleDoubleClick(i)}
-              style={getChunkStyle(i)}
-              className={`inline-block px-2.5 py-1 rounded-sm text-sm font-english border select-none
-                ${!disabled ? "cursor-pointer hover:brightness-95" : "cursor-default"}`}
-              title={disabled ? "" : 'Double-click to edit'}
+              className={`inline-block px-2 py-1 text-xs font-english border border-border bg-background text-foreground
+                ${!disabled ? "cursor-pointer hover:border-foreground hover:bg-muted" : "cursor-default"}`}
+              title={disabled ? "" : "Double-click to edit"}
             >
               {chunk.text}
             </span>
@@ -97,14 +78,14 @@ export function ChunkEditor({ chunks, onChange, disabled }: ChunkEditorProps) {
           {i < chunks.length - 1 && !disabled && (
             <button
               onClick={() => handleMerge(i)}
-              className="text-muted-foreground hover:text-foreground text-sm px-0.5 opacity-30 hover:opacity-100 transition-opacity"
+              className="text-muted-foreground hover:text-foreground text-xs px-0.5 opacity-30 hover:opacity-100 transition-opacity"
               title="Merge with next"
             >
               +
             </button>
           )}
           {i < chunks.length - 1 && (
-            <span className="text-muted-foreground/50 text-sm font-light">/</span>
+            <span className="text-muted-foreground text-xs">/</span>
           )}
         </div>
       ))}
