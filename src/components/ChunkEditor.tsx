@@ -14,8 +14,8 @@ function getChunkStyle(index: number) {
   const hsl = CHUNK_HSL[index % CHUNK_HSL.length];
   return {
     color: `hsl(${hsl})`,
-    backgroundColor: `hsl(${hsl} / 0.1)`,
-    borderColor: `hsl(${hsl} / 0.2)`,
+    backgroundColor: `hsl(${hsl} / 0.08)`,
+    borderColor: `hsl(${hsl} / 0.25)`,
   };
 }
 
@@ -68,9 +68,9 @@ export function ChunkEditor({ chunks, onChange, disabled }: ChunkEditorProps) {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex flex-wrap items-center gap-2">
       {chunks.map((chunk, i) => (
-        <div key={`${chunk.tag}-${i}`} className="flex items-center gap-1">
+        <div key={`${chunk.tag}-${i}`} className="flex items-center gap-1.5">
           {editingIndex === i ? (
             <input
               autoFocus
@@ -81,31 +81,30 @@ export function ChunkEditor({ chunks, onChange, disabled }: ChunkEditorProps) {
                 if (e.key === "Enter") handleSave();
                 if (e.key === "Escape") setEditingIndex(null);
               }}
-              className="bg-card border border-primary rounded px-2 py-1 text-sm font-mono text-foreground outline-none min-w-[80px]"
+              className="bg-card border border-primary rounded-sm px-2 py-1 text-sm font-english text-foreground outline-none min-w-[100px]"
             />
           ) : (
             <span
               onDoubleClick={() => handleDoubleClick(i)}
               style={getChunkStyle(i)}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-mono border select-none
-                ${!disabled ? "cursor-pointer hover:brightness-110" : "cursor-default"}`}
-              title={disabled ? "" : 'Double-click to edit · Use " / " to split'}
+              className={`inline-block px-2.5 py-1 rounded-sm text-sm font-english border select-none
+                ${!disabled ? "cursor-pointer hover:brightness-95" : "cursor-default"}`}
+              title={disabled ? "" : 'Double-click to edit'}
             >
-              <span className="text-[10px] opacity-50">c{chunk.tag}</span>
               {chunk.text}
             </span>
           )}
           {i < chunks.length - 1 && !disabled && (
             <button
               onClick={() => handleMerge(i)}
-              className="text-muted-foreground hover:text-foreground text-xs px-0.5 opacity-40 hover:opacity-100 transition-opacity"
-              title="Merge with next chunk"
+              className="text-muted-foreground hover:text-foreground text-sm px-0.5 opacity-30 hover:opacity-100 transition-opacity"
+              title="Merge with next"
             >
-              ⊕
+              +
             </button>
           )}
           {i < chunks.length - 1 && (
-            <span className="text-muted-foreground/40 text-sm">/</span>
+            <span className="text-muted-foreground/50 text-sm font-light">/</span>
           )}
         </div>
       ))}

@@ -20,7 +20,6 @@ interface SentenceResult {
 
 const PRESETS: Preset[] = ["고1", "고2", "수능"];
 
-// Split passage into sentences
 function splitIntoSentences(text: string): string[] {
   return text
     .split(/(?<=[.!?])\s+/)
@@ -125,148 +124,172 @@ export default function Index() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-bold tracking-tight text-foreground">
-              Sentence Engine
-            </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              영어 지문 → 문장별 청킹 + 한국어 번역
-            </p>
-          </div>
-          <div className="flex gap-1">
-            {PRESETS.map((p) => (
-              <button
-                key={p}
-                onClick={() => setPreset(p)}
-                className={`px-3 py-1.5 rounded-md text-xs font-korean font-medium transition-colors
-                  ${
-                    preset === p
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                  }`}
-              >
-                {p}
-              </button>
-            ))}
+      <header className="bg-card border-b-2 border-primary">
+        <div className="max-w-5xl mx-auto px-8 py-6">
+          <div className="flex items-center gap-6">
+            {/* Unit badge */}
+            <div className="bg-primary text-primary-foreground px-5 py-4 rounded-sm">
+              <div className="text-xs tracking-widest font-medium">UNIT</div>
+              <div className="text-3xl font-bold leading-none mt-1">01</div>
+            </div>
+            {/* Title */}
+            <div>
+              <h1 className="text-2xl font-bold text-primary tracking-wide">
+                SYNTAX
+              </h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                문장 해석 연습
+              </p>
+            </div>
+            {/* Spacer */}
+            <div className="flex-1" />
+            {/* Preset buttons */}
+            <div className="flex gap-2">
+              {PRESETS.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPreset(p)}
+                  className={`px-4 py-2 rounded-sm text-sm font-medium transition-colors border
+                    ${
+                      preset === p
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-card text-foreground border-border hover:border-primary/50"
+                    }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </header>
 
+      <div className="border-t border-border" />
+
       {/* Main */}
-      <main className="flex-1 px-6 py-8">
-        <div className="max-w-4xl mx-auto space-y-8">
-          {/* Input */}
-          <div className="space-y-3">
-            <label className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
-              English Passage
-            </label>
-            <textarea
-              value={passage}
-              onChange={(e) => setPassage(e.target.value)}
-              placeholder="영어 지문을 입력하세요. 여러 문장도 가능합니다..."
-              rows={5}
-              className="w-full bg-card border border-border rounded-lg px-4 py-3 text-sm font-mono text-foreground placeholder:text-muted-foreground/50 outline-none focus:ring-2 focus:ring-ring/30 transition-shadow resize-y"
-            />
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground font-korean">
-                {splitIntoSentences(passage).length}개 문장 감지됨
-              </span>
-              <button
-                onClick={handleAnalyze}
-                disabled={loading || splitIntoSentences(passage).length === 0}
-                className="px-5 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
-              >
-                {loading
-                  ? `분석 중... (${progress.current}/${progress.total})`
-                  : "전체 분석"}
-              </button>
-            </div>
+      <main className="max-w-5xl mx-auto px-8 py-8">
+        {/* Input Section */}
+        <div className="mb-8">
+          <textarea
+            value={passage}
+            onChange={(e) => setPassage(e.target.value)}
+            placeholder="영어 지문을 입력하세요..."
+            rows={6}
+            className="w-full bg-card border border-border rounded-sm px-5 py-4 text-base font-english leading-relaxed text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary transition-colors resize-y"
+          />
+          <div className="flex items-center justify-between mt-3">
+            <span className="text-sm text-muted-foreground">
+              {splitIntoSentences(passage).length}개 문장
+            </span>
+            <button
+              onClick={handleAnalyze}
+              disabled={loading || splitIntoSentences(passage).length === 0}
+              className="px-6 py-2.5 bg-primary text-primary-foreground rounded-sm text-sm font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+            >
+              {loading
+                ? `분석 중... (${progress.current}/${progress.total})`
+                : "분석하기"}
+            </button>
           </div>
+        </div>
 
-          {/* Results */}
-          {results.length > 0 && (
-            <div className="space-y-6">
-              {results.map((result, index) => (
-                <div
-                  key={result.id}
-                  className="border border-border rounded-xl p-5 bg-card space-y-4 animate-fade-in"
-                >
-                  {/* Sentence number */}
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">
-                      {index + 1}
-                    </span>
-                    <span className="text-xs text-muted-foreground font-mono truncate flex-1">
-                      {result.original}
-                    </span>
-                  </div>
+        {/* Results */}
+        {results.length > 0 && (
+          <div className="space-y-0 border-t-2 border-primary">
+            {results.map((result, index) => (
+              <div
+                key={result.id}
+                className="border-b border-border py-6 animate-fade-in"
+              >
+                {/* Sentence with number */}
+                <div className="flex gap-4 mb-5">
+                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-muted text-muted-foreground text-sm font-medium shrink-0">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <p className="font-english text-lg leading-relaxed text-foreground">
+                    {result.original}
+                  </p>
+                </div>
 
-                  {result.englishChunks.length > 0 ? (
-                    <>
-                      {/* English chunks (editable) */}
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
-                            English Chunks
-                          </span>
-                          <span className="text-[10px] text-muted-foreground/60 font-korean">
-                            더블클릭으로 편집 · " / "로 분할
+                {result.englishChunks.length > 0 ? (
+                  <div className="ml-12 space-y-5">
+                    {/* English chunks */}
+                    <div className="bg-muted/50 rounded-sm p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-xs font-medium text-accent uppercase tracking-wide">
+                          Chunking
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          더블클릭으로 편집 · " / "로 분할
+                        </span>
+                      </div>
+                      <ChunkEditor
+                        chunks={result.englishChunks}
+                        onChange={(chunks) => handleChunkChange(result.id, chunks)}
+                        disabled={result.regenerating}
+                      />
+                    </div>
+
+                    {/* Korean literal */}
+                    <div className="bg-muted/50 rounded-sm p-4 relative">
+                      {result.regenerating && (
+                        <div className="absolute inset-0 bg-muted/80 flex items-center justify-center rounded-sm z-10">
+                          <span className="text-sm text-muted-foreground animate-pulse">
+                            재생성 중...
                           </span>
                         </div>
-                        <ChunkEditor
-                          chunks={result.englishChunks}
-                          onChange={(chunks) => handleChunkChange(result.id, chunks)}
-                          disabled={result.regenerating}
-                        />
-                      </div>
-
-                      <div className="border-t border-border" />
-
-                      {/* Korean literal */}
-                      <div className="relative">
-                        {result.regenerating && (
-                          <div className="absolute inset-0 bg-card/60 flex items-center justify-center rounded z-10">
-                            <span className="text-xs text-muted-foreground animate-pulse font-korean">
-                              재생성 중...
-                            </span>
-                          </div>
-                        )}
-                        <ResultDisplay
-                          label="Korean Literal (직역)"
-                          chunks={result.koreanLiteralChunks}
-                          isKorean
-                        />
-                      </div>
-
-                      <div className="border-t border-border" />
-
-                      {/* Korean natural */}
+                      )}
                       <ResultDisplay
-                        label="Korean Natural (의역)"
+                        label="직역"
+                        chunks={result.koreanLiteralChunks}
+                        isKorean
+                      />
+                    </div>
+
+                    {/* Korean natural */}
+                    <div className="bg-muted/50 rounded-sm p-4">
+                      <ResultDisplay
+                        label="의역"
                         text={result.koreanNatural}
                         isKorean
                       />
-                    </>
-                  ) : (
-                    <p className="text-sm text-destructive font-korean">분석 실패</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </main>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="ml-12 text-sm text-destructive">
+                    분석 실패
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
-      {/* Footer */}
-      <footer className="border-t border-border px-6 py-3">
-        <p className="text-center text-[10px] text-muted-foreground/50 font-mono">
-          Deterministic chunking engine · v1.1
-        </p>
-      </footer>
+        {/* Before / After / Memo section */}
+        {results.length > 0 && (
+          <div className="mt-8 grid grid-cols-3 gap-4">
+            <div className="col-span-2 space-y-4">
+              <div className="bg-muted rounded-sm p-4 min-h-[100px]">
+                <div className="text-sm mb-2">
+                  <span className="text-accent font-medium">Before</span>
+                  <span className="text-muted-foreground ml-2">| 수업 전 스스로 해석 해보기</span>
+                </div>
+              </div>
+              <div className="bg-muted rounded-sm p-4 min-h-[100px]">
+                <div className="text-sm mb-2">
+                  <span className="text-accent font-medium">After</span>
+                  <span className="text-muted-foreground ml-2">| 수업 후 해석해보고 비교하기</span>
+                </div>
+              </div>
+            </div>
+            <div className="bg-card border border-border rounded-sm p-4 min-h-[216px]">
+              <div className="text-sm font-medium text-primary mb-2">MEMO</div>
+            </div>
+          </div>
+        )}
+      </main>
     </div>
   );
 }
