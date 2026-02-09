@@ -1,49 +1,39 @@
 
 
-## 정규식 수정 + 분리 모드 선택 UI 제거
+## 프롬프트 강화 + 청크 검증/자동 재시도
 
-### 변경 1: 자동 분리 정규식 수정
+### 변경 1: 프롬프트 강화
 
-닫는 큰따옴표 `"` (U+201D)가 포함되도록 정규식 수정:
+시스템 프롬프트의 CRITICAL RULES 섹션에 더 명확한 지시를 추가:
 
-```text
-변경 전: /(?<=[.!?]["'"']?)\s+/
-변경 후: /(?<=[.!?]["'""'']?)\s+/
+- 접속사(while, but, although 등)를 절대 누락하지 말 것
+- 영어 원문의 **모든 단어**가 반드시 하나의 청크에 포함될 것
+- 영어 문장 전체를 청크로 이어붙이면 원문과 동일해야 한다는 규칙 추가
+
+추가할 규칙 예시:
 ```
-
-모든 따옴표 유형 포함:
-- `"` `"` `"` (straight, left, right double quotes)
-- `'` `'` `'` (straight, left, right single quotes)
+- EVERY word in the original sentence MUST appear in exactly one chunk. No word may be omitted.
+- Conjunctions (while, but, although, because, etc.) MUST be included as part of a chunk, never dropped.
+- Concatenating all english chunks must reconstruct the original sentence exactly.
+```
 
 ---
 
-### 변경 2: 분리 모드 선택 UI 제거
+### 변경 2: 청크 수 검증 + 자동 재시도 (최대 2회)
 
-스크린샷에 보이는 "분리: 자동 / 줄바꿈 / 구분자" 버튼 그룹을 삭제하고 자동 모드만 사용.
+AI 응답을 받은 후, 영어 청크 수와 한국어 청크 수를 비교해서 다르면 자동으로 재시도하는 로직 추가.
 
-**삭제할 요소:**
-- `SplitMode` 타입 정의
-- `splitMode`, `customDelimiter` 상태
-- 분리 모드 버튼 그룹 UI (197~241줄)
-- `splitIntoSentences` 함수의 switch문 (자동 모드 로직만 유지)
+**검증 로직:**
+1. `english_tagged`에서 `<cN>` 태그 수를 셈
+2. `korean_literal_tagged`에서 `<cN>` 태그 수를 셈
+3. 두 수가 다르면 재시도 (최대 2회 재시도, 총 3번 시도)
+4. 3번 모두 실패하면 마지막 결과를 그대로 반환
 
-**유지할 요소:**
-- 문장 개수 표시 (`X개 문장`)
-- SentencePreview 컴포넌트 (합치기/나누기 기능)
-
----
-
-### 수정 후 UI
-
-```text
-┌─────────────────────────────────────────┐
-│ [영어 지문 입력...]                      │
-└─────────────────────────────────────────┘
-4개 문장                    [PDF 저장] [분석하기]
+**흐름:**
 ```
-
-- 문장 미리보기에서 합치기/나누기로 수동 조정 가능하므로 분리 모드 선택 불필요
-- 더 깔끔한 UI
+AI 호출 → 결과 검증 → 청크 수 일치? → Yes → 반환
+                                    → No → 재시도 (최대 2회)
+```
 
 ---
 
@@ -51,15 +41,21 @@
 
 | 파일 | 변경 내용 |
 |------|----------|
-| src/pages/Index.tsx | 1. 정규식에 `""''` 추가<br>2. `SplitMode` 타입 삭제<br>3. `splitMode`, `customDelimiter` 상태 삭제<br>4. 분리 모드 버튼 그룹 UI 삭제<br>5. `splitIntoSentences` 함수 단순화 |
+| supabase/functions/engine/index.ts | 1. 시스템 프롬프트에 누락 방지 규칙 추가<br>2. 태그 수 세는 헬퍼 함수 추가<br>3. AI 호출을 루프로 감싸서 검증 실패 시 최대 2회 재시도<br>4. 재시도 시 "이전 결과가 잘못되었다"는 피드백 메시지 포함 |
 
 ---
 
-### 수정 범위 요약
+### 기술 상세
 
-- **정규식 1줄 수정** (35줄)
-- **상태 2개 삭제** (47~48줄)
-- **타입 1개 삭제** (12줄)
-- **UI 약 45줄 삭제** (196~241줄 중 버튼 그룹 부분)
-- **함수 단순화** (27~37줄)
+**태그 카운트 함수:**
+```typescript
+function countTags(tagged: string): number {
+  return (tagged.match(/<c\d+>/g) || []).length;
+}
+```
+
+**재시도 루프 구조:**
+- 최대 3번 시도 (1번 시도 + 2번 재시도)
+- 재시도 시 user 메시지에 "이전 결과에서 태그 수가 맞지 않았다. 다시 정확하게 해달라"는 피드백 추가
+- 마지막 시도 결과는 검증 실패해도 그대로 반환 (응답 없는 것보다 나음)
 
