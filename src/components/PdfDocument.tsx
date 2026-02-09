@@ -126,8 +126,8 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* 헤더 */}
-        <View style={styles.header} fixed>
+        {/* 헤더 - 첫 페이지에만 표시 */}
+        <View style={styles.header}>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.subtitle}>{subtitle}</Text>
         </View>
