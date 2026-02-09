@@ -18,6 +18,35 @@ function normalize(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
+function safeParseJson(raw: string): Record<string, string> {
+  // Try direct parse first
+  try { return JSON.parse(raw); } catch { /* fallback */ }
+
+  // Strip markdown wrappers if present
+  let cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+
+  // Find JSON boundaries
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start !== -1 && end !== -1 && end > start) {
+    cleaned = cleaned.substring(start, end + 1);
+    try { return JSON.parse(cleaned); } catch { /* fallback */ }
+  }
+
+  // Try repairing truncated JSON by closing open braces
+  if (start !== -1) {
+    let repaired = cleaned.substring(start);
+    // Remove trailing comma or incomplete value
+    repaired = repaired.replace(/,\s*$/, "").replace(/:\s*"[^"]*$/, ': ""');
+    let braces = 0;
+    for (const ch of repaired) { if (ch === "{") braces++; if (ch === "}") braces--; }
+    while (braces > 0) { repaired += "}"; braces--; }
+    try { return JSON.parse(repaired); } catch { /* give up */ }
+  }
+
+  throw new Error("Failed to parse AI response as JSON");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -137,7 +166,19 @@ You MUST respond by calling the "analysis_result" function with the structured o
       const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
       if (!toolCall) throw new Error("No tool call in response");
 
-      lastResult = JSON.parse(toolCall.function.arguments);
+      try {
+        lastResult = safeParseJson(toolCall.function.arguments);
+      } catch (parseErr) {
+        console.warn(`Attempt ${attempt + 1}: Failed to parse tool call arguments: ${toolCall.function.arguments?.substring(0, 200)}`);
+        if (attempt >= MAX_ATTEMPTS - 1) throw parseErr;
+        continue;
+      }
+
+      if (!lastResult.english_tagged || !lastResult.korean_literal_tagged || !lastResult.korean_natural) {
+        console.warn(`Attempt ${attempt + 1}: Missing required fields in parsed result`);
+        if (attempt >= MAX_ATTEMPTS - 1) throw new Error("AI returned incomplete fields after max attempts");
+        continue;
+      }
 
       const enCount = countTags(lastResult.english_tagged);
       const krCount = countTags(lastResult.korean_literal_tagged);
