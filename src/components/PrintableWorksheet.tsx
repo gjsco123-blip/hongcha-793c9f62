@@ -12,6 +12,7 @@ interface SentenceResult {
 interface PrintableWorksheetProps {
   results: SentenceResult[];
   title?: string;
+  subtitle?: string;
 }
 
 function renderChunksWithSlash(chunks: Chunk[]): string {
@@ -40,7 +41,7 @@ function CircledNumber({ num }: { num: number }) {
 }
 
 export const PrintableWorksheet = forwardRef<HTMLDivElement, PrintableWorksheetProps>(
-  ({ results, title = "SYNTAX" }, ref) => {
+  ({ results, title = "SYNTAX", subtitle = "문장 해석 연습" }, ref) => {
     return (
       <div
         ref={ref}
@@ -54,21 +55,14 @@ export const PrintableWorksheet = forwardRef<HTMLDivElement, PrintableWorksheetP
           lineHeight: "1.8"
         }}
       >
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8 border-b-2 border-black pb-4">
-          <div className="bg-black text-white px-4 py-3 text-center">
-            <div style={{ fontSize: "9pt", letterSpacing: "0.1em" }}>UNIT</div>
-            <div style={{ fontSize: "20pt", fontWeight: "bold", lineHeight: 1 }}>01</div>
-          </div>
-          <div>
-            <h1 style={{ fontSize: "16pt", fontWeight: "bold", letterSpacing: "0.05em" }}>{title}</h1>
-            <p style={{ fontSize: "9pt", color: "#666" }}>문장 해석 연습</p>
-          </div>
-          <div className="flex-1" />
-          <div style={{ fontSize: "9pt", color: "#666", textAlign: "right" }}>
-            <div>이름: _______________</div>
-            <div className="mt-1">날짜: _______________</div>
-          </div>
+        {/* Header - 간소화 */}
+        <div className="mb-8 border-b-2 border-black pb-4">
+          <h1 style={{ fontSize: "16pt", fontWeight: "bold", letterSpacing: "0.05em", margin: 0 }}>
+            {title}
+          </h1>
+          <p style={{ fontSize: "9pt", color: "#666", marginTop: "4pt" }}>
+            {subtitle}
+          </p>
         </div>
 
         {/* Sentences */}
@@ -129,24 +123,22 @@ export const PrintableWorksheet = forwardRef<HTMLDivElement, PrintableWorksheetP
           ))}
         </div>
 
-        {/* 지문 Section - Inline continuous text */}
+        {/* 지문 Section - 슬래시 제거, 양쪽 정렬, 번호만 */}
         <div style={{ marginTop: "30pt", paddingTop: "20pt", borderTop: "2px solid #000" }}>
           <div style={{ fontSize: "10pt", fontWeight: 600, marginBottom: "12pt" }}>지문</div>
           <p style={{ 
             fontFamily: "'Noto Serif', Georgia, serif", 
             fontSize: "9pt",
             lineHeight: "2",
-            margin: 0
+            margin: 0,
+            textAlign: "justify"
           }}>
             {results.map((result, index) => (
               <span key={result.id}>
-                <CircledNumber num={index + 1} />
+                <span style={{ fontWeight: 600 }}>{index + 1}</span>
                 {" "}
-                {result.englishChunks.length > 0 
-                  ? renderChunksWithSlash(result.englishChunks)
-                  : result.original
-                }
-                {"  "}
+                {result.original}
+                {" "}
               </span>
             ))}
           </p>
