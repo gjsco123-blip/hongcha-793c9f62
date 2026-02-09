@@ -128,14 +128,23 @@ function renderChunksWithVerbUnderline(chunks: Chunk[]) {
   chunks.forEach((chunk, ci) => {
     const words = segmentsToWords(chunk.segments);
     words.forEach((w, wi) => {
-      if (wi > 0) {
-        elements.push(<Text key={`${ci}-${wi}-sp`}> </Text>);
+      const prefix = wi > 0 ? ' ' : '';
+      if (w.isVerb) {
+        if (prefix) {
+          elements.push(<Text key={`${ci}-${wi}-sp`}>{prefix}</Text>);
+        }
+        elements.push(
+          <Text key={`${ci}-${wi}`} style={styles.verbUnderline}>
+            {w.word}
+          </Text>
+        );
+      } else {
+        elements.push(
+          <Text key={`${ci}-${wi}`}>
+            {prefix}{w.word}
+          </Text>
+        );
       }
-      elements.push(
-        <Text key={`${ci}-${wi}`} style={w.isVerb ? styles.verbUnderline : undefined}>
-          {w.word}
-        </Text>
-      );
     });
     if (ci < chunks.length - 1) {
       elements.push(<Text key={`slash-${ci}`}> / </Text>);
