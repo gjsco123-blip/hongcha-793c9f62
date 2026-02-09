@@ -5,11 +5,9 @@ interface SentenceResult {
   id: number;
   original: string;
   englishChunks: Chunk[];
-  koreanLiteralChunks: Chunk[];
-  koreanNatural: string;
 }
 
-interface PrintableWorksheetProps {
+interface PrintableEnglishOnlyProps {
   results: SentenceResult[];
   title?: string;
 }
@@ -18,7 +16,7 @@ function renderChunksWithSlash(chunks: Chunk[]): string {
   return chunks.map((c) => c.text).join(" / ");
 }
 
-export const PrintableWorksheet = forwardRef<HTMLDivElement, PrintableWorksheetProps>(
+export const PrintableEnglishOnly = forwardRef<HTMLDivElement, PrintableEnglishOnlyProps>(
   ({ results, title = "SYNTAX" }, ref) => {
     return (
       <div
@@ -29,8 +27,8 @@ export const PrintableWorksheet = forwardRef<HTMLDivElement, PrintableWorksheetP
           minHeight: "297mm", 
           padding: "15mm 20mm",
           fontFamily: "'Noto Sans KR', sans-serif",
-          fontSize: "11pt",
-          lineHeight: "2"
+          fontSize: "7pt",
+          lineHeight: "1.8"
         }}
       >
         {/* Header */}
@@ -53,22 +51,30 @@ export const PrintableWorksheet = forwardRef<HTMLDivElement, PrintableWorksheetP
         {/* Sentences */}
         <div>
           {results.map((result, index) => (
-            <div key={result.id} style={{ marginBottom: "20pt", paddingBottom: "12pt", borderBottom: "1px solid #ddd" }}>
-              {/* Number + English sentence with chunks */}
-              <div style={{ display: "flex", alignItems: "flex-start", gap: "10pt", marginBottom: "6pt" }}>
+            <div key={result.id} style={{ marginBottom: "14pt" }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "8pt" }}>
+                {/* Circled number */}
                 <span 
                   style={{ 
-                    fontSize: "11pt",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "12pt",
+                    height: "12pt",
+                    backgroundColor: "#000",
+                    color: "#fff",
+                    borderRadius: "50%",
+                    fontSize: "6pt",
                     fontWeight: 600,
                     flexShrink: 0,
-                    minWidth: "20pt"
+                    marginTop: "1pt"
                   }}
                 >
-                  {String(index + 1).padStart(2, "0")}
+                  {index + 1}
                 </span>
                 <p style={{ 
                   fontFamily: "'Noto Serif', Georgia, serif", 
-                  fontSize: "11pt",
+                  fontSize: "7pt",
                   lineHeight: "1.8",
                   margin: 0
                 }}>
@@ -78,32 +84,6 @@ export const PrintableWorksheet = forwardRef<HTMLDivElement, PrintableWorksheetP
                   }
                 </p>
               </div>
-
-              {result.englishChunks.length > 0 && (
-                <div style={{ marginLeft: "30pt" }}>
-                  {/* 직역 with label and chunks */}
-                  <p style={{ 
-                    fontSize: "9pt", 
-                    color: "#333", 
-                    lineHeight: "1.6",
-                    marginBottom: "4pt"
-                  }}>
-                    <span style={{ fontWeight: 600, marginRight: "8pt" }}>직역</span>
-                    {renderChunksWithSlash(result.koreanLiteralChunks)}
-                  </p>
-
-                  {/* 의역 with label */}
-                  <p style={{ 
-                    fontSize: "9pt", 
-                    color: "#333", 
-                    lineHeight: "1.6",
-                    margin: 0
-                  }}>
-                    <span style={{ fontWeight: 600, marginRight: "8pt" }}>의역</span>
-                    {result.koreanNatural}
-                  </p>
-                </div>
-              )}
             </div>
           ))}
         </div>
@@ -112,4 +92,4 @@ export const PrintableWorksheet = forwardRef<HTMLDivElement, PrintableWorksheetP
   }
 );
 
-PrintableWorksheet.displayName = "PrintableWorksheet";
+PrintableEnglishOnly.displayName = "PrintableEnglishOnly";

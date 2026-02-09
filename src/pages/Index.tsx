@@ -3,10 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { ChunkEditor } from "@/components/ChunkEditor";
 import { ResultDisplay } from "@/components/ResultDisplay";
 import { PrintableWorksheet } from "@/components/PrintableWorksheet";
+import { PrintableEnglishOnly } from "@/components/PrintableEnglishOnly";
 import { Chunk, parseTagged, chunksToTagged } from "@/lib/chunk-utils";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { toast } from "sonner";
-import { FileDown } from "lucide-react";
+import { FileDown, FileText } from "lucide-react";
 
 type Preset = "고1" | "고2" | "수능";
 
@@ -39,7 +40,9 @@ export default function Index() {
   const [showPreview, setShowPreview] = useState(false);
 
   const printRef = useRef<HTMLDivElement>(null);
+  const printEnglishRef = useRef<HTMLDivElement>(null);
   const { exportToPdf } = usePdfExport(printRef);
+  const { exportToPdf: exportEnglishPdf } = usePdfExport(printEnglishRef);
 
   const handleAnalyze = async () => {
     const sentences = splitIntoSentences(passage);
@@ -134,7 +137,15 @@ export default function Index() {
     setShowPreview(true);
     setTimeout(async () => {
       await exportToPdf("syntax-worksheet.pdf");
-      toast.success("PDF가 저장되었습니다.");
+      toast.success("해석 PDF가 저장되었습니다.");
+    }, 100);
+  };
+
+  const handleExportEnglishPdf = async () => {
+    setShowPreview(true);
+    setTimeout(async () => {
+      await exportEnglishPdf("syntax-english-only.pdf");
+      toast.success("지문 PDF가 저장되었습니다.");
     }, 100);
   };
 
@@ -194,13 +205,22 @@ export default function Index() {
             </span>
             <div className="flex gap-2">
               {results.length > 0 && (
-                <button
-                  onClick={handleExportPdf}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors"
-                >
-                  <FileDown className="w-3.5 h-3.5" />
-                  PDF 저장
-                </button>
+                <>
+                  <button
+                    onClick={handleExportEnglishPdf}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    지문 PDF
+                  </button>
+                  <button
+                    onClick={handleExportPdf}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors"
+                  >
+                    <FileDown className="w-3.5 h-3.5" />
+                    해석 PDF
+                  </button>
+                </>
               )}
               <button
                 onClick={handleAnalyze}
@@ -286,10 +306,11 @@ export default function Index() {
         )}
       </main>
 
-      {/* Hidden printable worksheet */}
+      {/* Hidden printable worksheets */}
       {showPreview && (
         <div className="fixed left-[-9999px] top-0">
           <PrintableWorksheet ref={printRef} results={results} />
+          <PrintableEnglishOnly ref={printEnglishRef} results={results} />
         </div>
       )}
     </div>
