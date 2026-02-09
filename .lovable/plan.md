@@ -1,70 +1,68 @@
 
-## 문장 분리 방식 선택 기능 추가
 
-### 현재 문제
+## 자동 분리 개선 + 문장 미리보기 편집 기능
 
-현재 `splitIntoSentences` 함수가 정규식 `/(?<=[.!?])\s+/`를 사용하여 문장을 분리하는데, 인용문 안의 마침표(`this." Marcus`)나 복잡한 문장 구조에서 제대로 분리되지 않음.
+### 변경 1: 자동 분리 정규식 개선
 
----
-
-### 해결 방안: 3가지 분리 모드 제공
-
-| 모드 | 설명 | 사용 시점 |
-|------|------|----------|
-| **자동** | 기존 정규식 사용 (`.!?` 뒤 공백) | 일반적인 지문 |
-| **줄바꿈** | Enter로 구분 | 수동으로 문장 분리할 때 |
-| **구분자** | 사용자 지정 구분자 (예: `|||`) | 정밀한 분리가 필요할 때 |
-
----
-
-### UI 디자인
+따옴표 뒤에서도 문장을 나눌 수 있도록 정규식 수정:
 
 ```text
-┌─────────────────────────────────────────┐
-│ [영어 지문 입력...]                      │
-│                                         │
-└─────────────────────────────────────────┘
-분리: [자동 ▾] [줄바꿈] [구분자: |||]     3개 문장
-                                    [분석하기]
+변경 전: /(?<=[.!?])\s+/
+변경 후: /(?<=[.!?]["'"']?)\s+/
 ```
 
-- 텍스트 입력창 아래에 토글 버튼 그룹으로 분리 모드 선택
-- "구분자" 선택 시 입력 필드 표시
+이제 `this." Marcus` 같은 경우도 자동으로 분리됩니다.
+
+---
+
+### 변경 2: 문장 미리보기 편집 기능
+
+"분석하기" 버튼을 누르기 전에, 자동 분리된 문장 목록을 미리 보면서 편집할 수 있는 기능을 추가합니다.
+
+**동작 방식:**
+1. 지문을 입력하면 자동 분리된 문장 목록이 아래에 표시됨
+2. 각 문장 사이에 **합치기(+)** 버튼 -- 두 문장을 하나로 합침
+3. 각 문장을 **클릭하면 커서 위치에서 나누기** 가능
+4. 편집이 끝나면 "분석하기" 클릭
+
+**UI 예시:**
+
+```text
+미리보기:                              [분석하기]
+┌──────────────────────────────────────────┐
+│ 01  Marcus had always been told...       │
+│                            [+합치기]     │
+│ 02  "I believed it because..."           │
+│                            [+합치기]     │
+│ 03  But reality often told...            │
+└──────────────────────────────────────────┘
+```
+
+- 합치기(+): 아래 문장과 합쳐서 하나의 문장으로
+- 문장 클릭 후 "나누기" 버튼: 클릭 위치에서 문장을 둘로 분할
 
 ---
 
 ### 구현 계획
 
-#### 1. 상태 추가
+#### 새 컴포넌트: `SentencePreview`
 
-```typescript
-type SplitMode = "auto" | "newline" | "delimiter";
+| Props | 설명 |
+|-------|------|
+| `sentences: string[]` | 자동 분리된 문장 배열 |
+| `onChange: (sentences: string[]) => void` | 편집된 문장 배열 반환 |
 
-const [splitMode, setSplitMode] = useState<SplitMode>("auto");
-const [customDelimiter, setCustomDelimiter] = useState("|||");
-```
+기능:
+- 문장 목록 표시 (번호 포함)
+- 문장 사이 합치기 버튼
+- 문장 더블클릭으로 텍스트 편집 (커서 위치에 ` / ` 입력하면 그 위치에서 분할)
 
-#### 2. 분리 함수 수정
+#### Index.tsx 변경
 
-```typescript
-function splitIntoSentences(text: string, mode: SplitMode, delimiter: string): string[] {
-  switch (mode) {
-    case "newline":
-      return text.split(/\n+/).map(s => s.trim()).filter(s => s.length > 0);
-    case "delimiter":
-      return text.split(delimiter).map(s => s.trim()).filter(s => s.length > 0);
-    case "auto":
-    default:
-      return text.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(s => s.length > 0);
-  }
-}
-```
-
-#### 3. UI 컴포넌트 추가
-
-텍스트 입력창 아래에 분리 모드 선택 버튼 그룹:
-- 3개의 토글 버튼: 자동 / 줄바꿈 / 구분자
-- 구분자 모드 선택 시 구분자 입력 필드 표시
+- `editedSentences` 상태 추가 -- 미리보기에서 편집된 문장 배열
+- 지문 입력 시 자동으로 `editedSentences` 업데이트
+- `handleAnalyze`가 `editedSentences`를 사용하도록 변경
+- 미리보기 영역은 텍스트 입력 아래, 분석 결과 위에 배치
 
 ---
 
@@ -72,11 +70,17 @@ function splitIntoSentences(text: string, mode: SplitMode, delimiter: string): s
 
 | 파일 | 변경 내용 |
 |------|----------|
-| src/pages/Index.tsx | 1. `SplitMode` 타입 및 상태 추가<br>2. `splitIntoSentences` 함수 수정<br>3. 분리 모드 선택 UI 추가 |
+| src/components/SentencePreview.tsx | 새 파일 - 문장 미리보기/편집 컴포넌트 (합치기, 나누기, 편집) |
+| src/pages/Index.tsx | 1. 정규식 개선<br>2. `editedSentences` 상태 추가<br>3. SentencePreview 컴포넌트 연동<br>4. 분석 시 편집된 문장 사용 |
 
 ---
 
-### 예상 결과
+### 사용 흐름
 
-- 사용자가 복잡한 문장 구조에서도 수동으로 줄바꿈이나 구분자를 사용하여 정확하게 문장 분리 가능
-- 기존 자동 분리도 그대로 사용 가능
+```text
+지문 입력 → 자동 분리 → 미리보기에서 합치기/나누기 편집 → 분석하기
+```
+
+- 대부분의 경우 자동 분리가 잘 되므로 편집 없이 바로 분석
+- 문제가 있는 문장만 합치거나 나눠서 수정 가능
+
