@@ -32,10 +32,10 @@ interface PdfDocumentProps {
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: '30mm',
-    paddingBottom: '30mm',
-    paddingLeft: '20mm',
-    paddingRight: '20mm',
+    paddingTop: 85,      // 30mm in points
+    paddingBottom: 85,   // 30mm in points
+    paddingLeft: 57,     // 20mm in points
+    paddingRight: 57,    // 20mm in points
     fontFamily: 'Nanum Gothic',
     fontSize: 9,
     lineHeight: 1.8,
@@ -126,11 +126,17 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* 헤더 - 첫 페이지에만 표시 */}
-        <View style={styles.header}>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.subtitle}>{subtitle}</Text>
-        </View>
+        {/* 헤더 - render prop으로 첫 페이지에만 표시 */}
+        <View
+          render={({ pageNumber }) =>
+            pageNumber === 1 ? (
+              <View style={styles.header}>
+                <Text style={styles.title}>{title}</Text>
+                <Text style={styles.subtitle}>{subtitle}</Text>
+              </View>
+            ) : null
+          }
+        />
 
         {/* 문장들 - wrap={false}로 세트가 잘리지 않음 */}
         {results.map((result, index) => (
