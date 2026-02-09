@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChunkEditor } from "@/components/ChunkEditor";
 import { ResultDisplay } from "@/components/ResultDisplay";
+import { SyntaxNotesSection } from "@/components/SyntaxNotesSection";
 import { SentencePreview } from "@/components/SentencePreview";
 import { Chunk, parseTagged, chunksToTagged } from "@/lib/chunk-utils";
 import { usePdfExport } from "@/hooks/usePdfExport";
@@ -19,6 +20,7 @@ interface SentenceResult {
   englishTagged: string;
   koreanLiteralTagged: string;
   regenerating?: boolean;
+  syntaxNotes?: string;
 }
 
 const PRESETS: Preset[] = ["고1", "고2", "수능"];
@@ -81,6 +83,7 @@ export default function Index() {
           koreanNatural: data.korean_natural,
           englishTagged: data.english_tagged,
           koreanLiteralTagged: data.korean_literal_tagged,
+          syntaxNotes: "",
         });
 
         setResults([...newResults]);
@@ -94,6 +97,7 @@ export default function Index() {
           koreanNatural: "분석 실패",
           englishTagged: "",
           koreanLiteralTagged: "",
+          syntaxNotes: "",
         });
         setResults([...newResults]);
       }
@@ -281,6 +285,18 @@ export default function Index() {
                         isKorean
                       />
                     </div>
+
+                    {/* 구문분석 */}
+                    <SyntaxNotesSection
+                      value={result.syntaxNotes ?? ""}
+                      onChange={(val) =>
+                        setResults((prev) =>
+                          prev.map((r) =>
+                            r.id === result.id ? { ...r, syntaxNotes: val } : r
+                          )
+                        )
+                      }
+                    />
                   </div>
                 ) : (
                   <div className="ml-9 text-xs text-destructive">분석 실패</div>
