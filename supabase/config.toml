@@ -1,7 +1,1 @@
-project_id = "zgphcnswrrelnigbpyqr"
-
-[functions.engine]
-verify_jwt = false
-
-[functions.regenerate]
-verify_jwt = false
+project_id = "zifcvayyrfpctmvoweox"
