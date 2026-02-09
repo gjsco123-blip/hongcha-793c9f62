@@ -14,7 +14,7 @@ interface PrintableWorksheetProps {
   title?: string;
 }
 
-function renderChunksWithSlash(chunks: Chunk[], isEnglish: boolean = false): string {
+function renderChunksWithSlash(chunks: Chunk[]): string {
   return chunks.map((c) => c.text).join(" / ");
 }
 
@@ -55,20 +55,13 @@ export const PrintableWorksheet = forwardRef<HTMLDivElement, PrintableWorksheetP
           {results.map((result, index) => (
             <div key={result.id} style={{ marginBottom: "24pt", paddingBottom: "16pt", borderBottom: "1px solid #ddd" }}>
               {/* Number + English sentence with chunks */}
-              <div style={{ display: "flex", alignItems: "flex-start", gap: "12pt", marginBottom: "8pt" }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "10pt", marginBottom: "8pt" }}>
                 <span 
                   style={{ 
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "24pt", 
-                    height: "24pt", 
-                    borderRadius: "50%", 
-                    border: "1.5pt solid black",
-                    fontSize: "10pt",
+                    fontSize: "11pt",
                     fontWeight: 600,
                     flexShrink: 0,
-                    marginTop: "2pt"
+                    minWidth: "20pt"
                   }}
                 >
                   {String(index + 1).padStart(2, "0")}
@@ -80,66 +73,39 @@ export const PrintableWorksheet = forwardRef<HTMLDivElement, PrintableWorksheetP
                   margin: 0
                 }}>
                   {result.englishChunks.length > 0 
-                    ? renderChunksWithSlash(result.englishChunks, true)
+                    ? renderChunksWithSlash(result.englishChunks)
                     : result.original
                   }
                 </p>
               </div>
 
               {result.englishChunks.length > 0 && (
-                <div style={{ marginLeft: "36pt" }}>
-                  {/* 직역 with chunks */}
+                <div style={{ marginLeft: "30pt" }}>
+                  {/* 직역 with label and chunks */}
                   <p style={{ 
                     fontSize: "11pt", 
                     color: "#333", 
                     lineHeight: "2",
                     margin: "0 0 4pt 0"
                   }}>
+                    <span style={{ fontWeight: 600, marginRight: "8pt" }}>직역</span>
                     {renderChunksWithSlash(result.koreanLiteralChunks)}
                   </p>
 
-                  {/* 의역 */}
+                  {/* 의역 with label */}
                   <p style={{ 
                     fontSize: "11pt", 
                     color: "#333", 
                     lineHeight: "2",
                     margin: 0
                   }}>
+                    <span style={{ fontWeight: 600, marginRight: "8pt" }}>의역</span>
                     {result.koreanNatural}
                   </p>
                 </div>
               )}
             </div>
           ))}
-        </div>
-
-        {/* Bottom section */}
-        <div style={{ marginTop: "32pt", display: "grid", gridTemplateColumns: "2fr 1fr", gap: "16pt" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "12pt" }}>
-            <div style={{ border: "1pt solid #999", padding: "12pt", minHeight: "70pt" }}>
-              <div style={{ fontSize: "10pt", marginBottom: "8pt" }}>
-                <span style={{ fontWeight: 600 }}>Before</span>
-                <span style={{ color: "#666", marginLeft: "8pt" }}>| 수업 전 스스로 해석 해보기</span>
-              </div>
-              <div style={{ height: "36pt", borderBottom: "1pt dashed #ccc" }} />
-            </div>
-            <div style={{ border: "1pt solid #999", padding: "12pt", minHeight: "70pt" }}>
-              <div style={{ fontSize: "10pt", marginBottom: "8pt" }}>
-                <span style={{ fontWeight: 600 }}>After</span>
-                <span style={{ color: "#666", marginLeft: "8pt" }}>| 수업 후 해석해보고 비교하기</span>
-              </div>
-              <div style={{ height: "36pt", borderBottom: "1pt dashed #ccc" }} />
-            </div>
-          </div>
-          <div style={{ border: "2pt solid black", padding: "12pt", minHeight: "152pt" }}>
-            <div style={{ fontSize: "10pt", fontWeight: 600, marginBottom: "8pt" }}>MEMO</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "10pt" }}>
-              <div style={{ height: "14pt", borderBottom: "1pt dashed #ccc" }} />
-              <div style={{ height: "14pt", borderBottom: "1pt dashed #ccc" }} />
-              <div style={{ height: "14pt", borderBottom: "1pt dashed #ccc" }} />
-              <div style={{ height: "14pt", borderBottom: "1pt dashed #ccc" }} />
-            </div>
-          </div>
         </div>
       </div>
     );
