@@ -105,8 +105,8 @@ export function ChunkEditor({ chunks, onChange, disabled }: ChunkEditorProps) {
                 <span
                   key={wi}
                   onDoubleClick={() => handleVerbToggle(i, wi)}
-                  className={`${w.isVerb ? "underline decoration-foreground decoration-2 underline-offset-2" : ""}
-                    ${!disabled ? "cursor-pointer hover:bg-muted/80 rounded-sm px-0.5 -mx-0.5" : ""}`}
+                  className={`${w.isVerb ? "underline decoration-foreground decoration-2 underline-offset-[3px]" : ""}
+                    ${!disabled ? "cursor-pointer hover:bg-muted/80 rounded-sm" : ""}`}
                   title={disabled ? "" : "더블클릭: 동사 표시 토글"}
                 >
                   {w.word}
