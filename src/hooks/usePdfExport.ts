@@ -13,7 +13,7 @@ export function usePdfExport(ref: RefObject<HTMLDivElement>) {
     const a4Height = 297;
     
     const canvas = await html2canvas(element, {
-      scale: 2,
+      scale: 4,
       useCORS: true,
       logging: false,
       backgroundColor: "#ffffff",

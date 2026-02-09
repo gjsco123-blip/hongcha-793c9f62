@@ -18,10 +18,25 @@ function renderChunksWithSlash(chunks: Chunk[]): string {
   return chunks.map((c) => c.text).join(" / ");
 }
 
-function getCircledNumber(n: number): string {
-  const circled = ["①","②","③","④","⑤","⑥","⑦","⑧","⑨","⑩",
-                   "⑪","⑫","⑬","⑭","⑮","⑯","⑰","⑱","⑲","⑳"];
-  return n <= 20 ? circled[n - 1] : `(${n})`;
+function CircledNumber({ num }: { num: number }) {
+  return (
+    <span style={{
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: "14px",
+      height: "14px",
+      borderRadius: "50%",
+      border: "1px solid #333",
+      fontSize: "8px",
+      fontWeight: 600,
+      marginRight: "3px",
+      verticalAlign: "middle",
+      lineHeight: 1
+    }}>
+      {num}
+    </span>
+  );
 }
 
 export const PrintableWorksheet = forwardRef<HTMLDivElement, PrintableWorksheetProps>(
@@ -125,7 +140,7 @@ export const PrintableWorksheet = forwardRef<HTMLDivElement, PrintableWorksheetP
           }}>
             {results.map((result, index) => (
               <span key={result.id}>
-                <span style={{ fontWeight: 600 }}>{getCircledNumber(index + 1)}</span>
+                <CircledNumber num={index + 1} />
                 {" "}
                 {result.englishChunks.length > 0 
                   ? renderChunksWithSlash(result.englishChunks)
