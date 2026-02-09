@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { FileDown } from "lucide-react";
 
 type Preset = "고1" | "고2" | "수능";
+type SplitMode = "auto" | "newline" | "delimiter";
 
 interface SentenceResult {
   id: number;
@@ -22,11 +23,16 @@ interface SentenceResult {
 
 const PRESETS: Preset[] = ["고1", "고2", "수능"];
 
-function splitIntoSentences(text: string): string[] {
-  return text
-    .split(/(?<=[.!?])\s+/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
+function splitIntoSentences(text: string, mode: SplitMode, delimiter: string): string[] {
+  switch (mode) {
+    case "newline":
+      return text.split(/\n+/).map((s) => s.trim()).filter((s) => s.length > 0);
+    case "delimiter":
+      return text.split(delimiter).map((s) => s.trim()).filter((s) => s.length > 0);
+    case "auto":
+    default:
+      return text.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter((s) => s.length > 0);
+  }
 }
 
 export default function Index() {
@@ -37,11 +43,13 @@ export default function Index() {
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [pdfTitle, setPdfTitle] = useState("SYNTAX");
   const [pdfSubtitle, setPdfSubtitle] = useState("문장 해석 연습");
+  const [splitMode, setSplitMode] = useState<SplitMode>("auto");
+  const [customDelimiter, setCustomDelimiter] = useState("|||");
 
   const { exportToPdf } = usePdfExport();
 
   const handleAnalyze = async () => {
-    const sentences = splitIntoSentences(passage);
+    const sentences = splitIntoSentences(passage, splitMode, customDelimiter);
     if (sentences.length === 0) return;
 
     setLoading(true);
@@ -169,10 +177,54 @@ export default function Index() {
             rows={5}
             className="w-full bg-card border border-border px-4 py-3 text-sm font-english leading-relaxed text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-foreground transition-colors resize-y"
           />
-          <div className="flex items-center justify-between mt-2">
-            <span className="text-xs text-muted-foreground">
-              {splitIntoSentences(passage).length}개 문장
-            </span>
+          <div className="flex flex-wrap items-center justify-between mt-3 gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-muted-foreground">분리:</span>
+              <div className="flex border border-border">
+                <button
+                  onClick={() => setSplitMode("auto")}
+                  className={`px-3 py-1.5 text-xs transition-colors ${
+                    splitMode === "auto"
+                      ? "bg-foreground text-background"
+                      : "bg-background text-foreground hover:bg-muted"
+                  }`}
+                >
+                  자동
+                </button>
+                <button
+                  onClick={() => setSplitMode("newline")}
+                  className={`px-3 py-1.5 text-xs border-l border-border transition-colors ${
+                    splitMode === "newline"
+                      ? "bg-foreground text-background"
+                      : "bg-background text-foreground hover:bg-muted"
+                  }`}
+                >
+                  줄바꿈
+                </button>
+                <button
+                  onClick={() => setSplitMode("delimiter")}
+                  className={`px-3 py-1.5 text-xs border-l border-border transition-colors ${
+                    splitMode === "delimiter"
+                      ? "bg-foreground text-background"
+                      : "bg-background text-foreground hover:bg-muted"
+                  }`}
+                >
+                  구분자
+                </button>
+              </div>
+              {splitMode === "delimiter" && (
+                <input
+                  type="text"
+                  value={customDelimiter}
+                  onChange={(e) => setCustomDelimiter(e.target.value)}
+                  className="w-16 px-2 py-1 text-xs border border-border bg-background text-foreground outline-none focus:border-foreground"
+                  placeholder="|||"
+                />
+              )}
+              <span className="text-xs text-muted-foreground">
+                {splitIntoSentences(passage, splitMode, customDelimiter).length}개 문장
+              </span>
+            </div>
             <div className="flex gap-2 items-center">
               {results.length > 0 && (
                 <button
@@ -185,7 +237,7 @@ export default function Index() {
               )}
               <button
                 onClick={handleAnalyze}
-                disabled={loading || splitIntoSentences(passage).length === 0}
+                disabled={loading || splitIntoSentences(passage, splitMode, customDelimiter).length === 0}
                 className="px-5 py-2 bg-foreground text-background text-xs font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
               >
                 {loading
