@@ -7,7 +7,7 @@ import { SentencePreview } from "@/components/SentencePreview";
 import { Chunk, parseTagged, chunksToTagged } from "@/lib/chunk-utils";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { toast } from "sonner";
-import { FileDown } from "lucide-react";
+import { FileDown, RotateCw } from "lucide-react";
 
 type Preset = "고1" | "고2" | "수능";
 
@@ -180,6 +180,46 @@ export default function Index() {
     }
   };
 
+  const handleReanalyze = async (sentenceId: number) => {
+    const target = results.find((r) => r.id === sentenceId);
+    if (!target) return;
+
+    setResults((prev) =>
+      prev.map((r) => (r.id === sentenceId ? { ...r, regenerating: true } : r))
+    );
+
+    try {
+      const { data, error } = await supabase.functions.invoke("engine", {
+        body: { sentence: target.original, preset },
+      });
+
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      setResults((prev) =>
+        prev.map((r) =>
+          r.id === sentenceId
+            ? {
+                ...r,
+                englishChunks: parseTagged(data.english_tagged),
+                koreanLiteralChunks: parseTagged(data.korean_literal_tagged),
+                koreanNatural: data.korean_natural,
+                englishTagged: data.english_tagged,
+                koreanLiteralTagged: data.korean_literal_tagged,
+                regenerating: false,
+              }
+            : r
+        )
+      );
+      toast.success(`문장 ${sentenceId + 1} 재분석 완료`);
+    } catch (e: any) {
+      toast.error(`재분석 실패: ${e.message}`);
+      setResults((prev) =>
+        prev.map((r) => (r.id === sentenceId ? { ...r, regenerating: false } : r))
+      );
+    }
+  };
+
   const handleExportPdf = async () => {
     await exportToPdf(results, pdfTitle, pdfSubtitle, "syntax-worksheet.pdf");
     toast.success("PDF가 저장되었습니다.");
@@ -272,9 +312,17 @@ export default function Index() {
                   <span className="text-sm font-semibold shrink-0 w-6">
                     {String(index + 1).padStart(2, "0")}
                   </span>
-                  <p className="font-english text-base leading-relaxed text-foreground">
+                  <p className="font-english text-base leading-relaxed text-foreground flex-1">
                     {result.original}
                   </p>
+                  <button
+                    onClick={() => handleReanalyze(result.id)}
+                    disabled={result.regenerating}
+                    title="이 문장 재분석"
+                    className="shrink-0 p-1 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+                  >
+                    <RotateCw className={`w-3.5 h-3.5 ${result.regenerating ? 'animate-spin' : ''}`} />
+                  </button>
                 </div>
 
                 {result.englishChunks.length > 0 ? (
