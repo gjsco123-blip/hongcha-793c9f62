@@ -141,7 +141,7 @@ You MUST respond by calling the "analysis_result" function with the structured o
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
+          model: "google/gemini-2.5-flash",
           messages,
           tools,
           tool_choice: { type: "function", function: { name: "analysis_result" } },
