@@ -18,6 +18,12 @@ function renderChunksWithSlash(chunks: Chunk[]): string {
   return chunks.map((c) => c.text).join(" / ");
 }
 
+function getCircledNumber(n: number): string {
+  const circled = ["①","②","③","④","⑤","⑥","⑦","⑧","⑨","⑩",
+                   "⑪","⑫","⑬","⑭","⑮","⑯","⑰","⑱","⑲","⑳"];
+  return n <= 20 ? circled[n - 1] : `(${n})`;
+}
+
 export const PrintableWorksheet = forwardRef<HTMLDivElement, PrintableWorksheetProps>(
   ({ results, title = "SYNTAX" }, ref) => {
     return (
@@ -27,10 +33,10 @@ export const PrintableWorksheet = forwardRef<HTMLDivElement, PrintableWorksheetP
         style={{ 
           width: "210mm", 
           minHeight: "297mm", 
-          padding: "15mm 20mm",
+          padding: "20mm 20mm",
           fontFamily: "'Noto Sans KR', sans-serif",
-          fontSize: "11pt",
-          lineHeight: "2"
+          fontSize: "9pt",
+          lineHeight: "1.8"
         }}
       >
         {/* Header */}
@@ -58,7 +64,7 @@ export const PrintableWorksheet = forwardRef<HTMLDivElement, PrintableWorksheetP
               <div style={{ display: "flex", alignItems: "flex-start", gap: "10pt", marginBottom: "6pt" }}>
                 <span 
                   style={{ 
-                    fontSize: "11pt",
+                    fontSize: "9pt",
                     fontWeight: 600,
                     flexShrink: 0,
                     minWidth: "20pt"
@@ -68,7 +74,7 @@ export const PrintableWorksheet = forwardRef<HTMLDivElement, PrintableWorksheetP
                 </span>
                 <p style={{ 
                   fontFamily: "'Noto Serif', Georgia, serif", 
-                  fontSize: "11pt",
+                  fontSize: "9pt",
                   lineHeight: "1.8",
                   margin: 0
                 }}>
@@ -83,7 +89,7 @@ export const PrintableWorksheet = forwardRef<HTMLDivElement, PrintableWorksheetP
                 <div style={{ marginLeft: "30pt" }}>
                   {/* 직역 with label and chunks */}
                   <p style={{ 
-                    fontSize: "9pt", 
+                    fontSize: "8pt", 
                     color: "#333", 
                     lineHeight: "1.6",
                     marginBottom: "4pt"
@@ -94,7 +100,7 @@ export const PrintableWorksheet = forwardRef<HTMLDivElement, PrintableWorksheetP
 
                   {/* 의역 with label */}
                   <p style={{ 
-                    fontSize: "9pt", 
+                    fontSize: "8pt", 
                     color: "#333", 
                     lineHeight: "1.6",
                     margin: 0
@@ -106,6 +112,29 @@ export const PrintableWorksheet = forwardRef<HTMLDivElement, PrintableWorksheetP
               )}
             </div>
           ))}
+        </div>
+
+        {/* 지문 Section - Inline continuous text */}
+        <div style={{ marginTop: "30pt", paddingTop: "20pt", borderTop: "2px solid #000" }}>
+          <div style={{ fontSize: "10pt", fontWeight: 600, marginBottom: "12pt" }}>지문</div>
+          <p style={{ 
+            fontFamily: "'Noto Serif', Georgia, serif", 
+            fontSize: "9pt",
+            lineHeight: "2",
+            margin: 0
+          }}>
+            {results.map((result, index) => (
+              <span key={result.id}>
+                <span style={{ fontWeight: 600 }}>{getCircledNumber(index + 1)}</span>
+                {" "}
+                {result.englishChunks.length > 0 
+                  ? renderChunksWithSlash(result.englishChunks)
+                  : result.original
+                }
+                {"  "}
+              </span>
+            ))}
+          </p>
         </div>
       </div>
     );
