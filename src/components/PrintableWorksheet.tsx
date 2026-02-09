@@ -68,7 +68,7 @@ export const PrintableWorksheet = forwardRef<HTMLDivElement, PrintableWorksheetP
         {/* Sentences */}
         <div>
           {results.map((result, index) => (
-            <div key={result.id} style={{ marginBottom: "20pt", paddingBottom: "12pt", borderBottom: "1px solid #ddd" }}>
+            <div key={result.id} style={{ marginBottom: "20pt", paddingBottom: "12pt", borderBottom: "1px solid #ddd", pageBreakInside: "avoid", breakInside: "avoid" }}>
               {/* Number + English sentence with chunks */}
               <div style={{ display: "flex", alignItems: "flex-start", gap: "10pt", marginBottom: "6pt" }}>
                 <span 
