@@ -1,91 +1,104 @@
 
-
-## PDF 레이아웃 최종 조정
+## PDF 화질 개선 및 동그라미 번호 스타일 개선
 
 ### 변경 사항 요약
 
-1. **폰트 크기 조정**
-   - 영어 문장: 11pt → 9pt
-   - 직역/의역: 9pt → 8pt
+1. **PDF 화질 대폭 개선**
+   - html2canvas scale: 2 → 4 (300 DPI 수준)
+   - 고해상도 이미지로 선명한 텍스트 출력
 
-2. **지문 섹션 레이아웃**
-   - 문장 간 줄바꿈 없이 연속으로 이어서 표시
-   - 번호 스타일: 원형 테두리 숫자 (①, ②, ③...)
-
-3. **PDF 여백 확대**
-   - 상하 여백: 15mm → 20mm
+2. **동그라미 번호 CSS 스타일로 변경**
+   - 유니코드 문자 → CSS로 만든 완벽한 원
+   - 크기 조절 가능 (작게)
+   - 일관된 렌더링
 
 ---
 
 ### 기술적 세부사항
 
-#### PrintableWorksheet.tsx 수정
+#### 1. usePdfExport.ts 수정 - 화질 개선
 
 | 항목 | 현재 | 변경 후 |
 |------|------|---------|
-| 상하 padding | 15mm | 20mm |
-| 영어 문장 fontSize | 11pt | 9pt |
-| 영어 문장 번호 fontSize | 11pt | 9pt |
-| 직역 fontSize | 9pt | 8pt |
-| 의역 fontSize | 9pt | 8pt |
-
-#### 지문 섹션 레이아웃 변경
-
-현재:
-```text
-❶ 문장 1
-❷ 문장 2
-❸ 문장 3
-```
-
-변경 후:
-```text
-① 문장 1  ② 문장 2  ③ 문장 3  ④ 문장 4 ...
-```
-
-- 번호 스타일: 유니코드 원형 숫자 사용 (①②③④⑤⑥⑦⑧⑨⑩...)
-- 문장 간 구분: 공백 2칸으로 자연스럽게 이어짐
-- `display: inline` 으로 연속 배치
-
-#### 원형 숫자 헬퍼 함수 추가
+| scale | 2 | 4 |
+| 예상 DPI | ~150 DPI | ~300 DPI |
 
 ```typescript
+const canvas = await html2canvas(element, {
+  scale: 4,  // 2 → 4로 변경
+  useCORS: true,
+  logging: false,
+  backgroundColor: "#ffffff",
+});
+```
+
+#### 2. PrintableWorksheet.tsx 수정 - 동그라미 번호 스타일
+
+**현재 방식 (유니코드 문자):**
+```typescript
 function getCircledNumber(n: number): string {
-  const circled = ["①","②","③","④","⑤","⑥","⑦","⑧","⑨","⑩",
-                   "⑪","⑫","⑬","⑭","⑮","⑯","⑰","⑱","⑲","⑳"];
+  const circled = ["①","②","③",...];
   return n <= 20 ? circled[n - 1] : `(${n})`;
 }
+
+// 사용
+<span style={{ fontWeight: 600 }}>{getCircledNumber(index + 1)}</span>
+```
+
+**변경 후 (CSS 스타일):**
+```typescript
+// 함수 제거하고 JSX 컴포넌트로 변경
+function CircledNumber({ num }: { num: number }) {
+  return (
+    <span style={{
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: "14px",
+      height: "14px",
+      borderRadius: "50%",
+      border: "1px solid #333",
+      fontSize: "8px",
+      fontWeight: 600,
+      marginRight: "3px",
+      verticalAlign: "middle",
+      lineHeight: 1
+    }}>
+      {num}
+    </span>
+  );
+}
+
+// 사용
+<CircledNumber num={index + 1} />
 ```
 
 ---
 
-### PDF 최종 구조
+### 결과 비교
 
+**동그라미 번호 변경 전:**
 ```text
-┌─────────────────────────────────────────────────────┐
-│                    ↑ 20mm 상단 여백                 │
-├─────────────────────────────────────────────────────┤
-│  [UNIT 01]  SYNTAX                    이름: ______  │
-│             문장 해석 연습            날짜: ______  │
-├─────────────────────────────────────────────────────┤
-│                                                     │
-│  01  영어 청킹 문장 (9pt)                           │
-│      직역  한글 직역 (8pt)                          │
-│      의역  한글 의역 (8pt)                          │
-│                                                     │
-│  02  영어 청킹 문장                                 │
-│      ...                                            │
-│                                                     │
-├─────────────────────────────────────────────────────┤
-│  ── 지문 ───────────────────────────────────────    │
-│                                                     │
-│  ① The discovery of / ...  ② Despite the / ...    │
-│  ③ Researchers / ...  ④ The ocean / ...           │
-│                                                     │
-├─────────────────────────────────────────────────────┤
-│                    ↓ 20mm 하단 여백                 │
-└─────────────────────────────────────────────────────┘
+① 문장... (유니코드 - 크고 불완전한 원)
 ```
+
+**동그라미 번호 변경 후:**
+```text
+⓵ 문장... (CSS - 작고 완벽한 원, 크기 14px)
+```
+
+- 완벽한 원형 (borderRadius: 50%)
+- 크기: 14px (기존보다 작음)
+- 테두리: 1px solid
+- 숫자: 8px 폰트
+
+---
+
+### 추가 적용 예정 (이전 승인 사항)
+
+1. **페이지 분할 개선** - 문장 단위로 깔끔하게 분리
+2. **지문 섹션 개선** - 슬래시 제거, 양쪽 정렬
+3. **헤더 간소화** - UNIT 배지 제거, 제목 커스텀 기능
 
 ---
 
@@ -93,5 +106,5 @@ function getCircledNumber(n: number): string {
 
 | 파일 | 작업 |
 |------|------|
-| src/components/PrintableWorksheet.tsx | 폰트 크기 조정, 여백 확대, 지문 섹션 인라인 레이아웃으로 변경 |
-
+| src/hooks/usePdfExport.ts | scale 4로 증가하여 화질 개선 |
+| src/components/PrintableWorksheet.tsx | CircledNumber 컴포넌트로 완벽한 원형 번호 구현 |
