@@ -1,83 +1,104 @@
 
 
-## PDF 레이아웃 수정: 헤더 복원 + 페이지별 상단 여백 조정
+## PDF 스타일 수정: 여백 + 띄어쓰기 + 첨자번호
 
-### 현재 문제
+### 요청사항
 
-1. **헤더가 표시되지 않음**: `render` prop에 `fixed` 속성이 없어서 렌더링 안 됨
-2. **두 번째 페이지 상단 여백이 너무 넓음**: 30mm가 모든 페이지에 적용됨
+1. **첫 페이지 상단 여백**: 10mm
+2. **두 번째 페이지 상단 여백**: 15mm
+3. **직역/의역 라벨 뒤 띄어쓰기 복원**
+4. **지문 첨자번호 진한색으로**
 
-### 해결 방안
+---
 
-#### 페이지별 여백 전략
+### 수정 계획
 
-| 페이지 | 상단 여백 | 내용 |
-|--------|----------|------|
-| 첫 페이지 | 30mm | 헤더(SYNTAX, 문장해석연습) + 문장들 |
-| 두 번째 페이지~ | 20mm | 문장들만 (헤더 없음) |
+#### 1. 페이지 여백 조정
 
-#### 구현 방법
+| 페이지 | 현재 | 변경 후 |
+|--------|------|---------|
+| 첫 페이지 | 20mm + 10mm = 30mm | 10mm (28pt) |
+| 두 번째 페이지~ | 20mm | 15mm (42pt) |
 
-`@react-pdf/renderer`는 페이지별로 다른 padding을 직접 지원하지 않으므로:
+**구현 방법:**
+- 기본 `paddingTop`을 15mm (42pt)로 설정
+- 헤더의 `marginTop`을 음수(-14pt, 약 -5mm)로 설정하여 첫 페이지만 10mm 효과
 
-1. 기본 `paddingTop`을 **20mm (57pt)**로 설정
-2. 첫 페이지 헤더에 **추가 marginTop 10mm (28pt)**를 적용하여 총 30mm 효과
+#### 2. 직역/의역 띄어쓰기 복원
 
-```text
-수정 파일: src/components/PdfDocument.tsx
-
-변경 내용:
-1. paddingTop: 85 → 57 (30mm → 20mm)
-2. header 스타일에 marginTop 추가로 첫 페이지만 30mm 효과
-3. 헤더 View에 fixed 속성 추가하여 render prop 작동하게 함
-```
-
-### 수정할 스타일
-
+현재 코드:
 ```typescript
-const styles = StyleSheet.create({
-  page: {
-    paddingTop: 57,      // 20mm - 기본 상단 여백
-    paddingBottom: 85,   // 30mm
-    paddingLeft: 57,     // 20mm
-    paddingRight: 57,    // 20mm
-    // ...
-  },
-  header: {
-    marginTop: 28,       // 추가 10mm (총 30mm 효과)
-    marginBottom: 24,
-    borderBottomWidth: 2,
-    borderBottomColor: '#000',
-    paddingBottom: 12,
-  },
-  // ...
-});
+<Text style={styles.translationLabel}>직역</Text>
+{renderChunksWithSlash(result.koreanLiteralChunks)}
 ```
 
-### 수정할 JSX
-
+수정 후:
 ```typescript
-<View
-  fixed
-  render={({ pageNumber }) =>
-    pageNumber === 1 ? (
-      <View style={styles.header}>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.subtitle}>{subtitle}</Text>
-      </View>
-    ) : null
-  }
-/>
+<Text style={styles.translationLabel}>직역  </Text>
+{renderChunksWithSlash(result.koreanLiteralChunks)}
+```
+- 라벨 텍스트 뒤에 공백 1칸 추가
+
+#### 3. 지문 첨자번호 진한색
+
+현재 `passageNumber` 스타일에 `fontWeight: 700`은 있지만 색상이 명시되지 않음.
+
+수정:
+```typescript
+passageNumber: {
+  fontWeight: 700,
+  fontSize: 7,
+  verticalAlign: 'super',
+  marginRight: 2,
+  color: '#000',  // 진한 검정색 추가
+},
 ```
 
-### 예상 결과
-
-- **첫 페이지**: 상단 30mm 여백 → 헤더 → 문장들
-- **두 번째 페이지~**: 상단 20mm 여백 → 바로 문장 시작
+---
 
 ### 수정 파일
 
 | 파일 | 변경 내용 |
 |------|----------|
-| src/components/PdfDocument.tsx | 1. paddingTop 57pt로 변경<br>2. header에 marginTop 28pt 추가<br>3. 헤더 View에 `fixed` 속성 추가 |
+| src/components/PdfDocument.tsx | 1. `paddingTop: 42` (15mm)<br>2. `header.marginTop: -14` (첫 페이지 10mm 효과)<br>3. 직역/의역 라벨 뒤 공백 추가<br>4. `passageNumber`에 `color: '#000'` 추가 |
+
+---
+
+### 수정할 코드
+
+**스타일 변경:**
+```typescript
+const styles = StyleSheet.create({
+  page: {
+    paddingTop: 42,      // 15mm - 기본 상단 여백 (두 번째 페이지~)
+    // ...
+  },
+  header: {
+    marginTop: -14,      // 첫 페이지만 10mm 효과 (42-14=28pt ≈ 10mm)
+    // ...
+  },
+  passageNumber: {
+    fontWeight: 700,
+    fontSize: 7,
+    verticalAlign: 'super',
+    marginRight: 2,
+    color: '#000',       // 진한 검정색
+  },
+});
+```
+
+**직역/의역 띄어쓰기:**
+```typescript
+<Text style={styles.translationLabel}>직역 </Text>
+<Text style={styles.translationLabel}>의역 </Text>
+```
+
+---
+
+### 예상 결과
+
+- **첫 페이지**: 상단 10mm → 헤더 → 문장들
+- **두 번째 페이지~**: 상단 15mm → 문장들
+- **직역/의역**: 라벨 뒤 공백 있음
+- **지문 첨자**: 진한 검정색
 
