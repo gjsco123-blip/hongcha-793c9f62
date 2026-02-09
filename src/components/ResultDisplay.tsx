@@ -24,11 +24,13 @@ export function ResultDisplay({ label, chunks, text, isKorean }: ResultDisplayPr
               >
                 {!isKorean
                   ? segmentsToWords(chunk.segments).map((w, wi) => (
-                      <span
-                        key={wi}
-                        className={w.isVerb ? "underline decoration-foreground decoration-2 underline-offset-[3px]" : ""}
-                      >
-                        {wi > 0 ? " " : ""}{w.word}
+                      <span key={wi}>
+                        {wi > 0 ? " " : ""}
+                        <span
+                          className={w.isVerb ? "underline decoration-foreground decoration-2 underline-offset-[3px]" : ""}
+                        >
+                          {w.word}
+                        </span>
                       </span>
                     ))
                   : chunk.text}

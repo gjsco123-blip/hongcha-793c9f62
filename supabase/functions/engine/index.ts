@@ -84,7 +84,7 @@ CRITICAL RULES:
 - EVERY word in the original sentence MUST appear in exactly one chunk. No word may be omitted.
 - Conjunctions (while, but, although, because, however, etc.) MUST be included as part of a chunk, never dropped.
 - Concatenating all english chunks (removing tags) must reconstruct the original sentence exactly.
-- Within each English chunk, wrap the main verb or verb phrase with <v>...</v> tags. Include main verbs, auxiliary+main verb combinations (e.g., <v>has been working</v>), and modal+verb combinations (e.g., <v>can affect</v>). Do NOT tag gerunds used as nouns, infinitives used as nouns/adjectives, or participles used purely as adjectives.
+- Within each English chunk, wrap the main verb or verb phrase with <v>...</v> tags. ONLY tag finite verbs (verbs that function as the main predicate of a clause or sentence). Include main verbs, auxiliary+main verb combinations (e.g., <v>has been working</v>), and modal+verb combinations (e.g., <v>can affect</v>). Do NOT tag any non-finite verbs: no to-infinitives (e.g., to engage, to achieve), no gerunds (-ing used as nouns), no participles used as adjectives. The 'to' in to-infinitives must NEVER be inside a <v> tag.
 - The <v> tags go INSIDE the <c> tags. Example: <c1>The researchers <v>discovered</v></c1>
 
 You MUST respond by calling the "analysis_result" function with the structured output.`;

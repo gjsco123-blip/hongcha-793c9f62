@@ -128,9 +128,12 @@ function renderChunksWithVerbUnderline(chunks: Chunk[]) {
   chunks.forEach((chunk, ci) => {
     const words = segmentsToWords(chunk.segments);
     words.forEach((w, wi) => {
+      if (wi > 0) {
+        elements.push(<Text key={`${ci}-${wi}-sp`}> </Text>);
+      }
       elements.push(
         <Text key={`${ci}-${wi}`} style={w.isVerb ? styles.verbUnderline : undefined}>
-          {wi > 0 ? ' ' : ''}{w.word}
+          {w.word}
         </Text>
       );
     });
