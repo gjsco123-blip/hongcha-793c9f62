@@ -1,19 +1,19 @@
 import { Document, Page, View, Text, StyleSheet, Font } from '@react-pdf/renderer';
 import { Chunk } from '@/lib/chunk-utils';
 
-// 한글 폰트 등록
+// 한글 폰트 - Google EA 저장소 사용
 Font.register({
   family: 'Nanum Gothic',
   fonts: [
-    { src: 'https://fonts.gstatic.com/s/nanumgothic/v23/PN_3Rfi-oW3hYwmKDpxS7F_D_g.ttf', fontWeight: 400 },
-    { src: 'https://fonts.gstatic.com/s/nanumgothic/v23/PN_oRfi-oW3hYwmKDpxS7F_LQv37zlEn.ttf', fontWeight: 700 },
+    { src: 'https://fonts.gstatic.com/ea/nanumgothic/v5/NanumGothic-Regular.ttf', fontWeight: 400 },
+    { src: 'https://fonts.gstatic.com/ea/nanumgothic/v5/NanumGothic-Bold.ttf', fontWeight: 700 },
   ],
 });
 
-// 영문 세리프 폰트
+// 영문 세리프 폰트 - CDN 사용
 Font.register({
   family: 'Noto Serif',
-  src: 'https://fonts.gstatic.com/s/notoserif/v23/ga6iaw1J5X9T9RW6j9bNVls-hQ.ttf',
+  src: 'https://cdn.jsdelivr.net/fontsource/fonts/noto-serif@latest/latin-400-normal.ttf',
 });
 
 interface SentenceResult {
