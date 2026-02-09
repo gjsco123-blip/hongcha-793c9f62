@@ -1,25 +1,47 @@
 import { useState } from "react";
+import { Sparkles } from "lucide-react";
 
 interface SyntaxNotesSectionProps {
   value: string;
   onChange: (value: string) => void;
+  onGenerate?: () => void;
+  generating?: boolean;
 }
 
-export function SyntaxNotesSection({ value, onChange }: SyntaxNotesSectionProps) {
+export function SyntaxNotesSection({ value, onChange, onGenerate, generating }: SyntaxNotesSectionProps) {
   const [editing, setEditing] = useState(false);
 
   return (
-    <div className="bg-muted/50 border border-border p-3">
+    <div className="bg-muted/50 border border-border p-3 relative">
+      {generating && (
+        <div className="absolute inset-0 bg-muted/80 flex items-center justify-center z-10">
+          <span className="text-xs text-muted-foreground animate-pulse">
+            구문분석 생성 중...
+          </span>
+        </div>
+      )}
       <div className="flex items-center justify-between mb-2">
         <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
           구문분석
         </span>
-        <button
-          onClick={() => setEditing((prev) => !prev)}
-          className="text-[10px] px-2 py-0.5 border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"
-        >
-          {editing ? "완료" : "수정"}
-        </button>
+        <div className="flex items-center gap-1.5">
+          {onGenerate && (
+            <button
+              onClick={onGenerate}
+              disabled={generating}
+              className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors disabled:opacity-40"
+            >
+              <Sparkles className="w-3 h-3" />
+              자동 생성
+            </button>
+          )}
+          <button
+            onClick={() => setEditing((prev) => !prev)}
+            className="text-[10px] px-2 py-0.5 border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"
+          >
+            {editing ? "완료" : "수정"}
+          </button>
+        </div>
       </div>
       {editing ? (
         <textarea

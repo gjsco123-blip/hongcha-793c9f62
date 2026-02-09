@@ -21,6 +21,7 @@ interface SentenceResult {
   koreanLiteralTagged: string;
   regenerating?: boolean;
   syntaxNotes?: string;
+  generatingSyntax?: boolean;
 }
 
 const PRESETS: Preset[] = ["고1", "고2", "수능"];
@@ -141,6 +142,34 @@ export default function Index() {
       toast.error(`재생성 실패: ${e.message}`);
       setResults((prev) =>
         prev.map((r) => (r.id === sentenceId ? { ...r, regenerating: false } : r))
+      );
+    }
+  };
+
+  const handleGenerateSyntax = async (sentenceId: number, original: string) => {
+    setResults((prev) =>
+      prev.map((r) => (r.id === sentenceId ? { ...r, generatingSyntax: true } : r))
+    );
+
+    try {
+      const { data, error } = await supabase.functions.invoke("grammar", {
+        body: { sentence: original },
+      });
+
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      setResults((prev) =>
+        prev.map((r) =>
+          r.id === sentenceId
+            ? { ...r, syntaxNotes: data.syntaxNotes, generatingSyntax: false }
+            : r
+        )
+      );
+    } catch (e: any) {
+      toast.error(`구문분석 생성 실패: ${e.message}`);
+      setResults((prev) =>
+        prev.map((r) => (r.id === sentenceId ? { ...r, generatingSyntax: false } : r))
       );
     }
   };
@@ -296,6 +325,8 @@ export default function Index() {
                           )
                         )
                       }
+                      generating={result.generatingSyntax}
+                      onGenerate={() => handleGenerateSyntax(result.id, result.original)}
                     />
                   </div>
                 ) : (
