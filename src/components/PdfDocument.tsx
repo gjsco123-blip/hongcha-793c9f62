@@ -20,6 +20,7 @@ interface SentenceResult {
   englishChunks: Chunk[];
   koreanLiteralChunks: Chunk[];
   koreanNatural: string;
+  syntaxNotes?: string;
 }
 
 interface PdfDocumentProps {
@@ -190,6 +191,12 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
                   <Text style={styles.translationLabel}>의역 </Text>
                   {result.koreanNatural}
                 </Text>
+                {result.syntaxNotes ? (
+                  <Text style={styles.translationRow}>
+                    <Text style={styles.translationLabel}>구문 </Text>
+                    {result.syntaxNotes}
+                  </Text>
+                ) : null}
               </View>
             )}
           </View>
