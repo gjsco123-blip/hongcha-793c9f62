@@ -228,6 +228,18 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
           </View>
         ))}
 
+        {/* 지문 전체 — 소제목 없이 */}
+        <View style={styles.passageSection} wrap={false}>
+          <Text style={styles.passageText}>
+            {results.map((r, i) => (
+              <Text key={r.id}>
+                <Text style={styles.passageNumber}>{i + 1} </Text>
+                <Text>{r.original} </Text>
+              </Text>
+            ))}
+          </Text>
+        </View>
+
       </Page>
     </Document>
   );
