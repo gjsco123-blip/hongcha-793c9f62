@@ -127,18 +127,11 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* 헤더 - fixed + render prop으로 첫 페이지에만 표시 */}
-        <View
-          fixed
-          render={({ pageNumber }) =>
-            pageNumber === 1 ? (
-              <View style={styles.header}>
-                <Text style={styles.title}>{title}</Text>
-                <Text style={styles.subtitle}>{subtitle}</Text>
-              </View>
-            ) : null
-          }
-        />
+        {/* 헤더 - 첫 페이지에만 자연스럽게 표시됨 */}
+        <View style={styles.header}>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.subtitle}>{subtitle}</Text>
+        </View>
 
         {/* 문장들 - wrap={false}로 세트가 잘리지 않음 */}
         {results.map((result, index) => (
