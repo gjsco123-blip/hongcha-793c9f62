@@ -1,58 +1,70 @@
 
+## 문장 분리 방식 선택 기능 추가
 
-## PDF 스타일 수정: 여백 + 띄어쓰기 + 첨자번호
+### 현재 문제
 
-### 요청사항
-
-1. **첫 페이지 상단 여백**: 10mm
-2. **두 번째 페이지 상단 여백**: 15mm
-3. **직역/의역 라벨 뒤 띄어쓰기 복원**
-4. **지문 첨자번호 진한색으로**
+현재 `splitIntoSentences` 함수가 정규식 `/(?<=[.!?])\s+/`를 사용하여 문장을 분리하는데, 인용문 안의 마침표(`this." Marcus`)나 복잡한 문장 구조에서 제대로 분리되지 않음.
 
 ---
 
-### 수정 계획
+### 해결 방안: 3가지 분리 모드 제공
 
-#### 1. 페이지 여백 조정
+| 모드 | 설명 | 사용 시점 |
+|------|------|----------|
+| **자동** | 기존 정규식 사용 (`.!?` 뒤 공백) | 일반적인 지문 |
+| **줄바꿈** | Enter로 구분 | 수동으로 문장 분리할 때 |
+| **구분자** | 사용자 지정 구분자 (예: `|||`) | 정밀한 분리가 필요할 때 |
 
-| 페이지 | 현재 | 변경 후 |
-|--------|------|---------|
-| 첫 페이지 | 20mm + 10mm = 30mm | 10mm (28pt) |
-| 두 번째 페이지~ | 20mm | 15mm (42pt) |
+---
 
-**구현 방법:**
-- 기본 `paddingTop`을 15mm (42pt)로 설정
-- 헤더의 `marginTop`을 음수(-14pt, 약 -5mm)로 설정하여 첫 페이지만 10mm 효과
+### UI 디자인
 
-#### 2. 직역/의역 띄어쓰기 복원
-
-현재 코드:
-```typescript
-<Text style={styles.translationLabel}>직역</Text>
-{renderChunksWithSlash(result.koreanLiteralChunks)}
+```text
+┌─────────────────────────────────────────┐
+│ [영어 지문 입력...]                      │
+│                                         │
+└─────────────────────────────────────────┘
+분리: [자동 ▾] [줄바꿈] [구분자: |||]     3개 문장
+                                    [분석하기]
 ```
 
-수정 후:
+- 텍스트 입력창 아래에 토글 버튼 그룹으로 분리 모드 선택
+- "구분자" 선택 시 입력 필드 표시
+
+---
+
+### 구현 계획
+
+#### 1. 상태 추가
+
 ```typescript
-<Text style={styles.translationLabel}>직역  </Text>
-{renderChunksWithSlash(result.koreanLiteralChunks)}
+type SplitMode = "auto" | "newline" | "delimiter";
+
+const [splitMode, setSplitMode] = useState<SplitMode>("auto");
+const [customDelimiter, setCustomDelimiter] = useState("|||");
 ```
-- 라벨 텍스트 뒤에 공백 1칸 추가
 
-#### 3. 지문 첨자번호 진한색
+#### 2. 분리 함수 수정
 
-현재 `passageNumber` 스타일에 `fontWeight: 700`은 있지만 색상이 명시되지 않음.
-
-수정:
 ```typescript
-passageNumber: {
-  fontWeight: 700,
-  fontSize: 7,
-  verticalAlign: 'super',
-  marginRight: 2,
-  color: '#000',  // 진한 검정색 추가
-},
+function splitIntoSentences(text: string, mode: SplitMode, delimiter: string): string[] {
+  switch (mode) {
+    case "newline":
+      return text.split(/\n+/).map(s => s.trim()).filter(s => s.length > 0);
+    case "delimiter":
+      return text.split(delimiter).map(s => s.trim()).filter(s => s.length > 0);
+    case "auto":
+    default:
+      return text.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(s => s.length > 0);
+  }
+}
 ```
+
+#### 3. UI 컴포넌트 추가
+
+텍스트 입력창 아래에 분리 모드 선택 버튼 그룹:
+- 3개의 토글 버튼: 자동 / 줄바꿈 / 구분자
+- 구분자 모드 선택 시 구분자 입력 필드 표시
 
 ---
 
@@ -60,45 +72,11 @@ passageNumber: {
 
 | 파일 | 변경 내용 |
 |------|----------|
-| src/components/PdfDocument.tsx | 1. `paddingTop: 42` (15mm)<br>2. `header.marginTop: -14` (첫 페이지 10mm 효과)<br>3. 직역/의역 라벨 뒤 공백 추가<br>4. `passageNumber`에 `color: '#000'` 추가 |
-
----
-
-### 수정할 코드
-
-**스타일 변경:**
-```typescript
-const styles = StyleSheet.create({
-  page: {
-    paddingTop: 42,      // 15mm - 기본 상단 여백 (두 번째 페이지~)
-    // ...
-  },
-  header: {
-    marginTop: -14,      // 첫 페이지만 10mm 효과 (42-14=28pt ≈ 10mm)
-    // ...
-  },
-  passageNumber: {
-    fontWeight: 700,
-    fontSize: 7,
-    verticalAlign: 'super',
-    marginRight: 2,
-    color: '#000',       // 진한 검정색
-  },
-});
-```
-
-**직역/의역 띄어쓰기:**
-```typescript
-<Text style={styles.translationLabel}>직역 </Text>
-<Text style={styles.translationLabel}>의역 </Text>
-```
+| src/pages/Index.tsx | 1. `SplitMode` 타입 및 상태 추가<br>2. `splitIntoSentences` 함수 수정<br>3. 분리 모드 선택 UI 추가 |
 
 ---
 
 ### 예상 결과
 
-- **첫 페이지**: 상단 10mm → 헤더 → 문장들
-- **두 번째 페이지~**: 상단 15mm → 문장들
-- **직역/의역**: 라벨 뒤 공백 있음
-- **지문 첨자**: 진한 검정색
-
+- 사용자가 복잡한 문장 구조에서도 수동으로 줄바꿈이나 구분자를 사용하여 정확하게 문장 분리 가능
+- 기존 자동 분리도 그대로 사용 가능
