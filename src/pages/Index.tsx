@@ -1,8 +1,7 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChunkEditor } from "@/components/ChunkEditor";
 import { ResultDisplay } from "@/components/ResultDisplay";
-import { PrintableWorksheet } from "@/components/PrintableWorksheet";
 import { Chunk, parseTagged, chunksToTagged } from "@/lib/chunk-utils";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { toast } from "sonner";
@@ -36,12 +35,10 @@ export default function Index() {
   const [results, setResults] = useState<SentenceResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
-  const [showPreview, setShowPreview] = useState(false);
   const [pdfTitle, setPdfTitle] = useState("SYNTAX");
   const [pdfSubtitle, setPdfSubtitle] = useState("문장 해석 연습");
 
-  const printRef = useRef<HTMLDivElement>(null);
-  const { exportToPdf } = usePdfExport(printRef);
+  const { exportToPdf } = usePdfExport();
 
   const handleAnalyze = async () => {
     const sentences = splitIntoSentences(passage);
@@ -133,11 +130,8 @@ export default function Index() {
   };
 
   const handleExportPdf = async () => {
-    setShowPreview(true);
-    setTimeout(async () => {
-      await exportToPdf("syntax-worksheet.pdf");
-      toast.success("PDF가 저장되었습니다.");
-    }, 100);
+    await exportToPdf(results, pdfTitle, pdfSubtitle, "syntax-worksheet.pdf");
+    toast.success("PDF가 저장되었습니다.");
   };
 
   return (
@@ -272,18 +266,6 @@ export default function Index() {
           </div>
         )}
       </main>
-
-      {/* Hidden printable worksheet */}
-      {showPreview && (
-        <div className="fixed left-[-9999px] top-0">
-          <PrintableWorksheet 
-            ref={printRef} 
-            results={results} 
-            title={pdfTitle}
-            subtitle={pdfSubtitle}
-          />
-        </div>
-      )}
     </div>
   );
 }
