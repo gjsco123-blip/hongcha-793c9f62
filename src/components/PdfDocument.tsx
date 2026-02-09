@@ -32,15 +32,16 @@ interface PdfDocumentProps {
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 85,      // 30mm in points
-    paddingBottom: 85,   // 30mm in points
-    paddingLeft: 57,     // 20mm in points
-    paddingRight: 57,    // 20mm in points
+    paddingTop: 57,      // 20mm - 기본 상단 여백
+    paddingBottom: 85,   // 30mm
+    paddingLeft: 57,     // 20mm
+    paddingRight: 57,    // 20mm
     fontFamily: 'Nanum Gothic',
     fontSize: 9,
     lineHeight: 1.8,
   },
   header: {
+    marginTop: 28,       // 추가 10mm (첫 페이지만 총 30mm 효과)
     marginBottom: 24,
     borderBottomWidth: 2,
     borderBottomColor: '#000',
@@ -126,8 +127,9 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* 헤더 - render prop으로 첫 페이지에만 표시 */}
+        {/* 헤더 - fixed + render prop으로 첫 페이지에만 표시 */}
         <View
+          fixed
           render={({ pageNumber }) =>
             pageNumber === 1 ? (
               <View style={styles.header}>
