@@ -9,6 +9,7 @@ interface SentenceResult {
   englishChunks: Chunk[];
   koreanLiteralChunks: Chunk[];
   koreanNatural: string;
+  syntaxNotes?: string;
 }
 
 export function usePdfExport() {
