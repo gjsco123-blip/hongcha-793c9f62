@@ -84,14 +84,26 @@ const styles = StyleSheet.create({
     marginLeft: 28,
   },
   translationRow: {
-    fontSize: 8,
-    color: '#333',
-    lineHeight: 1.6,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    borderLeftWidth: 2,
+    borderLeftColor: '#000',
+    paddingLeft: 6,
     marginBottom: 3,
   },
   translationLabel: {
     fontWeight: 700,
-    marginRight: 8,
+    fontSize: 8,
+    width: 24,
+    flexShrink: 0,
+    lineHeight: 1.6,
+    color: '#333',
+  },
+  translationContent: {
+    flex: 1,
+    fontSize: 8,
+    color: '#333',
+    lineHeight: 1.6,
   },
   passageSection: {
     marginTop: 24,
@@ -183,20 +195,22 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
 
             {result.englishChunks.length > 0 && (
               <View style={styles.translationContainer}>
-                <Text style={styles.translationRow}>
-                  <Text style={styles.translationLabel}>직역 </Text>
-                  {renderChunksSlashPlain(result.koreanLiteralChunks)}
-                </Text>
-                <Text style={styles.translationRow}>
-                  <Text style={styles.translationLabel}>의역 </Text>
-                  {result.koreanNatural}
-                </Text>
+                <View style={styles.translationRow}>
+                  <Text style={styles.translationLabel}>직역</Text>
+                  <Text style={styles.translationContent}>
+                    {renderChunksSlashPlain(result.koreanLiteralChunks)}
+                  </Text>
+                </View>
+                <View style={styles.translationRow}>
+                  <Text style={styles.translationLabel}>의역</Text>
+                  <Text style={styles.translationContent}>
+                    {result.koreanNatural}
+                  </Text>
+                </View>
                 {result.syntaxNotes ? (
-                  <View style={{ marginTop: 2 }}>
-                    <Text style={styles.translationRow}>
-                      <Text style={styles.translationLabel}>구문</Text>
-                    </Text>
-                    <Text style={styles.translationRow}>
+                  <View style={styles.translationRow}>
+                    <Text style={styles.translationLabel}>구문</Text>
+                    <Text style={styles.translationContent}>
                       {result.syntaxNotes}
                     </Text>
                   </View>
@@ -206,7 +220,6 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
           </View>
         ))}
 
-        {/* 지문 섹션 - 밑줄 없이 원문만 */}
         <View style={styles.passageSection} wrap={false}>
           <Text style={styles.passageSectionTitle}>Original Passage</Text>
           <Text style={styles.passageText}>
