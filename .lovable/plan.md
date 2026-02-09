@@ -1,24 +1,47 @@
 
+# 라벨 스타일 개선: 검은 일자바 + 텍스트 정렬
 
-# 구문분석 마커 변경 + PDF 적용
+## 변경 요약
 
-## 1. 마커 변경: ★ → •
+1. **웹 화면** - 직역, 의역, 구문분석 라벨 앞에 검은색 세로 바(▎) 추가
+2. **PDF** - 동일하게 직역, 의역, 구문 라벨 앞에 검은 세로 바 추가
+3. **웹 + PDF 모두** - 라벨과 내용이 두 줄 이상일 때, 두 번째 줄부터 첫 글자와 같은 시작점에서 시작하도록 정렬 (라벨 너비만큼 들여쓰기)
 
-`supabase/functions/grammar/index.ts` 프롬프트에서 모든 `★`를 `•`(작은 검은색 점)로 변경하고, 모델을 `google/gemini-2.5-flash`로 변경합니다.
+## 상세 변경
 
-## 2. PDF에 구문분석 추가
+### 1. `src/components/ResultDisplay.tsx`
+- 라벨 앞에 검은 세로 바(`border-l-2 border-foreground pl-2`) 추가
+- 직역(chunks) 표시: 라벨 행과 내용 행을 분리하여 내용이 줄바꿈될 때 첫 글자 기준으로 정렬
+- 의역(text) 표시: 동일하게 적용
 
-**PdfDocument.tsx**: 의역 행 아래에 구문분석(syntaxNotes) 표시
-- 라벨: "구문" (볼드)
-- syntaxNotes가 비어있으면 생략
+### 2. `src/components/SyntaxNotesSection.tsx`
+- "구문분석" 라벨 영역에 검은 세로 바 추가 (`border-l-2 border-foreground pl-2`)
+- 내용 텍스트도 라벨과 동일한 시작점에서 시작하도록 정렬
 
-**usePdfExport.ts**: SentenceResult 인터페이스에 `syntaxNotes?: string` 추가
+### 3. `src/components/PdfDocument.tsx`
+- 직역, 의역, 구문 각 행에 세로 바 효과 추가 (라벨 앞에 `borderLeftWidth: 2, borderLeftColor: '#000', paddingLeft: 6`)
+- 라벨(직역/의역/구문)과 내용을 flexDirection: 'row'로 배치하되, 내용에 `flex: 1`을 주어 줄바꿈 시 라벨 너비 이후부터 시작하도록 설정
+- 구문도 동일하게 적용: 라벨 "구문" 아래 내용이 첫 글자 기준으로 정렬
+
+## 레이아웃 구조 (PDF 기준)
+
+```text
+┌─────────────────────────────────────────────┐
+│ ▎직역  사람들은 / 은유를 제시받은 /           │
+│       범죄를 바이러스에 비유하는 / ...        │
+│ ▎의역  범죄를 도시에 침입하는 바이러스에       │
+│       비유하는 은유를 제시받은 사람들은...     │
+│ ▎구문                                        │
+│   • that절이 동격절로 ...                     │
+└─────────────────────────────────────────────┘
+```
+
+라벨 뒤 내용이 길어져 줄바꿈되면, 라벨이 아닌 내용의 첫 글자 위치에 맞춰 정렬됩니다.
 
 ## 변경 파일
 
-| 파일 | 내용 |
-|------|------|
-| `supabase/functions/grammar/index.ts` | ★→• 변경, 모델 flash로 변경 |
-| `src/components/PdfDocument.tsx` | 의역 아래 구문분석 렌더링 |
-| `src/hooks/usePdfExport.ts` | 인터페이스에 syntaxNotes 추가 |
-
+| 파일 | 변경 내용 |
+|------|----------|
+| `src/components/ResultDisplay.tsx` | 라벨에 세로 바 추가, 내용 정렬 |
+| `src/components/SyntaxNotesSection.tsx` | 라벨에 세로 바 추가, 내용 정렬 |
+| `src/components/PdfDocument.tsx` | PDF 라벨에 세로 바 + 내용 정렬 |
