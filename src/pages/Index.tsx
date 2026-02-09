@@ -37,6 +37,8 @@ export default function Index() {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [showPreview, setShowPreview] = useState(false);
+  const [pdfTitle, setPdfTitle] = useState("SYNTAX");
+  const [pdfSubtitle, setPdfSubtitle] = useState("문장 해석 연습");
 
   const printRef = useRef<HTMLDivElement>(null);
   const { exportToPdf } = usePdfExport(printRef);
@@ -192,15 +194,31 @@ export default function Index() {
             <span className="text-xs text-muted-foreground">
               {splitIntoSentences(passage).length}개 문장
             </span>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
               {results.length > 0 && (
-                <button
-                  onClick={handleExportPdf}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors"
-                >
-                  <FileDown className="w-3.5 h-3.5" />
-                  PDF 저장
-                </button>
+                <>
+                  <input
+                    type="text"
+                    value={pdfTitle}
+                    onChange={(e) => setPdfTitle(e.target.value)}
+                    placeholder="제목"
+                    className="w-24 px-2 py-1.5 border border-border text-xs bg-card text-foreground outline-none focus:border-foreground"
+                  />
+                  <input
+                    type="text"
+                    value={pdfSubtitle}
+                    onChange={(e) => setPdfSubtitle(e.target.value)}
+                    placeholder="부제목"
+                    className="w-28 px-2 py-1.5 border border-border text-xs bg-card text-foreground outline-none focus:border-foreground"
+                  />
+                  <button
+                    onClick={handleExportPdf}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors"
+                  >
+                    <FileDown className="w-3.5 h-3.5" />
+                    PDF 저장
+                  </button>
+                </>
               )}
               <button
                 onClick={handleAnalyze}
@@ -289,7 +307,12 @@ export default function Index() {
       {/* Hidden printable worksheet */}
       {showPreview && (
         <div className="fixed left-[-9999px] top-0">
-          <PrintableWorksheet ref={printRef} results={results} />
+          <PrintableWorksheet 
+            ref={printRef} 
+            results={results} 
+            title={pdfTitle}
+            subtitle={pdfSubtitle}
+          />
         </div>
       )}
     </div>
