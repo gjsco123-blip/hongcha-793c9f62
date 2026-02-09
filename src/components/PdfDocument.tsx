@@ -192,10 +192,14 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
                   {result.koreanNatural}
                 </Text>
                 {result.syntaxNotes ? (
-                  <Text style={styles.translationRow}>
-                    <Text style={styles.translationLabel}>구문 </Text>
-                    {result.syntaxNotes}
-                  </Text>
+                  <View style={{ marginTop: 2 }}>
+                    <Text style={styles.translationRow}>
+                      <Text style={styles.translationLabel}>구문</Text>
+                    </Text>
+                    <Text style={styles.translationRow}>
+                      {result.syntaxNotes}
+                    </Text>
+                  </View>
                 ) : null}
               </View>
             )}
