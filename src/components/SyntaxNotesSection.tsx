@@ -20,11 +20,14 @@ export function SyntaxNotesSection({ value, onChange, onGenerate, generating }: 
           </span>
         </div>
       )}
-      <div className="border-l-2 border-foreground pl-3">
+      <div>
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-            구문분석
-          </span>
+          <div className="flex items-center gap-3">
+            <div className="w-0.5 h-4 bg-foreground shrink-0" />
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+              구문분석
+            </span>
+          </div>
           <div className="flex items-center gap-1.5">
             {onGenerate && (
               <button
@@ -44,19 +47,21 @@ export function SyntaxNotesSection({ value, onChange, onGenerate, generating }: 
             </button>
           </div>
         </div>
-        {editing ? (
-          <textarea
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            rows={3}
-            className="w-full bg-background border border-border px-3 py-2 text-sm font-sans leading-relaxed text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-foreground transition-colors resize-y"
-            placeholder="구문분석 내용을 입력하세요..."
-          />
-        ) : (
-          <p className="text-sm font-sans leading-relaxed text-foreground whitespace-pre-wrap">
-            {value || <span className="text-muted-foreground/50">구문분석 내용이 없습니다.</span>}
-          </p>
-        )}
+        <div className="ml-[22px]">
+          {editing ? (
+            <textarea
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              rows={3}
+              className="w-full bg-background border border-border px-3 py-2 text-sm font-sans leading-relaxed text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-foreground transition-colors resize-y"
+              placeholder="구문분석 내용을 입력하세요..."
+            />
+          ) : (
+            <p className="text-sm font-sans leading-relaxed text-foreground whitespace-pre-wrap">
+              {value || <span className="text-muted-foreground/50">구문분석 내용이 없습니다.</span>}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
