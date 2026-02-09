@@ -1,16 +1,48 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Chunk, segmentsToWords, wordsToSegments } from "@/lib/chunk-utils";
-import { Pencil } from "lucide-react";
+import { Pencil, Sparkles } from "lucide-react";
 
 interface ChunkEditorProps {
   chunks: Chunk[];
   onChange: (chunks: Chunk[]) => void;
   disabled?: boolean;
+  onAnalyzeSelection?: (selectedText: string) => void;
 }
 
-export function ChunkEditor({ chunks, onChange, disabled }: ChunkEditorProps) {
+export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection }: ChunkEditorProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [selectedText, setSelectedText] = useState("");
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseUp = useCallback(() => {
+    if (!onAnalyzeSelection) return;
+    const selection = window.getSelection();
+    const text = selection?.toString().trim();
+    if (text && text.length > 2 && containerRef.current?.contains(selection?.anchorNode ?? null)) {
+      const range = selection!.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      const containerRect = containerRef.current!.getBoundingClientRect();
+      setSelectedText(text);
+      setTooltipPos({
+        x: rect.left - containerRect.left + rect.width / 2,
+        y: rect.top - containerRect.top - 8,
+      });
+    } else {
+      setSelectedText("");
+      setTooltipPos(null);
+    }
+  }, [onAnalyzeSelection]);
+
+  const handleAnalyzeClick = () => {
+    if (selectedText && onAnalyzeSelection) {
+      onAnalyzeSelection(selectedText);
+      setSelectedText("");
+      setTooltipPos(null);
+      window.getSelection()?.removeAllRanges();
+    }
+  };
 
   const handleStartEdit = (index: number) => {
     if (disabled) return;
@@ -81,7 +113,18 @@ export function ChunkEditor({ chunks, onChange, disabled }: ChunkEditorProps) {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div ref={containerRef} onMouseUp={handleMouseUp} className="relative flex flex-wrap items-center gap-1.5">
+      {/* Selection analyze tooltip */}
+      {tooltipPos && selectedText && (
+        <button
+          onClick={handleAnalyzeClick}
+          className="absolute z-20 flex items-center gap-1 px-2 py-1 text-[10px] font-medium bg-foreground text-background rounded shadow-lg whitespace-nowrap -translate-x-1/2 -translate-y-full"
+          style={{ left: tooltipPos.x, top: tooltipPos.y }}
+        >
+          <Sparkles className="w-3 h-3" />
+          선택 구문분석
+        </button>
+      )}
       {chunks.map((chunk, i) => (
         <div key={`${chunk.tag}-${i}`} className="flex items-center gap-1">
           {editingIndex === i ? (

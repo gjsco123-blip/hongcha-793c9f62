@@ -146,14 +146,14 @@ export default function Index() {
     }
   };
 
-  const handleGenerateSyntax = async (sentenceId: number, original: string) => {
+  const handleGenerateSyntax = async (sentenceId: number, original: string, selectedText?: string) => {
     setResults((prev) =>
       prev.map((r) => (r.id === sentenceId ? { ...r, generatingSyntax: true } : r))
     );
 
     try {
       const { data, error } = await supabase.functions.invoke("grammar", {
-        body: { sentence: original },
+        body: { sentence: original, selectedText },
       });
 
       if (error) throw error;
@@ -162,7 +162,13 @@ export default function Index() {
       setResults((prev) =>
         prev.map((r) =>
           r.id === sentenceId
-            ? { ...r, syntaxNotes: data.syntaxNotes, generatingSyntax: false }
+            ? {
+                ...r,
+                syntaxNotes: selectedText
+                  ? (r.syntaxNotes ? r.syntaxNotes + "\n" + data.syntaxNotes : data.syntaxNotes)
+                  : data.syntaxNotes,
+                generatingSyntax: false,
+              }
             : r
         )
       );
@@ -287,6 +293,7 @@ export default function Index() {
                         chunks={result.englishChunks}
                         onChange={(chunks) => handleChunkChange(result.id, chunks)}
                         disabled={result.regenerating}
+                        onAnalyzeSelection={(text) => handleGenerateSyntax(result.id, result.original, text)}
                       />
                     </div>
 
