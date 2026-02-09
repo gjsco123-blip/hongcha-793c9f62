@@ -6,6 +6,10 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function countTags(tagged: string): number {
+  return (tagged.match(/<c\d+>/g) || []).length;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -40,86 +44,114 @@ CRITICAL RULES:
 - Chunks should be meaning units: noun phrases, verb phrases, prepositional phrases, clauses.
 - Do NOT split articles from their nouns.
 - Natural Korean ignores tags entirely and reads naturally.
+- EVERY word in the original sentence MUST appear in exactly one chunk. No word may be omitted.
+- Conjunctions (while, but, although, because, however, etc.) MUST be included as part of a chunk, never dropped.
+- Concatenating all english chunks (removing tags) must reconstruct the original sentence exactly.
 
 You MUST respond by calling the "analysis_result" function with the structured output.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Analyze this sentence: "${sentence}"` },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "analysis_result",
-              description: "Return the chunked analysis of the sentence",
-              parameters: {
-                type: "object",
-                properties: {
-                  english_tagged: {
-                    type: "string",
-                    description: "English sentence with <c1>...</c1> <c2>...</c2> tags around each chunk",
-                  },
-                  korean_literal_tagged: {
-                    type: "string",
-                    description: "Korean literal translation with the same <c1>...</c1> <c2>...</c2> tag structure",
-                  },
-                  korean_natural: {
-                    type: "string",
-                    description: "Natural Korean translation without any tags",
-                  },
-                },
-                required: ["english_tagged", "korean_literal_tagged", "korean_natural"],
-                additionalProperties: false,
+    const tools = [
+      {
+        type: "function",
+        function: {
+          name: "analysis_result",
+          description: "Return the chunked analysis of the sentence",
+          parameters: {
+            type: "object",
+            properties: {
+              english_tagged: {
+                type: "string",
+                description: "English sentence with <c1>...</c1> <c2>...</c2> tags around each chunk",
+              },
+              korean_literal_tagged: {
+                type: "string",
+                description: "Korean literal translation with the same <c1>...</c1> <c2>...</c2> tag structure",
+              },
+              korean_natural: {
+                type: "string",
+                description: "Natural Korean translation without any tags",
               },
             },
+            required: ["english_tagged", "korean_literal_tagged", "korean_natural"],
+            additionalProperties: false,
           },
-        ],
-        tool_choice: { type: "function", function: { name: "analysis_result" } },
-      }),
-    });
+        },
+      },
+    ];
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("AI gateway error:", response.status, errText);
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again shortly." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const MAX_ATTEMPTS = 3;
+    let lastResult = null;
+
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      const messages: { role: string; content: string }[] = [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Analyze this sentence: "${sentence}"` },
+      ];
+
+      if (attempt > 0 && lastResult) {
+        messages.push({
+          role: "user",
+          content: `Your previous result had ${countTags(lastResult.english_tagged)} English chunks but ${countTags(lastResult.korean_literal_tagged)} Korean chunks. The counts MUST match exactly. Please redo the analysis carefully, ensuring every English chunk has a corresponding Korean chunk with the same tag number.`,
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Credits exhausted. Please add credits." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages,
+          tools,
+          tool_choice: { type: "function", function: { name: "analysis_result" } },
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("AI gateway error:", response.status, errText);
+        if (response.status === 429) {
+          return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again shortly." }), {
+            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        if (response.status === 402) {
+          return new Response(JSON.stringify({ error: "Credits exhausted. Please add credits." }), {
+            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        throw new Error(`AI error: ${response.status}`);
       }
-      throw new Error(`AI error: ${response.status}`);
+
+      const data = await response.json();
+      const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+      if (!toolCall) throw new Error("No tool call in response");
+
+      lastResult = JSON.parse(toolCall.function.arguments);
+
+      const enCount = countTags(lastResult.english_tagged);
+      const krCount = countTags(lastResult.korean_literal_tagged);
+
+      if (enCount === krCount) {
+        console.log(`Chunk validation passed on attempt ${attempt + 1} (${enCount} chunks)`);
+        break;
+      }
+
+      console.warn(`Attempt ${attempt + 1}: tag mismatch (en=${enCount}, kr=${krCount}), ${attempt < MAX_ATTEMPTS - 1 ? "retrying..." : "using last result"}`);
     }
 
-    const data = await response.json();
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) throw new Error("No tool call in response");
-
-    const result = JSON.parse(toolCall.function.arguments);
-
-    // Convert tags to slashes for display
     const toSlash = (tagged: string) =>
       tagged.replace(/<c\d+>/g, "").replace(/<\/c\d+>/g, " / ").replace(/ \/ $/, "").trim();
 
     return new Response(
       JSON.stringify({
-        english_tagged: result.english_tagged,
-        korean_literal_tagged: result.korean_literal_tagged,
-        english_slash: toSlash(result.english_tagged),
-        korean_literal_slash: toSlash(result.korean_literal_tagged),
-        korean_natural: result.korean_natural,
+        english_tagged: lastResult!.english_tagged,
+        korean_literal_tagged: lastResult!.korean_literal_tagged,
+        english_slash: toSlash(lastResult!.english_tagged),
+        korean_literal_slash: toSlash(lastResult!.korean_literal_tagged),
+        korean_natural: lastResult!.korean_natural,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
