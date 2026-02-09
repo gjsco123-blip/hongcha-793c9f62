@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChunkEditor } from "@/components/ChunkEditor";
 import { ResultDisplay } from "@/components/ResultDisplay";
+import { SentencePreview } from "@/components/SentencePreview";
 import { Chunk, parseTagged, chunksToTagged } from "@/lib/chunk-utils";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { toast } from "sonner";
@@ -31,7 +32,7 @@ function splitIntoSentences(text: string, mode: SplitMode, delimiter: string): s
       return text.split(delimiter).map((s) => s.trim()).filter((s) => s.length > 0);
     case "auto":
     default:
-      return text.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter((s) => s.length > 0);
+      return text.split(/(?<=[.!?]["'"']?)\s+/).map((s) => s.trim()).filter((s) => s.length > 0);
   }
 }
 
@@ -45,11 +46,25 @@ export default function Index() {
   const [pdfSubtitle, setPdfSubtitle] = useState("문장 해석 연습");
   const [splitMode, setSplitMode] = useState<SplitMode>("auto");
   const [customDelimiter, setCustomDelimiter] = useState("|||");
+  const [editedSentences, setEditedSentences] = useState<string[]>([]);
+
+  const autoSentences = useMemo(
+    () => splitIntoSentences(passage, splitMode, customDelimiter),
+    [passage, splitMode, customDelimiter]
+  );
+
+  // 자동 분리 결과가 바뀌면 편집 상태 초기화
+  const [lastAutoKey, setLastAutoKey] = useState("");
+  const autoKey = autoSentences.join("\0");
+  if (autoKey !== lastAutoKey) {
+    setLastAutoKey(autoKey);
+    setEditedSentences(autoSentences);
+  }
 
   const { exportToPdf } = usePdfExport();
 
   const handleAnalyze = async () => {
-    const sentences = splitIntoSentences(passage, splitMode, customDelimiter);
+    const sentences = editedSentences.filter((s) => s.trim().length > 0);
     if (sentences.length === 0) return;
 
     setLoading(true);
@@ -222,7 +237,7 @@ export default function Index() {
                 />
               )}
               <span className="text-xs text-muted-foreground">
-                {splitIntoSentences(passage, splitMode, customDelimiter).length}개 문장
+                {editedSentences.length}개 문장
               </span>
             </div>
             <div className="flex gap-2 items-center">
@@ -237,7 +252,7 @@ export default function Index() {
               )}
               <button
                 onClick={handleAnalyze}
-                disabled={loading || splitIntoSentences(passage, splitMode, customDelimiter).length === 0}
+                disabled={loading || editedSentences.length === 0}
                 className="px-5 py-2 bg-foreground text-background text-xs font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
               >
                 {loading
@@ -247,6 +262,16 @@ export default function Index() {
             </div>
           </div>
         </div>
+
+        {/* Sentence Preview */}
+        {editedSentences.length > 0 && !loading && results.length === 0 && (
+          <div className="mb-6">
+            <SentencePreview
+              sentences={editedSentences}
+              onChange={setEditedSentences}
+            />
+          </div>
+        )}
 
         {/* Results */}
         {results.length > 0 && (
