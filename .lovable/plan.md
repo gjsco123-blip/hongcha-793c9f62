@@ -1,110 +1,156 @@
 
-## PDF 화질 개선 및 동그라미 번호 스타일 개선
 
-### 변경 사항 요약
+## PDF 생성 방식 전환 및 여백 개선
 
-1. **PDF 화질 대폭 개선**
-   - html2canvas scale: 2 → 4 (300 DPI 수준)
-   - 고해상도 이미지로 선명한 텍스트 출력
+### 현재 문제점
 
-2. **동그라미 번호 CSS 스타일로 변경**
-   - 유니코드 문자 → CSS로 만든 완벽한 원
-   - 크기 조절 가능 (작게)
-   - 일관된 렌더링
+1. **html2canvas 방식의 한계**
+   - HTML을 이미지로 변환 후 PDF에 삽입 → 화질 저하 (래스터화)
+   - 페이지별 여백 적용이 어려움 (이미지를 자르는 방식)
+   - 텍스트가 선명하지 않음
+
+2. **첫 페이지 상단 여백**
+   - 제목("하홍차는 귀여워")이 상단에서 30mm에 위치해야 함
+   - 현재는 용지 가운데쯤에 있음
+
+3. **모든 페이지 상하 여백 30mm**
+   - 현재 방식으로는 각 페이지별로 여백 적용 불가
 
 ---
 
-### 기술적 세부사항
+### 해결 방안: @react-pdf/renderer 사용
 
-#### 1. usePdfExport.ts 수정 - 화질 개선
+**html2canvas + jsPDF** → **@react-pdf/renderer**로 전환
 
-| 항목 | 현재 | 변경 후 |
-|------|------|---------|
-| scale | 2 | 4 |
-| 예상 DPI | ~150 DPI | ~300 DPI |
+| 항목 | 현재 (html2canvas) | 변경 후 (@react-pdf/renderer) |
+|------|-------------------|------------------------------|
+| 렌더링 방식 | HTML → 이미지 → PDF | React 컴포넌트 → 직접 PDF |
+| 화질 | 래스터 (픽셀) | 벡터 (무손실) |
+| 텍스트 | 이미지화됨 | 실제 텍스트 (검색/복사 가능) |
+| 페이지 여백 | 적용 어려움 | CSS-like 스타일로 완벽 제어 |
+| 한글 지원 | 웹폰트 의존 | TTF 폰트 직접 등록 |
+
+---
+
+### 구현 계획
+
+#### 1. 패키지 설치
+
+```
+@react-pdf/renderer
+```
+
+#### 2. 한글 폰트 등록
 
 ```typescript
-const canvas = await html2canvas(element, {
-  scale: 4,  // 2 → 4로 변경
-  useCORS: true,
-  logging: false,
-  backgroundColor: "#ffffff",
+import { Font } from '@react-pdf/renderer';
+
+// Nanum Gothic 폰트 등록 (TTF 형식, 한글 지원)
+Font.register({
+  family: 'Nanum Gothic',
+  src: 'https://fonts.gstatic.com/s/nanumgothic/v23/PN_3Rfi-oW3hYwmKDpxS7F_D_g.ttf',
 });
 ```
 
-#### 2. PrintableWorksheet.tsx 수정 - 동그라미 번호 스타일
+#### 3. PDF 문서 컴포넌트 생성
 
-**현재 방식 (유니코드 문자):**
+**새 파일: `src/components/PdfDocument.tsx`**
+
 ```typescript
-function getCircledNumber(n: number): string {
-  const circled = ["①","②","③",...];
-  return n <= 20 ? circled[n - 1] : `(${n})`;
-}
+import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer';
 
-// 사용
-<span style={{ fontWeight: 600 }}>{getCircledNumber(index + 1)}</span>
-```
+const styles = StyleSheet.create({
+  page: {
+    paddingTop: '30mm',      // 상단 여백 30mm
+    paddingBottom: '30mm',   // 하단 여백 30mm
+    paddingLeft: '20mm',
+    paddingRight: '20mm',
+    fontFamily: 'Nanum Gothic',
+    fontSize: 9,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  // ...
+});
 
-**변경 후 (CSS 스타일):**
-```typescript
-// 함수 제거하고 JSX 컴포넌트로 변경
-function CircledNumber({ num }: { num: number }) {
+export function PdfDocument({ results, title, subtitle }) {
   return (
-    <span style={{
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      width: "14px",
-      height: "14px",
-      borderRadius: "50%",
-      border: "1px solid #333",
-      fontSize: "8px",
-      fontWeight: 600,
-      marginRight: "3px",
-      verticalAlign: "middle",
-      lineHeight: 1
-    }}>
-      {num}
-    </span>
+    <Document>
+      <Page size="A4" style={styles.page}>
+        {/* 헤더 */}
+        <View>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.subtitle}>{subtitle}</Text>
+        </View>
+        
+        {/* 문장들 - 자동 페이지 분할 */}
+        {results.map((result, index) => (
+          <View key={result.id} wrap={false}> {/* wrap={false} = 잘리지 않음 */}
+            <Text>{String(index + 1).padStart(2, '0')} {result.original}</Text>
+            <Text>직역: {renderChunks(result.koreanLiteralChunks)}</Text>
+            <Text>의역: {result.koreanNatural}</Text>
+          </View>
+        ))}
+      </Page>
+    </Document>
   );
 }
-
-// 사용
-<CircledNumber num={index + 1} />
 ```
+
+#### 4. PDF 내보내기 훅 수정
+
+**수정 파일: `src/hooks/usePdfExport.ts`**
+
+```typescript
+import { pdf } from '@react-pdf/renderer';
+import { PdfDocument } from '@/components/PdfDocument';
+
+export function usePdfExport() {
+  const exportToPdf = async (results, title, subtitle, filename) => {
+    const blob = await pdf(
+      <PdfDocument results={results} title={title} subtitle={subtitle} />
+    ).toBlob();
+    
+    // 다운로드
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+  };
+
+  return { exportToPdf };
+}
+```
+
+#### 5. Index.tsx 수정
+
+- `printRef` 제거 (더 이상 HTML 참조 불필요)
+- `PrintableWorksheet` 컴포넌트 제거 (숨겨진 HTML 불필요)
+- `exportToPdf` 호출 시 데이터 직접 전달
 
 ---
 
-### 결과 비교
+### 주요 장점
 
-**동그라미 번호 변경 전:**
-```text
-① 문장... (유니코드 - 크고 불완전한 원)
-```
-
-**동그라미 번호 변경 후:**
-```text
-⓵ 문장... (CSS - 작고 완벽한 원, 크기 14px)
-```
-
-- 완벽한 원형 (borderRadius: 50%)
-- 크기: 14px (기존보다 작음)
-- 테두리: 1px solid
-- 숫자: 8px 폰트
+1. **화질 개선**: 벡터 기반으로 무한 확대해도 선명함
+2. **텍스트 검색 가능**: PDF 내 텍스트 검색/복사 가능
+3. **완벽한 여백 제어**: 모든 페이지에 동일한 30mm 여백
+4. **자동 페이지 분할**: `wrap={false}`로 문장 세트가 잘리지 않음
+5. **파일 크기 감소**: 이미지 없이 텍스트만 저장
 
 ---
 
-### 추가 적용 예정 (이전 승인 사항)
-
-1. **페이지 분할 개선** - 문장 단위로 깔끔하게 분리
-2. **지문 섹션 개선** - 슬래시 제거, 양쪽 정렬
-3. **헤더 간소화** - UNIT 배지 제거, 제목 커스텀 기능
-
----
-
-### 파일별 수정 내용
+### 수정 파일 요약
 
 | 파일 | 작업 |
 |------|------|
-| src/hooks/usePdfExport.ts | scale 4로 증가하여 화질 개선 |
-| src/components/PrintableWorksheet.tsx | CircledNumber 컴포넌트로 완벽한 원형 번호 구현 |
+| package.json | @react-pdf/renderer 패키지 추가 |
+| src/components/PdfDocument.tsx | 새로 생성 - PDF 문서 컴포넌트 |
+| src/hooks/usePdfExport.ts | @react-pdf/renderer 방식으로 전면 수정 |
+| src/pages/Index.tsx | printRef 제거, 숨겨진 HTML 제거, 호출 방식 변경 |
+| src/components/PrintableWorksheet.tsx | 삭제 가능 (더 이상 불필요) |
+
