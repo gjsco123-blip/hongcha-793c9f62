@@ -81,7 +81,8 @@ CRITICAL RULES:
 - Chunks should be meaning units: noun phrases, verb phrases, prepositional phrases, clauses.
 - Do NOT split articles from their nouns.
 - Natural Korean ignores tags entirely and reads naturally.
-- EVERY word in the original sentence MUST appear in exactly one chunk. No word may be omitted.
+- EVERY word and punctuation mark in the original sentence MUST appear in exactly one chunk. No word or punctuation may be omitted.
+- ALL punctuation MUST be preserved exactly as in the original: dashes (—, –, -), commas, semicolons, colons, parentheses, quotation marks, etc. An em dash (—) must remain in the chunk text, never be dropped.
 - Conjunctions (while, but, although, because, however, etc.) MUST be included as part of a chunk, never dropped.
 - Concatenating all english chunks (removing tags) must reconstruct the original sentence exactly.
 - Within each English chunk, wrap the main verb or verb phrase with <v>...</v> tags. ONLY tag finite verbs (verbs that function as the main predicate of a clause or sentence). Include main verbs, auxiliary+main verb combinations (e.g., <v>has been working</v>), and modal+verb combinations (e.g., <v>can affect</v>). Do NOT tag any non-finite verbs: no to-infinitives (e.g., to engage, to achieve), no gerunds (-ing used as nouns), no participles used as adjectives. The 'to' in to-infinitives must NEVER be inside a <v> tag.
