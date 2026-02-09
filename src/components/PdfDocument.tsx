@@ -1,7 +1,6 @@
 import { Document, Page, View, Text, StyleSheet, Font } from '@react-pdf/renderer';
-import { Chunk } from '@/lib/chunk-utils';
+import { Chunk, segmentsToWords } from '@/lib/chunk-utils';
 
-// 한글 폰트 - Google EA 저장소 사용
 Font.register({
   family: 'Nanum Gothic',
   fonts: [
@@ -10,7 +9,6 @@ Font.register({
   ],
 });
 
-// 영문 세리프 폰트 - CDN 사용
 Font.register({
   family: 'Noto Serif',
   src: 'https://cdn.jsdelivr.net/fontsource/fonts/noto-serif@latest/latin-400-normal.ttf',
@@ -32,16 +30,16 @@ interface PdfDocumentProps {
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 42,      // 15mm - 기본 상단 여백 (두 번째 페이지~)
-    paddingBottom: 85,   // 30mm
-    paddingLeft: 57,     // 20mm
-    paddingRight: 57,    // 20mm
+    paddingTop: 42,
+    paddingBottom: 85,
+    paddingLeft: 57,
+    paddingRight: 57,
     fontFamily: 'Nanum Gothic',
     fontSize: 9,
     lineHeight: 1.8,
   },
   header: {
-    marginTop: -14,      // 첫 페이지만 10mm 효과 (42-14=28pt ≈ 10mm)
+    marginTop: -14,
     marginBottom: 24,
     borderBottomWidth: 2,
     borderBottomColor: '#000',
@@ -118,9 +116,33 @@ const styles = StyleSheet.create({
     marginRight: 2,
     color: '#000',
   },
+  verbUnderline: {
+    textDecoration: 'underline',
+  },
 });
 
-function renderChunksWithSlash(chunks: Chunk[]): string {
+/** Render chunks with slash, applying underline to verbs */
+function renderChunksWithVerbUnderline(chunks: Chunk[]) {
+  const elements: React.ReactNode[] = [];
+
+  chunks.forEach((chunk, ci) => {
+    const words = segmentsToWords(chunk.segments);
+    words.forEach((w, wi) => {
+      elements.push(
+        <Text key={`${ci}-${wi}`} style={w.isVerb ? styles.verbUnderline : undefined}>
+          {wi > 0 ? ' ' : ''}{w.word}
+        </Text>
+      );
+    });
+    if (ci < chunks.length - 1) {
+      elements.push(<Text key={`slash-${ci}`}> / </Text>);
+    }
+  });
+
+  return elements;
+}
+
+function renderChunksSlashPlain(chunks: Chunk[]): string {
   return chunks.map((c) => c.text).join(' / ');
 }
 
@@ -128,35 +150,30 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* 헤더 - 첫 페이지에만 자연스럽게 표시됨 */}
         <View style={styles.header}>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.subtitle}>{subtitle}</Text>
         </View>
 
-        {/* 문장들 - wrap={false}로 세트가 잘리지 않음 */}
         {results.map((result, index) => (
           <View key={result.id} style={styles.sentenceContainer} wrap={false}>
-            {/* 번호 + 영어 문장 */}
             <View style={styles.sentenceRow}>
               <Text style={styles.sentenceNumber}>
                 {String(index + 1).padStart(2, '0')}
               </Text>
               <Text style={styles.englishText}>
                 {result.englishChunks.length > 0
-                  ? renderChunksWithSlash(result.englishChunks)
+                  ? renderChunksWithVerbUnderline(result.englishChunks)
                   : result.original}
               </Text>
             </View>
 
             {result.englishChunks.length > 0 && (
               <View style={styles.translationContainer}>
-              {/* 직역 */}
                 <Text style={styles.translationRow}>
                   <Text style={styles.translationLabel}>직역 </Text>
-                  {renderChunksWithSlash(result.koreanLiteralChunks)}
+                  {renderChunksSlashPlain(result.koreanLiteralChunks)}
                 </Text>
-                {/* 의역 */}
                 <Text style={styles.translationRow}>
                   <Text style={styles.translationLabel}>의역 </Text>
                   {result.koreanNatural}
@@ -166,7 +183,7 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
           </View>
         ))}
 
-        {/* 지문 섹션 */}
+        {/* 지문 섹션 - 밑줄 없이 원문만 */}
         <View style={styles.passageSection} wrap={false}>
           <Text style={styles.passageSectionTitle}>지문</Text>
           <Text style={styles.passageText}>

@@ -247,7 +247,7 @@ export default function Index() {
                           Chunking
                         </span>
                         <span className="text-[9px] text-muted-foreground">
-                          더블클릭으로 편집 · " / "로 분할
+                          ✏️ 편집 · 더블클릭으로 동사 표시 · " / "로 분할
                         </span>
                       </div>
                       <ChunkEditor

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Chunk } from "@/lib/chunk-utils";
+import { Chunk, segmentsToWords, wordsToSegments } from "@/lib/chunk-utils";
+import { Pencil } from "lucide-react";
 
 interface ChunkEditorProps {
   chunks: Chunk[];
@@ -11,7 +12,7 @@ export function ChunkEditor({ chunks, onChange, disabled }: ChunkEditorProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
 
-  const handleDoubleClick = (index: number) => {
+  const handleStartEdit = (index: number) => {
     if (disabled) return;
     setEditingIndex(index);
     setEditValue(chunks[index].text);
@@ -23,12 +24,20 @@ export function ChunkEditor({ chunks, onChange, disabled }: ChunkEditorProps) {
     const parts = editValue.split(" / ").map((p) => p.trim()).filter(Boolean);
 
     if (parts.length === 1) {
-      newChunks[editingIndex] = { ...newChunks[editingIndex], text: parts[0] };
+      newChunks[editingIndex] = {
+        ...newChunks[editingIndex],
+        text: parts[0],
+        segments: [{ text: parts[0], isVerb: false }],
+      };
     } else {
       newChunks.splice(
         editingIndex,
         1,
-        ...parts.map((text, i) => ({ tag: editingIndex + i + 1, text }))
+        ...parts.map((text, i) => ({
+          tag: editingIndex + i + 1,
+          text,
+          segments: [{ text, isVerb: false }],
+        }))
       );
       newChunks.forEach((c, i) => (c.tag = i + 1));
     }
@@ -40,12 +49,34 @@ export function ChunkEditor({ chunks, onChange, disabled }: ChunkEditorProps) {
   const handleMerge = (index: number) => {
     if (index >= chunks.length - 1) return;
     const newChunks = [...chunks];
+    const mergedSegments = [
+      ...newChunks[index].segments,
+      { text: " ", isVerb: false },
+      ...newChunks[index + 1].segments,
+    ];
+    // Consolidate adjacent same-type segments
+    const consolidated = wordsToSegments(
+      segmentsToWords(mergedSegments)
+    );
     newChunks[index] = {
       tag: newChunks[index].tag,
       text: `${newChunks[index].text} ${newChunks[index + 1].text}`,
+      segments: consolidated,
     };
     newChunks.splice(index + 1, 1);
     newChunks.forEach((c, i) => (c.tag = i + 1));
+    onChange(newChunks);
+  };
+
+  const handleVerbToggle = (chunkIndex: number, wordIndex: number) => {
+    if (disabled) return;
+    const chunk = chunks[chunkIndex];
+    const words = segmentsToWords(chunk.segments);
+    words[wordIndex] = { ...words[wordIndex], isVerb: !words[wordIndex].isVerb };
+    const newSegments = wordsToSegments(words);
+    const newChunks = chunks.map((c, i) =>
+      i === chunkIndex ? { ...c, segments: newSegments } : c
+    );
     onChange(newChunks);
   };
 
@@ -67,12 +98,29 @@ export function ChunkEditor({ chunks, onChange, disabled }: ChunkEditorProps) {
             />
           ) : (
             <span
-              onDoubleClick={() => handleDoubleClick(i)}
-              className={`inline-block px-2 py-1 text-xs font-english border border-border bg-background text-foreground
-                ${!disabled ? "cursor-pointer hover:border-foreground hover:bg-muted" : "cursor-default"}`}
-              title={disabled ? "" : "Double-click to edit"}
+              className={`inline-flex items-center gap-0.5 px-2 py-1 text-xs font-english border border-border bg-background text-foreground group
+                ${!disabled ? "cursor-default" : ""}`}
             >
-              {chunk.text}
+              {segmentsToWords(chunk.segments).map((w, wi) => (
+                <span
+                  key={wi}
+                  onDoubleClick={() => handleVerbToggle(i, wi)}
+                  className={`${w.isVerb ? "underline decoration-foreground decoration-2 underline-offset-2" : ""}
+                    ${!disabled ? "cursor-pointer hover:bg-muted/80 rounded-sm px-0.5 -mx-0.5" : ""}`}
+                  title={disabled ? "" : "더블클릭: 동사 표시 토글"}
+                >
+                  {w.word}
+                </span>
+              ))}
+              {!disabled && (
+                <button
+                  onClick={() => handleStartEdit(i)}
+                  className="ml-1 opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
+                  title="청크 편집"
+                >
+                  <Pencil className="w-2.5 h-2.5" />
+                </button>
+              )}
             </span>
           )}
           {i < chunks.length - 1 && !disabled && (

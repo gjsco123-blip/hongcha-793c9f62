@@ -1,4 +1,4 @@
-import { Chunk } from "@/lib/chunk-utils";
+import { Chunk, segmentsToWords } from "@/lib/chunk-utils";
 
 interface ResultDisplayProps {
   label: string;
@@ -22,7 +22,16 @@ export function ResultDisplay({ label, chunks, text, isKorean }: ResultDisplayPr
                   isKorean ? "font-sans" : "font-english"
                 }`}
               >
-                {chunk.text}
+                {!isKorean
+                  ? segmentsToWords(chunk.segments).map((w, wi) => (
+                      <span
+                        key={wi}
+                        className={w.isVerb ? "underline decoration-foreground decoration-2 underline-offset-2" : ""}
+                      >
+                        {wi > 0 ? " " : ""}{w.word}
+                      </span>
+                    ))
+                  : chunk.text}
               </span>
               {i < chunks.length - 1 && (
                 <span className="text-muted-foreground text-xs">/</span>
