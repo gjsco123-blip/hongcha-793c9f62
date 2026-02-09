@@ -1,62 +1,82 @@
 
 
-## PDF 폰트 URL 수정
+## PDF 레이아웃 수정: 헤더 위치 및 첫 페이지 전용 표시
 
-### 문제 원인
+### 문제점 분석
 
-`@react-pdf/renderer`에서 등록한 폰트 URL이 모두 **404 Not Found** 에러 반환:
+1. **헤더가 모든 페이지에 반복됨**
+   - `@react-pdf/renderer`의 자동 페이지 분할은 `<Page>` 내용을 이어서 렌더링
+   - 현재 구조에서는 헤더가 페이지별로 조건부 표시되지 않음
 
-| 폰트 | 현재 URL | 상태 |
-|------|----------|------|
-| Nanum Gothic (400) | fonts.gstatic.com/s/nanumgothic/v23/... | 404 에러 |
-| Nanum Gothic (700) | fonts.gstatic.com/s/nanumgothic/v23/... | 404 에러 |
-| Noto Serif | fonts.gstatic.com/s/notoserif/v23/... | 404 에러 |
+2. **헤더가 30mm보다 더 아래에 위치**
+   - `paddingTop: '30mm'`가 적용되어 있지만 렌더링 결과가 다름
+   - 단위 문제일 수 있음 (문자열 '30mm' vs 숫자)
+
+---
 
 ### 해결 방안
 
-Google Fonts EA (East Asian) 저장소의 올바른 TTF URL로 변경:
+#### 1. 페이지별 조건부 헤더 표시 (`render` prop 사용)
+
+```typescript
+// 첫 페이지에만 헤더 표시
+<View 
+  render={({ pageNumber }) => 
+    pageNumber === 1 ? (
+      <View style={styles.header}>
+        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.subtitle}>{subtitle}</Text>
+      </View>
+    ) : null
+  }
+/>
+```
+
+#### 2. 여백을 포인트 단위로 변경
+
+`@react-pdf/renderer`에서 mm 단위가 정확히 적용되지 않을 수 있으므로 포인트(pt) 단위로 변경:
+
+```typescript
+// 30mm = 약 85pt (1mm ≈ 2.835pt)
+const styles = StyleSheet.create({
+  page: {
+    paddingTop: 85,      // 30mm in points
+    paddingBottom: 85,   // 30mm in points
+    paddingLeft: 57,     // 20mm in points
+    paddingRight: 57,    // 20mm in points
+    fontFamily: 'Nanum Gothic',
+    fontSize: 9,
+    lineHeight: 1.8,
+  },
+  // ...
+});
+```
+
+---
+
+### 수정할 코드
 
 ```text
 수정 파일: src/components/PdfDocument.tsx
 
 변경 내용:
-- Nanum Gothic → Google EA 저장소 URL 사용
-  https://fonts.gstatic.com/ea/nanumgothic/v5/NanumGothic-Regular.ttf
-  https://fonts.gstatic.com/ea/nanumgothic/v5/NanumGothic-Bold.ttf
-
-- Noto Serif → Noto Sans로 변경 (영문도 산세리프로 통일)
-  또는 올바른 Noto Serif URL 사용
-  https://cdn.jsdelivr.net/fontsource/fonts/noto-serif@latest/latin-400-normal.ttf
+1. page 스타일의 padding을 mm에서 pt로 변경 (30mm → 85pt)
+2. 헤더를 render prop으로 감싸서 pageNumber === 1일 때만 표시
+3. 두 번째 페이지부터는 헤더 없이 바로 문장 시작
 ```
 
-### 수정할 코드
+---
 
-```typescript
-// 한글 폰트 - EA 저장소 사용
-Font.register({
-  family: 'Nanum Gothic',
-  fonts: [
-    { 
-      src: 'https://fonts.gstatic.com/ea/nanumgothic/v5/NanumGothic-Regular.ttf', 
-      fontWeight: 400 
-    },
-    { 
-      src: 'https://fonts.gstatic.com/ea/nanumgothic/v5/NanumGothic-Bold.ttf', 
-      fontWeight: 700 
-    },
-  ],
-});
-
-// 영문 폰트 - CDN 또는 로컬 폰트 사용
-Font.register({
-  family: 'Noto Serif',
-  src: 'https://cdn.jsdelivr.net/fontsource/fonts/noto-serif@latest/latin-400-normal.ttf',
-});
-```
-
-### 수정 파일
+### 수정 파일 요약
 
 | 파일 | 변경 내용 |
 |------|----------|
-| src/components/PdfDocument.tsx | 폰트 URL을 올바른 EA 저장소 URL로 수정 |
+| src/components/PdfDocument.tsx | 1. padding 단위를 pt로 변경 (정확한 30mm 여백)<br>2. render prop으로 첫 페이지에만 헤더 표시 |
+
+---
+
+### 예상 결과
+
+- **첫 페이지**: 상단 30mm 여백 → 헤더(SYNTAX, 문장해석연습) → 문장들
+- **두 번째 페이지 이후**: 상단 30mm 여백 → 바로 문장 시작 (헤더 없음)
 
