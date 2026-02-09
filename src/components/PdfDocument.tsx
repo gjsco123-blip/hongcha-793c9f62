@@ -86,10 +86,15 @@ const styles = StyleSheet.create({
   translationRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    borderLeftWidth: 2,
-    borderLeftColor: '#000',
-    paddingLeft: 6,
     marginBottom: 3,
+  },
+  translationBar: {
+    width: 2,
+    height: 10,
+    backgroundColor: '#000',
+    marginRight: 4,
+    marginTop: 2,
+    flexShrink: 0,
   },
   translationLabel: {
     fontWeight: 700,
@@ -196,12 +201,14 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
             {result.englishChunks.length > 0 && (
               <View style={styles.translationContainer}>
                 <View style={styles.translationRow}>
+                  <View style={styles.translationBar} />
                   <Text style={styles.translationLabel}>직역</Text>
                   <Text style={styles.translationContent}>
                     {renderChunksSlashPlain(result.koreanLiteralChunks)}
                   </Text>
                 </View>
                 <View style={styles.translationRow}>
+                  <View style={styles.translationBar} />
                   <Text style={styles.translationLabel}>의역</Text>
                   <Text style={styles.translationContent}>
                     {result.koreanNatural}
@@ -209,6 +216,7 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
                 </View>
                 {result.syntaxNotes ? (
                   <View style={styles.translationRow}>
+                    <View style={styles.translationBar} />
                     <Text style={styles.translationLabel}>구문</Text>
                     <Text style={styles.translationContent}>
                       {result.syntaxNotes}
@@ -220,17 +228,6 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
           </View>
         ))}
 
-        <View style={styles.passageSection} wrap={false}>
-          <Text style={styles.passageSectionTitle}>Original Passage</Text>
-          <Text style={styles.passageText}>
-            {results.map((result, index) => (
-              <Text key={result.id}>
-                <Text style={styles.passageNumber}>{index + 1}</Text>
-                {' '}{result.original}{' '}
-              </Text>
-            ))}
-          </Text>
-        </View>
       </Page>
     </Document>
   );
