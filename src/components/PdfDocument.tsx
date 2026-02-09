@@ -32,7 +32,7 @@ interface PdfDocumentProps {
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 57,      // 20mm - 기본 상단 여백
+    paddingTop: 42,      // 15mm - 기본 상단 여백 (두 번째 페이지~)
     paddingBottom: 85,   // 30mm
     paddingLeft: 57,     // 20mm
     paddingRight: 57,    // 20mm
@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
     lineHeight: 1.8,
   },
   header: {
-    marginTop: 28,       // 추가 10mm (첫 페이지만 총 30mm 효과)
+    marginTop: -14,      // 첫 페이지만 10mm 효과 (42-14=28pt ≈ 10mm)
     marginBottom: 24,
     borderBottomWidth: 2,
     borderBottomColor: '#000',
@@ -116,6 +116,7 @@ const styles = StyleSheet.create({
     fontSize: 7,
     verticalAlign: 'super',
     marginRight: 2,
+    color: '#000',
   },
 });
 
@@ -150,14 +151,14 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
 
             {result.englishChunks.length > 0 && (
               <View style={styles.translationContainer}>
-                {/* 직역 */}
+              {/* 직역 */}
                 <Text style={styles.translationRow}>
-                  <Text style={styles.translationLabel}>직역</Text>
+                  <Text style={styles.translationLabel}>직역 </Text>
                   {renderChunksWithSlash(result.koreanLiteralChunks)}
                 </Text>
                 {/* 의역 */}
                 <Text style={styles.translationRow}>
-                  <Text style={styles.translationLabel}>의역</Text>
+                  <Text style={styles.translationLabel}>의역 </Text>
                   {result.koreanNatural}
                 </Text>
               </View>
