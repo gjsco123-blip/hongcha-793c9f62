@@ -2,46 +2,46 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Noto+Serif:wght@400;500;600;700&display=swap');
 
 @layer base {
   :root {
-    --background: 220 20% 97%;
-    --foreground: 220 20% 10%;
+    --background: 40 20% 98%;
+    --foreground: 220 25% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 20% 10%;
+    --card-foreground: 220 25% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 10%;
+    --popover-foreground: 220 25% 15%;
 
-    --primary: 220 70% 50%;
+    --primary: 225 40% 28%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 15% 92%;
-    --secondary-foreground: 220 20% 20%;
+    --secondary: 220 15% 94%;
+    --secondary-foreground: 220 25% 25%;
 
-    --muted: 220 15% 94%;
+    --muted: 220 10% 92%;
     --muted-foreground: 220 10% 45%;
 
-    --accent: 160 60% 45%;
+    --accent: 200 70% 45%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 220 15% 88%;
+    --border: 220 15% 85%;
     --input: 220 15% 88%;
-    --ring: 220 70% 50%;
+    --ring: 225 40% 28%;
 
-    --radius: 0.5rem;
+    --radius: 0.375rem;
 
-    --chunk-1: 220 70% 50%;
-    --chunk-2: 160 60% 40%;
-    --chunk-3: 30 80% 50%;
-    --chunk-4: 340 65% 50%;
-    --chunk-5: 270 55% 55%;
-    --chunk-6: 190 70% 40%;
+    --chunk-1: 225 50% 45%;
+    --chunk-2: 160 50% 38%;
+    --chunk-3: 30 70% 50%;
+    --chunk-4: 340 55% 48%;
+    --chunk-5: 270 45% 50%;
+    --chunk-6: 190 60% 40%;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -63,7 +63,7 @@
     --popover: 220 20% 10%;
     --popover-foreground: 220 15% 90%;
 
-    --primary: 220 70% 60%;
+    --primary: 225 50% 55%;
     --primary-foreground: 220 20% 5%;
 
     --secondary: 220 15% 15%;
@@ -72,7 +72,7 @@
     --muted: 220 15% 15%;
     --muted-foreground: 220 10% 55%;
 
-    --accent: 160 60% 50%;
+    --accent: 200 70% 50%;
     --accent-foreground: 220 20% 5%;
 
     --destructive: 0 62.8% 30.6%;
@@ -80,14 +80,14 @@
 
     --border: 220 15% 18%;
     --input: 220 15% 18%;
-    --ring: 220 70% 60%;
+    --ring: 225 50% 55%;
 
-    --chunk-1: 220 70% 65%;
-    --chunk-2: 160 60% 55%;
-    --chunk-3: 30 80% 60%;
-    --chunk-4: 340 65% 60%;
-    --chunk-5: 270 55% 65%;
-    --chunk-6: 190 70% 55%;
+    --chunk-1: 225 60% 60%;
+    --chunk-2: 160 55% 50%;
+    --chunk-3: 30 75% 55%;
+    --chunk-4: 340 60% 55%;
+    --chunk-5: 270 50% 60%;
+    --chunk-6: 190 65% 50%;
 
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
@@ -106,13 +106,13 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'JetBrains Mono', monospace;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Noto Sans KR', sans-serif;
   }
 }
 
 @layer components {
-  .chunk-tag {
-    @apply inline-block px-2 py-0.5 rounded text-sm font-medium;
+  .font-english {
+    font-family: 'Noto Serif', Georgia, serif;
   }
 }

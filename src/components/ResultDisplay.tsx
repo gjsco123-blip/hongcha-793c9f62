@@ -13,8 +13,8 @@ function getChunkStyle(index: number) {
   const hsl = CHUNK_HSL[index % CHUNK_HSL.length];
   return {
     color: `hsl(${hsl})`,
-    backgroundColor: `hsl(${hsl} / 0.1)`,
-    borderColor: `hsl(${hsl} / 0.2)`,
+    backgroundColor: `hsl(${hsl} / 0.08)`,
+    borderColor: `hsl(${hsl} / 0.25)`,
   };
 }
 
@@ -27,28 +27,28 @@ interface ResultDisplayProps {
 
 export function ResultDisplay({ label, chunks, text, isKorean }: ResultDisplayProps) {
   return (
-    <div className="space-y-2 animate-fade-in">
-      <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground">
+    <div>
+      <div className="text-xs font-medium text-accent uppercase tracking-wide mb-2">
         {label}
       </div>
       {chunks ? (
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-2">
           {chunks.map((chunk, i) => (
-            <div key={`${chunk.tag}-${i}`} className="flex items-center gap-1">
+            <div key={`${chunk.tag}-${i}`} className="flex items-center gap-1.5">
               <span
                 style={getChunkStyle(i)}
-                className={`inline-block px-2.5 py-1 rounded-md text-sm border ${isKorean ? "font-korean" : "font-mono"}`}
+                className={`inline-block px-2.5 py-1 rounded-sm text-sm border ${isKorean ? "font-sans" : "font-english"}`}
               >
                 {chunk.text}
               </span>
               {i < chunks.length - 1 && (
-                <span className="text-muted-foreground/40 text-sm">/</span>
+                <span className="text-muted-foreground/50 text-sm font-light">/</span>
               )}
             </div>
           ))}
         </div>
       ) : (
-        <p className={`text-base leading-relaxed ${isKorean ? "font-korean" : "font-mono"} text-foreground`}>
+        <p className={`text-base leading-relaxed ${isKorean ? "font-sans" : "font-english"} text-foreground`}>
           {text}
         </p>
       )}
