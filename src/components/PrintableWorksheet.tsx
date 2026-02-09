@@ -49,7 +49,7 @@ export const PrintableWorksheet = forwardRef<HTMLDivElement, PrintableWorksheetP
         style={{ 
           width: "210mm", 
           minHeight: "297mm", 
-          padding: "25mm 20mm",
+          padding: "30mm 20mm",
           fontFamily: "'Noto Sans KR', sans-serif",
           fontSize: "9pt",
           lineHeight: "1.8"
@@ -135,7 +135,7 @@ export const PrintableWorksheet = forwardRef<HTMLDivElement, PrintableWorksheetP
           }}>
             {results.map((result, index) => (
               <span key={result.id}>
-                <sup style={{ fontWeight: 600, fontSize: "7pt", verticalAlign: "super" }}>{index + 1}</sup>
+                <span style={{ fontWeight: 600, fontSize: "7pt", verticalAlign: "0.3em", marginRight: "2px" }}>{index + 1}</span>
                 {" "}
                 {result.original}
                 {" "}
