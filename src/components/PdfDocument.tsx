@@ -185,7 +185,7 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
 
         {/* 지문 섹션 - 밑줄 없이 원문만 */}
         <View style={styles.passageSection} wrap={false}>
-          <Text style={styles.passageSectionTitle}>지문</Text>
+          <Text style={styles.passageSectionTitle}>Original Passage</Text>
           <Text style={styles.passageText}>
             {results.map((result, index) => (
               <Text key={result.id}>
