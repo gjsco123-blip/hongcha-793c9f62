@@ -1,20 +1,24 @@
 
 
-## engine 함수 모델 변경: gemini-2.5-pro → gemini-2.5-flash
+# 구문분석 마커 변경 + PDF 적용
 
-개발 단계에서 비용을 절감하기 위해 분석 모델을 변경합니다.
+## 1. 마커 변경: ★ → •
 
-### 변경 내용
+`supabase/functions/grammar/index.ts` 프롬프트에서 모든 `★`를 `•`(작은 검은색 점)로 변경하고, 모델을 `google/gemini-2.5-flash`로 변경합니다.
 
-**supabase/functions/engine/index.ts** - 모델명 1줄 변경
+## 2. PDF에 구문분석 추가
 
-`google/gemini-2.5-pro` → `google/gemini-2.5-flash`
+**PdfDocument.tsx**: 의역 행 아래에 구문분석(syntaxNotes) 표시
+- 라벨: "구문" (볼드)
+- syntaxNotes가 비어있으면 생략
 
-나중에 품질을 높이고 싶을 때 다시 `gemini-2.5-pro`로 변경하면 됩니다.
+**usePdfExport.ts**: SentenceResult 인터페이스에 `syntaxNotes?: string` 추가
 
-### 기술 요약
+## 변경 파일
 
-| 파일 | 변경 |
+| 파일 | 내용 |
 |------|------|
-| supabase/functions/engine/index.ts | model 값을 `google/gemini-2.5-flash`로 변경 |
+| `supabase/functions/grammar/index.ts` | ★→• 변경, 모델 flash로 변경 |
+| `src/components/PdfDocument.tsx` | 의역 아래 구문분석 렌더링 |
+| `src/hooks/usePdfExport.ts` | 인터페이스에 syntaxNotes 추가 |
 
