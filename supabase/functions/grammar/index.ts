@@ -45,6 +45,8 @@ serve(async (req) => {
 - "~때문에 / ~을 나타내며" 사용 금지
 - 교과서·대학 문법 말투 금지
 - 문장의 실제 단어를 괄호로 인용하여 구체적으로 설명
+- 연속된 영어 단어를 인용할 때, 3단어 이상이면 첫 단어~마지막 단어로 축약 (예: "parenting improves when it is practiced as a skilled craft" → "parenting~craft")
+- 2단어 이하는 그대로 표기
 
 선택 기준:
 - 시험에서 헷갈릴 수 있는 지점만 선택
@@ -52,11 +54,11 @@ serve(async (req) => {
 - 단순 정보(전치사 뜻, 일반 부사, 당연한 수식)는 제외
 
 출력 예시:
-• 주어는 단수 명사 technology, 동사는 gives임. 주어와 동사 사이에 관계대명사절이 삽입되어 거리가 멀어졌으므로 수일치에 주의해야 함.
-• gives는 '~에게 …을 주다'라는 의미의 4형식 동사로, 간접목적어(them)와 직접목적어(the tools)를 차례로 가짐.
-• to부정사구 to act...와 to serve...가 and로 병렬 연결되어 앞의 명사 the tools를 수식하는 형용사적 용법으로 쓰임.
+• 주어는 단수 명사 technology, 동사는 gives임. 주어와 동사 사이에 관계대명사절이 삽입되어 수일치에 주의해야 함.
+• gives는 4형식 동사로, 간접목적어(them)와 직접목적어(the tools)를 차례로 가짐.
+• to act~와 to serve~가 and로 병렬 연결되어 the tools를 수식하는 형용사적 용법으로 쓰임.
 • allow + O + to부정사 = 5형식. citizens가 O, to retake가 O.C임.
-• 과거분사구 caused by...가 앞의 명사 disruptions를 뒤에서 수식함. (which were) caused...에서 주격관대+be동사가 생략된 형태임.
+• 과거분사구 caused by~가 disruptions를 뒤에서 수식함. (which were) caused~에서 주격관대+be동사가 생략된 형태임.
 • 관계대명사 what은 선행사를 포함하여 '~하는 것'으로 해석되며, 전치사 of의 목적어 역할을 하는 명사절을 이끔.
 
 출력하지 말 것:
