@@ -1,47 +1,39 @@
 
-# 라벨 스타일 개선: 검은 일자바 + 텍스트 정렬
 
-## 변경 요약
+# 구문분석 약어 규칙 + PDF 폰트 변경
 
-1. **웹 화면** - 직역, 의역, 구문분석 라벨 앞에 검은색 세로 바(▎) 추가
-2. **PDF** - 동일하게 직역, 의역, 구문 라벨 앞에 검은 세로 바 추가
-3. **웹 + PDF 모두** - 라벨과 내용이 두 줄 이상일 때, 두 번째 줄부터 첫 글자와 같은 시작점에서 시작하도록 정렬 (라벨 너비만큼 들여쓰기)
+## 변경 1: 구문분석 프롬프트에 물결(~) 약어 규칙 추가
 
-## 상세 변경
+**파일:** `supabase/functions/grammar/index.ts`
 
-### 1. `src/components/ResultDisplay.tsx`
-- 라벨 앞에 검은 세로 바(`border-l-2 border-foreground pl-2`) 추가
-- 직역(chunks) 표시: 라벨 행과 내용 행을 분리하여 내용이 줄바꿈될 때 첫 글자 기준으로 정렬
-- 의역(text) 표시: 동일하게 적용
+현재 프롬프트의 출력 예시를 보면 영어 단어를 길게 인용하는 경우가 많음. 스크린샷 예시처럼 `parenting~craft를 대신하는`과 같이 연속된 영어 구문을 물결(~)로 축약하는 규칙을 추가.
 
-### 2. `src/components/SyntaxNotesSection.tsx`
-- "구문분석" 라벨 영역에 검은 세로 바 추가 (`border-l-2 border-foreground pl-2`)
-- 내용 텍스트도 라벨과 동일한 시작점에서 시작하도록 정렬
+**프롬프트에 추가할 규칙:**
 
-### 3. `src/components/PdfDocument.tsx`
-- 직역, 의역, 구문 각 행에 세로 바 효과 추가 (라벨 앞에 `borderLeftWidth: 2, borderLeftColor: '#000', paddingLeft: 6`)
-- 라벨(직역/의역/구문)과 내용을 flexDirection: 'row'로 배치하되, 내용에 `flex: 1`을 주어 줄바꿈 시 라벨 너비 이후부터 시작하도록 설정
-- 구문도 동일하게 적용: 라벨 "구문" 아래 내용이 첫 글자 기준으로 정렬
+"문장 스타일 규칙" 섹션에 다음 항목 추가:
+- 연속된 영어 단어를 인용할 때, 3단어 이상이면 첫 단어~마지막 단어로 축약 (예: "parenting improves when it is practiced as a skilled craft" → "parenting~craft")
+- 2단어 이하는 그대로 표기
 
-## 레이아웃 구조 (PDF 기준)
+출력 예시도 이에 맞게 업데이트:
+- 기존: `to부정사구 to act...와 to serve...가 and로 병렬 연결되어`
+- 변경: `to act~와 to serve~가 and로 병렬 연결되어` (이미 짧은 경우는 유지)
 
-```text
-┌─────────────────────────────────────────────┐
-│ ▎직역  사람들은 / 은유를 제시받은 /           │
-│       범죄를 바이러스에 비유하는 / ...        │
-│ ▎의역  범죄를 도시에 침입하는 바이러스에       │
-│       비유하는 은유를 제시받은 사람들은...     │
-│ ▎구문                                        │
-│   • that절이 동격절로 ...                     │
-└─────────────────────────────────────────────┘
-```
+## 변경 2: PDF 폰트를 Noto Sans KR로 교체
 
-라벨 뒤 내용이 길어져 줄바꿈되면, 라벨이 아닌 내용의 첫 글자 위치에 맞춰 정렬됩니다.
+**파일:** `src/components/PdfDocument.tsx`
 
-## 변경 파일
+- Nanum Gothic 폰트 등록을 Noto Sans KR로 교체
+- Google Fonts CDN에서 Noto Sans KR TTF 파일 URL 사용:
+  - Regular (400): `https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-kr@latest/korean-400-normal.ttf`
+  - Bold (700): `https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-kr@latest/korean-700-normal.ttf`
+- `fontFamily: 'Nanum Gothic'` → `fontFamily: 'Noto Sans KR'`로 변경
+
+---
+
+## 기술 상세
 
 | 파일 | 변경 내용 |
 |------|----------|
-| `src/components/ResultDisplay.tsx` | 라벨에 세로 바 추가, 내용 정렬 |
-| `src/components/SyntaxNotesSection.tsx` | 라벨에 세로 바 추가, 내용 정렬 |
-| `src/components/PdfDocument.tsx` | PDF 라벨에 세로 바 + 내용 정렬 |
+| `supabase/functions/grammar/index.ts` | 프롬프트 문장 스타일 규칙에 물결 축약 규칙 추가 + 출력 예시 업데이트 |
+| `src/components/PdfDocument.tsx` | Font.register를 Noto Sans KR로 교체, page 스타일의 fontFamily 변경 |
+
