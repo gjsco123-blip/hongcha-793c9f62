@@ -2,10 +2,10 @@ import { Document, Page, View, Text, StyleSheet, Font } from '@react-pdf/rendere
 import { Chunk, segmentsToWords } from '@/lib/chunk-utils';
 
 Font.register({
-  family: 'Nanum Gothic',
+  family: 'Noto Sans KR',
   fonts: [
-    { src: 'https://fonts.gstatic.com/ea/nanumgothic/v5/NanumGothic-Regular.ttf', fontWeight: 400 },
-    { src: 'https://fonts.gstatic.com/ea/nanumgothic/v5/NanumGothic-Bold.ttf', fontWeight: 700 },
+    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-kr@latest/korean-400-normal.ttf', fontWeight: 400 },
+    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-kr@latest/korean-700-normal.ttf', fontWeight: 700 },
   ],
 });
 
@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
     paddingBottom: 85,
     paddingLeft: 57,
     paddingRight: 57,
-    fontFamily: 'Nanum Gothic',
+    fontFamily: 'Noto Sans KR',
     fontSize: 9,
     lineHeight: 1.8,
   },
