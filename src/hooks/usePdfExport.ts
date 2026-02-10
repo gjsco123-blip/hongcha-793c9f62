@@ -10,6 +10,7 @@ interface SentenceResult {
   koreanLiteralChunks: Chunk[];
   koreanNatural: string;
   syntaxNotes?: string;
+  hongTNotes?: string;
 }
 
 export function usePdfExport() {

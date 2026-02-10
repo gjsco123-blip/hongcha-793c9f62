@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ChunkEditor } from "@/components/ChunkEditor";
 import { ResultDisplay } from "@/components/ResultDisplay";
 import { SyntaxNotesSection } from "@/components/SyntaxNotesSection";
+import { HongTSection } from "@/components/HongTSection";
 import { SentencePreview } from "@/components/SentencePreview";
 import { Chunk, parseTagged, chunksToTagged } from "@/lib/chunk-utils";
 import { usePdfExport } from "@/hooks/usePdfExport";
@@ -22,6 +23,8 @@ interface SentenceResult {
   regenerating?: boolean;
   syntaxNotes?: string;
   generatingSyntax?: boolean;
+  hongTNotes?: string;
+  generatingHongT?: boolean;
 }
 
 const PRESETS: Preset[] = ["고1", "고2", "수능"];
@@ -55,6 +58,34 @@ export default function Index() {
 
   const { exportToPdf } = usePdfExport();
 
+  const generateHongT = async (sentenceId: number, allSentences: string[]) => {
+    setResults((prev) =>
+      prev.map((r) => (r.id === sentenceId ? { ...r, generatingHongT: true } : r))
+    );
+
+    try {
+      const { data, error } = await supabase.functions.invoke("hongt", {
+        body: { sentences: allSentences, index: sentenceId },
+      });
+
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      setResults((prev) =>
+        prev.map((r) =>
+          r.id === sentenceId
+            ? { ...r, hongTNotes: data.explanation, generatingHongT: false }
+            : r
+        )
+      );
+    } catch (e: any) {
+      console.error(`홍T 생성 실패 (문장 ${sentenceId + 1}):`, e.message);
+      setResults((prev) =>
+        prev.map((r) => (r.id === sentenceId ? { ...r, generatingHongT: false } : r))
+      );
+    }
+  };
+
   const handleAnalyze = async () => {
     const sentences = editedSentences.filter((s) => s.trim().length > 0);
     if (sentences.length === 0) return;
@@ -85,6 +116,7 @@ export default function Index() {
           englishTagged: data.english_tagged,
           koreanLiteralTagged: data.korean_literal_tagged,
           syntaxNotes: "",
+          hongTNotes: "",
         });
 
         setResults([...newResults]);
@@ -99,9 +131,17 @@ export default function Index() {
           englishTagged: "",
           koreanLiteralTagged: "",
           syntaxNotes: "",
+          hongTNotes: "",
         });
         setResults([...newResults]);
       }
+    }
+
+    // Auto-generate 홍T for all sentences
+    const allSentences = newResults.map((r) => r.original);
+    for (let i = 0; i < newResults.length; i++) {
+      if (newResults[i].englishChunks.length === 0) continue;
+      generateHongT(i, allSentences);
     }
 
     setLoading(false);
@@ -369,6 +409,23 @@ export default function Index() {
                         isKorean
                       />
                     </div>
+
+                    {/* 홍T */}
+                    <HongTSection
+                      value={result.hongTNotes ?? ""}
+                      onChange={(val) =>
+                        setResults((prev) =>
+                          prev.map((r) =>
+                            r.id === result.id ? { ...r, hongTNotes: val } : r
+                          )
+                        )
+                      }
+                      generating={result.generatingHongT}
+                      onGenerate={() => {
+                        const allSentences = results.map((r) => r.original);
+                        generateHongT(result.id, allSentences);
+                      }}
+                    />
 
                     {/* 구문분석 */}
                     <SyntaxNotesSection
