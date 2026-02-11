@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
     paddingTop: 42,
     paddingBottom: 85,
     paddingLeft: 57,
-    paddingRight: 80,
+    paddingRight: 90,
     fontFamily: "Noto Sans KR",
     fontSize: 9,
     lineHeight: 1.8,
@@ -79,8 +79,8 @@ const styles = StyleSheet.create({
   },
   englishText: {
     fontFamily: "Noto Serif",
-    fontSize: 9,
-    lineHeight: 1.8,
+    fontSize: 10,
+    lineHeight: 2.2,
     flex: 1,
   },
   translationContainer: {
