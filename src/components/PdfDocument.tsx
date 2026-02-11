@@ -22,6 +22,8 @@ interface SentenceResult {
   koreanNatural: string;
   syntaxNotes?: string;
   hongTNotes?: string;
+  hideLiteral?: boolean;
+  hideNatural?: boolean;
 }
 
 interface PdfDocumentProps {
@@ -201,20 +203,24 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
 
             {result.englishChunks.length > 0 && (
               <View style={styles.translationContainer}>
-                <View style={styles.translationRow}>
-                  <View style={styles.translationBar} />
-                  <Text style={styles.translationLabel}>직역</Text>
-                  <Text style={styles.translationContent}>
-                    {renderChunksSlashPlain(result.koreanLiteralChunks)}
-                  </Text>
-                </View>
-                <View style={styles.translationRow}>
-                  <View style={styles.translationBar} />
-                  <Text style={styles.translationLabel}>의역</Text>
-                  <Text style={styles.translationContent}>
-                    {result.koreanNatural}
-                  </Text>
-                </View>
+                {!result.hideLiteral && (
+                  <View style={styles.translationRow}>
+                    <View style={styles.translationBar} />
+                    <Text style={styles.translationLabel}>직역</Text>
+                    <Text style={styles.translationContent}>
+                      {renderChunksSlashPlain(result.koreanLiteralChunks)}
+                    </Text>
+                  </View>
+                )}
+                {!result.hideNatural && (
+                  <View style={styles.translationRow}>
+                    <View style={styles.translationBar} />
+                    <Text style={styles.translationLabel}>의역</Text>
+                    <Text style={styles.translationContent}>
+                      {result.koreanNatural}
+                    </Text>
+                  </View>
+                )}
                 {result.hongTNotes ? (
                   <View style={styles.translationRow}>
                     <View style={styles.translationBar} />

@@ -8,7 +8,7 @@ import { SentencePreview } from "@/components/SentencePreview";
 import { Chunk, parseTagged, chunksToTagged } from "@/lib/chunk-utils";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { toast } from "sonner";
-import { FileDown, RotateCw } from "lucide-react";
+import { FileDown, RotateCw, X, Scissors } from "lucide-react";
 
 type Preset = "고1" | "고2" | "수능";
 
@@ -25,6 +25,8 @@ interface SentenceResult {
   generatingSyntax?: boolean;
   hongTNotes?: string;
   generatingHongT?: boolean;
+  hideLiteral?: boolean;
+  hideNatural?: boolean;
 }
 
 const PRESETS: Preset[] = ["고1", "고2", "수능"];
@@ -57,6 +59,51 @@ export default function Index() {
   }
 
   const { exportToPdf } = usePdfExport();
+
+  // PDF 페이지 구분선 계산 (A4: 842pt, 상42 하85 = 사용가능 715pt)
+  const pageBreakInfo = useMemo(() => {
+    if (results.length === 0) return { page1EndIndex: -1, totalPages: 0, passageFits: false };
+
+    const PAGE_USABLE = [665, 715]; // page1 has header ~50pt
+    const SENTENCE_BASE = 30;
+    const CHUNK_ROW = 14;
+    const TRANS_ROW = 12;
+    const HONG_T_ROW = 14;
+    const SYNTAX_ROW = 14;
+    const CONTAINER_GAP = 20;
+    const PASSAGE_SECTION = 60;
+
+    let currentPage = 0;
+    let usedHeight = 0;
+    let page1EndIndex = -1;
+
+    for (let i = 0; i < results.length; i++) {
+      const r = results[i];
+      let h = SENTENCE_BASE + CHUNK_ROW;
+      if (!r.hideLiteral) h += TRANS_ROW;
+      if (!r.hideNatural) h += TRANS_ROW;
+      if (r.hongTNotes) h += HONG_T_ROW;
+      if (r.syntaxNotes) h += SYNTAX_ROW;
+      h += CONTAINER_GAP;
+
+      if (usedHeight + h > (PAGE_USABLE[currentPage] ?? 715)) {
+        if (currentPage === 0) page1EndIndex = i - 1;
+        currentPage++;
+        usedHeight = h;
+      } else {
+        usedHeight += h;
+      }
+    }
+
+    if (page1EndIndex === -1 && currentPage === 0) page1EndIndex = results.length - 1;
+
+    const remaining = (PAGE_USABLE[currentPage] ?? 715) - usedHeight;
+    const passageFits = currentPage <= 1 && remaining >= PASSAGE_SECTION;
+    const totalPages = currentPage + 1 + (passageFits ? 0 : 1);
+
+    return { page1EndIndex, totalPages, passageFits };
+  }, [results]);
+
 
   const generateHongT = async (sentenceId: number, allSentences: string[]) => {
     setResults((prev) =>
@@ -343,10 +390,18 @@ export default function Index() {
         {results.length > 0 && (
           <div className="space-y-0 border-t-2 border-foreground">
             {results.map((result, index) => (
-              <div
-                key={result.id}
-                className="border-b border-border py-5 animate-fade-in"
-              >
+              <div key={result.id}>
+                {/* 페이지 구분선 */}
+                {index > 0 && index === pageBreakInfo.page1EndIndex + 1 && (
+                  <div className="flex items-center gap-2 py-2 my-1">
+                    <div className="flex-1 border-t-2 border-dashed border-destructive/50" />
+                    <span className="text-[10px] font-medium text-destructive/70 shrink-0">
+                      ✂️ PDF 페이지 1 끝 — 여기서 페이지 넘어감
+                    </span>
+                    <div className="flex-1 border-t-2 border-dashed border-destructive/50" />
+                  </div>
+                )}
+                <div className="border-b border-border py-5 animate-fade-in">
                 {/* Sentence with number */}
                 <div className="flex gap-3 mb-4">
                   <span className="text-sm font-semibold shrink-0 w-6">
@@ -386,29 +441,47 @@ export default function Index() {
                     </div>
 
                     {/* Korean literal */}
-                    <div className="bg-muted/50 border border-border p-3 relative">
-                      {result.regenerating && (
-                        <div className="absolute inset-0 bg-muted/80 flex items-center justify-center z-10">
-                          <span className="text-xs text-muted-foreground animate-pulse">
-                            재생성 중...
-                          </span>
-                        </div>
-                      )}
-                      <ResultDisplay
-                        label="직역"
-                        chunks={result.koreanLiteralChunks}
-                        isKorean
-                      />
-                    </div>
+                    {!result.hideLiteral && (
+                      <div className="bg-muted/50 border border-border p-3 relative group/literal">
+                        {result.regenerating && (
+                          <div className="absolute inset-0 bg-muted/80 flex items-center justify-center z-10">
+                            <span className="text-xs text-muted-foreground animate-pulse">
+                              재생성 중...
+                            </span>
+                          </div>
+                        )}
+                        <button
+                          onClick={() => setResults(prev => prev.map(r => r.id === result.id ? { ...r, hideLiteral: true } : r))}
+                          className="absolute top-1.5 right-1.5 p-0.5 text-muted-foreground/50 hover:text-destructive opacity-0 group-hover/literal:opacity-100 transition-opacity"
+                          title="직역 삭제"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                        <ResultDisplay
+                          label="직역"
+                          chunks={result.koreanLiteralChunks}
+                          isKorean
+                        />
+                      </div>
+                    )}
 
                     {/* Korean natural */}
-                    <div className="bg-muted/50 border border-border p-3">
-                      <ResultDisplay
-                        label="의역"
-                        text={result.koreanNatural}
-                        isKorean
-                      />
-                    </div>
+                    {!result.hideNatural && (
+                      <div className="bg-muted/50 border border-border p-3 relative group/natural">
+                        <button
+                          onClick={() => setResults(prev => prev.map(r => r.id === result.id ? { ...r, hideNatural: true } : r))}
+                          className="absolute top-1.5 right-1.5 p-0.5 text-muted-foreground/50 hover:text-destructive opacity-0 group-hover/natural:opacity-100 transition-opacity"
+                          title="의역 삭제"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                        <ResultDisplay
+                          label="의역"
+                          text={result.koreanNatural}
+                          isKorean
+                        />
+                      </div>
+                    )}
 
                     {/* 홍T */}
                     <HongTSection
@@ -445,7 +518,17 @@ export default function Index() {
                   <div className="ml-9 text-xs text-destructive">분석 실패</div>
                 )}
               </div>
+              </div>
             ))}
+            {/* 페이지 상태 표시 */}
+            {pageBreakInfo.totalPages > 0 && (
+              <div className={`flex items-center gap-2 py-3 px-2 mt-2 border border-dashed ${pageBreakInfo.totalPages <= 2 ? 'border-green-500/50 bg-green-50/50 dark:bg-green-950/20' : 'border-destructive/50 bg-destructive/5'}`}>
+                <span className={`text-xs font-medium ${pageBreakInfo.totalPages <= 2 ? 'text-green-700 dark:text-green-400' : 'text-destructive'}`}>
+                  📄 예상 PDF: {pageBreakInfo.totalPages}페이지 {pageBreakInfo.totalPages <= 2 ? '✅' : '⚠️ 2페이지 초과'}
+                  {' · '}Original Passage: {pageBreakInfo.passageFits ? '2페이지 안에 포함 ✅' : '별도 페이지 ⚠️'}
+                </span>
+              </div>
+            )}
           </div>
         )}
       </main>
