@@ -11,6 +11,8 @@ interface SentenceResult {
   koreanNatural: string;
   syntaxNotes?: string;
   hongTNotes?: string;
+  hideLiteral?: boolean;
+  hideNatural?: boolean;
 }
 
 export function usePdfExport() {
