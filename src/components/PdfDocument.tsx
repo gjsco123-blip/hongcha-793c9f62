@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   sentenceContainer: {
-    marginBottom: 16,
+    marginBottom: 20,
     paddingBottom: 12,
     borderBottomWidth: 0.5,
     borderBottomColor: '#ddd',
@@ -70,14 +70,14 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   sentenceNumber: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: 700,
     width: 20,
     flexShrink: 0,
   },
   englishText: {
     fontFamily: 'Noto Serif',
-    fontSize: 9,
+    fontSize: 7,
     lineHeight: 1.8,
     flex: 1,
   },
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   },
   translationLabel: {
     fontWeight: 700,
-    fontSize: 8,
+    fontSize: 6,
     width: 24,
     flexShrink: 0,
     lineHeight: 1.6,
@@ -107,20 +107,20 @@ const styles = StyleSheet.create({
   },
   translationContent: {
     flex: 1,
-    fontSize: 8,
+    fontSize: 6,
     color: '#333',
     lineHeight: 1.6,
   },
   passageSection: {
-    marginTop: 24,
-    paddingTop: 16,
+    marginTop: 16,
+    paddingTop: 8,
     borderTopWidth: 2,
     borderTopColor: '#000',
   },
   passageSectionTitle: {
     fontSize: 10,
     fontWeight: 700,
-    marginBottom: 12,
+    marginBottom: 4,
   },
   passageText: {
     fontFamily: 'Noto Serif',
@@ -240,6 +240,7 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
 
         {/* 지문 전체 — 소제목 없이 */}
         <View style={styles.passageSection} wrap={false}>
+          <Text style={styles.passageSectionTitle}>Original Passage</Text>
           <Text style={styles.passageText}>
             {results.map((r, i) => (
               <Text key={r.id}>
