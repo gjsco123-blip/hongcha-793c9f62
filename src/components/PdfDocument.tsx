@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
     paddingTop: 42,
     paddingBottom: 85,
     paddingLeft: 57,
-    paddingRight: 70,
+    paddingRight: 80,
     fontFamily: "Noto Sans KR",
     fontSize: 9,
     lineHeight: 1.8,
