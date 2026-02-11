@@ -1,17 +1,17 @@
-import { Document, Page, View, Text, StyleSheet, Font } from '@react-pdf/renderer';
-import { Chunk, segmentsToWords } from '@/lib/chunk-utils';
+import { Document, Page, View, Text, StyleSheet, Font } from "@react-pdf/renderer";
+import { Chunk, segmentsToWords } from "@/lib/chunk-utils";
 
 Font.register({
-  family: 'Noto Sans KR',
+  family: "Noto Sans KR",
   fonts: [
-    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-kr@latest/korean-400-normal.ttf', fontWeight: 400 },
-    { src: 'https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-kr@latest/korean-700-normal.ttf', fontWeight: 700 },
+    { src: "https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-kr@latest/korean-400-normal.ttf", fontWeight: 400 },
+    { src: "https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-kr@latest/korean-700-normal.ttf", fontWeight: 700 },
   ],
 });
 
 Font.register({
-  family: 'Noto Serif',
-  src: 'https://cdn.jsdelivr.net/fontsource/fonts/noto-serif@latest/latin-400-normal.ttf',
+  family: "Noto Serif",
+  src: "https://cdn.jsdelivr.net/fontsource/fonts/noto-serif@latest/latin-400-normal.ttf",
 });
 
 interface SentenceResult {
@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
     paddingBottom: 85,
     paddingLeft: 57,
     paddingRight: 57,
-    fontFamily: 'Noto Sans KR',
+    fontFamily: "Noto Sans KR",
     fontSize: 9,
     lineHeight: 1.8,
   },
@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
     marginTop: -14,
     marginBottom: 24,
     borderBottomWidth: 2,
-    borderBottomColor: '#000',
+    borderBottomColor: "#000",
     paddingBottom: 12,
   },
   title: {
@@ -56,18 +56,18 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 9,
-    color: '#666',
+    color: "#666",
     marginTop: 4,
   },
   sentenceContainer: {
     marginBottom: 20,
     paddingBottom: 12,
     borderBottomWidth: 0.5,
-    borderBottomColor: '#ddd',
+    borderBottomColor: "#ddd",
   },
   sentenceRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     gap: 8,
     marginBottom: 6,
   },
@@ -78,8 +78,8 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   englishText: {
-    fontFamily: 'Noto Serif',
-    fontSize: 7,
+    fontFamily: "Noto Serif",
+    fontSize: 9,
     lineHeight: 1.8,
     flex: 1,
   },
@@ -87,14 +87,14 @@ const styles = StyleSheet.create({
     marginLeft: 28,
   },
   translationRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     marginBottom: 3,
   },
   translationBar: {
     width: 2,
     height: 10,
-    backgroundColor: '#000',
+    backgroundColor: "#000",
     marginRight: 4,
     marginTop: 2,
     flexShrink: 0,
@@ -105,19 +105,19 @@ const styles = StyleSheet.create({
     width: 24,
     flexShrink: 0,
     lineHeight: 1.6,
-    color: '#333',
+    color: "#333",
   },
   translationContent: {
     flex: 1,
     fontSize: 6,
-    color: '#333',
+    color: "#333",
     lineHeight: 1.6,
   },
   passageSection: {
     marginTop: 16,
     paddingTop: 8,
     borderTopWidth: 2,
-    borderTopColor: '#000',
+    borderTopColor: "#000",
   },
   passageSectionTitle: {
     fontSize: 10,
@@ -125,20 +125,20 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   passageText: {
-    fontFamily: 'Noto Serif',
+    fontFamily: "Noto Serif",
     fontSize: 9,
     lineHeight: 2,
-    textAlign: 'justify',
+    textAlign: "justify",
   },
   passageNumber: {
     fontWeight: 700,
     fontSize: 7,
-    verticalAlign: 'super',
+    verticalAlign: "super",
     marginRight: 2,
-    color: '#000',
+    color: "#000",
   },
   verbUnderline: {
-    textDecoration: 'underline',
+    textDecoration: "underline",
   },
 });
 
@@ -149,7 +149,7 @@ function renderChunksWithVerbUnderline(chunks: Chunk[]) {
   chunks.forEach((chunk, ci) => {
     const words = segmentsToWords(chunk.segments);
     words.forEach((w, wi) => {
-      const prefix = wi > 0 ? ' ' : '';
+      const prefix = wi > 0 ? " " : "";
       if (w.isVerb) {
         if (prefix) {
           elements.push(<Text key={`${ci}-${wi}-sp`}>{prefix}</Text>);
@@ -157,13 +157,14 @@ function renderChunksWithVerbUnderline(chunks: Chunk[]) {
         elements.push(
           <Text key={`${ci}-${wi}`} style={styles.verbUnderline}>
             {w.word}
-          </Text>
+          </Text>,
         );
       } else {
         elements.push(
           <Text key={`${ci}-${wi}`}>
-            {prefix}{w.word}
-          </Text>
+            {prefix}
+            {w.word}
+          </Text>,
         );
       }
     });
@@ -176,7 +177,7 @@ function renderChunksWithVerbUnderline(chunks: Chunk[]) {
 }
 
 function renderChunksSlashPlain(chunks: Chunk[]): string {
-  return chunks.map((c) => c.text).join(' / ');
+  return chunks.map((c) => c.text).join(" / ");
 }
 
 export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
@@ -191,9 +192,7 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
         {results.map((result, index) => (
           <View key={result.id} style={styles.sentenceContainer} wrap={false}>
             <View style={styles.sentenceRow}>
-              <Text style={styles.sentenceNumber}>
-                {String(index + 1).padStart(2, '0')}
-              </Text>
+              <Text style={styles.sentenceNumber}>{String(index + 1).padStart(2, "0")}</Text>
               <Text style={styles.englishText}>
                 {result.englishChunks.length > 0
                   ? renderChunksWithVerbUnderline(result.englishChunks)
@@ -207,36 +206,28 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
                   <View style={styles.translationRow}>
                     <View style={styles.translationBar} />
                     <Text style={styles.translationLabel}>직역</Text>
-                    <Text style={styles.translationContent}>
-                      {renderChunksSlashPlain(result.koreanLiteralChunks)}
-                    </Text>
+                    <Text style={styles.translationContent}>{renderChunksSlashPlain(result.koreanLiteralChunks)}</Text>
                   </View>
                 )}
                 {!result.hideNatural && (
                   <View style={styles.translationRow}>
                     <View style={styles.translationBar} />
                     <Text style={styles.translationLabel}>의역</Text>
-                    <Text style={styles.translationContent}>
-                      {result.koreanNatural}
-                    </Text>
+                    <Text style={styles.translationContent}>{result.koreanNatural}</Text>
                   </View>
                 )}
                 {result.hongTNotes ? (
                   <View style={styles.translationRow}>
                     <View style={styles.translationBar} />
                     <Text style={styles.translationLabel}>홍T</Text>
-                    <Text style={styles.translationContent}>
-                      {result.hongTNotes}
-                    </Text>
+                    <Text style={styles.translationContent}>{result.hongTNotes}</Text>
                   </View>
                 ) : null}
                 {result.syntaxNotes ? (
                   <View style={styles.translationRow}>
                     <View style={styles.translationBar} />
                     <Text style={styles.translationLabel}>구문</Text>
-                    <Text style={styles.translationContent}>
-                      {result.syntaxNotes}
-                    </Text>
+                    <Text style={styles.translationContent}>{result.syntaxNotes}</Text>
                   </View>
                 ) : null}
               </View>
@@ -256,7 +247,6 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
             ))}
           </Text>
         </View>
-
       </Page>
     </Document>
   );
