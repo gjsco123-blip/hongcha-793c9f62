@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Sparkles, SpellCheck } from "lucide-react";
+import { Sparkles, SpellCheck, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -8,9 +8,10 @@ interface HongTSectionProps {
   onChange: (value: string) => void;
   onGenerate?: () => void;
   generating?: boolean;
+  onDelete?: () => void;
 }
 
-export function HongTSection({ value, onChange, onGenerate, generating }: HongTSectionProps) {
+export function HongTSection({ value, onChange, onGenerate, generating, onDelete }: HongTSectionProps) {
   const [editing, setEditing] = useState(false);
   const [checking, setChecking] = useState(false);
 
@@ -37,7 +38,7 @@ export function HongTSection({ value, onChange, onGenerate, generating }: HongTS
   };
 
   return (
-    <div className="bg-muted/50 border border-border p-3 relative">
+    <div className="bg-muted/50 border border-border p-3 relative group/hongt">
       {generating && (
         <div className="absolute inset-0 bg-muted/80 flex items-center justify-center z-10">
           <span className="text-xs text-muted-foreground animate-pulse">
@@ -46,6 +47,15 @@ export function HongTSection({ value, onChange, onGenerate, generating }: HongTS
         </div>
       )}
       <div>
+        {onDelete && (
+          <button
+            onClick={onDelete}
+            className="absolute top-1.5 right-1.5 p-0.5 text-muted-foreground/50 hover:text-destructive opacity-0 group-hover/hongt:opacity-100 transition-opacity"
+            title="홍T 삭제"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        )}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
             <div className="w-0.5 h-4 bg-foreground shrink-0" />

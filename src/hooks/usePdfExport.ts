@@ -13,6 +13,7 @@ interface SentenceResult {
   hongTNotes?: string;
   hideLiteral?: boolean;
   hideNatural?: boolean;
+  hideHongT?: boolean;
 }
 
 export function usePdfExport() {

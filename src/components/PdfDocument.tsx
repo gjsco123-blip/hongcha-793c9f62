@@ -24,6 +24,7 @@ interface SentenceResult {
   hongTNotes?: string;
   hideLiteral?: boolean;
   hideNatural?: boolean;
+  hideHongT?: boolean;
 }
 
 interface PdfDocumentProps {
@@ -216,7 +217,7 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
                     <Text style={styles.translationContent}>{result.koreanNatural}</Text>
                   </View>
                 )}
-                {result.hongTNotes ? (
+                {result.hongTNotes && !result.hideHongT ? (
                   <View style={styles.translationRow}>
                     <View style={styles.translationBar} />
                     <Text style={styles.translationLabel}>홍T</Text>
