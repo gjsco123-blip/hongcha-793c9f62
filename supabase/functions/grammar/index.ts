@@ -69,54 +69,7 @@ serve(async (req) => {
 • 동사 means의 목적어로 that이 생략된 명사절이 옴.
 • 조동사 may + be p.p. 형태의 수동태임.`;
 
-    // Step 1: gpt-5-mini로 초안 생성 (빠르고 저렴)
-    const draftResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "openai/gpt-5-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `다음 문장을 구문분석하세요: "${textToAnalyze}"` },
-        ],
-      }),
-    });
-
-    if (!draftResponse.ok) {
-      const errText = await draftResponse.text();
-      console.error("Draft AI error:", draftResponse.status, errText);
-      if (draftResponse.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (draftResponse.status === 402) {
-        return new Response(JSON.stringify({ error: "Credits exhausted." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      throw new Error(`Draft AI error: ${draftResponse.status}`);
-    }
-
-    const draftData = await draftResponse.json();
-    const draftContent = draftData.choices?.[0]?.message?.content ?? "";
-
-    // Step 2: gpt-5로 검수/수정 (정확도 높음)
-    const reviewPrompt = `너는 수능 영어 구문분석 검수 전문가다.
-아래는 초안 구문분석 결과다. 오류가 있으면 고치고, 불필요한 항목은 삭제하고, 최종 • 리스트만 출력하라.
-규칙: 각 항목은 • 로 시작, 한 줄로 작성, 해석 금지, 번호 금지, 2~4개만 유지.
-
-[원문] "${textToAnalyze}"
-
-[초안]
-${draftContent}
-
-[지시] 오류 있으면 고쳐서 최종 • 리스트만 출력하라. 추가 설명 금지.`;
-
-    const reviewResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
@@ -125,27 +78,30 @@ ${draftContent}
       body: JSON.stringify({
         model: "openai/gpt-5",
         messages: [
-          { role: "user", content: reviewPrompt },
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `다음 문장을 구문분석하세요: "${textToAnalyze}"` },
         ],
       }),
     });
 
-    if (!reviewResponse.ok) {
-      const errText = await reviewResponse.text();
-      console.error("Review AI error:", reviewResponse.status, errText);
-      if (reviewResponse.status === 429 || reviewResponse.status === 402) {
-        // 검수 실패 시 초안이라도 반환
-        console.warn("Review failed, returning draft instead");
-        return new Response(
-          JSON.stringify({ syntaxNotes: draftContent.trim() }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("AI gateway error:", response.status, errText);
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded." }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
-      throw new Error(`Review AI error: ${reviewResponse.status}`);
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "Credits exhausted." }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      throw new Error(`AI error: ${response.status}`);
     }
 
-    const reviewData = await reviewResponse.json();
-    const content = reviewData.choices?.[0]?.message?.content ?? draftContent;
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content ?? "";
 
     return new Response(
       JSON.stringify({ syntaxNotes: content.trim() }),
