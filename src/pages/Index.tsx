@@ -27,6 +27,7 @@ interface SentenceResult {
   generatingHongT?: boolean;
   hideLiteral?: boolean;
   hideNatural?: boolean;
+  hideHongT?: boolean;
 }
 
 const PRESETS: Preset[] = ["고1", "고2", "수능"];
@@ -484,21 +485,24 @@ export default function Index() {
                     )}
 
                     {/* 홍T */}
-                    <HongTSection
-                      value={result.hongTNotes ?? ""}
-                      onChange={(val) =>
-                        setResults((prev) =>
-                          prev.map((r) =>
-                            r.id === result.id ? { ...r, hongTNotes: val } : r
+                    {!result.hideHongT && (
+                      <HongTSection
+                        value={result.hongTNotes ?? ""}
+                        onChange={(val) =>
+                          setResults((prev) =>
+                            prev.map((r) =>
+                              r.id === result.id ? { ...r, hongTNotes: val } : r
+                            )
                           )
-                        )
-                      }
-                      generating={result.generatingHongT}
-                      onGenerate={() => {
-                        const allSentences = results.map((r) => r.original);
-                        generateHongT(result.id, allSentences);
-                      }}
-                    />
+                        }
+                        generating={result.generatingHongT}
+                        onGenerate={() => {
+                          const allSentences = results.map((r) => r.original);
+                          generateHongT(result.id, allSentences);
+                        }}
+                        onDelete={() => setResults(prev => prev.map(r => r.id === result.id ? { ...r, hideHongT: true } : r))}
+                      />
+                    )}
 
                     {/* 구문분석 */}
                     <SyntaxNotesSection
