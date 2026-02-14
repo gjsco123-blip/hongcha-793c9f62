@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
     paddingTop: 42,
     paddingBottom: 85,
     paddingLeft: 57,
-    paddingRight: 100,
+    paddingRight: 120,
     fontFamily: "Noto Sans KR",
     fontSize: 9,
     lineHeight: 1.8,
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
   },
   sentenceRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: 0,
     marginBottom: 6,
   },
