@@ -69,14 +69,14 @@ const styles = StyleSheet.create({
   sentenceRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 8,
+    gap: 0,
     marginBottom: 6,
   },
   sentenceNumber: {
     fontSize: 8,
     fontWeight: 700,
-    width: 20,
-    flexShrink: 0,
+    width: "auto",
+    flexShrink: 2,
   },
   englishText: {
     fontFamily: "Noto Serif",
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   translationContainer: {
-    marginLeft: 28,
+    marginLeft: 12,
   },
   translationRow: {
     flexDirection: "row",
@@ -193,7 +193,7 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
         {results.map((result, index) => (
           <View key={result.id} style={styles.sentenceContainer} wrap={false}>
             <View style={styles.sentenceRow}>
-              <Text style={styles.sentenceNumber}>{String(index + 1).padStart(2, "0")}</Text>
+              <Text style={styles.sentenceNumber}>{String(index + 1).padStart(2, "0")} </Text>
               <Text style={styles.englishText}>
                 {result.englishChunks.length > 0
                   ? renderChunksWithVerbUnderline(result.englishChunks)
