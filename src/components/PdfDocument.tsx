@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: 700,
     width: "auto",
-    flexShrink: 2,
+    flexShrink: 6,
   },
   englishText: {
     fontFamily: "Noto Serif",
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   translationContainer: {
-    marginLeft: 12,
+    marginLeft: 16,
   },
   translationRow: {
     flexDirection: "row",
