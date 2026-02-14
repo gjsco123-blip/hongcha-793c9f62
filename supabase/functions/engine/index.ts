@@ -85,7 +85,10 @@ CRITICAL RULES:
 - ALL punctuation MUST be preserved exactly as in the original: dashes (—, –, -), commas, semicolons, colons, parentheses, quotation marks, etc. An em dash (—) must remain in the chunk text, never be dropped.
 - Conjunctions (while, but, although, because, however, etc.) MUST be included as part of a chunk, never dropped.
 - Concatenating all english chunks (removing tags) must reconstruct the original sentence exactly.
-- Within each English chunk, wrap the main verb or verb phrase with <v>...</v> tags. ONLY tag finite verbs (verbs that function as the main predicate of a clause or sentence). Include main verbs, auxiliary+main verb combinations (e.g., <v>has been working</v>), and modal+verb combinations (e.g., <v>can affect</v>). Do NOT tag any non-finite verbs: no to-infinitives (e.g., to engage, to achieve), no gerunds (-ing used as nouns), no participles used as adjectives. The 'to' in to-infinitives must NEVER be inside a <v> tag.
+- Within each English chunk, wrap the main verb or verb phrase with <v>...</v> tags. ONLY tag finite verbs (verbs that function as the main predicate of a clause or sentence). Include main verbs, auxiliary+main verb combinations (e.g., <v>has been working</v>), and modal+verb combinations (e.g., <v>can affect</v>). Multi-word verb phrases MUST be wrapped in a SINGLE <v> tag (e.g., <v>were conducted</v>, <v>sought out</v>), never split into separate <v> tags per word. Do NOT tag any non-finite verbs: no to-infinitives (e.g., to engage, to achieve), no gerunds (-ing used as nouns), no participles used as adjectives. The 'to' in to-infinitives must NEVER be inside a <v> tag.
+- NEVER tag these as verbs — they are prepositions, conjunctions, or fixed expressions: such as, as well as, rather than, according to, due to, because of, in order to, as opposed to, in addition to, regardless of, in terms of. If in doubt, ask: "Does this word/phrase describe an action or state performed by a subject?" If NO, do NOT use <v>.
+- WRONG: <c1>researchers <v>such as</v> Boas</c1> — "such as" is a preposition, NOT a verb.
+- CORRECT: <c1>researchers such as Boas <v>studied</v> cultures</c1>
 - The <v> tags go INSIDE the <c> tags. Example: <c1>The researchers <v>discovered</v></c1>
 
 You MUST respond by calling the "analysis_result" function with the structured output.`;
