@@ -83,6 +83,7 @@ const styles = StyleSheet.create({
     fontSize: 8,
     lineHeight: 2.2,
     flex: 1,
+    marginLeft: 6,
   },
   translationContainer: {
     marginLeft: 16,
