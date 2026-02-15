@@ -10,8 +10,8 @@ Font.register({
 });
 
 Font.register({
-  family: "Noto Serif",
-  src: "https://cdn.jsdelivr.net/fontsource/fonts/noto-serif@latest/latin-400-normal.ttf",
+  family: "Pretendard",
+  src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-Regular.otf",
 });
 
 interface SentenceResult {
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
   },
   sentenceRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 0,
     marginBottom: 6,
   },
@@ -77,9 +77,10 @@ const styles = StyleSheet.create({
     fontWeight: 700,
     width: "auto",
     flexShrink: 6,
+    marginTop: 1,
   },
   englishText: {
-    fontFamily: "Noto Serif",
+    fontFamily: "Pretendard",
     fontSize: 8,
     lineHeight: 2.2,
     flex: 1,
@@ -127,7 +128,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   passageText: {
-    fontFamily: "Noto Serif",
+    fontFamily: "Pretendard",
     fontSize: 9,
     lineHeight: 2,
     textAlign: "justify",
