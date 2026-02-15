@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   passageNumber: {
     fontWeight: 700,
     fontSize: 6,
-    marginTop: -1,
+    marginTop: -3,
     marginRight: 1,
     color: "#000",
   },
