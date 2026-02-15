@@ -1,13 +1,13 @@
 import { useState, useRef, useCallback } from "react";
 import { Chunk, segmentsToWords, wordsToSegments } from "@/lib/chunk-utils";
-import { Sparkles, Check, X, Pencil } from "lucide-react";
+import { Sparkles, Check, X, Pencil, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ChunkEditorProps {
   chunks: Chunk[];
   onChange: (chunks: Chunk[]) => void;
   disabled?: boolean;
-  onAnalyzeSelection?: (selectedText: string) => void;
+  onAnalyzeSelection?: (selectedText: string, userHint?: string) => void;
 }
 
 export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection }: ChunkEditorProps) {
@@ -15,11 +15,15 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection }: 
   const [draftChunks, setDraftChunks] = useState<Chunk[]>([]);
   const [selectedText, setSelectedText] = useState("");
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
+  const [showHintInput, setShowHintInput] = useState(false);
+  const [hintText, setHintText] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hintInputRef = useRef<HTMLTextAreaElement>(null);
 
   const handleMouseUp = useCallback(() => {
     if (!onAnalyzeSelection) return;
+    if (showHintInput) return; // 힌트 입력 중에는 선택 무시
     const selection = window.getSelection();
     const text = selection?.toString().trim();
     if (text && text.length > 2 && containerRef.current?.contains(selection?.anchorNode ?? null)) {
@@ -35,15 +39,35 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection }: 
       setSelectedText("");
       setTooltipPos(null);
     }
-  }, [onAnalyzeSelection]);
+  }, [onAnalyzeSelection, showHintInput]);
 
   const handleAnalyzeClick = () => {
+    // 선택 구문분석 버튼 클릭 → 힌트 입력 팝업 표시
+    setShowHintInput(true);
+    setHintText("");
+    setTimeout(() => hintInputRef.current?.focus(), 50);
+  };
+
+  const handleSubmitWithHint = () => {
+    if (selectedText && onAnalyzeSelection) {
+      onAnalyzeSelection(selectedText, hintText.trim() || undefined);
+    }
+    resetSelection();
+  };
+
+  const handleSubmitAuto = () => {
     if (selectedText && onAnalyzeSelection) {
       onAnalyzeSelection(selectedText);
-      setSelectedText("");
-      setTooltipPos(null);
-      window.getSelection()?.removeAllRanges();
     }
+    resetSelection();
+  };
+
+  const resetSelection = () => {
+    setSelectedText("");
+    setTooltipPos(null);
+    setShowHintInput(false);
+    setHintText("");
+    window.getSelection()?.removeAllRanges();
   };
 
   const handleEnterEdit = () => {
@@ -63,8 +87,8 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection }: 
 
   const handleWordClick = (chunkIndex: number, wordIndex: number) => {
     if (wordIndex === 0) {
-      if (chunkIndex === 0) return; // 맨 첫 단어는 무시
-      handleMerge(chunkIndex - 1); // 이전 청크와 병합 (분할 해제)
+      if (chunkIndex === 0) return;
+      handleMerge(chunkIndex - 1);
       return;
     }
     const chunk = draftChunks[chunkIndex];
@@ -175,8 +199,8 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection }: 
       )}
 
       <div ref={containerRef} onMouseUp={handleMouseUp} className="relative flex flex-wrap items-center gap-1.5">
-        {/* Selection analyze tooltip */}
-        {tooltipPos && selectedText && (
+        {/* Selection tooltip - 기본 버튼 */}
+        {tooltipPos && selectedText && !showHintInput && (
           <button
             onClick={handleAnalyzeClick}
             className="absolute z-20 flex items-center gap-1 px-2 py-1 text-[10px] font-medium bg-foreground text-background rounded shadow-lg whitespace-nowrap -translate-x-1/2 -translate-y-full"
@@ -186,6 +210,63 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection }: 
             선택 구문분석
           </button>
         )}
+
+        {/* 힌트 입력 팝업 */}
+        {tooltipPos && selectedText && showHintInput && (
+          <div
+            className="absolute z-30 bg-card border border-border rounded-lg shadow-xl p-3 w-72 -translate-x-1/2"
+            style={{ left: tooltipPos.x, top: tooltipPos.y - 8 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-[10px] text-muted-foreground mb-1.5 truncate">
+              선택: <span className="font-english font-medium text-foreground">"{selectedText}"</span>
+            </div>
+            <textarea
+              ref={hintInputRef}
+              value={hintText}
+              onChange={(e) => setHintText(e.target.value)}
+              placeholder="문법 포인트 힌트 입력 (예: 관계대명사, 수동태...)"
+              className="w-full bg-muted/50 border border-border rounded px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground resize-none"
+              rows={2}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmitWithHint();
+                }
+                if (e.key === "Escape") resetSelection();
+              }}
+            />
+            <div className="flex gap-1.5 mt-2">
+              <Button
+                size="sm"
+                onClick={handleSubmitWithHint}
+                disabled={!hintText.trim()}
+                className="h-6 px-2 text-[10px] gap-1 flex-1"
+              >
+                <Send className="w-3 h-3" />
+                정리하기
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSubmitAuto}
+                className="h-6 px-2 text-[10px] gap-1 flex-1"
+              >
+                <Sparkles className="w-3 h-3" />
+                자동생성
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={resetSelection}
+                className="h-6 px-1.5 text-[10px]"
+              >
+                <X className="w-3 h-3" />
+              </Button>
+            </div>
+          </div>
+        )}
+
         {displayChunks.map((chunk, i) => (
           <div key={`${chunk.tag}-${i}`} className="flex items-center gap-1 max-w-full">
             <span
