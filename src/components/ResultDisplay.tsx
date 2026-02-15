@@ -18,9 +18,9 @@ export function ResultDisplay({ label, chunks, text, isKorean }: ResultDisplayPr
         {chunks ? (
           <div className="flex flex-wrap items-center gap-1.5">
             {chunks.map((chunk, i) => (
-              <div key={`${chunk.tag}-${i}`} className="flex items-center gap-1">
+              <div key={`${chunk.tag}-${i}`} className="flex items-center gap-1 max-w-full">
                 <span
-                  className={`inline-block px-2 py-1 text-xs border border-border bg-background ${
+                  className={`inline-block px-2 py-1 text-xs border border-border bg-background break-words max-w-full ${
                     isKorean ? "font-sans" : "font-english"
                   }`}
                 >

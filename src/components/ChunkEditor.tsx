@@ -126,7 +126,7 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection }: 
         </button>
       )}
       {chunks.map((chunk, i) => (
-        <div key={`${chunk.tag}-${i}`} className="flex items-center gap-1">
+        <div key={`${chunk.tag}-${i}`} className="flex items-center gap-1 max-w-full">
           {editingIndex === i ? (
             <input
               autoFocus
@@ -141,7 +141,7 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection }: 
             />
           ) : (
             <span
-              className={`inline-flex items-center gap-0.5 px-2 py-1 text-xs font-english border border-border bg-background text-foreground group
+              className={`inline-flex items-center gap-0.5 px-2 py-1 text-xs font-english border border-border bg-background text-foreground group flex-wrap break-words max-w-full
                 ${!disabled ? "cursor-default" : ""}`}
             >
               {segmentsToWords(chunk.segments).map((w, wi) => (
