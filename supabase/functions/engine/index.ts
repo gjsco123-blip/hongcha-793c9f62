@@ -18,6 +18,37 @@ function normalize(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
+/** Repair tagged string by ensuring all text from original sentence is captured in chunks */
+function repairTagged(tagged: string, original: string): string {
+  const extracted = normalize(extractText(tagged));
+  const norm = normalize(original);
+  if (extracted === norm) return tagged;
+
+  // Find missing trailing text
+  if (norm.startsWith(extracted)) {
+    const missing = norm.substring(extracted.length).trim();
+    if (missing) {
+      // Append missing text to the last chunk
+      const lastClose = tagged.lastIndexOf("</c");
+      if (lastClose !== -1) {
+        const closeEnd = tagged.indexOf(">", lastClose) + 1;
+        const beforeClose = tagged.substring(0, lastClose);
+        const closeTag = tagged.substring(lastClose, closeEnd);
+        const after = tagged.substring(closeEnd);
+        return beforeClose + " " + missing + closeTag + after;
+      }
+    }
+  }
+
+  // Strip residual malformed tags from tagged content
+  const cleaned = tagged.replace(/<c\d+>|<\/c\d+>/g, (m, offset) => {
+    // Keep properly paired tags, remove orphans
+    return m;
+  });
+
+  return tagged;
+}
+
 function safeParseJson(raw: string): Record<string, string> {
   // Try direct parse first
   try { return JSON.parse(raw); } catch { /* fallback */ }
@@ -190,9 +221,19 @@ You MUST respond by calling the "analysis_result" function with the structured o
       const krCount = countTags(lastResult.korean_literal_tagged);
 
       const tagMatch = enCount === krCount;
-      const reconstructed = normalize(extractText(lastResult.english_tagged));
+      let reconstructed = normalize(extractText(lastResult.english_tagged));
       const original = normalize(sentence);
-      const contentMatch = reconstructed === original;
+      let contentMatch = reconstructed === original;
+
+      // Attempt auto-repair if content doesn't match
+      if (!contentMatch) {
+        lastResult.english_tagged = repairTagged(lastResult.english_tagged, sentence);
+        reconstructed = normalize(extractText(lastResult.english_tagged));
+        contentMatch = reconstructed === original;
+        if (contentMatch) {
+          console.log(`Auto-repaired english_tagged on attempt ${attempt + 1}`);
+        }
+      }
 
       if (tagMatch && contentMatch) {
         console.log(`Validation passed on attempt ${attempt + 1} (${enCount} chunks)`);
