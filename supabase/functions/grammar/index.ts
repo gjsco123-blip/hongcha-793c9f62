@@ -10,7 +10,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { sentence, selectedText } = await req.json();
+    const { sentence, selectedText, userHint } = await req.json();
     const textToAnalyze = selectedText || sentence;
     if (!textToAnalyze) {
       return new Response(JSON.stringify({ error: "Missing sentence or selectedText" }), {
@@ -22,7 +22,7 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const systemPrompt = `너는 한국 고등학교 수능 대비 영어 '구문분석' 교재를 제작하는 전문 강사다.
+    const baseSystemPrompt = `너는 한국 고등학교 수능 대비 영어 '구문분석' 교재를 제작하는 전문 강사다.
 입력된 문장 1개에 대해 시험 출제 관점에서 핵심 구문만 간결하게 분석하라.
 
 [절대 규칙]
@@ -69,6 +69,34 @@ serve(async (req) => {
 • 동사 means의 목적어로 that이 생략된 명사절이 옴.
 • 조동사 may + be p.p. 형태의 수동태임.`;
 
+    const hintSystemPrompt = `너는 한국 고등학교 수능 대비 영어 '구문분석' 교재를 제작하는 전문 강사다.
+사용자가 특정 영어 구문을 선택하고, 분석할 문법 포인트를 힌트로 제시했다.
+사용자가 제시한 포인트만을 기반으로 아래 출력 형식에 맞게 정리하라.
+
+[절대 규칙]
+1. 사용자가 언급하지 않은 문법 포인트는 절대 추가하지 말 것.
+2. 사용자의 힌트를 해석하여 정확한 문법 용어와 템플릿 형식으로 변환할 것.
+3. 각 항목은 • 로 시작, 한 줄로 작성.
+4. 해석/정의 설명 금지.
+5. 기능 중심으로만 설명.
+
+[출력 말투 템플릿 – 반드시 이 스타일 유지]
+- "주격 관계대명사 that/who/which가 선행사 ___를 수식하는 형용사절을 이룸."
+- "선행사 ___가 단수/복수이므로 관계절 동사 ___가 단수형/복수형으로 수일치함."
+- "가주어 it, 진주어 to-v 구문으로 to-v가 문장의 실제 주어 역할을 함."
+- "5형식 동사 ___ + O + O.C 구조임."
+- "to부정사가 목적/결과/형용사적 용법으로 사용됨."
+- "전치사 + 동명사구가 수단/방법/목적을 나타냄."
+- "조동사 + be p.p. 형태로 수동의 의미를 나타냄."
+- "삽입된 부사구는 문장 전체를 수식함."
+- "병렬 구조로 두 요소가 and/or/but으로 연결됨."
+- "접속사 ___가 이유/조건/양보/시간의 부사절을 이룸."`;
+
+    const systemPrompt = userHint ? hintSystemPrompt : baseSystemPrompt;
+    const userMessage = userHint
+      ? `구문: "${textToAnalyze}"\n힌트: ${userHint}`
+      : `다음 문장을 구문분석하세요: "${textToAnalyze}"`;
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -79,7 +107,7 @@ serve(async (req) => {
         model: "openai/gpt-5",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `다음 문장을 구문분석하세요: "${textToAnalyze}"` },
+          { role: "user", content: userMessage },
         ],
       }),
     });
