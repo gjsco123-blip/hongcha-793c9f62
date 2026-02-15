@@ -39,11 +39,15 @@ function parseVerbSegments(raw: string): ChunkSegment[] {
 }
 
 export function parseTagged(tagged: string): Chunk[] {
-  const regex = /<c(\d+)>(.*?)<\/c\1>/g;
+  const regex = /<c(\d+)>([\s\S]*?)<\/c\1>/g;
   const chunks: Chunk[] = [];
+  const matchedRanges: { start: number; end: number }[] = [];
   let match;
+
   while ((match = regex.exec(tagged)) !== null) {
-    const rawText = match[2].trim();
+    matchedRanges.push({ start: match.index, end: regex.lastIndex });
+    // Remove any residual <cN> or </cN> tags inside the chunk content
+    const rawText = match[2].trim().replace(/<\/?c\d+>/g, "");
     const cleanText = rawText.replace(/<\/?v>/g, "");
     chunks.push({
       tag: parseInt(match[1]),
@@ -51,6 +55,40 @@ export function parseTagged(tagged: string): Chunk[] {
       segments: parseVerbSegments(rawText),
     });
   }
+
+  // Collect untagged text (text outside any <cN>...</cN>) and merge into nearest chunk
+  if (chunks.length > 0) {
+    let pos = 0;
+    for (const range of matchedRanges) {
+      if (range.start > pos) {
+        const orphan = tagged.substring(pos, range.start).replace(/<\/?c\d+>/g, "").replace(/<\/?v>/g, "").trim();
+        if (orphan) {
+          // Find the chunk whose range starts at range.start (i.e. the next chunk)
+          const idx = matchedRanges.indexOf(range);
+          if (idx > 0) {
+            // Append to previous chunk
+            chunks[idx - 1].text += " " + orphan;
+            chunks[idx - 1].segments[chunks[idx - 1].segments.length - 1].text += " " + orphan;
+          } else {
+            // Prepend to first chunk
+            chunks[0].text = orphan + " " + chunks[0].text;
+            chunks[0].segments[0].text = orphan + " " + chunks[0].segments[0].text;
+          }
+        }
+      }
+      pos = range.end;
+    }
+    // Check trailing text after last match
+    if (pos < tagged.length) {
+      const trailing = tagged.substring(pos).replace(/<\/?c\d+>/g, "").replace(/<\/?v>/g, "").trim();
+      if (trailing) {
+        const last = chunks[chunks.length - 1];
+        last.text += " " + trailing;
+        last.segments[last.segments.length - 1].text += " " + trailing;
+      }
+    }
+  }
+
   return chunks;
 }
 
