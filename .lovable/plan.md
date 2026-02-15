@@ -1,33 +1,43 @@
 
 
-## PDF 수정: 숫자 위치 미세조정 + 단어 줄바꿈 방지
+## PDF 수정: 글씨체 변경 + 정렬 + 위첨자 조정
 
-### 1. 숫자 위치 조정
+### 1. 영어 글씨체를 Noto Serif로 변경
 
-**파일:** `src/components/PdfDocument.tsx`
+Pretendard 폰트 등록을 Noto Serif로 교체하고, `englishText`와 `passageText`의 `fontFamily`를 변경.
 
-현재 `lineHeight: 2.2`로 맞췄지만 숫자가 너무 위에 붙어 있음. `marginTop`을 소량(약 1~2pt) 추가하여 영어 텍스트 첫 줄 바로 위쪽에 살짝 올라간 정도로 조정.
+```text
+Font.register({
+  family: "Noto Serif",
+  src: "https://cdn.jsdelivr.net/fontsource/fonts/noto-serif@latest/latin-400-normal.ttf",
+});
+```
 
 | 스타일 | 변경 전 | 변경 후 |
 |--------|---------|---------|
-| `sentenceNumber.marginTop` | (없음) | `1` |
+| 폰트 등록 | Pretendard | Noto Serif |
+| `englishText.fontFamily` | `"Pretendard"` | `"Noto Serif"` |
+| `passageText.fontFamily` | `"Pretendard"` | `"Noto Serif"` |
 
-### 2. 단어 중간 줄바꿈(하이픈 분리) 방지
+### 2. sentenceNumber와 englishText 윗라인 정렬
 
-**파일:** `src/components/PdfDocument.tsx`
+두 요소 모두 동일한 `fontSize: 8`, `lineHeight: 2.2`를 사용하되, `sentenceNumber`의 `marginTop`을 `0`으로 설정하여 윗선을 정확히 맞춤.
 
-react-pdf는 기본적으로 긴 단어를 하이픈으로 분리할 수 있음. `Font.registerHyphenationCallback`을 사용하여 하이픈 분리를 비활성화하면 "par-ticularly"처럼 단어가 쪼개지는 현상을 방지할 수 있음.
+| 스타일 | 변경 전 | 변경 후 |
+|--------|---------|---------|
+| `sentenceNumber.fontSize` | `8` | `8` (유지) |
+| `sentenceNumber.lineHeight` | `2.2` | `2.2` (유지) |
+| `sentenceNumber.marginTop` | `-1` | `0` (제거) |
 
-```text
-Font.registerHyphenationCallback(word => [word]);
-```
+### 3. passageNumber 위첨자 효과
 
-이 한 줄을 폰트 등록 코드 아래에 추가하면, 모든 단어가 분리 없이 통째로 다음 줄로 넘어감.
+Original Passage 섹션의 번호가 영어 문장보다 살짝 위에 위치하도록 `passageNumber` 스타일 조정. `fontSize`를 본문보다 작게 유지하고 음수 `marginTop`으로 위로 올림.
 
-### 수정 요약
+| 스타일 | 변경 전 | 변경 후 |
+|--------|---------|---------|
+| `passageNumber.fontSize` | `7` | `6` |
+| `passageNumber.marginTop` | `2` | `-1` |
+| `passageNumber.marginRight` | `3` | `1` |
 
-| 위치 | 변경 내용 |
-|------|-----------|
-| `sentenceNumber` 스타일 | `marginTop: 1` 추가 |
-| 폰트 설정 | `Font.registerHyphenationCallback` 추가로 하이픈 분리 비활성화 |
-
+### 수정 파일
+- `src/components/PdfDocument.tsx`
