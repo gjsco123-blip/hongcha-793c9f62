@@ -14,6 +14,8 @@ Font.register({
   src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-Regular.otf",
 });
 
+Font.registerHyphenationCallback((word) => [word]);
+
 interface SentenceResult {
   id: number;
   original: string;
@@ -78,6 +80,7 @@ const styles = StyleSheet.create({
     width: "auto",
     flexShrink: 6,
     lineHeight: 2.2,
+    marginTop: 1,
   },
   englishText: {
     fontFamily: "Pretendard",
