@@ -41,7 +41,7 @@ interface PdfDocumentProps {
 const styles = StyleSheet.create({
   page: {
     paddingTop: 42,
-    paddingBottom: 85,
+    paddingBottom: 40,
     paddingLeft: 57,
     paddingRight: 120,
     fontFamily: "Noto Sans KR",
