@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     width: "auto",
     flexShrink: 6,
     lineHeight: 2.2,
-    marginTop: 0,
+    marginTop: 1,
   },
   englishText: {
     fontFamily: "Pretendard",
