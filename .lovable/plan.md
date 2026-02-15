@@ -1,38 +1,26 @@
 
 
-## 청크 분할 토글 + 설명 텍스트 수정
+## 영어 폰트 변경: Noto Serif → Source Serif 4
 
-### 변경 1: 분할 토글 기능
+### 변경 내용
 
-현재 `handleWordClick`은 단어 앞에서 분할만 가능. 이미 분할된 지점(청크의 첫 번째 단어)을 클릭하면 이전 청크와 병합되도록 수정.
-
-**로직:**
-- `wordIndex === 0`이고 `chunkIndex > 0`인 경우: 이전 청크와 병합 (분할 해제)
-- `wordIndex > 0`인 경우: 기존처럼 분할
-- `wordIndex === 0`이고 `chunkIndex === 0`인 경우: 무시 (첫 번째 청크의 첫 단어)
-
-**파일:** `src/components/ChunkEditor.tsx`
-
-`handleWordClick` 함수 수정:
-```
-if (wordIndex === 0) {
-  if (chunkIndex === 0) return; // 맨 첫 단어는 무시
-  // 이전 청크와 병합 (분할 해제)
-  handleMerge(chunkIndex - 1);
-  return;
-}
-// 기존 분할 로직 유지
-```
-
-### 변경 2: 설명 텍스트 수정
-
-**파일:** `src/pages/Index.tsx` (433번째 줄)
-
-| 변경 전 | 변경 후 |
-|---------|---------|
-| `✏️ 편집 · 더블클릭으로 동사 표시 · " / "로 분할` | `✏️ 편집 · 클릭: 분할/병합 · 더블클릭: 동사 표시` |
+Google Fonts에서 제공하는 Source Serif 4로 교체합니다.
 
 ### 수정 파일
-- `src/components/ChunkEditor.tsx` - 분할 토글 로직
-- `src/pages/Index.tsx` - 설명 텍스트
+
+**1. `src/index.css`** - Google Fonts import URL 변경
+- `Noto+Serif:wght@400;500;600;700` → `Source+Serif+4:wght@400;500;600;700`
+
+**2. `tailwind.config.ts`** - 폰트 패밀리 이름 변경
+- `serif` / `english` 항목: `"Noto Serif"` → `"Source Serif 4"`
+
+**3. `src/components/PdfDocument.tsx`** - PDF용 폰트 등록 변경
+- `Font.register` 에서 Noto Serif 대신 Source Serif 4 TTF 경로로 교체
+- family 이름을 `"Source Serif 4"`로 변경
+- `styles.englishText`, `styles.passageText` 등에서 fontFamily 업데이트
+
+### 영향 범위
+- 웹 화면의 영어 텍스트 전체
+- PDF 출력의 영어 텍스트
+- 기능 변경 없음, 폰트만 교체
 
