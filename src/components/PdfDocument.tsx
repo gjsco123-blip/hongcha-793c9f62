@@ -66,8 +66,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   sentenceContainer: {
-    marginBottom: 20,
-    paddingBottom: 12,
+    marginBottom: 14,
+    paddingBottom: 8,
     borderBottomWidth: 0.5,
     borderBottomColor: "#ddd",
   },
