@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
   },
   sentenceRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 0,
     marginBottom: 6,
   },
@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     width: "auto",
     flexShrink: 6,
     lineHeight: 2.2,
-    marginTop: 1,
+    marginTop: -1,
   },
   englishText: {
     fontFamily: "Pretendard",
