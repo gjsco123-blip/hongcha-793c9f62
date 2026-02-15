@@ -62,7 +62,11 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection }: 
   };
 
   const handleWordClick = (chunkIndex: number, wordIndex: number) => {
-    if (wordIndex === 0) return; // can't split at first word
+    if (wordIndex === 0) {
+      if (chunkIndex === 0) return; // 맨 첫 단어는 무시
+      handleMerge(chunkIndex - 1); // 이전 청크와 병합 (분할 해제)
+      return;
+    }
     const chunk = draftChunks[chunkIndex];
     const words = segmentsToWords(chunk.segments);
     const beforeWords = words.slice(0, wordIndex);
