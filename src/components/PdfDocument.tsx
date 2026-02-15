@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
   },
   sentenceRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: 0,
     marginBottom: 6,
   },
@@ -139,8 +139,8 @@ const styles = StyleSheet.create({
   passageNumber: {
     fontWeight: 700,
     fontSize: 7,
-    verticalAlign: "super",
-    marginRight: 2,
+    marginTop: 2,
+    marginRight: 3,
     color: "#000",
   },
   verbUnderline: {
