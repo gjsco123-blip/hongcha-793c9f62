@@ -1,21 +1,35 @@
 
+## 긴 문장 파싱 오류 수정
 
-## PdfDocument.tsx Noto Serif → Source Serif 4 수정
+### 원인 분석
 
-`src/index.css`와 `tailwind.config.ts`는 이미 변경 완료. `src/components/PdfDocument.tsx`에 Noto Serif가 3곳 남아있어 수정 필요.
+`parseTagged`의 정규식 `/<c(\d+)>(.*?)<\/c\1>/g`은 AI가 정상적인 태그를 반환할 때만 동작합니다. 긴 문장(청크 10개 이상)에서 AI가 태그를 누락하거나, 중첩하거나, 닫는 태그 없이 반환하면:
+- 일부 청크가 파싱되지 않고 건너뜀
+- 파싱된 청크의 텍스트에 raw 태그(`<c3>`, `</c3>`)가 포함됨
 
-### 수정 내용 (`src/components/PdfDocument.tsx`)
+### 수정 내용
 
-**1. Font.register (12~15줄)**
-- family: `"Noto Serif"` → `"Source Serif 4"`
-- URL을 Source Serif 4 TTF로 변경
-- bold(700) 웨이트도 함께 등록
+**파일: `src/lib/chunk-utils.ts`**
 
-**2. styles.englishText (86줄)**
-- `fontFamily: "Noto Serif"` → `fontFamily: "Source Serif 4"`
+1. `parseTagged` 함수에서 파싱된 각 청크의 텍스트에 남아있는 raw `<cN>`, `</cN>` 태그를 제거하는 정리 단계 추가
+2. 정규식을 `[\s\S]*?`로 변경하여 줄바꿈이 포함된 경우에도 대응
+3. 태그 바깥에 남은 텍스트(어떤 청크에도 포함되지 않은 단어)를 가장 가까운 청크에 병합하는 폴백 로직 추가
 
-**3. styles.passageText (134줄)**
-- `fontFamily: "Noto Serif"` → `fontFamily: "Source Serif 4"`
+**파일: `supabase/functions/engine/index.ts`**
+
+4. AI 응답 후처리에서 파싱되지 않은 텍스트가 있을 경우 자동으로 태그를 재구성하는 보정 로직 추가 -- 프론트에서 받기 전에 서버에서 한번 정리
+
+### 구체적 변경
+
+**`src/lib/chunk-utils.ts` - `parseTagged` 강화:**
+- `(.*?)` → `([\s\S]*?)` (줄바꿈 대응)
+- 파싱 후 각 chunk의 rawText에서 잔여 `<cN>`, `</cN>` 태그 제거
+- 태그 밖의 텍스트를 감지하여 인접 청크에 붙이는 로직 추가
+
+**`supabase/functions/engine/index.ts` - 응답 검증 강화:**
+- 기존 `contentMatch` 검증 실패 시, 태그가 누락된 텍스트를 자동으로 마지막 유효 청크에 포함시키는 보정 함수 추가
+- `extractText`에서 이미 태그를 제거하므로, 보정 후 다시 `contentMatch`를 검사
 
 ### 수정 파일
-- `src/components/PdfDocument.tsx` (1개 파일, 3곳 수정)
+- `src/lib/chunk-utils.ts` (프론트엔드 파싱 강화)
+- `supabase/functions/engine/index.ts` (서버 응답 보정)
