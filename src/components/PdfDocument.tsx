@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
   },
   englishText: {
     fontFamily: "Source Serif 4",
-    fontSize: 9,
+    fontSize: 10,
     lineHeight: 2.3,
     flex: 1,
     marginLeft: 6,
