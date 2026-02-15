@@ -15,9 +15,9 @@ export default {
     extend: {
       fontFamily: {
         sans: ["Noto Sans KR", "sans-serif"],
-        serif: ["Noto Serif", "Georgia", "serif"],
+        serif: ["Source Serif 4", "Georgia", "serif"],
         korean: ["Noto Sans KR", "sans-serif"],
-        english: ["Noto Serif", "Georgia", "serif"],
+        english: ["Source Serif 4", "Georgia", "serif"],
       },
       colors: {
         border: "hsl(var(--border))",
