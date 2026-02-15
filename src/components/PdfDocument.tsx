@@ -10,11 +10,8 @@ Font.register({
 });
 
 Font.register({
-  family: "Source Serif 4",
-  fonts: [
-    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@latest/latin-400-normal.ttf", fontWeight: 400 },
-    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@latest/latin-700-normal.ttf", fontWeight: 700 },
-  ],
+  family: "Noto Serif",
+  src: "https://cdn.jsdelivr.net/fontsource/fonts/noto-serif@latest/latin-400-normal.ttf",
 });
 
 Font.registerHyphenationCallback((word) => [word]);
@@ -78,7 +75,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   sentenceNumber: {
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: 700,
     width: "auto",
     flexShrink: 6,
@@ -86,9 +83,9 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   englishText: {
-    fontFamily: "Source Serif 4",
-    fontSize: 8,
-    lineHeight: 2.2,
+    fontFamily: "Noto Serif",
+    fontSize: 9,
+    lineHeight: 2.3,
     flex: 1,
     marginLeft: 6,
   },
@@ -134,7 +131,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   passageText: {
-    fontFamily: "Source Serif 4",
+    fontFamily: "Noto Serif",
     fontSize: 9,
     lineHeight: 2,
     textAlign: "justify",
