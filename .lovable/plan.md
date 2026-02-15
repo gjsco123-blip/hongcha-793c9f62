@@ -1,30 +1,19 @@
 
 
-## PDF 수정: 숫자 정렬 + 영어 글씨체 변경
+## PDF 숫자-영어문장 윗선 정렬 수정
 
-### 1. 숫자-영어문장 정렬 수정
+### 문제
+`englishText`에 `lineHeight: 2.2`가 설정되어 있어 텍스트 위에 추가 여백이 생김. 반면 `sentenceNumber`는 기본 `lineHeight: 1.8`(페이지 기본값)을 사용하므로, 두 요소의 텍스트 윗선이 어긋남. 현재 `marginTop: 1`로는 보정이 부족함.
 
-**파일:** `src/components/PdfDocument.tsx`
-
-현재 `sentenceRow` 스타일에 `alignItems: "center"`가 설정되어 있어서, 영어 문장이 여러 줄로 넘어갈 때 숫자가 세로 중앙에 위치함. 이를 `alignItems: "flex-start"`로 변경하여 숫자가 첫 줄과 같은 높이에 오도록 수정.
-
-또한 `sentenceNumber`의 `marginTop`을 약간 추가하여 텍스트 첫 줄과 시각적으로 정렬되도록 미세 조정.
-
-### 2. 영어 글씨체를 Pretendard로 변경
+### 해결
 
 **파일:** `src/components/PdfDocument.tsx`
 
-- 기존 `Noto Serif` 폰트 등록을 `Pretendard` 폰트 등록으로 교체
-- CDN 출처: `https://cdn.jsdelivr.net/gh/Project-Noonnu/noonfonts_2107@1.1/Pretendard-Regular.woff` (react-pdf는 ttf/otf를 선호하므로 적합한 ttf URL 사용)
-- `englishText` 스타일의 `fontFamily`를 `"Pretendard"`로 변경
-- `passageText`, `verbUnderline` 등 영어 텍스트에 적용되는 모든 스타일도 동일하게 변경
+`sentenceNumber`의 `lineHeight`를 `englishText`와 동일한 `2.2`로 맞추고, `marginTop`을 제거하면 두 요소가 같은 lineHeight 기준으로 정렬되어 윗선이 일치함.
 
-### 수정 요약
+| 스타일 | 변경 전 | 변경 후 |
+|--------|---------|---------|
+| `sentenceNumber.lineHeight` | (없음, 페이지 기본 1.8) | `2.2` |
+| `sentenceNumber.marginTop` | `1` | 제거 |
 
-| 위치 | 변경 내용 |
-|------|-----------|
-| `sentenceRow.alignItems` | `"center"` → `"flex-start"` |
-| 폰트 등록 | `Noto Serif` → `Pretendard` (ttf CDN) |
-| `englishText.fontFamily` | `"Noto Serif"` → `"Pretendard"` |
-| `passageText.fontFamily` | `"Noto Serif"` → `"Pretendard"` |
-
+이렇게 하면 숫자와 영어 텍스트가 동일한 lineHeight를 사용하여 첫 줄의 윗선이 정확히 일치합니다.
