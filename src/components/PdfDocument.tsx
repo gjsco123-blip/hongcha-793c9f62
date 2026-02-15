@@ -138,10 +138,9 @@ const styles = StyleSheet.create({
   },
   passageNumber: {
     fontWeight: 700,
-    fontSize: 6,
-    lineHeight: 1,
-    marginTop: -3,
-    marginRight: 1,
+    fontSize: 7,
+    verticalAlign: "super",
+    marginRight: 2,
     color: "#000",
   },
   verbUnderline: {
