@@ -12,6 +12,7 @@ serve(async (req) => {
   try {
     const { sentence, selectedText, userHint } = await req.json();
     const textToAnalyze = selectedText || sentence;
+    // sentence = 전체 문장, textToAnalyze = 선택된 구문 또는 전체 문장
     if (!textToAnalyze) {
       return new Response(JSON.stringify({ error: "Missing sentence or selectedText" }), {
         status: 400,
@@ -69,33 +70,36 @@ serve(async (req) => {
 • 동사 means의 목적어로 that이 생략된 명사절이 옴.
 • 조동사 may + be p.p. 형태의 수동태임.`;
 
-    const hintSystemPrompt = `너는 한국 고등학교 수능 대비 영어 '구문분석' 교재를 제작하는 전문 강사다.
-사용자가 특정 영어 구문을 선택하고, 분석할 문법 포인트를 힌트로 제시했다.
-사용자가 제시한 포인트만을 기반으로 아래 출력 형식에 맞게 정리하라.
+    const hintSystemPrompt = `너는 한국 고등학교 수능 대비 영어 구문분석 교재를 제작하는 전문 강사다.
+사용자가 전체 문장과 그 안에서 특정 구문을 선택하고, 분석할 문법 포인트를 힌트로 제시했다.
+
+[핵심 지시]
+1. 전체 문장의 맥락을 먼저 파악한 뒤, 사용자가 지정한 포인트가 해당 문장에서 어떤 역할을 하는지 구체적으로 설명하라.
+2. 단순히 문법 용어를 나열하지 말고, 그 문장에서 실제로 어떻게 쓰였는지를 기능 중심으로 서술하라.
+3. 사용자가 언급하지 않은 문법 포인트는 절대 추가하지 말 것.
 
 [절대 규칙]
-1. 사용자가 언급하지 않은 문법 포인트는 절대 추가하지 말 것.
-2. 사용자의 힌트를 해석하여 정확한 문법 용어와 템플릿 형식으로 변환할 것.
-3. 각 항목은 • 로 시작, 한 줄로 작성.
-4. 해석/정의 설명 금지.
-5. 기능 중심으로만 설명.
+1. 각 항목은 • 로 시작, 한 줄로 작성.
+2. 해석/정의 설명 금지. 기능 중심으로만 설명.
+3. 출력에 큰따옴표(" ")를 절대 사용하지 말 것.
+4. 3단어 이상의 영어 구문은 첫단어~마지막단어 형태로 축약하라. (예: who received the scholarship → who~scholarship)
 
 [출력 말투 템플릿 – 반드시 이 스타일 유지]
-- "주격 관계대명사 that/who/which가 선행사 ___를 수식하는 형용사절을 이룸."
-- "선행사 ___가 단수/복수이므로 관계절 동사 ___가 단수형/복수형으로 수일치함."
-- "가주어 it, 진주어 to-v 구문으로 to-v가 문장의 실제 주어 역할을 함."
-- "5형식 동사 ___ + O + O.C 구조임."
-- "to부정사가 목적/결과/형용사적 용법으로 사용됨."
-- "전치사 + 동명사구가 수단/방법/목적을 나타냄."
-- "조동사 + be p.p. 형태로 수동의 의미를 나타냄."
-- "삽입된 부사구는 문장 전체를 수식함."
-- "병렬 구조로 두 요소가 and/or/but으로 연결됨."
-- "접속사 ___가 이유/조건/양보/시간의 부사절을 이룸."`;
+- 주격 관계대명사 who가 선행사 students를 수식하는 형용사절을 이끌며, who~scholarship 전체가 students를 후치수식함.
+- 선행사 students가 복수이므로 관계절 동사 were가 복수형으로 수일치함.
+- 가주어 it, 진주어 to-v 구문으로 to-v가 문장의 실제 주어 역할을 함.
+- 5형식 동사 make + O + O.C 구조로, 목적어 them을 O.C가 보충 설명함.
+- to부정사 to improve가 목적의 부사적 용법으로 쓰여 행위의 목적을 나타냄.
+- 전치사 by 뒤에 동명사 using이 와서 수단/방법을 나타냄.
+- 조동사 can + be p.p. 형태로 수동의 의미를 나타냄.
+- 삽입된 부사구 in~sense는 문장 전체를 수식함.
+- 병렬 구조로 reading과 writing이 and로 연결됨.
+- 접속사 because가 이유의 부사절을 이끌어 주절의 원인을 나타냄.`;
 
     const systemPrompt = userHint ? hintSystemPrompt : baseSystemPrompt;
     const userMessage = userHint
-      ? `구문: "${textToAnalyze}"\n힌트: ${userHint}`
-      : `다음 문장을 구문분석하세요: "${textToAnalyze}"`;
+      ? `전체 문장: ${sentence}\n선택 구문: ${textToAnalyze}\n힌트: ${userHint}`
+      : `다음 문장을 구문분석하세요: ${textToAnalyze}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
