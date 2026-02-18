@@ -332,23 +332,30 @@ serve(async (req) => {
 
     const systemPrompt = useFreestyle ? buildAutoSystemPrompt() : buildHintSystemPrompt();
 
+    const hintModel = useFreestyle ? "google/gemini-2.5-flash" : "google/gemini-2.5-pro";
+    const useToolCall = hintModel.includes("flash");
+
+    const reqBody: any = {
+      model: hintModel,
+      temperature: useFreestyle ? 0.2 : 0.12,
+      max_tokens: useToolCall ? 450 : 2000,
+      messages: [
+        { role: "system", content: systemPrompt + (useToolCall ? "" : "\n\n출력 형식: 반드시 {\"points\":[...]} JSON만 출력하라. 다른 텍스트 없이 JSON만.") },
+        { role: "user", content: userMessage },
+      ],
+    };
+    if (useToolCall) {
+      reqBody.tools = tools;
+      reqBody.tool_choice = { type: "function", function: { name: "syntax_result" } };
+    }
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        temperature: useFreestyle ? 0.2 : 0.12,
-        max_tokens: 450,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage },
-        ],
-        tools,
-        tool_choice: { type: "function", function: { name: "syntax_result" } },
-      }),
+      body: JSON.stringify(reqBody),
     });
 
     if (!response.ok) {
