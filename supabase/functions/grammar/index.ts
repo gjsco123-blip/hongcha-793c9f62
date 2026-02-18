@@ -323,7 +323,7 @@ serve(async (req) => {
       });
     }
 
-    // ── 힌트 모드: 기존 태그 기반 필터링 ──
+    // ── 힌트 모드: 태그 기반 + 폴백 ──
     let tags: TagId[] = [];
     if (Array.isArray(hintTags) && hintTags.length > 0) {
       tags = hintTags as TagId[];
@@ -331,27 +331,26 @@ serve(async (req) => {
       tags = detectTagsFromHint(rawHint);
     }
 
-    if (tags.length === 0) {
-      const res: GrammarResponse = {
-        syntaxNotes: "(힌트가 너무 짧거나 인식되지 않았습니다) 예: 목관대 생략 / 수일치 / 과거분사",
-        detectedTags: [],
-        normalizedHint: rawHint,
-      };
-      return new Response(JSON.stringify(res), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // 태그 매칭 실패 시 → 힌트+선택 텍스트를 그대로 프롬프트에 넘겨 자유 분석
+    const useFreestyle = tags.length === 0;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const userMessage =
-      `전체 문장: ${full}\n` +
-      `선택 구문: ${selected || "(없음/전체문장기준)"}\n` +
-      `분석 대상: ${textToAnalyze}\n` +
-      `허용 태그(TagId): ${tags.join(", ")}\n` +
-      `태그 의미:\n${tagsToPromptBlock(tags)}\n` +
-      `주의: 위 태그에 해당하는 포인트만 points로 작성하라.`;
+    const userMessage = useFreestyle
+      ? `전체 문장: ${full}\n` +
+        `선택 구문: ${selected || "(없음/전체문장기준)"}\n` +
+        `분석 대상: ${textToAnalyze}\n` +
+        `사용자 힌트: ${rawHint || "(없음)"}\n` +
+        `이 문장에서 힌트와 관련된 핵심 문법 포인트를 찾아서 points로 작성하라.`
+      : `전체 문장: ${full}\n` +
+        `선택 구문: ${selected || "(없음/전체문장기준)"}\n` +
+        `분석 대상: ${textToAnalyze}\n` +
+        `허용 태그(TagId): ${tags.join(", ")}\n` +
+        `태그 의미:\n${tagsToPromptBlock(tags)}\n` +
+        `주의: 위 태그에 해당하는 포인트만 points로 작성하라.`;
+
+    const systemPrompt = useFreestyle ? buildAutoSystemPrompt() : buildHintSystemPrompt();
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -360,11 +359,11 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
-        temperature: 0.12,
+        model: useFreestyle ? "google/gemini-2.5-flash" : "google/gemini-2.5-pro",
+        temperature: useFreestyle ? 0.2 : 0.12,
         max_tokens: 450,
         messages: [
-          { role: "system", content: buildHintSystemPrompt() },
+          { role: "system", content: systemPrompt },
           { role: "user", content: userMessage },
         ],
         tools,
@@ -401,15 +400,22 @@ serve(async (req) => {
     }
 
     points = points.map(oneLine).filter(Boolean).map(stripLeadingBullets);
-    points = points.filter((p) => passesTagFilter(p, tags));
 
-    if (points.length === 0) {
-      points = ["(힌트 태그에 해당하는 포인트를 문장에서 찾기 어려움) / 드래그 범위를 조금 넓히거나 힌트를 구체화"];
+    // 태그 매칭 모드에서만 필터 적용, freestyle은 필터 없이 통과
+    if (!useFreestyle) {
+      points = points.filter((p) => passesTagFilter(p, tags));
     }
 
-    points = points.slice(0, 3).map((p) => (p.length > 170 ? p.slice(0, 168).trim() + "…" : p));
+    if (points.length === 0) {
+      points = useFreestyle
+        ? ["(해당 문장에서 문법 포인트를 찾지 못했습니다)"]
+        : ["(힌트 태그에 해당하는 포인트를 문장에서 찾기 어려움) / 드래그 범위를 조금 넓히거나 힌트를 구체화"];
+    }
 
-    const syntaxNotes = formatAsLines(points, 3);
+    const maxPts = useFreestyle ? 5 : 3;
+    points = points.slice(0, maxPts).map((p) => (p.length > 170 ? p.slice(0, 168).trim() + "…" : p));
+
+    const syntaxNotes = formatAsLines(points, maxPts);
 
     const res: GrammarResponse = {
       syntaxNotes,
