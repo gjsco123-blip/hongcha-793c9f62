@@ -241,7 +241,7 @@ serve(async (req) => {
     const { sentence, selectedText, userHint, hintTags, mode } = await req.json();
 
     const full = oneLine(sentence || "");
-    const selected = oneLine(selectedText || "");
+    const selected = oneLine(selectedText || "").replace(/\s*\/\s*/g, " ").trim();
     const rawHint = oneLine(userHint || "");
     const isAutoMode = mode === "auto";
 
