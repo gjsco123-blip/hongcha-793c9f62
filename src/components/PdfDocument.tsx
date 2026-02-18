@@ -238,8 +238,11 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
                       <Text style={styles.translationLabel}>
                         {n.id === 1 ? "구문" : ""}
                       </Text>
+                      <Text style={{ fontSize: 7, width: 10, flexShrink: 0, color: "#333", lineHeight: 1.6 }}>
+                        {["\u2460","\u2461","\u2462","\u2463","\u2464"][n.id-1] || String(n.id)}
+                      </Text>
                       <Text style={styles.translationContent}>
-                        {["①","②","③","④","⑤"][n.id-1]||n.id} {n.content.replace(/^\s*[•·\-\*]\s*/, "")}
+                        {n.content.replace(/^\s*[•·\-\*]\s*/, "")}
                       </Text>
                     </View>
                   ))
