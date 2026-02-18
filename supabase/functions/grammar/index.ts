@@ -6,25 +6,46 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// -----------------------------
-// Utils
-// -----------------------------
+type TagId =
+  | "REL_SUBJ" // 주격 관계대명사
+  | "REL_OBJ_OMIT" // 목적격 관계대명사 생략
+  | "REL_ADV" // 관계부사
+  | "AGREEMENT" // 수일치
+  | "NOUN_CLAUSE_THAT" // 명사절 that(생략 포함)
+  | "NOUN_CLAUSE_WH" // 의문사절(what/how/why/which 등)
+  | "IT_DUMMY_SUBJ" // 가주어/진주어
+  | "IT_DUMMY_OBJ" // 가목적어/진목적어
+  | "FIVE_PATTERN" // 5형식
+  | "TO_INF" // to부정사(기본)
+  | "PARTICIPLE_POST" // 분사 후치수식
+  | "PARTICIPLE_CLAUSE" // 분사구문
+  | "PASSIVE" // 수동태
+  | "MODAL_PASSIVE" // 조동사+수동
+  | "PARALLEL" // 병렬
+  | "PREP_GERUND" // 전치사+동명사
+  | "THERE_BE" // There is/are
+  | "COMPARISON" // 비교
+  | "OMISSION"; // 생략(일반)
+
+type GrammarResponse = {
+  syntaxNotes: string; // 기존 UI 호환(필수)
+  detectedTags?: TagId[]; // 칩 UI용(옵션)
+  normalizedHint?: string; // 서버가 정리한 힌트(옵션)
+};
+
 function oneLine(s: string) {
   return String(s ?? "")
     .replace(/\s*\n+\s*/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
-
-function clamp(n: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, n));
+function countWords(text: string) {
+  return oneLine(text).split(" ").filter(Boolean).length;
 }
-
 function safeJsonParse(raw: string): any {
   try {
     return JSON.parse(raw);
   } catch {
-    // remove markdown wrappers if any
     const cleaned = String(raw ?? "")
       .replace(/```json\s*/gi, "")
       .replace(/```\s*/g, "")
@@ -38,198 +59,164 @@ function safeJsonParse(raw: string): any {
   }
 }
 
-function countWords(text: string) {
-  return oneLine(text).split(" ").filter(Boolean).length;
-}
-
-/**
- * 힌트 문자열을 "허용 키워드" 집합으로 정리.
- * 예: "목관대 생략, 동사 수일치 / 과거분사" -> ["목관대", "생략", "동사", "수일치", "과거분사"]
- */
-function parseHintTokens(userHint: string): string[] {
-  const raw = oneLine(userHint)
-    .replace(/[•\-\*\(\)\[\]\{\}]/g, " ")
-    .replace(/[\/,]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  if (!raw) return [];
-  // 너무 흔한 조사/군더더기 제거는 최소만
-  const stop = new Set(["및", "또는", "그리고", "or", "and", "the", "a", "an"]);
-  return raw
-    .split(" ")
-    .map((t) => t.trim())
-    .filter((t) => t.length >= 2)
-    .filter((t) => !stop.has(t));
-}
-
-/**
- * 힌트 기반 모드에서:
- * - 모델이 몰래 추가한 포인트를 최대한 걸러내기 위한 서버 필터
- * - 규칙: 각 포인트 문장에 hint 토큰 중 1개 이상 포함되어야 통과
- * - 단, 사용자가 "목관대 생략"처럼 약어를 쓰면, "목적격 관계대명사"와 매칭을 돕기 위해 약간의 확장 동의어를 제공
- */
-function buildHintAliases(tokens: string[]): string[] {
-  const aliases: string[] = [];
-  for (const t of tokens) {
-    aliases.push(t);
-
-    // 자주 쓰는 약어/표현 보강
-    if (t.includes("목관대") || t.includes("목적격")) {
-      aliases.push("목적격 관계대명사");
-      aliases.push("목적격 관계대명사 생략");
-      aliases.push("관계대명사 목적격");
-    }
-    if (t.includes("주관대") || t.includes("주격")) {
-      aliases.push("주격 관계대명사");
-    }
-    if (t.includes("관계사")) {
-      aliases.push("관계대명사");
-      aliases.push("관계부사");
-      aliases.push("관계절");
-    }
-    if (t.includes("명사절")) {
-      aliases.push("that절");
-      aliases.push("what절");
-      aliases.push("whether절");
-      aliases.push("간접의문문");
-    }
-    if (t.includes("부사절")) {
-      aliases.push("접속사");
-      aliases.push("양보");
-      aliases.push("이유");
-      aliases.push("조건");
-      aliases.push("시간");
-    }
-    if (t.includes("수일치")) {
-      aliases.push("수일치");
-      aliases.push("단수");
-      aliases.push("복수");
-    }
-    if (t.includes("과거분사")) {
-      aliases.push("p.p.");
-      aliases.push("분사구");
-      aliases.push("과거분사구");
-    }
-    if (t.includes("현재분사")) {
-      aliases.push("v-ing");
-      aliases.push("현재분사구");
-    }
-    if (t.includes("to부정사") || t === "to") {
-      aliases.push("to부정사");
-      aliases.push("to-v");
-      aliases.push("to V");
-    }
-    if (t.includes("동명사")) {
-      aliases.push("동명사");
-      aliases.push("v-ing");
-    }
-    if (t.includes("분사구문")) {
-      aliases.push("분사구문");
-      aliases.push("접속사 생략");
-    }
-    if (t.includes("수동")) {
-      aliases.push("수동태");
-      aliases.push("be p.p.");
-      aliases.push("조동사 + be p.p.");
-    }
-    if (t.includes("5형식")) {
-      aliases.push("5형식");
-      aliases.push("O.C");
-      aliases.push("목적격보어");
-    }
-    if (t.includes("가주어") || t.includes("진주어")) {
-      aliases.push("가주어");
-      aliases.push("진주어");
-      aliases.push("it");
-      aliases.push("to부정사");
-      aliases.push("that절");
-    }
-    if (t.includes("병렬")) {
-      aliases.push("병렬");
-      aliases.push("and");
-      aliases.push("or");
-      aliases.push("but");
-    }
-    if (t.includes("대동사")) {
-      aliases.push("대동사");
-      aliases.push("do");
-      aliases.push("does");
-      aliases.push("did");
-    }
-    if (t.includes("there")) {
-      aliases.push("There is/are");
-      aliases.push("유도부사");
-    }
-  }
-  // 중복 제거
-  return Array.from(new Set(aliases.map(oneLine).filter(Boolean)));
-}
-
-function passesHintFilter(point: string, hintAliases: string[]) {
-  const p = oneLine(point);
-  if (!p) return false;
-  // 최소 1개 alias가 포함되면 통과
-  return hintAliases.some((a) => a && p.includes(a));
-}
-
 function formatAsBullets(points: string[], maxLines: number) {
   const cleaned = points
     .map((p) => oneLine(p))
     .filter(Boolean)
-    .map((p) => p.replace(/^•\s*/g, "")); // 혹시 모델이 bullet 붙여도 제거 후 서버에서 다시 붙임
-
-  const sliced = cleaned.slice(0, maxLines);
-  return sliced.map((p) => `• ${p}`).join("\n");
+    .map((p) => p.replace(/^•\s*/g, ""));
+  return cleaned
+    .slice(0, maxLines)
+    .map((p) => `• ${p}`)
+    .join("\n");
 }
 
 // -----------------------------
-// Prompts
+// 1) 자유 입력 힌트 → 표준 태그 자동 정규화
 // -----------------------------
-function buildBaseSystemPrompt() {
-  return `너는 한국 고등학교 수능 대비 영어 '구문분석' 교재를 제작하는 전문 강사다.
-입력된 문장 1개에 대해 시험 출제 관점에서 핵심 구문만 간결하게 분석하라.
+const TAG_RULES: Array<{
+  id: TagId;
+  // 이 키워드들 중 하나라도 포함되면 태그로 인식
+  keywords: string[];
+  // 표시용 라벨(프롬프트에 태그 설명으로 같이 전달)
+  label: string;
+}> = [
+  { id: "REL_SUBJ", keywords: ["주격관계대명사", "주관대", "who", "which", "that(주격)"], label: "주격 관계대명사" },
+  {
+    id: "REL_OBJ_OMIT",
+    keywords: ["목적격관계대명사", "목관대", "관계대명사 생략", "목적격 생략", "that 생략", "which 생략"],
+    label: "목적격 관계대명사(생략)",
+  },
+  { id: "REL_ADV", keywords: ["관계부사", "when", "where", "why", "how(관계부사)"], label: "관계부사" },
+  { id: "AGREEMENT", keywords: ["수일치", "단수", "복수", "동사 수일치"], label: "수일치" },
+  {
+    id: "NOUN_CLAUSE_THAT",
+    keywords: ["명사절 that", "that절", "that 명사절", "that 생략"],
+    label: "명사절 that(생략)",
+  },
+  {
+    id: "NOUN_CLAUSE_WH",
+    keywords: ["의문사절", "간접의문문", "what절", "how절", "why절", "which절", "whether절", "if절(명사절)"],
+    label: "의문사절/간접의문문",
+  },
+  {
+    id: "IT_DUMMY_SUBJ",
+    keywords: ["가주어", "진주어", "it 가주어", "to부정사 진주어", "that절 진주어"],
+    label: "가주어/진주어",
+  },
+  { id: "IT_DUMMY_OBJ", keywords: ["가목적어", "진목적어", "it 가목적어"], label: "가목적어/진목적어" },
+  { id: "FIVE_PATTERN", keywords: ["5형식", "목적격보어", "o.c", "oc", "make o c", "find o c"], label: "5형식(O.C)" },
+  {
+    id: "TO_INF",
+    keywords: ["to부정사", "to-v", "to v", "to부정사 용법", "to부정사 목적", "to부정사 형용사적", "to부정사 부사적"],
+    label: "to부정사",
+  },
+  {
+    id: "PARTICIPLE_POST",
+    keywords: ["과거분사", "현재분사", "분사 후치", "후치수식", "p.p", "v-ing(형용사)", "분사구"],
+    label: "분사 후치수식",
+  },
+  {
+    id: "PARTICIPLE_CLAUSE",
+    keywords: ["분사구문", "접속사 생략", "분사구문(이유)", "분사구문(시간)", "분사구문(양보)"],
+    label: "분사구문",
+  },
+  { id: "PASSIVE", keywords: ["수동태", "be p.p", "be pp", "수동"], label: "수동태" },
+  {
+    id: "MODAL_PASSIVE",
+    keywords: ["조동사+수동", "can be p.p", "may be p.p", "must be p.p", "will be p.p"],
+    label: "조동사+수동",
+  },
+  { id: "PARALLEL", keywords: ["병렬", "and 병렬", "or 병렬", "not only", "both", "either", "neither"], label: "병렬" },
+  {
+    id: "PREP_GERUND",
+    keywords: ["전치사+동명사", "by ~ing", "in ~ing", "for ~ing", "without ~ing"],
+    label: "전치사+동명사",
+  },
+  { id: "THERE_BE", keywords: ["there is", "there are", "There is/are", "유도부사"], label: "There is/are" },
+  { id: "COMPARISON", keywords: ["비교급", "최상급", "as ~ as", "than", "the 비교급", "비교"], label: "비교구문" },
+  { id: "OMISSION", keywords: ["생략", "that 생략", "관계사 생략", "접속사 생략"], label: "생략" },
+];
 
-[절대 규칙]
-1. 문장당 2~4개 핵심 문법 포인트만 제시 (단순문은 1~2개).
-2. 시험에 나올 구조만 선택할 것.
-3. 정의 설명 금지.
-4. 의미 확장/배경 설명 금지.
-5. 기능 중심으로만 설명.
-6. 각 항목은 반드시 "한 줄" (줄바꿈 금지).
-7. 하나의 항목에 하나의 포인트만 담을 것. 부가 설명(수일치/수식 범위 등)은 슬래시(/)로 이어서 한 줄에 작성.
-8. 해석 작성 금지.
-9. 불필요한 문장 추가 금지.
-10. 번호 매기지 말 것.
+function detectTagsFromHint(userHint: string): TagId[] {
+  const h = oneLine(userHint).toLowerCase();
+  if (!h) return [];
+  const found: TagId[] = [];
+  for (const rule of TAG_RULES) {
+    const hit = rule.keywords.some((k) => h.includes(k.toLowerCase()));
+    if (hit) found.push(rule.id);
+  }
+  // 중복 제거
+  return Array.from(new Set(found));
+}
 
-[우선 분석 대상 구조]
-관계대명사절/관계부사절(수일치 포함), 명사절(that/what/whether/간접의문문), 부사절 접속사(While/As/Because/Unless/If/Otherwise 등),
-가주어/진주어, 가목적어/진목적어, 5형식, to부정사(목적/보어/형용사적/부사적), 동명사/분사구문,
-병렬 구조, 수동태/조동사+수동, 비교구문, 대동사 do/does, There is/are, 생략 구조, 전치사+동명사
-
-[출력은 반드시 JSON 함수 호출로만 제공]`;
+function tagsToPromptBlock(tags: TagId[]) {
+  const map = new Map<TagId, string>();
+  for (const r of TAG_RULES) map.set(r.id, r.label);
+  return tags.map((t) => `${t}: ${map.get(t) ?? t}`).join("\n");
 }
 
 /**
- * 핵심: hint 모드는 "사용자가 적은 포인트만" 다루게 만들고,
- * 서버에서도 hint 토큰 필터로 2중 안전장치.
+ * hint 모드 필터:
+ * - 모델이 태그 밖 포인트를 쓰면 제거하기 위해,
+ * - 포인트 문자열에 태그 라벨 또는 태그 관련 키워드가 포함되는지 확인.
  */
-function buildHintSystemPrompt() {
-  return `너는 한국 고등학교 수능 대비 영어 '구문분석' 교재를 제작하는 전문 강사다.
-사용자가 전체 문장과 그 안에서 특정 구문을 선택하고, '분석할 문법 포인트(힌트)'를 제시했다.
+function passesTagFilter(point: string, tags: TagId[]) {
+  const p = oneLine(point);
+  if (!p) return false;
 
-[핵심 지시]
-1. 전체 문장 맥락을 먼저 확인한 뒤, 선택 구문이 문장 안에서 어떤 역할인지 파악한다.
-2. 사용자가 제시한 힌트에 해당하는 문법 포인트만 설명한다. (힌트 밖 포인트는 절대 추가 금지)
-3. 정의/배경/의미 확장/해석 금지. 기능 중심으로만, 교재 스타일로 간결하게 쓴다.
-4. 각 항목은 반드시 "한 줄" (줄바꿈 금지). 부가 설명은 슬래시(/)로 이어서 한 줄 유지.
-5. 3단어 이상 영어 구문 인용은 who~school 처럼 축약 표기만 사용. 큰따옴표(") 금지.
+  // 태그별로 허용 키워드 세트(최소)
+  const allow: Record<TagId, string[]> = {
+    REL_SUBJ: ["주격 관계대명사", "who", "which", "that"],
+    REL_OBJ_OMIT: ["목적격 관계대명사", "관계대명사 생략", "목적격", "which/that", "that/which", "생략"],
+    REL_ADV: ["관계부사", "when", "where", "why"],
+    AGREEMENT: ["수일치", "단수", "복수"],
+    NOUN_CLAUSE_THAT: ["명사절", "that", "목적어", "주어", "that 생략"],
+    NOUN_CLAUSE_WH: ["의문사절", "간접의문문", "what", "how", "why", "which", "whether", "if"],
+    IT_DUMMY_SUBJ: ["가주어", "진주어", "it", "to부정사", "that절"],
+    IT_DUMMY_OBJ: ["가목적어", "진목적어", "it"],
+    FIVE_PATTERN: ["5형식", "O.C", "목적격보어"],
+    TO_INF: ["to부정사", "to-v", "to V", "형용사적", "부사적", "목적", "보어"],
+    PARTICIPLE_POST: ["분사", "과거분사", "현재분사", "후치수식", "p.p.", "v-ing"],
+    PARTICIPLE_CLAUSE: ["분사구문", "접속사 생략"],
+    PASSIVE: ["수동태", "be p.p.", "be p.p", "수동"],
+    MODAL_PASSIVE: ["조동사", "can", "may", "must", "will", "be p.p", "수동"],
+    PARALLEL: ["병렬", "and", "or", "not only", "both", "either", "neither"],
+    PREP_GERUND: ["전치사", "동명사", "by", "in", "for", "without", "~ing"],
+    THERE_BE: ["There", "there", "is/are", "유도부사"],
+    COMPARISON: ["비교", "비교급", "최상급", "as", "than", "the 비교급"],
+    OMISSION: ["생략", "that 생략", "관계사 생략", "접속사 생략"],
+  };
 
-[출력은 반드시 JSON 함수 호출로만 제공]`;
+  return tags.some((t) => allow[t]?.some((kw) => p.includes(kw)));
 }
 
 // -----------------------------
-// Tool schema (Function calling)
+// Prompts (hint 강제)
 // -----------------------------
+function buildHintSystemPrompt() {
+  return `너는 한국 고등학교 수능 대비 영어 '구문분석' 교재를 제작하는 전문 강사다.
+
+[중요]
+사용자가 제공한 "허용 태그(TagId)"에 해당하는 문법 포인트만 작성하라.
+허용 태그 밖의 포인트는 절대 추가하지 말 것.
+
+[절대 규칙]
+- 출력은 반드시 JSON 함수 호출로만 한다.
+- points는 1~3개(최대 3).
+- 각 항목은 한 줄(줄바꿈 금지).
+- 하나의 항목에 하나의 포인트만 / 부가설명은 슬래시(/)로 이어서 한 줄 유지.
+- 정의/해석/배경설명 금지. 기능 중심으로만.
+- 3단어 이상 영어 인용은 who~school처럼 축약.
+- 큰따옴표(") 사용 금지.
+
+[문체 예시(이 톤 유지)]
+- 주격 관계대명사 who/which/that이 선행사 ___를 수식하는 관계절을 이끔.
+- 목적격 관계대명사 (which/that) 생략 가능 구조임.
+- 선행사 ___ 단복수에 따라 관계절 동사 ___가 수일치함.
+- 분사(과거/현재)가 명사를 뒤에서 수식하는 후치수식 구조임.
+- 조동사 + be p.p. 형태로 수동을 나타냄.`;
+}
+
 const tools = [
   {
     type: "function",
@@ -242,7 +229,6 @@ const tools = [
           points: {
             type: "array",
             items: { type: "string" },
-            description: "구문분석 핵심 포인트 목록. 각 항목은 한 줄. (문장당 2~4개 / 단순문 1~2개).",
           },
         },
         required: ["points"],
@@ -259,38 +245,54 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { sentence, selectedText, userHint } = await req.json();
-    const hasHint = Boolean(oneLine(userHint || ""));
+    const { sentence, selectedText, userHint, hintTags } = await req.json();
 
-    // 선택 구문이 너무 짧으면(1~2단어 등) 모델이 억지 분석하기 쉬움 -> 문장 전체로 fallback
-    const selected = oneLine(selectedText || "");
     const full = oneLine(sentence || "");
+    const selected = oneLine(selectedText || "");
+    const rawHint = oneLine(userHint || "");
 
-    let textToAnalyze = selected || full;
-    if (!textToAnalyze) {
+    if (!full && !selected) {
       return new Response(JSON.stringify({ error: "Missing sentence or selectedText" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // hint 모드일 때 선택 구문이 너무 짧으면 전체 문장으로 분석하되, 힌트만 반영하도록
-    if (hasHint && selected && countWords(selected) < 3 && full) {
-      textToAnalyze = full;
+    // 분석 대상(선택구문이 너무 짧으면 전체문장 fallback)
+    let textToAnalyze = selected || full;
+    if (selected && countWords(selected) < 3 && full) textToAnalyze = full;
+
+    // 2) 태그 결정: 프론트에서 hintTags 배열이 오면 우선 사용, 없으면 userHint에서 자동 추출
+    let tags: TagId[] = [];
+    if (Array.isArray(hintTags) && hintTags.length > 0) {
+      tags = hintTags as TagId[];
+    } else {
+      tags = detectTagsFromHint(rawHint);
+    }
+
+    // 태그가 하나도 없으면: "자동 모드"로 해버리면 또 흔들림.
+    // 여기서는 최소한 안내 문구를 주는 게 교재 제작엔 더 안전.
+    if (tags.length === 0) {
+      const res: GrammarResponse = {
+        syntaxNotes: "• (힌트가 너무 짧거나 인식되지 않았습니다) 예: 목관대 생략 / 수일치 / 과거분사",
+        detectedTags: [],
+        normalizedHint: rawHint,
+      };
+      return new Response(JSON.stringify(res), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const systemPrompt = hasHint ? buildHintSystemPrompt() : buildBaseSystemPrompt();
-
-    // 힌트 토큰/별칭 준비(서버 필터용)
-    const hintTokens = hasHint ? parseHintTokens(userHint) : [];
-    const hintAliases = hasHint ? buildHintAliases(hintTokens) : [];
-
-    const userMessage = hasHint
-      ? `전체 문장: ${full}\n선택 구문: ${selected || "(없음/전체문장기준)"}\n분석 대상: ${textToAnalyze}\n힌트(이것만 다룰 것): ${oneLine(userHint)}`
-      : `다음 문장을 구문분석하세요: ${textToAnalyze}`;
+    const userMessage =
+      `전체 문장: ${full}\n` +
+      `선택 구문: ${selected || "(없음/전체문장기준)"}\n` +
+      `분석 대상: ${textToAnalyze}\n` +
+      `허용 태그(TagId): ${tags.join(", ")}\n` +
+      `태그 의미:\n${tagsToPromptBlock(tags)}\n` +
+      `주의: 위 태그에 해당하는 포인트만 points로 작성하라.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -299,11 +301,11 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        // 구문분석은 flash보다 pro/gpt-5가 유리. 우선 pro로 추천.
         model: "google/gemini-2.5-pro",
-        temperature: 0.15,
+        temperature: 0.12,
+        max_tokens: 450,
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: buildHintSystemPrompt() },
           { role: "user", content: userMessage },
         ],
         tools,
@@ -331,90 +333,39 @@ serve(async (req) => {
 
     const data = await response.json();
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall?.function?.arguments) {
-      // 혹시라도 tool-call 안 나오면 fallback로 텍스트를 bullet로 감싸기
+
+    let points: string[] = [];
+    if (toolCall?.function?.arguments) {
+      const parsed = safeJsonParse(toolCall.function.arguments);
+      points = Array.isArray(parsed?.points) ? parsed.points : [];
+    } else {
       const fallback = oneLine(data.choices?.[0]?.message?.content ?? "");
-      const syntaxNotes = fallback ? `• ${fallback}` : "";
-      return new Response(JSON.stringify({ syntaxNotes }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      points = fallback ? [fallback] : [];
     }
 
-    const parsed = safeJsonParse(toolCall.function.arguments);
-    let points: string[] = Array.isArray(parsed?.points) ? parsed.points : [];
-
-    // 정리: 한 줄화 + 공백 정리
+    // 3) 후처리: 한 줄화 + 태그 필터 + 최대 3개
     points = points.map(oneLine).filter(Boolean);
 
-    // --- 핵심: hint 모드 강제 필터 ---
-    if (hasHint) {
-      // 1) 힌트 관련 없는 포인트 제거
-      const filtered = points.filter((p) => passesHintFilter(p, hintAliases));
+    // hint 기반 2중 안전장치: 태그와 무관한 포인트 제거
+    points = points.filter((p) => passesTagFilter(p, tags));
 
-      // 2) 너무 많이 제거돼서 0개가 되면: 모델이 힌트를 무시한 것
-      // -> 최소한 “힌트만 다시” 요청하는 1회 재시도
-      if (filtered.length === 0) {
-        const retry = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-pro",
-            temperature: 0.1,
-            messages: [
-              { role: "system", content: buildHintSystemPrompt() },
-              {
-                role: "user",
-                content:
-                  `너의 이전 출력은 힌트와 무관했으므로 모두 폐기한다.\n` +
-                  `아래 힌트에 해당하는 포인트만 1~3개로 다시 작성하라.\n` +
-                  `전체 문장: ${full}\n선택 구문: ${selected || "(없음/전체문장기준)"}\n분석 대상: ${textToAnalyze}\n힌트(이것만): ${oneLine(userHint)}\n` +
-                  `주의: 힌트 밖 포인트 절대 추가 금지.`,
-              },
-            ],
-            tools,
-            tool_choice: { type: "function", function: { name: "syntax_result" } },
-          }),
-        });
-
-        if (retry.ok) {
-          const retryData = await retry.json();
-          const retryToolCall = retryData.choices?.[0]?.message?.tool_calls?.[0];
-          if (retryToolCall?.function?.arguments) {
-            const retryParsed = safeJsonParse(retryToolCall.function.arguments);
-            let retryPoints: string[] = Array.isArray(retryParsed?.points) ? retryParsed.points : [];
-            retryPoints = retryPoints.map(oneLine).filter(Boolean);
-            points = retryPoints.filter((p) => passesHintFilter(p, hintAliases));
-          } else {
-            points = filtered;
-          }
-        } else {
-          points = filtered;
-        }
-      } else {
-        points = filtered;
-      }
+    // 그래도 0개면: 최소한 첫 1개라도 보여주되(교재 제작 흐름 끊김 방지), 아주 짧게
+    if (points.length === 0) {
+      points = ["(힌트 태그에 해당하는 포인트를 문장에서 찾기 어려움) / 드래그 범위를 조금 넓히거나 힌트를 구체화"];
     }
 
-    // 길이/개수 고정
-    // base: 2~4 (단순문이면 1~2는 모델이 판단) -> 서버는 max 4만 강제
-    // hint: 1~3 (사용자가 고른 포인트만이므로 보통 1~3)
-    const maxLines = hasHint ? 3 : 4;
-    points = points.slice(0, maxLines);
+    // 길이/개수 제한
+    points = points.slice(0, 3).map((p) => (p.length > 170 ? p.slice(0, 168).trim() + "…" : p));
 
-    // 너무 긴 문장은 자르기(교재 스타일 유지)
-    // 한 줄이 과하게 길면 “/” 기준으로 쪼개지게 프롬프트에서 유도했지만,
-    // 혹시 길면 서버에서 강제 축약
-    points = points.map((p) => {
-      const s = oneLine(p);
-      return s.length > 160 ? s.slice(0, 158).trim() + "…" : s;
-    });
+    const syntaxNotes = formatAsBullets(points, 3);
 
-    const syntaxNotes = formatAsBullets(points, maxLines);
+    const res: GrammarResponse = {
+      syntaxNotes,
+      detectedTags: tags,
+      normalizedHint: rawHint,
+    };
 
-    return new Response(JSON.stringify({ syntaxNotes }), {
+    return new Response(JSON.stringify(res), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
