@@ -137,7 +137,7 @@ function passesTagFilter(point: string, tags: TagId[]) {
     NOUN_CLAUSE_WH: ["의문사절", "간접의문문", "what", "how", "why", "which", "whether", "if"],
     IT_DUMMY_SUBJ: ["가주어", "진주어", "it", "to부정사", "that절"],
     IT_DUMMY_OBJ: ["가목적어", "진목적어", "it"],
-    FIVE_PATTERN: ["5형식", "O.C", "목적격보어"],
+    FIVE_PATTERN: ["5형식", "O.C", "O.C.", "목적격보어", "cause", "make", "find", "keep", "leave", "consider", "to V", "to부정사"],
     TO_INF: ["to부정사", "to-v", "to V", "형용사적", "부사적", "목적", "보어"],
     PARTICIPLE_POST: ["분사", "과거분사", "현재분사", "후치수식", "p.p.", "v-ing"],
     PARTICIPLE_CLAUSE: ["분사구문", "접속사 생략"],
