@@ -40,129 +40,137 @@ interface Props {
 
 const s = StyleSheet.create({
   page: {
-    paddingTop: 32,
-    paddingBottom: 28,
-    paddingLeft: 40,
-    paddingRight: 40,
+    paddingTop: 30,
+    paddingBottom: 24,
+    paddingLeft: 36,
+    paddingRight: 36,
     fontFamily: "Noto Sans KR",
     fontSize: 7,
-    color: "#1a1a1a",
+    color: "#222",
   },
   // ── Header ──
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-end",
-    borderBottomWidth: 1.5,
-    borderBottomColor: "#000",
-    paddingBottom: 6,
-    marginBottom: 12,
+    alignItems: "center",
+    marginBottom: 14,
+    paddingBottom: 8,
+    borderBottomWidth: 2,
+    borderBottomColor: "#222",
   },
   title: {
     fontFamily: "Source Serif 4",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 700,
-    letterSpacing: 1,
+    letterSpacing: 2,
   },
   subtitle: {
-    fontSize: 6,
-    color: "#888",
+    fontSize: 6.5,
+    color: "#999",
+    letterSpacing: 0.5,
   },
   // ── Section ──
-  sectionTitle: {
-    fontSize: 8,
-    fontWeight: 700,
-    letterSpacing: 0.8,
-    marginBottom: 5,
-    paddingBottom: 2,
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#ccc",
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
   },
-  sectionTag: {
+  sectionBadge: {
     fontFamily: "Source Serif 4",
     fontSize: 7,
     fontWeight: 700,
-    color: "#666",
-    marginRight: 4,
+    color: "#fff",
+    backgroundColor: "#222",
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    marginRight: 6,
+  },
+  sectionLabel: {
+    fontSize: 8,
+    fontWeight: 700,
+    letterSpacing: 0.6,
+  },
+  sectionCount: {
+    fontSize: 6.5,
+    color: "#999",
+    marginLeft: 4,
   },
   // ── Vocab table ──
   vocabHeader: {
     flexDirection: "row",
-    backgroundColor: "#f5f5f5",
-    paddingVertical: 2.5,
+    backgroundColor: "#f0f0f0",
+    paddingVertical: 3,
     paddingHorizontal: 4,
-    borderBottomWidth: 0.5,
+    borderBottomWidth: 1,
     borderBottomColor: "#ccc",
   },
   vocabRow: {
     flexDirection: "row",
-    paddingVertical: 2,
+    paddingVertical: 2.5,
     paddingHorizontal: 4,
     borderBottomWidth: 0.3,
-    borderBottomColor: "#eee",
+    borderBottomColor: "#e5e5e5",
   },
-  vocabNum: { width: 14, fontSize: 5.5, color: "#999", textAlign: "center" },
-  vocabWord: { width: 62, fontFamily: "Source Serif 4", fontSize: 7, fontWeight: 700 },
-  vocabPos: { width: 18, fontSize: 5.5, color: "#888", textAlign: "center" },
-  vocabMeaning: { width: 90, fontSize: 6.5 },
-  vocabContext: { flex: 1, fontFamily: "Source Serif 4", fontSize: 5.5, color: "#666", fontStyle: "italic" },
-  vocabHeaderText: { fontSize: 5.5, fontWeight: 700, color: "#555" },
+  vocabRowAlt: {
+    backgroundColor: "#fafafa",
+  },
+  vocabNum: { width: 14, fontSize: 5.5, color: "#aaa", textAlign: "center" },
+  vocabWord: { width: 60, fontFamily: "Source Serif 4", fontSize: 7, fontWeight: 700 },
+  vocabPos: { width: 20, fontSize: 5.5, color: "#888", textAlign: "center" },
+  vocabMeaning: { flex: 1, fontSize: 6.5 },
+  vocabHeaderText: { fontSize: 5.5, fontWeight: 700, color: "#666" },
   // ── Structure ──
   stepRow: {
     flexDirection: "row",
-    marginBottom: 3,
-    paddingLeft: 2,
+    marginBottom: 4,
+    alignItems: "flex-start",
   },
-  stepNum: {
+  stepBadge: {
     fontFamily: "Source Serif 4",
-    fontSize: 8,
+    fontSize: 7.5,
     fontWeight: 700,
+    color: "#fff",
+    backgroundColor: "#444",
     width: 14,
-    color: "#333",
+    height: 14,
+    textAlign: "center",
+    lineHeight: 14,
+    marginRight: 6,
+    marginTop: 0.5,
   },
-  stepContent: {
+  stepText: {
     flex: 1,
-  },
-  stepOneLine: {
-    fontSize: 6.5,
-    lineHeight: 1.5,
-  },
-  stepEvidence: {
-    fontFamily: "Source Serif 4",
-    fontSize: 5.5,
-    color: "#777",
-    fontStyle: "italic",
-    marginTop: 1,
+    fontSize: 7.5,
+    lineHeight: 1.6,
   },
   // ── Explanation ──
   explanationBox: {
-    backgroundColor: "#fafafa",
-    borderWidth: 0.5,
-    borderColor: "#ddd",
-    padding: 8,
-    lineHeight: 1.7,
+    backgroundColor: "#f8f8f8",
+    borderLeftWidth: 2.5,
+    borderLeftColor: "#333",
+    padding: 10,
+    paddingLeft: 12,
   },
   explanationText: {
-    fontSize: 6.5,
+    fontSize: 7.5,
+    lineHeight: 2,
   },
   // ── Layout helpers ──
   columns: {
     flexDirection: "row",
-    gap: 14,
-  },
-  leftCol: {
-    flex: 1,
-  },
-  rightCol: {
-    width: 200,
+    gap: 12,
   },
   spacer: {
-    height: 10,
+    height: 12,
+  },
+  divider: {
+    height: 0.5,
+    backgroundColor: "#ddd",
+    marginVertical: 10,
   },
 });
 
 export function PassageBuilderPdf({ vocab, structure, explanation }: Props) {
-  // Split vocab into two columns (10 each) for compactness
   const vocabLeft = vocab.slice(0, 10);
   const vocabRight = vocab.slice(10, 20);
 
@@ -172,20 +180,20 @@ export function PassageBuilderPdf({ vocab, structure, explanation }: Props) {
         {/* Header */}
         <View style={s.header}>
           <Text style={s.title}>PASSAGE BUILDER</Text>
-          <Text style={s.subtitle}>Vocabulary · Structure · Explanation</Text>
+          <Text style={s.subtitle}>Pre-Study Guide</Text>
         </View>
 
         {/* ═══ A) Vocabulary ═══ */}
         <View>
-          <Text style={s.sectionTitle}>
-            <Text style={s.sectionTag}>A</Text> VOCABULARY ({vocab.length})
-          </Text>
+          <View style={s.sectionHeader}>
+            <Text style={s.sectionBadge}>A</Text>
+            <Text style={s.sectionLabel}>VOCABULARY</Text>
+            <Text style={s.sectionCount}>({vocab.length})</Text>
+          </View>
 
-          {/* Two-column vocab layout */}
           <View style={s.columns}>
             {[vocabLeft, vocabRight].map((col, colIdx) => (
               <View key={colIdx} style={{ flex: 1 }}>
-                {/* Header row */}
                 <View style={s.vocabHeader}>
                   <Text style={{ ...s.vocabNum, ...s.vocabHeaderText }}>#</Text>
                   <Text style={{ ...s.vocabWord, ...s.vocabHeaderText, fontFamily: "Noto Sans KR" }}>Word</Text>
@@ -195,7 +203,7 @@ export function PassageBuilderPdf({ vocab, structure, explanation }: Props) {
                 {col.map((v, i) => {
                   const num = colIdx * 10 + i + 1;
                   return (
-                    <View key={num} style={s.vocabRow}>
+                    <View key={num} style={[s.vocabRow, i % 2 === 1 ? s.vocabRowAlt : {}]}>
                       <Text style={s.vocabNum}>{num}</Text>
                       <Text style={s.vocabWord}>{v.word}</Text>
                       <Text style={s.vocabPos}>{v.pos}</Text>
@@ -208,31 +216,31 @@ export function PassageBuilderPdf({ vocab, structure, explanation }: Props) {
           </View>
         </View>
 
-        <View style={s.spacer} />
+        <View style={s.divider} />
 
-        {/* Bottom section: Structure + Explanation side by side */}
+        {/* Bottom: Structure + Explanation side by side */}
         <View style={s.columns}>
           {/* ═══ B) Structure ═══ */}
-          <View style={s.leftCol}>
-            <Text style={s.sectionTitle}>
-              <Text style={s.sectionTag}>B</Text> STRUCTURE SUMMARY ({structure.length})
-            </Text>
+          <View style={{ flex: 1 }}>
+            <View style={s.sectionHeader}>
+              <Text style={s.sectionBadge}>B</Text>
+              <Text style={s.sectionLabel}>STRUCTURE</Text>
+              <Text style={s.sectionCount}>({structure.length})</Text>
+            </View>
             {structure.map((step) => (
               <View key={step.step} style={s.stepRow}>
-                <Text style={s.stepNum}>{step.step}.</Text>
-                <View style={s.stepContent}>
-                  <Text style={s.stepOneLine}>{step.one_line}</Text>
-                  <Text style={s.stepEvidence}>"{step.evidence}"</Text>
-                </View>
+                <Text style={s.stepBadge}>{step.step}</Text>
+                <Text style={s.stepText}>{step.one_line}</Text>
               </View>
             ))}
           </View>
 
           {/* ═══ C) Explanation ═══ */}
-          <View style={s.rightCol}>
-            <Text style={s.sectionTitle}>
-              <Text style={s.sectionTag}>C</Text> EASY EXPLANATION
-            </Text>
+          <View style={{ width: 210 }}>
+            <View style={s.sectionHeader}>
+              <Text style={s.sectionBadge}>C</Text>
+              <Text style={s.sectionLabel}>쉬운 해설</Text>
+            </View>
             <View style={s.explanationBox}>
               <Text style={s.explanationText}>{explanation}</Text>
             </View>
