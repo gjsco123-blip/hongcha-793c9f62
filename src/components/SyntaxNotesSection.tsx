@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Sparkles, X } from "lucide-react";
 import type { SyntaxNote } from "@/pages/Index";
 
-const CIRCLED_NUMBERS = ["①", "②", "③", "④", "⑤"];
+
 
 interface SyntaxNotesSectionProps {
   notes: SyntaxNote[];
@@ -15,7 +15,8 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating }: 
   const [editing, setEditing] = useState(false);
 
   const handleDeleteNote = (id: number) => {
-    onChange(notes.filter((n) => n.id !== id));
+    const filtered = notes.filter((n) => n.id !== id);
+    onChange(filtered.map((n, i) => ({ ...n, id: i + 1 })));
   };
 
   const handleEditNote = (id: number, content: string) => {
@@ -69,7 +70,7 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating }: 
             notes.map((note) => (
               <div key={note.id} className="flex items-start gap-2 group/note">
                 <span className="text-xs font-bold text-foreground shrink-0 mt-0.5 w-4">
-                  {CIRCLED_NUMBERS[note.id - 1] || note.id}
+                  {note.id}.
                 </span>
                 {editing ? (
                   <textarea
