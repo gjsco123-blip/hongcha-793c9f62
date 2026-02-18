@@ -8,7 +8,8 @@ import { SentencePreview } from "@/components/SentencePreview";
 import { Chunk, parseTagged, chunksToTagged } from "@/lib/chunk-utils";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { toast } from "sonner";
-import { FileDown, RotateCw, X, Scissors, RefreshCw } from "lucide-react";
+import { FileDown, RotateCw, X, Scissors, RefreshCw, BookOpen } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 type Preset = "고1" | "고2" | "수능";
 
@@ -70,6 +71,7 @@ function splitIntoSentences(text: string): string[] {
 }
 
 export default function Index() {
+  const navigate = useNavigate();
   const [passage, setPassage] = useState("");
   const [preset, setPreset] = useState<Preset>("수능");
   const [results, setResults] = useState<SentenceResult[]>([]);
@@ -461,6 +463,14 @@ export default function Index() {
                   실패 {failedResults.length}건 재시도
                 </button>
               )}
+              <button
+                onClick={() => navigate("/passage-builder", { state: { passage } })}
+                disabled={!passage.trim()}
+                className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors disabled:opacity-40"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                Preview
+              </button>
               <button
                 onClick={handleAnalyze}
                 disabled={loading || editedSentences.length === 0}
