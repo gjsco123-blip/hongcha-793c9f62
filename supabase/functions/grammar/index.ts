@@ -61,22 +61,14 @@ function safeJsonParse(raw: string): any {
   }
 }
 
-/**
- * 모델이 혹시 • / - / * / · 를 붙여도 서버에서 최종 제거
- */
 function stripLeadingBullets(line: string) {
   return String(line ?? "")
-    .replace(/^(\s*[\u2460-\u2473])\s*[•·\-\*]\s*/u, "$1 ") // ① • -> ①
-    .replace(/^(\s*\d+[\)\.])\s*[•·\-\*]\s*/u, "$1 ") // 1) • -> 1)
-    .replace(/^\s*[•·\-\*]\s*/u, "") // • / - / * / · 제거
+    .replace(/^(\s*[\u2460-\u2473])\s*[•·\-\*]\s*/u, "$1 ")
+    .replace(/^(\s*\d+[\)\.])\s*[•·\-\*]\s*/u, "$1 ")
+    .replace(/^\s*[•·\-\*]\s*/u, "")
     .trim();
 }
 
-/**
- * UI에서 ①②③이 이미 붙는다면, 서버는 "그냥 줄바꿈으로만" 반환
- * - 각 줄은 한 줄 유지(슬래시 / 로 부가설명)
- * - 어떤 경우에도 •를 붙이지 않음
- */
 function formatAsLines(points: string[], maxLines: number) {
   const cleaned = points
     .map((p) => oneLine(p))
@@ -87,7 +79,7 @@ function formatAsLines(points: string[], maxLines: number) {
 }
 
 // -----------------------------
-// 1) 자유 입력 힌트 → 표준 태그 자동 정규화
+// 태그 규칙
 // -----------------------------
 const TAG_RULES: Array<{
   id: TagId;
@@ -95,57 +87,21 @@ const TAG_RULES: Array<{
   label: string;
 }> = [
   { id: "REL_SUBJ", keywords: ["주격관계대명사", "주관대", "who", "which", "that(주격)"], label: "주격 관계대명사" },
-  {
-    id: "REL_OBJ_OMIT",
-    keywords: ["목적격관계대명사", "목관대", "관계대명사 생략", "목적격 생략", "that 생략", "which 생략"],
-    label: "목적격 관계대명사(생략)",
-  },
+  { id: "REL_OBJ_OMIT", keywords: ["목적격관계대명사", "목관대", "관계대명사 생략", "목적격 생략", "that 생략", "which 생략"], label: "목적격 관계대명사(생략)" },
   { id: "REL_ADV", keywords: ["관계부사", "when", "where", "why", "how(관계부사)"], label: "관계부사" },
   { id: "AGREEMENT", keywords: ["수일치", "단수", "복수", "동사 수일치"], label: "수일치" },
-  {
-    id: "NOUN_CLAUSE_THAT",
-    keywords: ["명사절 that", "that절", "that 명사절", "that 생략"],
-    label: "명사절 that(생략)",
-  },
-  {
-    id: "NOUN_CLAUSE_WH",
-    keywords: ["의문사절", "간접의문문", "what절", "how절", "why절", "which절", "whether절", "if절(명사절)"],
-    label: "의문사절/간접의문문",
-  },
-  {
-    id: "IT_DUMMY_SUBJ",
-    keywords: ["가주어", "진주어", "it 가주어", "to부정사 진주어", "that절 진주어"],
-    label: "가주어/진주어",
-  },
+  { id: "NOUN_CLAUSE_THAT", keywords: ["명사절 that", "that절", "that 명사절", "that 생략"], label: "명사절 that(생략)" },
+  { id: "NOUN_CLAUSE_WH", keywords: ["의문사절", "간접의문문", "what절", "how절", "why절", "which절", "whether절", "if절(명사절)"], label: "의문사절/간접의문문" },
+  { id: "IT_DUMMY_SUBJ", keywords: ["가주어", "진주어", "it 가주어", "to부정사 진주어", "that절 진주어"], label: "가주어/진주어" },
   { id: "IT_DUMMY_OBJ", keywords: ["가목적어", "진목적어", "it 가목적어"], label: "가목적어/진목적어" },
   { id: "FIVE_PATTERN", keywords: ["5형식", "목적격보어", "o.c", "oc", "make o c", "find o c"], label: "5형식(O.C)" },
-  {
-    id: "TO_INF",
-    keywords: ["to부정사", "to-v", "to v", "to부정사 용법", "to부정사 목적", "to부정사 형용사적", "to부정사 부사적"],
-    label: "to부정사",
-  },
-  {
-    id: "PARTICIPLE_POST",
-    keywords: ["과거분사", "현재분사", "분사 후치", "후치수식", "p.p", "v-ing(형용사)", "분사구"],
-    label: "분사 후치수식",
-  },
-  {
-    id: "PARTICIPLE_CLAUSE",
-    keywords: ["분사구문", "접속사 생략", "분사구문(이유)", "분사구문(시간)", "분사구문(양보)"],
-    label: "분사구문",
-  },
+  { id: "TO_INF", keywords: ["to부정사", "to-v", "to v", "to부정사 용법", "to부정사 목적", "to부정사 형용사적", "to부정사 부사적"], label: "to부정사" },
+  { id: "PARTICIPLE_POST", keywords: ["과거분사", "현재분사", "분사 후치", "후치수식", "p.p", "v-ing(형용사)", "분사구"], label: "분사 후치수식" },
+  { id: "PARTICIPLE_CLAUSE", keywords: ["분사구문", "접속사 생략", "분사구문(이유)", "분사구문(시간)", "분사구문(양보)"], label: "분사구문" },
   { id: "PASSIVE", keywords: ["수동태", "be p.p", "be pp", "수동"], label: "수동태" },
-  {
-    id: "MODAL_PASSIVE",
-    keywords: ["조동사+수동", "can be p.p", "may be p.p", "must be p.p", "will be p.p"],
-    label: "조동사+수동",
-  },
+  { id: "MODAL_PASSIVE", keywords: ["조동사+수동", "can be p.p", "may be p.p", "must be p.p", "will be p.p"], label: "조동사+수동" },
   { id: "PARALLEL", keywords: ["병렬", "and 병렬", "or 병렬", "not only", "both", "either", "neither"], label: "병렬" },
-  {
-    id: "PREP_GERUND",
-    keywords: ["전치사+동명사", "by ~ing", "in ~ing", "for ~ing", "without ~ing"],
-    label: "전치사+동명사",
-  },
+  { id: "PREP_GERUND", keywords: ["전치사+동명사", "by ~ing", "in ~ing", "for ~ing", "without ~ing"], label: "전치사+동명사" },
   { id: "THERE_BE", keywords: ["there is", "there are", "There is/are", "유도부사"], label: "There is/are" },
   { id: "COMPARISON", keywords: ["비교급", "최상급", "as ~ as", "than", "the 비교급", "비교"], label: "비교구문" },
   { id: "OMISSION", keywords: ["생략", "that 생략", "관계사 생략", "접속사 생략"], label: "생략" },
@@ -198,7 +154,7 @@ function passesTagFilter(point: string, tags: TagId[]) {
 }
 
 // -----------------------------
-// Prompts (hint 강제)
+// Prompts
 // -----------------------------
 function buildHintSystemPrompt() {
   return `너는 한국 고등학교 수능 대비 영어 '구문분석' 교재를 제작하는 전문 강사다.
@@ -223,6 +179,35 @@ function buildHintSystemPrompt() {
 - 선행사 ___ 단복수에 따라 관계절 동사 ___가 수일치함.
 - 분사(과거/현재)가 명사를 뒤에서 수식하는 후치수식 구조임.
 - 조동사 + be p.p. 형태로 수동을 나타냄.`;
+}
+
+function buildAutoSystemPrompt() {
+  return `너는 한국 고등학교 수능 대비 영어 '구문분석' 교재를 제작하는 전문 강사다.
+
+[역할]
+주어진 문장에서 수능에 출제될 수 있는 핵심 문법 포인트를 자동으로 찾아 설명하라.
+
+[절대 규칙]
+- 출력은 반드시 JSON 함수 호출로만 한다.
+- points는 1~5개(최대 5). 문장의 핵심 구문부터 우선순위로.
+- 각 항목은 한 줄(줄바꿈 금지).
+- 하나의 항목에 하나의 포인트만 / 부가설명은 슬래시(/)로 이어서 한 줄 유지.
+- 정의/해석/배경설명 금지. 기능 중심으로만.
+- 3단어 이상 영어 인용은 who~school처럼 물결(~) 축약.
+- 큰따옴표(") 사용 금지.
+- 불릿(•)을 절대 붙이지 말 것. (UI가 번호를 붙인다)
+
+[우선 추출 대상]
+관계대명사(주격/목적격/생략), 관계부사, 명사절(that/wh-), 가주어/진주어, 가목적어/진목적어,
+5형식(O.C), to부정사 용법, 분사 후치수식, 분사구문, 수동태, 조동사+수동, 병렬구조,
+전치사+동명사, There is/are, 비교구문, 생략, 수일치
+
+[문체 예시(이 톤 유지)]
+- 주격 관계대명사 that이 선행사 pressures를 수식하는 관계절을 이끔
+- cause + O + to V(5형식) 구조 / it이 the museum을 가리킴
+- what이 이끄는 명사절이 emphasise의 목적어 역할
+- 분사(과거/현재)가 명사를 뒤에서 수식하는 후치수식 구조임
+- 조동사 + be p.p. 형태로 수동을 나타냄`;
 }
 
 const tools = [
@@ -253,11 +238,12 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { sentence, selectedText, userHint, hintTags } = await req.json();
+    const { sentence, selectedText, userHint, hintTags, mode } = await req.json();
 
     const full = oneLine(sentence || "");
     const selected = oneLine(selectedText || "");
     const rawHint = oneLine(userHint || "");
+    const isAutoMode = mode === "auto";
 
     if (!full && !selected) {
       return new Response(JSON.stringify({ error: "Missing sentence or selectedText" }), {
@@ -269,6 +255,75 @@ serve(async (req) => {
     let textToAnalyze = selected || full;
     if (selected && countWords(selected) < 3 && full) textToAnalyze = full;
 
+    // ── 자동 생성 모드: 태그 필터 없이 자유 추출 ──
+    if (isAutoMode) {
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
+      const userMessage = `문장: ${full}\n이 문장에서 수능에 출제될 수 있는 핵심 문법 포인트를 찾아서 points로 작성하라.`;
+
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          temperature: 0.2,
+          max_tokens: 600,
+          messages: [
+            { role: "system", content: buildAutoSystemPrompt() },
+            { role: "user", content: userMessage },
+          ],
+          tools,
+          tool_choice: { type: "function", function: { name: "syntax_result" } },
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("AI gateway error:", response.status, errText);
+        if (response.status === 429) {
+          return new Response(JSON.stringify({ error: "Rate limit exceeded." }), {
+            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        if (response.status === 402) {
+          return new Response(JSON.stringify({ error: "Credits exhausted." }), {
+            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        throw new Error(`AI error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+
+      let points: string[] = [];
+      if (toolCall?.function?.arguments) {
+        const parsed = safeJsonParse(toolCall.function.arguments);
+        points = Array.isArray(parsed?.points) ? parsed.points : [];
+      } else {
+        const fallback = oneLine(data.choices?.[0]?.message?.content ?? "");
+        points = fallback ? [fallback] : [];
+      }
+
+      points = points.map(oneLine).filter(Boolean).map(stripLeadingBullets);
+      points = points.slice(0, 5).map((p) => (p.length > 170 ? p.slice(0, 168).trim() + "…" : p));
+
+      if (points.length === 0) {
+        points = ["(이 문장에서 주요 문법 포인트를 찾지 못했습니다)"];
+      }
+
+      const syntaxNotes = formatAsLines(points, 5);
+      const res: GrammarResponse = { syntaxNotes, detectedTags: [], normalizedHint: "" };
+      return new Response(JSON.stringify(res), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── 힌트 모드: 기존 태그 기반 필터링 ──
     let tags: TagId[] = [];
     if (Array.isArray(hintTags) && hintTags.length > 0) {
       tags = hintTags as TagId[];
@@ -322,14 +377,12 @@ serve(async (req) => {
       console.error("AI gateway error:", response.status, errText);
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "Credits exhausted." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       throw new Error(`AI error: ${response.status}`);
@@ -347,10 +400,7 @@ serve(async (req) => {
       points = fallback ? [fallback] : [];
     }
 
-    // 후처리: 한 줄화 + 불릿 제거
     points = points.map(oneLine).filter(Boolean).map(stripLeadingBullets);
-
-    // 태그 필터(힌트 밖 포인트 제거)
     points = points.filter((p) => passesTagFilter(p, tags));
 
     if (points.length === 0) {
@@ -359,7 +409,6 @@ serve(async (req) => {
 
     points = points.slice(0, 3).map((p) => (p.length > 170 ? p.slice(0, 168).trim() + "…" : p));
 
-    // ✅ 여기서부터는 •를 절대 붙이지 않음 (UI가 ①②③ 붙임)
     const syntaxNotes = formatAsLines(points, 3);
 
     const res: GrammarResponse = {
