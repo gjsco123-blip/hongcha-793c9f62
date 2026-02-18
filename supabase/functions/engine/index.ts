@@ -102,25 +102,45 @@ serve(async (req) => {
     const systemPrompt = `You are a precise English-Korean sentence analysis engine. ${levelGuide}
 
 Given an English sentence, you must:
-1. Break the English sentence into meaningful chunks (phrases/clauses). Tag each chunk with <c1>, <c2>, etc.
-2. Translate each chunk into Korean literally, preserving the EXACT same tag structure. Each tagged Korean segment must correspond to the same-numbered English tag.
-3. Provide a natural Korean translation (no tags, prioritize readability).
+1. Break it into meaningful chunks (phrases/clauses). Tag each with <c1>, <c2>, etc.
+2. Translate each chunk into Korean literally with the EXACT same tag structure.
+3. Provide a natural Korean translation (no tags).
 
-CRITICAL RULES:
-- The number of tags in english_tagged MUST equal the number of tags in korean_literal_tagged.
-- Each <cN>...</cN> in English maps to exactly one <cN>...</cN> in Korean literal.
-- Chunks should be meaning units: noun phrases, verb phrases, prepositional phrases, clauses.
+## VERB TAGGING — READ THIS FIRST
+
+### What to tag with <v>...</v>:
+ONLY finite verbs — verbs that serve as the predicate of a clause with a subject.
+- Simple verbs: <v>discovered</v>, <v>is</v>, <v>runs</v>
+- Auxiliary + main: <v>has been working</v>, <v>were conducted</v>
+- Modal + verb: <v>can affect</v>, <v>should consider</v>
+- Multi-word verbs in ONE tag: <v>sought out</v>, <v>turned off</v>
+
+### NEVER tag these — they are NOT verbs:
+1. **To-infinitives**: "to cause", "to achieve", "to engage", "to switch off" → NO <v> tag. The word "to" before a verb = infinitive = NOT a finite verb.
+2. **Gerunds (-ing as noun)**: "Swimming is fun" → "Swimming" is a noun, not a verb.
+3. **Participles as adjectives**: "the broken window", "an interesting book" → adjectives, not verbs.
+4. **Prepositions/conjunctions that look like verbs**: such as, as well as, rather than, according to, due to, because of, in order to, as opposed to, in addition to, regardless of, in terms of, based on, depending on.
+
+### Examples:
+- CORRECT: <c1>The ability to cause harm</c1> → "to cause" has NO <v> tag
+- WRONG:  <c1>The ability <v>to cause</v> harm</c1>
+- CORRECT: <c2>researchers <v>studied</v> the effects</c2>
+- WRONG:  <c2>researchers <v>such as</v> Boas</c2> — "such as" is a preposition
+- CORRECT: <c3>which <v>can lead</v> to problems</c3> → "can lead" is finite, "to" after it is a preposition
+- CORRECT: <c4>Upon encountering the data,</c4> → "Upon" is a preposition, "encountering" is a gerund — NO <v>
+
+### Quick test: Ask "Does this word have a SUBJECT performing it RIGHT HERE in this clause?" If NO → do NOT use <v>.
+
+## CHUNKING RULES
+- Tag count in english_tagged MUST equal tag count in korean_literal_tagged.
+- Each <cN> in English maps to exactly one <cN> in Korean.
+- Chunks = meaning units: noun phrases, verb phrases, prepositional phrases, clauses.
 - Do NOT split articles from their nouns.
-- Natural Korean ignores tags entirely and reads naturally.
-- EVERY word and punctuation mark in the original sentence MUST appear in exactly one chunk. No word or punctuation may be omitted.
-- ALL punctuation MUST be preserved exactly as in the original: dashes (—, –, -), commas, semicolons, colons, parentheses, quotation marks, etc. An em dash (—) must remain in the chunk text, never be dropped.
-- Conjunctions (while, but, although, because, however, etc.) MUST be included as part of a chunk, never dropped.
-- Concatenating all english chunks (removing tags) must reconstruct the original sentence exactly.
-- Within each English chunk, wrap the main verb or verb phrase with <v>...</v> tags. ONLY tag finite verbs (verbs that function as the main predicate of a clause or sentence). Include main verbs, auxiliary+main verb combinations (e.g., <v>has been working</v>), and modal+verb combinations (e.g., <v>can affect</v>). Multi-word verb phrases MUST be wrapped in a SINGLE <v> tag (e.g., <v>were conducted</v>, <v>sought out</v>), never split into separate <v> tags per word. Do NOT tag any non-finite verbs: no to-infinitives (e.g., to engage, to achieve), no gerunds (-ing used as nouns), no participles used as adjectives. The 'to' in to-infinitives must NEVER be inside a <v> tag.
-- NEVER tag these as verbs — they are prepositions, conjunctions, or fixed expressions: such as, as well as, rather than, according to, due to, because of, in order to, as opposed to, in addition to, regardless of, in terms of. If in doubt, ask: "Does this word/phrase describe an action or state performed by a subject?" If NO, do NOT use <v>.
-- WRONG: <c1>researchers <v>such as</v> Boas</c1> — "such as" is a preposition, NOT a verb.
-- CORRECT: <c1>researchers such as Boas <v>studied</v> cultures</c1>
-- The <v> tags go INSIDE the <c> tags. Example: <c1>The researchers <v>discovered</v></c1>
+- EVERY word and punctuation mark MUST appear in exactly one chunk — nothing omitted.
+- ALL punctuation preserved exactly: dashes (—, –, -), commas, semicolons, colons, parentheses, quotes.
+- Conjunctions (while, but, although, because, however) MUST be included in a chunk, never dropped.
+- Concatenating all chunks (removing tags) MUST reconstruct the original sentence exactly.
+- <v> tags go INSIDE <c> tags: <c1>The researchers <v>discovered</v></c1>
 
 You MUST respond by calling the "analysis_result" function with the structured output.`;
 
@@ -176,7 +196,7 @@ You MUST respond by calling the "analysis_result" function with the structured o
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "google/gemini-2.5-pro",
           messages,
           tools,
           tool_choice: { type: "function", function: { name: "analysis_result" } },
