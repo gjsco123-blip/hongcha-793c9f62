@@ -1,14 +1,16 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, createElement } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate, useLocation } from "react-router-dom";
+import { pdf } from "@react-pdf/renderer";
 import {
-  ArrowLeft, Loader2, RefreshCw, Plus, Pencil, Trash2, Check, X, ChevronDown,
+  ArrowLeft, Loader2, RefreshCw, Plus, Pencil, Trash2, Check, X, ChevronDown, FileDown,
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { PassageBuilderPdf } from "@/components/PassageBuilderPdf";
 
 // ── Types ──
 interface VocabItem {
@@ -199,6 +201,22 @@ export default function PassageBuilder() {
     }
   };
 
+  // ── PDF Export ──
+  const canExport = vocab.length > 0 || structure.length > 0 || explanation;
+  const handleExportPdf = async () => {
+    const doc = createElement(PassageBuilderPdf, { vocab, structure, explanation }) as any;
+    const blob = await pdf(doc).toBlob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "passage-builder.pdf";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success("PDF가 저장되었습니다.");
+  };
+
   // ── Section loading indicator ──
   const Spinner = () => <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />;
 
@@ -210,7 +228,16 @@ export default function PassageBuilder() {
           <button onClick={() => navigate("/")} className="text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-xl font-bold tracking-wide">Passage Builder</h1>
+          <h1 className="text-xl font-bold tracking-wide flex-1">Passage Builder</h1>
+          {canExport && (
+            <button
+              onClick={handleExportPdf}
+              className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors"
+            >
+              <FileDown className="w-3.5 h-3.5" />
+              PDF 저장
+            </button>
+          )}
         </div>
       </header>
 
