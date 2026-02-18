@@ -270,6 +270,7 @@ serve(async (req) => {
       }
 
       const data = await response.json();
+      console.log("AI response (auto):", JSON.stringify(data.choices?.[0]?.message).slice(0, 500));
       const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
 
       let points: string[] = [];
@@ -277,8 +278,15 @@ serve(async (req) => {
         const parsed = safeJsonParse(toolCall.function.arguments);
         points = Array.isArray(parsed?.points) ? parsed.points : [];
       } else {
-        const fallback = oneLine(data.choices?.[0]?.message?.content ?? "");
-        points = fallback ? [fallback] : [];
+        const content = data.choices?.[0]?.message?.content ?? "";
+        console.log("No tool_call (auto), trying content fallback:", content.slice(0, 300));
+        try {
+          const parsed = safeJsonParse(content);
+          points = Array.isArray(parsed?.points) ? parsed.points : [];
+        } catch {
+          const fallback = oneLine(content);
+          points = fallback ? [fallback] : [];
+        }
       }
 
       points = points.map(oneLine).filter(Boolean).map(stripLeadingBullets);
@@ -331,7 +339,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: useFreestyle ? "google/gemini-2.5-flash" : "google/gemini-2.5-pro",
+        model: "google/gemini-2.5-flash",
         temperature: useFreestyle ? 0.2 : 0.12,
         max_tokens: 450,
         messages: [
@@ -360,6 +368,7 @@ serve(async (req) => {
     }
 
     const data = await response.json();
+    console.log("AI response (hint):", JSON.stringify(data.choices?.[0]?.message).slice(0, 500));
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
 
     let points: string[] = [];
@@ -367,8 +376,15 @@ serve(async (req) => {
       const parsed = safeJsonParse(toolCall.function.arguments);
       points = Array.isArray(parsed?.points) ? parsed.points : [];
     } else {
-      const fallback = oneLine(data.choices?.[0]?.message?.content ?? "");
-      points = fallback ? [fallback] : [];
+      const content = data.choices?.[0]?.message?.content ?? "";
+      console.log("No tool_call, trying content fallback:", content.slice(0, 300));
+      try {
+        const parsed = safeJsonParse(content);
+        points = Array.isArray(parsed?.points) ? parsed.points : [];
+      } catch {
+        const fallback = oneLine(content);
+        points = fallback ? [fallback] : [];
+      }
     }
 
     points = points.map(oneLine).filter(Boolean).map(stripLeadingBullets);
