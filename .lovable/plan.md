@@ -1,28 +1,27 @@
 
 
-## PDF 구문분석 레이아웃 수정
+## 동사 밑줄 정확도 개선
 
-### 현재 문제
-1. PDF에서 동그라미 숫자(①②③...)가 보이지 않음
-2. 2번째 이후 노트의 정렬이 깨짐 - 세로바 자리에 빈 spacer가 있지만 레이아웃 불일치
-3. 웹 UI에서는 정상적으로 보이는데 PDF에서만 깨짐
+### 문제점
+- to부정사(to cause, to switch off)가 동사로 태깅됨
+- 전치사(of, upon)가 동사로 태깅됨
+- 프롬프트에 규칙이 이미 있지만 모델이 무시함
 
-### 원인 분석
-- `translationContent` 스타일의 fontSize가 6으로 매우 작아서 동그라미 숫자가 잘 안 보일 수 있음
-- 레이아웃 구조가 직역/의역 행과 동일한 `translationRow`를 쓰는데, 구문분석은 "구문" 라벨 + 동그라미 숫자 내용이라 구조가 다름
+### 수정 1: 모델 업그레이드 (supabase/functions/engine/index.ts)
+- `google/gemini-2.5-flash` → `google/gemini-2.5-pro`로 변경
+- Pro 모델이 복잡한 언어학적 규칙을 더 정확하게 따름
 
-### 수정 내용 (`src/components/PdfDocument.tsx`)
+### 수정 2: 프롬프트 간소화 및 강화 (supabase/functions/engine/index.ts)
+현재 프롬프트의 동사 관련 규칙이 너무 길고 분산되어 있음. 핵심 규칙을 더 명확하고 간결하게 정리:
 
-**구문분석 렌더링 로직 전면 재작성:**
-
-1. 첫 번째 노트(n.id === 1)만 세로바 + "구문" 라벨 표시
-2. 2번째 이후 노트는 세로바 없이, "구문" 라벨 자리만큼 빈 공간 확보하여 내용 정렬
-3. 모든 노트 앞에 동그라미 숫자를 별도 Text 요소로 분리하여 확실히 렌더링
-4. 불릿 제거 regex 유지
-
-구체적으로:
-- 동그라미 숫자를 `translationContent` 안에 문자열로 합치지 않고, 별도의 고정 너비 `Text` 요소로 분리
-- 이렇게 하면 숫자가 누락되지 않고, 정렬도 일관됨
+- 동사 태깅 규칙을 별도 섹션으로 분리하여 강조
+- "절대 하지 말 것" 목록을 앞쪽에 배치 (모델이 앞부분 규칙을 더 잘 따름)
+- Few-shot 예시 추가: 올바른 태깅 vs 잘못된 태깅을 구체적으로 보여줌
+- 특히 to-infinitive, 전치사 오태깅 방지 예시 강화
 
 ### 수정 파일
-- `src/components/PdfDocument.tsx` (syntaxNotes 렌더링 부분 약 15줄)
+- `supabase/functions/engine/index.ts` (model 변수 + systemPrompt 내 verb 규칙 부분)
+
+### 트레이드오프
+- Pro 모델은 flash 대비 응답 시간이 약간 느리고 비용이 높음
+- 정확도는 눈에 띄게 개선됨
