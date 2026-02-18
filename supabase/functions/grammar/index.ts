@@ -7,30 +7,30 @@ const corsHeaders = {
 };
 
 type TagId =
-  | "REL_SUBJ" // 주격 관계대명사
-  | "REL_OBJ_OMIT" // 목적격 관계대명사 생략
-  | "REL_ADV" // 관계부사
-  | "AGREEMENT" // 수일치
-  | "NOUN_CLAUSE_THAT" // 명사절 that(생략 포함)
-  | "NOUN_CLAUSE_WH" // 의문사절(what/how/why/which 등)
-  | "IT_DUMMY_SUBJ" // 가주어/진주어
-  | "IT_DUMMY_OBJ" // 가목적어/진목적어
-  | "FIVE_PATTERN" // 5형식
-  | "TO_INF" // to부정사(기본)
-  | "PARTICIPLE_POST" // 분사 후치수식
-  | "PARTICIPLE_CLAUSE" // 분사구문
-  | "PASSIVE" // 수동태
-  | "MODAL_PASSIVE" // 조동사+수동
-  | "PARALLEL" // 병렬
-  | "PREP_GERUND" // 전치사+동명사
-  | "THERE_BE" // There is/are
-  | "COMPARISON" // 비교
-  | "OMISSION"; // 생략(일반)
+  | "REL_SUBJ"
+  | "REL_OBJ_OMIT"
+  | "REL_ADV"
+  | "AGREEMENT"
+  | "NOUN_CLAUSE_THAT"
+  | "NOUN_CLAUSE_WH"
+  | "IT_DUMMY_SUBJ"
+  | "IT_DUMMY_OBJ"
+  | "FIVE_PATTERN"
+  | "TO_INF"
+  | "PARTICIPLE_POST"
+  | "PARTICIPLE_CLAUSE"
+  | "PASSIVE"
+  | "MODAL_PASSIVE"
+  | "PARALLEL"
+  | "PREP_GERUND"
+  | "THERE_BE"
+  | "COMPARISON"
+  | "OMISSION";
 
 type GrammarResponse = {
-  syntaxNotes: string; // 기존 UI 호환(필수)
-  detectedTags?: TagId[]; // 칩 UI용(옵션)
-  normalizedHint?: string; // 서버가 정리한 힌트(옵션)
+  syntaxNotes: string;
+  detectedTags?: TagId[];
+  normalizedHint?: string;
 };
 
 function oneLine(s: string) {
@@ -39,9 +39,11 @@ function oneLine(s: string) {
     .replace(/\s+/g, " ")
     .trim();
 }
+
 function countWords(text: string) {
   return oneLine(text).split(" ").filter(Boolean).length;
 }
+
 function safeJsonParse(raw: string): any {
   try {
     return JSON.parse(raw);
@@ -59,15 +61,29 @@ function safeJsonParse(raw: string): any {
   }
 }
 
-function formatAsBullets(points: string[], maxLines: number) {
+/**
+ * 모델이 혹시 • / - / * / · 를 붙여도 서버에서 최종 제거
+ */
+function stripLeadingBullets(line: string) {
+  return String(line ?? "")
+    .replace(/^(\s*[\u2460-\u2473])\s*[•·\-\*]\s*/u, "$1 ") // ① • -> ①
+    .replace(/^(\s*\d+[\)\.])\s*[•·\-\*]\s*/u, "$1 ") // 1) • -> 1)
+    .replace(/^\s*[•·\-\*]\s*/u, "") // • / - / * / · 제거
+    .trim();
+}
+
+/**
+ * UI에서 ①②③이 이미 붙는다면, 서버는 "그냥 줄바꿈으로만" 반환
+ * - 각 줄은 한 줄 유지(슬래시 / 로 부가설명)
+ * - 어떤 경우에도 •를 붙이지 않음
+ */
+function formatAsLines(points: string[], maxLines: number) {
   const cleaned = points
     .map((p) => oneLine(p))
     .filter(Boolean)
-    .map((p) => p.replace(/^•\s*/g, ""));
-  return cleaned
-    .slice(0, maxLines)
-    .map((p) => `• ${p}`)
-    .join("\n");
+    .map(stripLeadingBullets);
+
+  return cleaned.slice(0, maxLines).join("\n");
 }
 
 // -----------------------------
@@ -75,9 +91,7 @@ function formatAsBullets(points: string[], maxLines: number) {
 // -----------------------------
 const TAG_RULES: Array<{
   id: TagId;
-  // 이 키워드들 중 하나라도 포함되면 태그로 인식
   keywords: string[];
-  // 표시용 라벨(프롬프트에 태그 설명으로 같이 전달)
   label: string;
 }> = [
   { id: "REL_SUBJ", keywords: ["주격관계대명사", "주관대", "who", "which", "that(주격)"], label: "주격 관계대명사" },
@@ -145,7 +159,6 @@ function detectTagsFromHint(userHint: string): TagId[] {
     const hit = rule.keywords.some((k) => h.includes(k.toLowerCase()));
     if (hit) found.push(rule.id);
   }
-  // 중복 제거
   return Array.from(new Set(found));
 }
 
@@ -155,16 +168,10 @@ function tagsToPromptBlock(tags: TagId[]) {
   return tags.map((t) => `${t}: ${map.get(t) ?? t}`).join("\n");
 }
 
-/**
- * hint 모드 필터:
- * - 모델이 태그 밖 포인트를 쓰면 제거하기 위해,
- * - 포인트 문자열에 태그 라벨 또는 태그 관련 키워드가 포함되는지 확인.
- */
 function passesTagFilter(point: string, tags: TagId[]) {
   const p = oneLine(point);
   if (!p) return false;
 
-  // 태그별로 허용 키워드 세트(최소)
   const allow: Record<TagId, string[]> = {
     REL_SUBJ: ["주격 관계대명사", "who", "which", "that"],
     REL_OBJ_OMIT: ["목적격 관계대명사", "관계대명사 생략", "목적격", "which/that", "that/which", "생략"],
@@ -208,6 +215,7 @@ function buildHintSystemPrompt() {
 - 정의/해석/배경설명 금지. 기능 중심으로만.
 - 3단어 이상 영어 인용은 who~school처럼 축약.
 - 큰따옴표(") 사용 금지.
+- 불릿(•)을 절대 붙이지 말 것. (UI가 번호를 붙인다)
 
 [문체 예시(이 톤 유지)]
 - 주격 관계대명사 who/which/that이 선행사 ___를 수식하는 관계절을 이끔.
@@ -258,11 +266,9 @@ serve(async (req) => {
       });
     }
 
-    // 분석 대상(선택구문이 너무 짧으면 전체문장 fallback)
     let textToAnalyze = selected || full;
     if (selected && countWords(selected) < 3 && full) textToAnalyze = full;
 
-    // 2) 태그 결정: 프론트에서 hintTags 배열이 오면 우선 사용, 없으면 userHint에서 자동 추출
     let tags: TagId[] = [];
     if (Array.isArray(hintTags) && hintTags.length > 0) {
       tags = hintTags as TagId[];
@@ -270,11 +276,9 @@ serve(async (req) => {
       tags = detectTagsFromHint(rawHint);
     }
 
-    // 태그가 하나도 없으면: "자동 모드"로 해버리면 또 흔들림.
-    // 여기서는 최소한 안내 문구를 주는 게 교재 제작엔 더 안전.
     if (tags.length === 0) {
       const res: GrammarResponse = {
-        syntaxNotes: "• (힌트가 너무 짧거나 인식되지 않았습니다) 예: 목관대 생략 / 수일치 / 과거분사",
+        syntaxNotes: "(힌트가 너무 짧거나 인식되지 않았습니다) 예: 목관대 생략 / 수일치 / 과거분사",
         detectedTags: [],
         normalizedHint: rawHint,
       };
@@ -343,21 +347,20 @@ serve(async (req) => {
       points = fallback ? [fallback] : [];
     }
 
-    // 3) 후처리: 한 줄화 + 태그 필터 + 최대 3개
-    points = points.map(oneLine).filter(Boolean);
+    // 후처리: 한 줄화 + 불릿 제거
+    points = points.map(oneLine).filter(Boolean).map(stripLeadingBullets);
 
-    // hint 기반 2중 안전장치: 태그와 무관한 포인트 제거
+    // 태그 필터(힌트 밖 포인트 제거)
     points = points.filter((p) => passesTagFilter(p, tags));
 
-    // 그래도 0개면: 최소한 첫 1개라도 보여주되(교재 제작 흐름 끊김 방지), 아주 짧게
     if (points.length === 0) {
       points = ["(힌트 태그에 해당하는 포인트를 문장에서 찾기 어려움) / 드래그 범위를 조금 넓히거나 힌트를 구체화"];
     }
 
-    // 길이/개수 제한
     points = points.slice(0, 3).map((p) => (p.length > 170 ? p.slice(0, 168).trim() + "…" : p));
 
-    const syntaxNotes = formatAsBullets(points, 3);
+    // ✅ 여기서부터는 •를 절대 붙이지 않음 (UI가 ①②③ 붙임)
+    const syntaxNotes = formatAsLines(points, 3);
 
     const res: GrammarResponse = {
       syntaxNotes,
