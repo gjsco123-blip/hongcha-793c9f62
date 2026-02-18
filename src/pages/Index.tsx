@@ -8,9 +8,37 @@ import { SentencePreview } from "@/components/SentencePreview";
 import { Chunk, parseTagged, chunksToTagged } from "@/lib/chunk-utils";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { toast } from "sonner";
-import { FileDown, RotateCw, X, Scissors } from "lucide-react";
+import { FileDown, RotateCw, X, Scissors, RefreshCw } from "lucide-react";
 
 type Preset = "고1" | "고2" | "수능";
+
+async function invokeWithRetry(
+  sentence: string,
+  preset: string,
+  maxRetries = 3
+): Promise<{ data: any; error: any }> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const { data, error } = await supabase.functions.invoke("engine", {
+      body: { sentence, preset },
+    });
+
+    if (!error && data && !data.error) return { data, error: null };
+
+    const isRetryable =
+      error?.status === 429 ||
+      error?.status === 503 ||
+      (typeof data?.error === "string" && /rate.?limit/i.test(data.error));
+
+    if (isRetryable && attempt < maxRetries) {
+      const waitMs = Math.pow(2, attempt) * 500 + Math.random() * 500;
+      await new Promise((r) => setTimeout(r, waitMs));
+      continue;
+    }
+
+    return { data, error };
+  }
+  return { data: null, error: new Error("Max retries exceeded") };
+}
 
 export interface SyntaxNote {
   id: number; // 1~5
@@ -153,7 +181,7 @@ export default function Index() {
     for (let batch = 0; batch < sentences.length; batch += CONCURRENCY) {
       const chunk = sentences.slice(batch, batch + CONCURRENCY);
       const promises = chunk.map((s, j) =>
-        supabase.functions.invoke("engine", { body: { sentence: s, preset } })
+        invokeWithRetry(s, preset)
           .then(({ data, error }) => ({ idx: batch + j, sentence: s, data, error }))
           .catch((e: any) => ({ idx: batch + j, sentence: s, data: null, error: e }))
       );
@@ -189,6 +217,54 @@ export default function Index() {
 
     // 홍T는 사용자가 버튼 클릭 시에만 생성
 
+    setLoading(false);
+  };
+
+  const failedResults = useMemo(
+    () => results.filter((r) => r.koreanNatural === "분석 실패"),
+    [results]
+  );
+
+  const handleRetryFailed = async () => {
+    if (loading || failedResults.length === 0) return;
+    setLoading(true);
+    setProgress({ current: 0, total: failedResults.length });
+
+    const CONCURRENCY = 3;
+    let done = 0;
+    for (let batch = 0; batch < failedResults.length; batch += CONCURRENCY) {
+      const chunk = failedResults.slice(batch, batch + CONCURRENCY);
+      const promises = chunk.map((r) =>
+        invokeWithRetry(r.original, preset)
+          .then(({ data, error }) => ({ id: r.id, original: r.original, data, error }))
+          .catch((e: any) => ({ id: r.id, original: r.original, data: null, error: e }))
+      );
+      const batchResults = await Promise.all(promises);
+
+      for (const { id, original, data, error } of batchResults) {
+        if (!error && data && !data.error) {
+          setResults((prev) =>
+            prev.map((r) =>
+              r.id === id
+                ? {
+                    ...r,
+                    englishChunks: parseTagged(data.english_tagged),
+                    koreanLiteralChunks: parseTagged(data.korean_literal_tagged),
+                    koreanNatural: data.korean_natural,
+                    englishTagged: data.english_tagged,
+                    koreanLiteralTagged: data.korean_literal_tagged,
+                  }
+                : r
+            )
+          );
+        } else {
+          const msg = error?.message || data?.error || "알 수 없는 오류";
+          toast.error(`문장 ${id + 1} 재시도 실패: ${msg}`);
+        }
+      }
+      done += chunk.length;
+      setProgress({ current: done, total: failedResults.length });
+    }
     setLoading(false);
   };
 
@@ -374,6 +450,15 @@ export default function Index() {
                 >
                   <FileDown className="w-3.5 h-3.5" />
                   PDF 저장
+                </button>
+              )}
+              {failedResults.length > 0 && !loading && (
+                <button
+                  onClick={handleRetryFailed}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 border border-destructive text-destructive text-xs font-medium hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  실패 {failedResults.length}건 재시도
                 </button>
               )}
               <button
