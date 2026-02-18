@@ -149,45 +149,42 @@ export default function Index() {
 
     const newResults: SentenceResult[] = [];
 
-    for (let i = 0; i < sentences.length; i++) {
-      setProgress({ current: i + 1, total: sentences.length });
+    const CONCURRENCY = 3;
+    for (let batch = 0; batch < sentences.length; batch += CONCURRENCY) {
+      const chunk = sentences.slice(batch, batch + CONCURRENCY);
+      const promises = chunk.map((s, j) =>
+        supabase.functions.invoke("engine", { body: { sentence: s, preset } })
+          .then(({ data, error }) => ({ idx: batch + j, sentence: s, data, error }))
+          .catch((e: any) => ({ idx: batch + j, sentence: s, data: null, error: e }))
+      );
 
-      try {
-        const { data, error } = await supabase.functions.invoke("engine", {
-          body: { sentence: sentences[i], preset },
-        });
+      const batchResults = await Promise.all(promises);
 
-        if (error) throw error;
-        if (data.error) throw new Error(data.error);
-
-        newResults.push({
-          id: i,
-          original: sentences[i],
-          englishChunks: parseTagged(data.english_tagged),
-          koreanLiteralChunks: parseTagged(data.korean_literal_tagged),
-          koreanNatural: data.korean_natural,
-          englishTagged: data.english_tagged,
-          koreanLiteralTagged: data.korean_literal_tagged,
-          syntaxNotes: [],
-          hongTNotes: "",
-        });
-
-        setResults([...newResults]);
-      } catch (e: any) {
-        toast.error(`문장 ${i + 1} 분석 실패: ${e.message}`);
-        newResults.push({
-          id: i,
-          original: sentences[i],
-          englishChunks: [],
-          koreanLiteralChunks: [],
-          koreanNatural: "분석 실패",
-          englishTagged: "",
-          koreanLiteralTagged: "",
-          syntaxNotes: [],
-          hongTNotes: "",
-        });
-        setResults([...newResults]);
+      for (const { idx, sentence, data, error } of batchResults) {
+        if (error || !data || data.error) {
+          const msg = error?.message || data?.error || "알 수 없는 오류";
+          toast.error(`문장 ${idx + 1} 분석 실패: ${msg}`);
+          newResults.push({
+            id: idx, original: sentence,
+            englishChunks: [], koreanLiteralChunks: [],
+            koreanNatural: "분석 실패", englishTagged: "", koreanLiteralTagged: "",
+            syntaxNotes: [], hongTNotes: "",
+          });
+        } else {
+          newResults.push({
+            id: idx, original: sentence,
+            englishChunks: parseTagged(data.english_tagged),
+            koreanLiteralChunks: parseTagged(data.korean_literal_tagged),
+            koreanNatural: data.korean_natural,
+            englishTagged: data.english_tagged,
+            koreanLiteralTagged: data.korean_literal_tagged,
+            syntaxNotes: [], hongTNotes: "",
+          });
+        }
       }
+
+      setProgress({ current: Math.min(batch + CONCURRENCY, sentences.length), total: sentences.length });
+      setResults([...newResults]);
     }
 
     // 홍T는 사용자가 버튼 클릭 시에만 생성
