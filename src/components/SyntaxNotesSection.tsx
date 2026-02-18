@@ -67,10 +67,10 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating }: 
               구문분석 내용이 없습니다.
             </p>
           ) : (
-            notes.map((note) => (
+            notes.map((note, index) => (
               <div key={note.id} className="flex items-start gap-2 group/note">
                 <span className="text-xs font-bold text-foreground shrink-0 mt-0.5 w-4">
-                  {note.id}.
+                  {index + 1}.
                 </span>
                 {editing ? (
                   <textarea
