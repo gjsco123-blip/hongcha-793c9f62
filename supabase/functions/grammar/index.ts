@@ -87,21 +87,57 @@ const TAG_RULES: Array<{
   label: string;
 }> = [
   { id: "REL_SUBJ", keywords: ["주격관계대명사", "주관대", "who", "which", "that(주격)"], label: "주격 관계대명사" },
-  { id: "REL_OBJ_OMIT", keywords: ["목적격관계대명사", "목관대", "관계대명사 생략", "목적격 생략", "that 생략", "which 생략"], label: "목적격 관계대명사(생략)" },
+  {
+    id: "REL_OBJ_OMIT",
+    keywords: ["목적격관계대명사", "목관대", "관계대명사 생략", "목적격 생략", "that 생략", "which 생략"],
+    label: "목적격 관계대명사(생략)",
+  },
   { id: "REL_ADV", keywords: ["관계부사", "when", "where", "why", "how(관계부사)"], label: "관계부사" },
   { id: "AGREEMENT", keywords: ["수일치", "단수", "복수", "동사 수일치"], label: "수일치" },
-  { id: "NOUN_CLAUSE_THAT", keywords: ["명사절 that", "that절", "that 명사절", "that 생략"], label: "명사절 that(생략)" },
-  { id: "NOUN_CLAUSE_WH", keywords: ["의문사절", "간접의문문", "what절", "how절", "why절", "which절", "whether절", "if절(명사절)"], label: "의문사절/간접의문문" },
-  { id: "IT_DUMMY_SUBJ", keywords: ["가주어", "진주어", "it 가주어", "to부정사 진주어", "that절 진주어"], label: "가주어/진주어" },
+  {
+    id: "NOUN_CLAUSE_THAT",
+    keywords: ["명사절 that", "that절", "that 명사절", "that 생략"],
+    label: "명사절 that(생략)",
+  },
+  {
+    id: "NOUN_CLAUSE_WH",
+    keywords: ["의문사절", "간접의문문", "what절", "how절", "why절", "which절", "whether절", "if절(명사절)"],
+    label: "의문사절/간접의문문",
+  },
+  {
+    id: "IT_DUMMY_SUBJ",
+    keywords: ["가주어", "진주어", "it 가주어", "to부정사 진주어", "that절 진주어"],
+    label: "가주어/진주어",
+  },
   { id: "IT_DUMMY_OBJ", keywords: ["가목적어", "진목적어", "it 가목적어"], label: "가목적어/진목적어" },
   { id: "FIVE_PATTERN", keywords: ["5형식", "목적격보어", "o.c", "oc", "make o c", "find o c"], label: "5형식(O.C)" },
-  { id: "TO_INF", keywords: ["to부정사", "to-v", "to v", "to부정사 용법", "to부정사 목적", "to부정사 형용사적", "to부정사 부사적"], label: "to부정사" },
-  { id: "PARTICIPLE_POST", keywords: ["과거분사", "현재분사", "분사 후치", "후치수식", "p.p", "v-ing(형용사)", "분사구"], label: "분사 후치수식" },
-  { id: "PARTICIPLE_CLAUSE", keywords: ["분사구문", "접속사 생략", "분사구문(이유)", "분사구문(시간)", "분사구문(양보)"], label: "분사구문" },
+  {
+    id: "TO_INF",
+    keywords: ["to부정사", "to-v", "to v", "to부정사 용법", "to부정사 목적", "to부정사 형용사적", "to부정사 부사적"],
+    label: "to부정사",
+  },
+  {
+    id: "PARTICIPLE_POST",
+    keywords: ["과거분사", "현재분사", "분사 후치", "후치수식", "p.p", "v-ing(형용사)", "분사구"],
+    label: "분사 후치수식",
+  },
+  {
+    id: "PARTICIPLE_CLAUSE",
+    keywords: ["분사구문", "접속사 생략", "분사구문(이유)", "분사구문(시간)", "분사구문(양보)"],
+    label: "분사구문",
+  },
   { id: "PASSIVE", keywords: ["수동태", "be p.p", "be pp", "수동"], label: "수동태" },
-  { id: "MODAL_PASSIVE", keywords: ["조동사+수동", "can be p.p", "may be p.p", "must be p.p", "will be p.p"], label: "조동사+수동" },
+  {
+    id: "MODAL_PASSIVE",
+    keywords: ["조동사+수동", "can be p.p", "may be p.p", "must be p.p", "will be p.p"],
+    label: "조동사+수동",
+  },
   { id: "PARALLEL", keywords: ["병렬", "and 병렬", "or 병렬", "not only", "both", "either", "neither"], label: "병렬" },
-  { id: "PREP_GERUND", keywords: ["전치사+동명사", "by ~ing", "in ~ing", "for ~ing", "without ~ing"], label: "전치사+동명사" },
+  {
+    id: "PREP_GERUND",
+    keywords: ["전치사+동명사", "by ~ing", "in ~ing", "for ~ing", "without ~ing"],
+    label: "전치사+동명사",
+  },
   { id: "THERE_BE", keywords: ["there is", "there are", "There is/are", "유도부사"], label: "There is/are" },
   { id: "COMPARISON", keywords: ["비교급", "최상급", "as ~ as", "than", "the 비교급", "비교"], label: "비교구문" },
   { id: "OMISSION", keywords: ["생략", "that 생략", "관계사 생략", "접속사 생략"], label: "생략" },
@@ -124,7 +160,6 @@ function tagsToPromptBlock(tags: TagId[]) {
   return tags.map((t) => `${t}: ${map.get(t) ?? t}`).join("\n");
 }
 
-
 // -----------------------------
 // Prompts
 // -----------------------------
@@ -144,6 +179,10 @@ function buildHintSystemPrompt() {
 - 3단어 이상 영어 인용은 who~school처럼 축약.
 - 큰따옴표(") 사용 금지.
 - 불릿(•)을 절대 붙이지 말 것. (UI가 번호를 붙인다)
+
+[관계절(관계사절) 표기 규칙 — 반드시 지킬 것]
+- 관계대명사/관계부사가 나오면, “관계사 ___부터 ___까지(예: who~object)가 선행사 ___를 수식함”을 반드시 포함할 것.
+- 범위는 항상 ‘관계사 첫단어~관계절 마지막단어’로 표시할 것. (예: who~object, that~movement, where~live)
 
 [문체 예시(이 톤 유지)]
 - 주격 관계대명사 who/which/that이 선행사 ___를 수식하는 관계절을 이끔.
@@ -168,6 +207,10 @@ function buildAutoSystemPrompt() {
 - 3단어 이상 영어 인용은 who~school처럼 물결(~) 축약.
 - 큰따옴표(") 사용 금지.
 - 불릿(•)을 절대 붙이지 말 것. (UI가 번호를 붙인다)
+
+[관계절(관계사절) 표기 규칙 — 반드시 지킬 것]
+- 관계대명사/관계부사가 나오면, “관계사 ___부터 ___까지(예: who~object)가 선행사 ___를 수식함”을 반드시 포함할 것.
+- 범위는 항상 ‘관계사 첫단어~관계절 마지막단어’로 표시할 것. (예: who~object, that~movement, where~live)
 
 [우선 추출 대상]
 관계대명사(주격/목적격/생략), 관계부사, 명사절(that/wh-), 가주어/진주어, 가목적어/진목적어,
@@ -213,7 +256,9 @@ serve(async (req) => {
     const { sentence, selectedText, userHint, hintTags, mode } = await req.json();
 
     const full = oneLine(sentence || "");
-    const selected = oneLine(selectedText || "").replace(/\s*\/\s*/g, " ").trim();
+    const selected = oneLine(selectedText || "")
+      .replace(/\s*\/\s*/g, " ")
+      .trim();
     const rawHint = oneLine(userHint || "");
     const isAutoMode = mode === "auto";
 
@@ -258,12 +303,14 @@ serve(async (req) => {
         console.error("AI gateway error:", response.status, errText);
         if (response.status === 429) {
           return new Response(JSON.stringify({ error: "Rate limit exceeded." }), {
-            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 429,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
         if (response.status === 402) {
           return new Response(JSON.stringify({ error: "Credits exhausted." }), {
-            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 402,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
         throw new Error(`AI error: ${response.status}`);
@@ -340,7 +387,12 @@ serve(async (req) => {
       temperature: useFreestyle ? 0.2 : 0.12,
       max_tokens: useToolCall ? 450 : 2000,
       messages: [
-        { role: "system", content: systemPrompt + (useToolCall ? "" : "\n\n출력 형식: 반드시 {\"points\":[...]} JSON만 출력하라. 다른 텍스트 없이 JSON만.") },
+        {
+          role: "system",
+          content:
+            systemPrompt +
+            (useToolCall ? "" : '\n\n출력 형식: 반드시 {"points":[...]} JSON만 출력하라. 다른 텍스트 없이 JSON만.'),
+        },
         { role: "user", content: userMessage },
       ],
     };
@@ -363,12 +415,14 @@ serve(async (req) => {
       console.error("AI gateway error:", response.status, errText);
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "Credits exhausted." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       throw new Error(`AI error: ${response.status}`);
