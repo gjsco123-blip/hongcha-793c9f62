@@ -230,7 +230,11 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
                 {result.syntaxNotes && result.syntaxNotes.length > 0 ? (
                   result.syntaxNotes.map((n) => (
                     <View key={n.id} style={styles.translationRow}>
-                      <View style={styles.translationBar} />
+                      {n.id === 1 ? (
+                        <View style={styles.translationBar} />
+                      ) : (
+                        <View style={{ width: 2, marginRight: 4, flexShrink: 0 }} />
+                      )}
                       <Text style={styles.translationLabel}>
                         {n.id === 1 ? "구문" : ""}
                       </Text>
