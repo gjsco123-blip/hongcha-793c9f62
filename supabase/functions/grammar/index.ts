@@ -75,6 +75,8 @@ serve(async (req) => {
 1. 전체 문장의 맥락을 먼저 파악한 뒤, 사용자가 지정한 포인트가 해당 문장에서 어떤 역할을 하는지 구체적으로 설명하라.
 2. 단순히 문법 용어를 나열하지 말고, 그 문장에서 실제로 어떻게 쓰였는지를 기능 중심으로 서술하라.
 3. 사용자가 언급하지 않은 문법 포인트는 절대 추가하지 말 것.
+4. 선택 구문에 포함된 단어를 반드시 인용하여 설명할 것. 추상적 설명 금지.
+5. 힌트 키워드를 문법 용어로 정확히 매핑하여 해당 용법만 설명할 것. (예: 힌트 "수동태" → be p.p. 구조 설명, 힌트 "관계대명사" → 관계절 구조 설명)
 
 [절대 규칙]
 1. 각 항목은 • 로 시작, 반드시 한 줄로 작성.
@@ -83,20 +85,34 @@ serve(async (req) => {
 4. 출력에 큰따옴표(" ")를 절대 사용하지 말 것.
 5. 3단어 이상의 영어 구문은 첫단어~마지막단어 형태로 축약하라. (예: who received the scholarship → who~scholarship)
 
-[출력 말투 템플릿 – 반드시 이 스타일 유지]
-- 주격 관계대명사 who가 선행사 students를 수식하는 형용사절을 이끌며, who~scholarship 전체가 students를 후치수식함 / 선행사 students가 복수이므로 관계절 동사 were가 복수형으로 수일치함.
-- 가주어 it, 진주어 to-v 구문으로 to-v가 문장의 실제 주어 역할을 함.
-- 5형식 동사 make + O + O.C 구조로, 목적어 them을 O.C가 보충 설명함.
-- to부정사 to improve가 목적의 부사적 용법으로 쓰여 행위의 목적을 나타냄.
-- 전치사 by 뒤에 동명사 using이 와서 수단/방법을 나타냄.
-- 조동사 can + be p.p. 형태로 수동의 의미를 나타냄.
-- 삽입된 부사구 in~sense는 문장 전체를 수식함.
-- 병렬 구조로 reading과 writing이 and로 연결됨.
-- 접속사 because가 이유의 부사절을 이끌어 주절의 원인을 나타냄.`;
+[입출력 예시]
+전체 문장: The students who received the scholarship were honored at the ceremony.
+선택 구문: who received the scholarship
+힌트: 관계대명사
+출력:
+• 주격 관계대명사 who가 선행사 students를 수식하는 형용사절을 이끔 / who~scholarship 전체가 students를 후치수식함.
+
+전체 문장: A new policy can be implemented to reduce costs.
+선택 구문: can be implemented
+힌트: 수동태
+출력:
+• 조동사 can + be p.p. 형태로 수동의 의미를 나타냄.
+
+전체 문장: By using advanced technology, the team solved the problem.
+선택 구문: By using advanced technology
+힌트: 전치사+동명사
+출력:
+• 전치사 by 뒤에 동명사 using이 와서 수단/방법을 나타냄.
+
+전체 문장: It is important to understand the context before making a decision.
+선택 구문: It is important to understand
+힌트: 가주어/진주어
+출력:
+• 가주어 it, 진주어 to understand 구문으로 to-v가 문장의 실제 주어 역할을 함.`;
 
     const systemPrompt = userHint ? hintSystemPrompt : baseSystemPrompt;
     const userMessage = userHint
-      ? `전체 문장: ${sentence}\n선택 구문: ${textToAnalyze}\n힌트: ${userHint}`
+      ? `[전체 문장]\n${sentence}\n\n[선택 구문]\n${textToAnalyze}\n\n[힌트]\n${userHint}`
       : `다음 문장을 구문분석하세요: ${textToAnalyze}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -107,6 +123,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
+        temperature: userHint ? 0.2 : 0.4,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userMessage },
