@@ -3,13 +3,18 @@ import { pdf } from "@react-pdf/renderer";
 import { PdfDocument } from "@/components/PdfDocument";
 import { Chunk } from "@/lib/chunk-utils";
 
+interface SyntaxNote {
+  id: number;
+  content: string;
+}
+
 interface SentenceResult {
   id: number;
   original: string;
   englishChunks: Chunk[];
   koreanLiteralChunks: Chunk[];
   koreanNatural: string;
-  syntaxNotes?: string;
+  syntaxNotes?: SyntaxNote[];
   hongTNotes?: string;
   hideLiteral?: boolean;
   hideNatural?: boolean;
