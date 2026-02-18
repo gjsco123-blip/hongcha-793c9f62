@@ -7,16 +7,18 @@ interface ChunkEditorProps {
   chunks: Chunk[];
   onChange: (chunks: Chunk[]) => void;
   disabled?: boolean;
-  onAnalyzeSelection?: (selectedText: string, userHint?: string) => void;
+  onAnalyzeSelection?: (selectedText: string, userHint?: string, slotNumber?: number) => void;
+  usedSlots?: number[];
 }
 
-export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection }: ChunkEditorProps) {
+export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, usedSlots = [] }: ChunkEditorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [draftChunks, setDraftChunks] = useState<Chunk[]>([]);
   const [selectedText, setSelectedText] = useState("");
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
   const [showHintInput, setShowHintInput] = useState(false);
   const [hintText, setHintText] = useState("");
+  const [selectedSlot, setSelectedSlot] = useState<number>(1);
   const containerRef = useRef<HTMLDivElement>(null);
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hintInputRef = useRef<HTMLTextAreaElement>(null);
@@ -42,22 +44,24 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection }: 
   }, [onAnalyzeSelection, showHintInput]);
 
   const handleAnalyzeClick = () => {
-    // 선택 구문분석 버튼 클릭 → 힌트 입력 팝업 표시
     setShowHintInput(true);
     setHintText("");
+    // 다음 빈 슬롯 자동 선택
+    const nextSlot = [1, 2, 3, 4, 5].find((n) => !usedSlots.includes(n)) || 1;
+    setSelectedSlot(nextSlot);
     setTimeout(() => hintInputRef.current?.focus(), 50);
   };
 
   const handleSubmitWithHint = () => {
     if (selectedText && onAnalyzeSelection) {
-      onAnalyzeSelection(selectedText, hintText.trim() || undefined);
+      onAnalyzeSelection(selectedText, hintText.trim() || undefined, selectedSlot);
     }
     resetSelection();
   };
 
   const handleSubmitAuto = () => {
     if (selectedText && onAnalyzeSelection) {
-      onAnalyzeSelection(selectedText);
+      onAnalyzeSelection(selectedText, undefined, selectedSlot);
     }
     resetSelection();
   };
@@ -218,6 +222,28 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection }: 
             style={{ left: tooltipPos.x, top: tooltipPos.y - 8 }}
             onClick={(e) => e.stopPropagation()}
           >
+            {/* 번호 선택 */}
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-[10px] text-muted-foreground mr-1">번호:</span>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setSelectedSlot(n)}
+                  className={`w-5 h-5 text-[10px] font-bold border transition-colors ${
+                    selectedSlot === n
+                      ? "bg-foreground text-background border-foreground"
+                      : usedSlots.includes(n)
+                      ? "border-border text-muted-foreground bg-muted/50"
+                      : "border-border text-foreground hover:border-foreground"
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
+              {usedSlots.includes(selectedSlot) && (
+                <span className="text-[9px] text-muted-foreground ml-1">덮어쓰기</span>
+              )}
+            </div>
             <div className="text-[10px] text-muted-foreground mb-1.5 truncate">
               선택: <span className="font-english font-medium text-foreground">"{selectedText}"</span>
             </div>

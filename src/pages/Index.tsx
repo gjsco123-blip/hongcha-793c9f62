@@ -12,6 +12,11 @@ import { FileDown, RotateCw, X, Scissors } from "lucide-react";
 
 type Preset = "고1" | "고2" | "수능";
 
+export interface SyntaxNote {
+  id: number; // 1~5
+  content: string;
+}
+
 interface SentenceResult {
   id: number;
   original: string;
@@ -21,7 +26,7 @@ interface SentenceResult {
   englishTagged: string;
   koreanLiteralTagged: string;
   regenerating?: boolean;
-  syntaxNotes?: string;
+  syntaxNotes: SyntaxNote[];
   generatingSyntax?: boolean;
   hongTNotes?: string;
   generatingHongT?: boolean;
@@ -84,7 +89,7 @@ export default function Index() {
       if (!r.hideLiteral) h += TRANS_ROW;
       if (!r.hideNatural) h += TRANS_ROW;
       if (r.hongTNotes) h += HONG_T_ROW;
-      if (r.syntaxNotes) h += SYNTAX_ROW;
+      if (r.syntaxNotes && r.syntaxNotes.length > 0) h += SYNTAX_ROW * r.syntaxNotes.length;
       h += CONTAINER_GAP;
 
       if (usedHeight + h > (PAGE_USABLE[currentPage] ?? 715)) {
@@ -163,7 +168,7 @@ export default function Index() {
           koreanNatural: data.korean_natural,
           englishTagged: data.english_tagged,
           koreanLiteralTagged: data.korean_literal_tagged,
-          syntaxNotes: "",
+          syntaxNotes: [],
           hongTNotes: "",
         });
 
@@ -178,7 +183,7 @@ export default function Index() {
           koreanNatural: "분석 실패",
           englishTagged: "",
           koreanLiteralTagged: "",
-          syntaxNotes: "",
+          syntaxNotes: [],
           hongTNotes: "",
         });
         setResults([...newResults]);
@@ -234,7 +239,7 @@ export default function Index() {
     }
   };
 
-  const handleGenerateSyntax = async (sentenceId: number, original: string, selectedText?: string, userHint?: string) => {
+  const handleGenerateSyntax = async (sentenceId: number, original: string, selectedText?: string, userHint?: string, slotNumber?: number) => {
     setResults((prev) =>
       prev.map((r) => (r.id === sentenceId ? { ...r, generatingSyntax: true } : r))
     );
@@ -248,17 +253,31 @@ export default function Index() {
       if (data.error) throw new Error(data.error);
 
       setResults((prev) =>
-        prev.map((r) =>
-          r.id === sentenceId
-            ? {
-                ...r,
-                syntaxNotes: selectedText
-                  ? (r.syntaxNotes ? r.syntaxNotes + "\n" + data.syntaxNotes : data.syntaxNotes)
-                  : data.syntaxNotes,
-                generatingSyntax: false,
-              }
-            : r
-        )
+        prev.map((r) => {
+          if (r.id !== sentenceId) return r;
+
+          let newNotes = [...(r.syntaxNotes || [])];
+
+          if (slotNumber) {
+            // 특정 번호 슬롯에 저장
+            const existingIdx = newNotes.findIndex((n) => n.id === slotNumber);
+            if (existingIdx >= 0) {
+              newNotes[existingIdx] = { id: slotNumber, content: data.syntaxNotes };
+            } else {
+              newNotes.push({ id: slotNumber, content: data.syntaxNotes });
+              newNotes.sort((a, b) => a.id - b.id);
+            }
+          } else {
+            // 자동 생성: 전체 교체
+            const lines = (data.syntaxNotes as string).split("\n").filter((l: string) => l.trim());
+            newNotes = lines.map((line: string, idx: number) => ({
+              id: idx + 1,
+              content: line.replace(/^[•·\-]\s*/, ""),
+            }));
+          }
+
+          return { ...r, syntaxNotes: newNotes, generatingSyntax: false };
+        })
       );
     } catch (e: any) {
       toast.error(`구문분석 생성 실패: ${e.message}`);
@@ -437,7 +456,8 @@ export default function Index() {
                         chunks={result.englishChunks}
                         onChange={(chunks) => handleChunkChange(result.id, chunks)}
                         disabled={result.regenerating}
-                        onAnalyzeSelection={(text, hint) => handleGenerateSyntax(result.id, result.original, text, hint)}
+                        onAnalyzeSelection={(text, hint, slotNumber) => handleGenerateSyntax(result.id, result.original, text, hint, slotNumber)}
+                        usedSlots={(result.syntaxNotes || []).map(n => n.id)}
                       />
                     </div>
 
@@ -506,11 +526,11 @@ export default function Index() {
 
                     {/* 구문분석 */}
                     <SyntaxNotesSection
-                      value={result.syntaxNotes ?? ""}
-                      onChange={(val) =>
+                      notes={result.syntaxNotes || []}
+                      onChange={(notes) =>
                         setResults((prev) =>
                           prev.map((r) =>
-                            r.id === result.id ? { ...r, syntaxNotes: val } : r
+                            r.id === result.id ? { ...r, syntaxNotes: notes } : r
                           )
                         )
                       }

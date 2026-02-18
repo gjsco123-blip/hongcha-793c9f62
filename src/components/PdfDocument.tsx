@@ -19,13 +19,18 @@ Font.register({
 
 Font.registerHyphenationCallback((word) => [word]);
 
+interface SyntaxNote {
+  id: number;
+  content: string;
+}
+
 interface SentenceResult {
   id: number;
   original: string;
   englishChunks: Chunk[];
   koreanLiteralChunks: Chunk[];
   koreanNatural: string;
-  syntaxNotes?: string;
+  syntaxNotes?: SyntaxNote[];
   hongTNotes?: string;
   hideLiteral?: boolean;
   hideNatural?: boolean;
@@ -222,11 +227,13 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
                     <Text style={styles.translationContent}>{result.hongTNotes}</Text>
                   </View>
                 ) : null}
-                {result.syntaxNotes ? (
+                {result.syntaxNotes && result.syntaxNotes.length > 0 ? (
                   <View style={styles.translationRow}>
                     <View style={styles.translationBar} />
                     <Text style={styles.translationLabel}>구문</Text>
-                    <Text style={styles.translationContent}>{result.syntaxNotes}</Text>
+                    <Text style={styles.translationContent}>
+                      {result.syntaxNotes.map((n) => `${["①","②","③","④","⑤"][n.id-1]||n.id} ${n.content}`).join("\n")}
+                    </Text>
                   </View>
                 ) : null}
               </View>
