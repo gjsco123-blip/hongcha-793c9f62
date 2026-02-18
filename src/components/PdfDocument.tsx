@@ -228,13 +228,17 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
                   </View>
                 ) : null}
                 {result.syntaxNotes && result.syntaxNotes.length > 0 ? (
-                  <View style={styles.translationRow}>
-                    <View style={styles.translationBar} />
-                    <Text style={styles.translationLabel}>구문</Text>
-                    <Text style={styles.translationContent}>
-                      {result.syntaxNotes.map((n) => `${["①","②","③","④","⑤"][n.id-1]||n.id} ${n.content}`).join("\n")}
-                    </Text>
-                  </View>
+                  result.syntaxNotes.map((n) => (
+                    <View key={n.id} style={styles.translationRow}>
+                      <View style={styles.translationBar} />
+                      <Text style={styles.translationLabel}>
+                        {n.id === 1 ? "구문" : ""}
+                      </Text>
+                      <Text style={styles.translationContent}>
+                        {["①","②","③","④","⑤"][n.id-1]||n.id} {n.content.replace(/^\s*[•·\-\*]\s*/, "")}
+                      </Text>
+                    </View>
+                  ))
                 ) : null}
               </View>
             )}

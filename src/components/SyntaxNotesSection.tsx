@@ -80,7 +80,7 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating }: 
                   />
                 ) : (
                   <p className="flex-1 text-sm font-sans leading-relaxed text-foreground whitespace-pre-wrap">
-                    {note.content}
+                    {note.content.replace(/^\s*[•·\-\*]\s*/, "")}
                   </p>
                 )}
                 <button
