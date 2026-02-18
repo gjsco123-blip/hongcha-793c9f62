@@ -27,7 +27,11 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
     if (!onAnalyzeSelection) return;
     if (showHintInput) return; // 힌트 입력 중에는 선택 무시
     const selection = window.getSelection();
-    const text = selection?.toString().trim();
+    const rawText = selection?.toString().trim();
+    const text = rawText
+      ?.replace(/\s*\/\s*/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
     if (text && text.length > 2 && containerRef.current?.contains(selection?.anchorNode ?? null)) {
       const range = selection!.getRangeAt(0);
       const rect = range.getBoundingClientRect();
