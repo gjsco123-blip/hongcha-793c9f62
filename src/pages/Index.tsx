@@ -190,12 +190,7 @@ export default function Index() {
       }
     }
 
-    // Auto-generate 홍T for all sentences
-    const allSentences = newResults.map((r) => r.original);
-    for (let i = 0; i < newResults.length; i++) {
-      if (newResults[i].englishChunks.length === 0) continue;
-      generateHongT(i, allSentences);
-    }
+    // 홍T는 사용자가 버튼 클릭 시에만 생성
 
     setLoading(false);
   };
