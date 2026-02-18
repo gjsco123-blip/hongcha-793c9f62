@@ -1,45 +1,54 @@
 
+## 구문분석 번호 시스템 추가
 
-## grammar 힌트 프롬프트 개선
+### 개요
+구문분석 항목에 번호(1~5)를 부여하고, 드래그 시 힌트 팝업에서 몇 번 설명인지 선택할 수 있도록 함.
 
-### 문제점
-현재 `hintSystemPrompt`가 단순히 문법 용어를 나열하는 수준. 사용자가 원하는 것:
-1. 선택한 구문뿐 아니라 **전체 문장 맥락**을 파악해서 설명
-2. 문법 용어만 나열이 아니라 **그 문장에서 어떻게 쓰였는지** 구체적으로
-3. 길어지면 `who~scholarship` 식으로 **물결 축약** 사용
-4. 설명에 큰따옴표(`" "`) 제거
+### 변경 내용
 
-### 수정 내용
+**1. `SentenceResult` 데이터 구조 변경 (`src/pages/Index.tsx`)**
+- `syntaxNotes: string` → `syntaxNotes: SyntaxNote[]` 형태로 변경
+- `SyntaxNote = { id: number; content: string }` (id는 1~5)
+- 기존 문자열 기반 구문분석 데이터를 배열 기반으로 전환
 
-**파일: `supabase/functions/grammar/index.ts`**
+**2. 힌트 팝업에 번호 선택 추가 (`src/components/ChunkEditor.tsx`)**
+- 힌트 입력 팝업 상단에 번호 버튼(1~5) 표시
+- 이미 사용된 번호는 비활성화 또는 표시
+- 선택한 번호가 `onAnalyzeSelection(selectedText, userHint, slotNumber)`로 전달됨
 
-1. `hintSystemPrompt` 개선:
-   - 전체 문장(sentence)도 함께 제공하도록 프롬프트에 명시
-   - "문장 전체 맥락을 파악한 뒤, 사용자가 지정한 포인트를 해당 문장에서 어떤 역할을 하는지 구체적으로 설명하라" 지시 추가
-   - 3단어 이상의 영어 구문은 `첫단어~마지막단어` 형태로 축약하라는 규칙 추가
-   - 출력에 큰따옴표(`"`) 사용 금지 규칙 추가
-   - 템플릿 예시에서도 큰따옴표 제거
+**3. `onAnalyzeSelection` 콜백 시그니처 변경**
+- `(text: string, hint?: string)` → `(text: string, hint?: string, slotNumber?: number)` 
+- `handleGenerateSyntax`도 `slotNumber` 파라미터 추가
+- 응답을 받으면 해당 번호 슬롯에 결과를 저장 (기존 내용 덮어쓰기)
 
-2. `userMessage` 변경:
-   - 힌트 모드일 때 전체 문장(sentence)과 선택 구문(selectedText)을 모두 전달
-   - 형식: `전체 문장: "..."\n선택 구문: "..."\n힌트: ...`
+**4. `SyntaxNotesSection` 번호별 표시 (`src/components/SyntaxNotesSection.tsx`)**
+- 배열 기반으로 변경: 각 항목 앞에 번호 표시 (예: `①`, `②`)
+- 개별 항목 삭제 가능
+- 수정 모드에서는 각 항목별로 편집
 
-3. `baseSystemPrompt`의 템플릿 예시에서도 큰따옴표 제거 (일관성)
+**5. 자동 생성 버튼 동작 변경**
+- "자동 생성" 클릭 시 기존처럼 전체 문장을 분석하되, 결과를 번호 1부터 순차적으로 채움
 
-### 변경 전후 비교
+### UI 흐름
 
-변경 전 (힌트: "관계대명사, 수동태"):
-```
-• 주격 관계대명사 which가 선행사를 수식함.
-• 수동태 were conducted가 사용됨.
-```
-
-변경 후:
-```
-• 주격 관계대명사 which가 선행사 studies를 수식하는 형용사절을 이끌며, which~abroad 전체가 studies를 후치수식함.
-• were conducted는 conduct의 수동태로, 연구가 수행된 대상임을 나타냄.
+```text
+[텍스트 드래그] → [선택 구문분석 클릭]
+                       ↓
+            ┌──────────────────────────┐
+            │  번호: [1] [2] [3] [4] [5]  │
+            │  선택: "which were..."       │
+            │  [힌트 입력란]              │
+            │  [정리하기]  [자동생성]      │
+            └──────────────────────────┘
+                       ↓
+            구문분석 섹션에 해당 번호로 표시:
+            ① 주격 관계대명사 which가...
+            ② (아직 없음)
+            ③ 전치사 by 뒤에 동명사가...
 ```
 
 ### 수정 파일
-- `supabase/functions/grammar/index.ts` (프롬프트 2곳 + userMessage 1곳)
-
+- `src/pages/Index.tsx` (데이터 구조 + 핸들러)
+- `src/components/ChunkEditor.tsx` (번호 선택 UI)
+- `src/components/SyntaxNotesSection.tsx` (번호별 표시)
+- `src/components/PdfDocument.tsx` (PDF 출력 호환 — 배열을 문자열로 변환)
