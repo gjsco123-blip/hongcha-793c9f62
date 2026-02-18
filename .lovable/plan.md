@@ -1,41 +1,27 @@
 
-## 구문분석 드래그 선택 텍스트 정리
 
-### 문제 원인
-청킹 UI를 단어별 개별 `<span>`으로 변경한 후, `window.getSelection().toString()`이 단어 사이에 줄바꿈(`\n`)을 삽입하고 청크 구분자(`/`)까지 포함시킴.
+## passesTagFilter 완전 제거
 
-**이전 selectedText:** `"their modernisation being kept on hold or being given less and less space"`  
-**현재 selectedText:** `"their\nmodernisation\nbeing\nkept\non\nhold\n/\nor\nbeing\ngiven\nless\nand\nless\nspace"`
+### 문제
+`passesTagFilter` 함수가 AI 응답을 키워드 매칭으로 사후 검증하는데, AI 표현이 매번 달라서 거의 모든 결과가 필터에 걸려 삭제됨. 이것이 드래그 구문분석이 항상 실패하는 원인.
 
-이로 인해 grammar 함수가 문장을 제대로 분석하지 못하고 에러 메시지를 반환함.
-
-### 수정 내용
-
-#### 1. ChunkEditor.tsx - 선택 텍스트 정규화
-`handleMouseUp`에서 `window.getSelection().toString()` 결과를 정리:
-- 줄바꿈(`\n`)을 공백으로 변환
-- 청크 구분자(`/`)를 제거
-- 연속 공백을 하나로 합침
-
-수정 위치: `handleMouseUp` 콜백 내 `text` 변수 처리 (약 30~31번 줄)
-
-```typescript
-const rawText = selection?.toString().trim();
-const text = rawText
-  ?.replace(/\s*\/\s*/g, " ")  // 구분자 / 제거
-  .replace(/\s+/g, " ")        // 줄바꿈 + 연속공백 정리
-  .trim();
-```
-
-#### 2. grammar edge function - 입력 정규화 강화 (방어적 처리)
-`selectedText`에 대해서도 `oneLine()` 정규화를 이미 적용하고 있지만, 혹시 모를 `/` 문자를 추가로 제거.
-
-수정 위치: `supabase/functions/grammar/index.ts` 내 `selected` 변수 처리
-
-```typescript
-const selected = oneLine(selectedText || "").replace(/\s*\/\s*/g, " ").trim();
-```
+### 해결
+`passesTagFilter` 사후 필터링을 완전히 제거. 프롬프트에서 이미 "허용 태그에 해당하는 포인트만 작성하라"고 지시하고 있으므로 AI 출력을 신뢰.
 
 ### 수정 파일
-- `src/components/ChunkEditor.tsx` (handleMouseUp 내 텍스트 정리)
-- `supabase/functions/grammar/index.ts` (selectedText 입력 정규화)
+**supabase/functions/grammar/index.ts**
+
+1. 힌트 모드에서 `passesTagFilter` 호출 부분 삭제:
+```typescript
+// 삭제할 코드:
+if (!useFreestyle) {
+  points = points.filter((p) => passesTagFilter(p, tags));
+}
+```
+
+2. `passesTagFilter` 함수 자체와 내부 `allow` 객체도 사용처가 없어지므로 함께 삭제하여 코드 정리.
+
+### 기대 효과
+- 어떤 힌트를 입력하든 AI가 생성한 구문분석이 그대로 표시됨
+- 프롬프트 지시만으로 태그 범위를 제어 (더 안정적이고 유연함)
+
