@@ -124,34 +124,6 @@ function tagsToPromptBlock(tags: TagId[]) {
   return tags.map((t) => `${t}: ${map.get(t) ?? t}`).join("\n");
 }
 
-function passesTagFilter(point: string, tags: TagId[]) {
-  const p = oneLine(point);
-  if (!p) return false;
-
-  const allow: Record<TagId, string[]> = {
-    REL_SUBJ: ["주격 관계대명사", "who", "which", "that"],
-    REL_OBJ_OMIT: ["목적격 관계대명사", "관계대명사 생략", "목적격", "which/that", "that/which", "생략"],
-    REL_ADV: ["관계부사", "when", "where", "why"],
-    AGREEMENT: ["수일치", "단수", "복수"],
-    NOUN_CLAUSE_THAT: ["명사절", "that", "목적어", "주어", "that 생략"],
-    NOUN_CLAUSE_WH: ["의문사절", "간접의문문", "what", "how", "why", "which", "whether", "if"],
-    IT_DUMMY_SUBJ: ["가주어", "진주어", "it", "to부정사", "that절"],
-    IT_DUMMY_OBJ: ["가목적어", "진목적어", "it"],
-    FIVE_PATTERN: ["5형식", "O.C", "O.C.", "목적격보어", "cause", "make", "find", "keep", "leave", "consider", "to V", "to부정사"],
-    TO_INF: ["to부정사", "to-v", "to V", "형용사적", "부사적", "목적", "보어"],
-    PARTICIPLE_POST: ["분사", "과거분사", "현재분사", "후치수식", "p.p.", "v-ing"],
-    PARTICIPLE_CLAUSE: ["분사구문", "접속사 생략"],
-    PASSIVE: ["수동태", "be p.p.", "be p.p", "수동"],
-    MODAL_PASSIVE: ["조동사", "can", "may", "must", "will", "be p.p", "수동"],
-    PARALLEL: ["병렬", "and", "or", "not only", "both", "either", "neither"],
-    PREP_GERUND: ["전치사", "동명사", "by", "in", "for", "without", "~ing"],
-    THERE_BE: ["There", "there", "is/are", "유도부사"],
-    COMPARISON: ["비교", "비교급", "최상급", "as", "than", "the 비교급"],
-    OMISSION: ["생략", "that 생략", "관계사 생략", "접속사 생략"],
-  };
-
-  return tags.some((t) => allow[t]?.some((kw) => p.includes(kw)));
-}
 
 // -----------------------------
 // Prompts
@@ -400,11 +372,6 @@ serve(async (req) => {
     }
 
     points = points.map(oneLine).filter(Boolean).map(stripLeadingBullets);
-
-    // 태그 매칭 모드에서만 필터 적용, freestyle은 필터 없이 통과
-    if (!useFreestyle) {
-      points = points.filter((p) => passesTagFilter(p, tags));
-    }
 
     if (points.length === 0) {
       points = useFreestyle
