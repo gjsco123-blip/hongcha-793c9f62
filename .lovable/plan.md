@@ -1,63 +1,70 @@
 
 
-## 메인 분석(engine) 속도 개선 - 병렬 처리
+## 429/503 재시도 백오프 + 실패만 재시도 기능 추가
 
-### 현재 문제
-- 문장들을 `for` 루프로 **순차 처리** (1번 끝나야 2번 시작)
-- `gemini-2.5-pro`는 문장당 약 10~15초 소요
-- 10문장이면 100~150초 대기
+### 1. 지수 백오프 재시도 (engine 호출 래퍼)
 
-### 해결 방법: 병렬 호출
-모델을 바꾸지 않고, 여러 문장을 **동시에** AI에 요청하면 총 대기 시간이 크게 줄어듭니다.
+각 문장의 engine 호출에 재시도 로직을 감싸는 헬퍼 함수를 추가합니다.
 
-예를 들어 10문장을 3개씩 동시 호출하면:
-- 현재: 10 x 12초 = ~120초
-- 변경 후: 4라운드 x 12초 = ~48초 (약 60% 단축)
-
-### 수정 내용
-
-**파일: `src/pages/Index.tsx` - `handleAnalyze` 함수**
-
-현재 순차 `for` 루프를 **동시 3개씩 병렬 처리**로 변경:
-
-```text
-현재: for (i = 0; i < sentences.length; i++) { await invoke("engine", ...) }
-
-변경: 3개씩 묶어서 Promise.allSettled로 동시 호출
-      -> 완료되는 대로 결과를 화면에 표시
-      -> 실패한 문장은 개별 에러 처리
-```
-
-- 동시 호출 수(concurrency)를 3으로 제한하여 서버 과부하 방지
-- 각 배치 완료 시 즉시 `setResults`로 화면 업데이트
-- 진행률 표시도 배치 단위로 업데이트
-
-### 기술 세부사항
+- 429 또는 503 에러 시 자동 재시도 (최대 3회)
+- 대기 시간: 500ms -> 1000ms -> 2000ms (지수 백오프 + 랜덤 jitter)
+- 400, 401, 402 등 영구적 에러는 즉시 실패 처리
+- `Retry-After` 헤더가 있으면 해당 값 우선 사용
 
 ```typescript
-// 변경 전: 순차 처리
-for (let i = 0; i < sentences.length; i++) {
-  const { data } = await supabase.functions.invoke("engine", { body: { sentence: sentences[i], preset } });
-  // ... 결과 추가
-}
+async function invokeWithRetry(sentence: string, preset: string, maxRetries = 3) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const { data, error } = await supabase.functions.invoke("engine", {
+      body: { sentence, preset },
+    });
 
-// 변경 후: 3개씩 병렬 처리
-const CONCURRENCY = 3;
-for (let batch = 0; batch < sentences.length; batch += CONCURRENCY) {
-  const chunk = sentences.slice(batch, batch + CONCURRENCY);
-  const promises = chunk.map((s, j) =>
-    supabase.functions.invoke("engine", { body: { sentence: s, preset } })
-      .then(({ data, error }) => ({ idx: batch + j, data, error }))
-  );
-  const results = await Promise.allSettled(promises);
-  // 각 결과를 newResults에 추가하고 setResults 업데이트
+    // 성공
+    if (!error && data && !data.error) return { data, error: null };
+
+    // 429/503이면 백오프 후 재시도
+    const status = error?.status || data?.error?.includes("Rate limit") ? 429 : 0;
+    if ((status === 429 || status === 503) && attempt < maxRetries - 1) {
+      const waitMs = Math.pow(2, attempt) * 500 + Math.random() * 500;
+      await new Promise(r => setTimeout(r, waitMs));
+      continue;
+    }
+
+    // 영구적 에러 또는 재시도 소진
+    return { data, error };
+  }
+  return { data: null, error: new Error("Max retries exceeded") };
 }
 ```
 
-### 기대 효과
-- 모델 변경 없이 총 소요 시간 약 50~60% 단축
-- 퀄리티는 동일 (같은 모델, 같은 프롬프트)
-- 결과가 배치 단위로 점진적으로 화면에 표시됨
+### 2. 중복 호출 방지
+
+`handleAnalyze` 실행 중 버튼 재클릭 방지:
+- 현재 `loading` 상태로 버튼은 비활성화되어 있지만, `handleRetryFailed`에도 동일한 guard 적용
+- 진행 중인 문장 ID를 Set으로 관리하여 같은 문장 중복 호출 차단
+
+### 3. "실패만 재시도" 버튼
+
+분석 완료 후 실패한 문장이 있으면 "실패한 문장만 재시도" 버튼을 표시합니다.
+
+```text
+[분석 결과 영역]
+  문장 1: 정상 결과 (캐시 유지)
+  문장 2: "분석 실패" ← 이것만 재시도
+  문장 3: 정상 결과 (캐시 유지)
+
+  [실패한 2건 재시도] 버튼
+```
+
+동작:
+- 성공한 결과는 그대로 유지 (`results` 배열에서 `koreanNatural !== "분석 실패"`인 항목 보존)
+- 실패한 문장만 필터링하여 `invokeWithRetry`로 다시 호출
+- 성공하면 해당 인덱스의 결과를 업데이트
 
 ### 수정 파일
-- `src/pages/Index.tsx` (`handleAnalyze` 함수의 순차 루프를 병렬 배치로 변경)
+
+- `src/pages/Index.tsx`
+  - `invokeWithRetry` 헬퍼 함수 추가
+  - `handleAnalyze`에서 `supabase.functions.invoke` 대신 `invokeWithRetry` 사용
+  - `handleRetryFailed` 함수 추가 (실패 문장만 재분석)
+  - 실패 문장이 있을 때 "실패만 재시도" 버튼 UI 추가
+
