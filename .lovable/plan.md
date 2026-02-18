@@ -1,59 +1,63 @@
 
 
-## 구문분석 드래그 힌트 모드 디버깅 및 수정
+## 메인 분석(engine) 속도 개선 - 병렬 처리
 
-### 근본 원인 분석
+### 현재 문제
+- 문장들을 `for` 루프로 **순차 처리** (1번 끝나야 2번 시작)
+- `gemini-2.5-pro`는 문장당 약 10~15초 소요
+- 10문장이면 100~150초 대기
 
-`passesTagFilter`를 제거했음에도 여전히 "(힌트 태그에 해당하는 포인트를 문장에서 찾기 어려움)" 에러가 나오는 이유는 **AI 자체가 빈 points를 반환**하기 때문입니다.
+### 해결 방법: 병렬 호출
+모델을 바꾸지 않고, 여러 문장을 **동시에** AI에 요청하면 총 대기 시간이 크게 줄어듭니다.
 
-현재 코드 흐름:
-1. 사용자가 텍스트 드래그 + 힌트 입력
-2. `detectTagsFromHint`로 태그 감지 (예: "5형식" -> `FIVE_PATTERN`)
-3. 태그가 감지되면 `useFreestyle = false` -> hint 모드 (gemini-2.5-pro)
-4. AI gateway 호출 -> **tool_call 응답이 비어있거나 파싱 실패**
-5. `points.length === 0` -> 에러 메시지 표시
-
-가능한 원인 2가지:
-- **gemini-2.5-pro 모델이 tool_call 형식 대신 일반 텍스트로 응답**하는 경우, 현재 fallback 로직이 content에서 텍스트를 가져오지만 빈 문자열일 수 있음
-- **배포가 반영되지 않았을 가능성** (이전 passesTagFilter가 있는 버전이 캐시되어 실행 중)
+예를 들어 10문장을 3개씩 동시 호출하면:
+- 현재: 10 x 12초 = ~120초
+- 변경 후: 4라운드 x 12초 = ~48초 (약 60% 단축)
 
 ### 수정 내용
 
-**파일: `supabase/functions/grammar/index.ts`**
+**파일: `src/pages/Index.tsx` - `handleAnalyze` 함수**
 
-#### 1. AI 응답 디버그 로깅 추가
-tool_call이 비어있는 경우를 진단하기 위해 로깅 추가:
+현재 순차 `for` 루프를 **동시 3개씩 병렬 처리**로 변경:
 
-```typescript
-const data = await response.json();
-console.log("AI response:", JSON.stringify(data.choices?.[0]?.message).slice(0, 500));
-const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+```text
+현재: for (i = 0; i < sentences.length; i++) { await invoke("engine", ...) }
+
+변경: 3개씩 묶어서 Promise.allSettled로 동시 호출
+      -> 완료되는 대로 결과를 화면에 표시
+      -> 실패한 문장은 개별 에러 처리
 ```
 
-#### 2. Fallback 파싱 강화
-tool_call이 없을 때 content에서 JSON을 추출하는 로직을 강화:
+- 동시 호출 수(concurrency)를 3으로 제한하여 서버 과부하 방지
+- 각 배치 완료 시 즉시 `setResults`로 화면 업데이트
+- 진행률 표시도 배치 단위로 업데이트
+
+### 기술 세부사항
 
 ```typescript
-if (toolCall?.function?.arguments) {
-  const parsed = safeJsonParse(toolCall.function.arguments);
-  points = Array.isArray(parsed?.points) ? parsed.points : [];
-} else {
-  // tool_call 실패 시 content에서 points 추출 시도
-  const content = data.choices?.[0]?.message?.content ?? "";
-  console.log("No tool_call, trying content fallback:", content.slice(0, 300));
-  try {
-    const parsed = safeJsonParse(content);
-    points = Array.isArray(parsed?.points) ? parsed.points : [];
-  } catch {
-    const fallback = oneLine(content);
-    points = fallback ? [fallback] : [];
-  }
+// 변경 전: 순차 처리
+for (let i = 0; i < sentences.length; i++) {
+  const { data } = await supabase.functions.invoke("engine", { body: { sentence: sentences[i], preset } });
+  // ... 결과 추가
+}
+
+// 변경 후: 3개씩 병렬 처리
+const CONCURRENCY = 3;
+for (let batch = 0; batch < sentences.length; batch += CONCURRENCY) {
+  const chunk = sentences.slice(batch, batch + CONCURRENCY);
+  const promises = chunk.map((s, j) =>
+    supabase.functions.invoke("engine", { body: { sentence: s, preset } })
+      .then(({ data, error }) => ({ idx: batch + j, data, error }))
+  );
+  const results = await Promise.allSettled(promises);
+  // 각 결과를 newResults에 추가하고 setResults 업데이트
 }
 ```
 
-#### 3. 강제 재배포
-edge function을 명시적으로 재배포하여 캐시된 이전 버전이 실행되는 문제를 방지.
+### 기대 효과
+- 모델 변경 없이 총 소요 시간 약 50~60% 단축
+- 퀄리티는 동일 (같은 모델, 같은 프롬프트)
+- 결과가 배치 단위로 점진적으로 화면에 표시됨
 
 ### 수정 파일
-- `supabase/functions/grammar/index.ts` (로깅 추가 + fallback 파싱 강화 + 재배포)
-
+- `src/pages/Index.tsx` (`handleAnalyze` 함수의 순차 루프를 병렬 배치로 변경)
