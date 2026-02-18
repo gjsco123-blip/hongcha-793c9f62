@@ -125,17 +125,13 @@ const s = StyleSheet.create({
     marginBottom: 4,
     alignItems: "flex-start",
   },
-  stepBadge: {
+  stepNum: {
     fontFamily: "Source Serif 4",
-    fontSize: 7.5,
+    fontSize: 8,
     fontWeight: 700,
-    color: "#fff",
-    backgroundColor: "#444",
+    color: "#333",
     width: 14,
-    height: 14,
-    textAlign: "center",
-    lineHeight: 14,
-    marginRight: 6,
+    marginRight: 4,
     marginTop: 0.5,
   },
   stepText: {
@@ -154,6 +150,7 @@ const s = StyleSheet.create({
   explanationText: {
     fontSize: 7.5,
     lineHeight: 2,
+    textAlign: "justify",
   },
   // ── Layout helpers ──
   columns: {
@@ -229,7 +226,7 @@ export function PassageBuilderPdf({ vocab, structure, explanation }: Props) {
             </View>
             {structure.map((step) => (
               <View key={step.step} style={s.stepRow}>
-                <Text style={s.stepBadge}>{step.step}</Text>
+                <Text style={s.stepNum}>{step.step}.</Text>
                 <Text style={s.stepText}>{step.one_line}</Text>
               </View>
             ))}
