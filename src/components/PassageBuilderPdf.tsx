@@ -11,9 +11,9 @@ Font.register({
 Font.register({
   family: "Inter",
   fonts: [
-    { src: "https://cdn.jsdelivr.net/gh/rsms/inter@v4.1/docs/font-files/InterDisplay-Regular.otf", fontWeight: 400 },
-    { src: "https://cdn.jsdelivr.net/gh/rsms/inter@v4.1/docs/font-files/InterDisplay-SemiBold.otf", fontWeight: 600 },
-    { src: "https://cdn.jsdelivr.net/gh/rsms/inter@v4.1/docs/font-files/InterDisplay-Bold.otf", fontWeight: 700 },
+    { src: "https://cdn.jsdelivr.net/npm/inter-font@3.19.0/ttf/Inter-Regular.ttf", fontWeight: 400 },
+    { src: "https://cdn.jsdelivr.net/npm/inter-font@3.19.0/ttf/Inter-SemiBold.ttf", fontWeight: 600 },
+    { src: "https://cdn.jsdelivr.net/npm/inter-font@3.19.0/ttf/Inter-Bold.ttf", fontWeight: 700 },
   ],
 });
 
