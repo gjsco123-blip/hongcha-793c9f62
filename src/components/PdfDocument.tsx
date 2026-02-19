@@ -10,11 +10,11 @@ Font.register({
 });
 
 Font.register({
-  family: "Inter",
+  family: "SourceSerif4",
   fonts: [
-    { src: "https://cdn.jsdelivr.net/npm/inter-font@3.19.0/ttf/Inter-Regular.ttf", fontWeight: 400 },
-    { src: "https://cdn.jsdelivr.net/npm/inter-font@3.19.0/ttf/Inter-SemiBold.ttf", fontWeight: 600 },
-    { src: "https://cdn.jsdelivr.net/npm/inter-font@3.19.0/ttf/Inter-Bold.ttf", fontWeight: 700 },
+    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@latest/latin-400-normal.ttf", fontWeight: 400 },
+    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@latest/latin-600-normal.ttf", fontWeight: 600 },
+    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@latest/latin-700-normal.ttf", fontWeight: 700 },
   ],
 });
 
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   englishText: {
-    fontFamily: "Inter",
+    fontFamily: "SourceSerif4",
     fontSize: 10,
     lineHeight: 2.3,
     flex: 1,
@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   passageText: {
-    fontFamily: "Inter",
+    fontFamily: "SourceSerif4",
     fontSize: 9,
     lineHeight: 2,
     textAlign: "justify",
@@ -239,7 +239,7 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
                       <Text style={styles.translationLabel}>
                         {n.id === 1 ? "구문" : ""}
                       </Text>
-                      <Text style={{ fontFamily: "Inter", fontSize: 7, width: 10, flexShrink: 0, color: "#333", lineHeight: 1.6 }}>
+                      <Text style={{ fontFamily: "SourceSerif4", fontSize: 7, width: 10, flexShrink: 0, color: "#333", lineHeight: 1.6 }}>
                         {n.id}.
                       </Text>
                       <Text style={styles.translationContent}>
