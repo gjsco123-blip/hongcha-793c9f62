@@ -1,70 +1,54 @@
 
+# PDF 영어 폰트 Helvetica -> Inter 변경
 
-## 429/503 재시도 백오프 + 실패만 재시도 기능 추가
+## 문제
+- react-pdf 내장 Helvetica는 실제 인쇄 시 글자가 얇고 선명하지 않음
+- 특히 작은 폰트 사이즈(7~10pt)에서 가독성이 떨어짐
 
-### 1. 지수 백오프 재시도 (engine 호출 래퍼)
+## 해결 방안
+영어 폰트를 **Inter**로 변경. Inter는 Pretendard와 같은 디자인 계열이라 한영 혼용 시 자연스럽고, Regular/Bold/SemiBold 등 다양한 weight를 지원하여 인쇄 품질이 우수함.
 
-각 문장의 engine 호출에 재시도 로직을 감싸는 헬퍼 함수를 추가합니다.
+## 변경 내용
 
-- 429 또는 503 에러 시 자동 재시도 (최대 3회)
-- 대기 시간: 500ms -> 1000ms -> 2000ms (지수 백오프 + 랜덤 jitter)
-- 400, 401, 402 등 영구적 에러는 즉시 실패 처리
-- `Retry-After` 헤더가 있으면 해당 값 우선 사용
+### 1. PassageBuilderPdf.tsx (Pre-Study Guide PDF)
+- Inter 폰트 등록 (Regular 400 + SemiBold 600 + Bold 700)
+- SemiBold 추가로 Bold가 너무 굵은 문제 해결 (어휘 단어 등에 SemiBold 적용)
+- `fontFamily: "Helvetica"` -> `fontFamily: "Inter"` 전체 교체
+- 어휘 단어(vocabWord): Bold(700) -> SemiBold(600)으로 변경하여 더 세련된 느낌
+- 제목(title): Inter Bold 유지
+- 섹션 배지(sectionBadge): Inter Bold 유지
+- 구조 번호(stepNum): Inter SemiBold로 변경
 
-```typescript
-async function invokeWithRetry(sentence: string, preset: string, maxRetries = 3) {
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    const { data, error } = await supabase.functions.invoke("engine", {
-      body: { sentence, preset },
-    });
+### 2. PdfDocument.tsx (분석지 PDF)
+- Inter 폰트 등록 (Regular 400 + SemiBold 600 + Bold 700)
+- `fontFamily: "Helvetica"` -> `fontFamily: "Inter"` 전체 교체
+- englishText: Inter Regular 유지
+- passageText: Inter Regular 유지
+- 구문 번호: Helvetica -> Inter로 변경
 
-    // 성공
-    if (!error && data && !data.error) return { data, error: null };
+## 기술 세부사항
 
-    // 429/503이면 백오프 후 재시도
-    const status = error?.status || data?.error?.includes("Rate limit") ? 429 : 0;
-    if ((status === 429 || status === 503) && attempt < maxRetries - 1) {
-      const waitMs = Math.pow(2, attempt) * 500 + Math.random() * 500;
-      await new Promise(r => setTimeout(r, waitMs));
-      continue;
-    }
+Inter 폰트 CDN 소스:
+- Regular: `https://cdn.jsdelivr.net/gh/nicholasgasior/gfonts@master/dist/Inter/Inter-Regular.ttf`  
+  (또는 Google Fonts static TTF)
+- SemiBold: Inter-SemiBold.ttf
+- Bold: Inter-Bold.ttf
 
-    // 영구적 에러 또는 재시도 소진
-    return { data, error };
-  }
-  return { data: null, error: new Error("Max retries exceeded") };
-}
+Google Fonts 공식 TTF 경로 사용:
+```
+https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2
+```
+-> TTF가 더 안정적이므로 GitHub 미러 또는 CDN의 .ttf 파일 사용
+
+안정적인 소스로 rsms/inter GitHub 릴리스 사용:
+```
+https://cdn.jsdelivr.net/gh/rsms/inter@v4.1/docs/font-files/InterDisplay-Regular.otf
+https://cdn.jsdelivr.net/gh/rsms/inter@v4.1/docs/font-files/InterDisplay-SemiBold.otf  
+https://cdn.jsdelivr.net/gh/rsms/inter@v4.1/docs/font-files/InterDisplay-Bold.otf
 ```
 
-### 2. 중복 호출 방지
-
-`handleAnalyze` 실행 중 버튼 재클릭 방지:
-- 현재 `loading` 상태로 버튼은 비활성화되어 있지만, `handleRetryFailed`에도 동일한 guard 적용
-- 진행 중인 문장 ID를 Set으로 관리하여 같은 문장 중복 호출 차단
-
-### 3. "실패만 재시도" 버튼
-
-분석 완료 후 실패한 문장이 있으면 "실패한 문장만 재시도" 버튼을 표시합니다.
-
-```text
-[분석 결과 영역]
-  문장 1: 정상 결과 (캐시 유지)
-  문장 2: "분석 실패" ← 이것만 재시도
-  문장 3: 정상 결과 (캐시 유지)
-
-  [실패한 2건 재시도] 버튼
-```
-
-동작:
-- 성공한 결과는 그대로 유지 (`results` 배열에서 `koreanNatural !== "분석 실패"`인 항목 보존)
-- 실패한 문장만 필터링하여 `invokeWithRetry`로 다시 호출
-- 성공하면 해당 인덱스의 결과를 업데이트
-
-### 수정 파일
-
-- `src/pages/Index.tsx`
-  - `invokeWithRetry` 헬퍼 함수 추가
-  - `handleAnalyze`에서 `supabase.functions.invoke` 대신 `invokeWithRetry` 사용
-  - `handleRetryFailed` 함수 추가 (실패 문장만 재분석)
-  - 실패 문장이 있을 때 "실패만 재시도" 버튼 UI 추가
-
+## 기대 효과
+- 인쇄 시 글자가 더 선명하고 균일한 두께로 출력
+- 작은 사이즈에서도 높은 가독성
+- Pretendard와 자연스러운 한영 조합
+- SemiBold weight 활용으로 Bold 일변도가 아닌 세련된 타이포그래피
