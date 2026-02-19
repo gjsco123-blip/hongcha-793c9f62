@@ -9,11 +9,11 @@ Font.register({
 });
 
 Font.register({
-  family: "Inter",
+  family: "SourceSerif4",
   fonts: [
-    { src: "https://cdn.jsdelivr.net/npm/inter-font@3.19.0/ttf/Inter-Regular.ttf", fontWeight: 400 },
-    { src: "https://cdn.jsdelivr.net/npm/inter-font@3.19.0/ttf/Inter-SemiBold.ttf", fontWeight: 600 },
-    { src: "https://cdn.jsdelivr.net/npm/inter-font@3.19.0/ttf/Inter-Bold.ttf", fontWeight: 700 },
+    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@latest/latin-400-normal.ttf", fontWeight: 400 },
+    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@latest/latin-600-normal.ttf", fontWeight: 600 },
+    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@latest/latin-700-normal.ttf", fontWeight: 700 },
   ],
 });
 
@@ -59,7 +59,7 @@ const s = StyleSheet.create({
     borderBottomColor: "#222",
   },
   title: {
-    fontFamily: "Inter",
+    fontFamily: "SourceSerif4",
     fontSize: 16,
     fontWeight: 700,
     letterSpacing: 2,
@@ -76,7 +76,7 @@ const s = StyleSheet.create({
     marginBottom: 6,
   },
   sectionBadge: {
-    fontFamily: "Inter",
+    fontFamily: "SourceSerif4",
     fontSize: 7,
     fontWeight: 700,
     color: "#fff",
@@ -115,7 +115,7 @@ const s = StyleSheet.create({
     backgroundColor: "#fafafa",
   },
   vocabNum: { width: 14, fontSize: 5.5, color: "#aaa", textAlign: "center" },
-  vocabWord: { width: 60, fontFamily: "Inter", fontSize: 7, fontWeight: 600 },
+  vocabWord: { width: 60, fontFamily: "SourceSerif4", fontSize: 7, fontWeight: 600 },
   vocabPos: { width: 20, fontSize: 5.5, color: "#888", textAlign: "center" },
   vocabMeaning: { flex: 1, fontSize: 6.5 },
   vocabHeaderText: { fontSize: 5.5, fontWeight: 700, color: "#666" },
@@ -126,7 +126,7 @@ const s = StyleSheet.create({
     alignItems: "flex-start",
   },
   stepNum: {
-    fontFamily: "Inter",
+    fontFamily: "SourceSerif4",
     fontSize: 8,
     fontWeight: 600,
     color: "#333",
