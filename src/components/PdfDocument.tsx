@@ -4,8 +4,14 @@ import { Chunk, segmentsToWords } from "@/lib/chunk-utils";
 Font.register({
   family: "Pretendard",
   fonts: [
-    { src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-Regular.otf", fontWeight: 400 },
-    { src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-Bold.otf", fontWeight: 700 },
+    {
+      src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-Regular.otf",
+      fontWeight: 400,
+    },
+    {
+      src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-Bold.otf",
+      fontWeight: 700,
+    },
   ],
 });
 
@@ -93,7 +99,7 @@ const styles = StyleSheet.create({
   },
   englishText: {
     fontFamily: "SourceSerif4",
-    fontSize: 10,
+    fontSize: 9,
     lineHeight: 2.3,
     flex: 1,
     marginLeft: 6,
@@ -228,26 +234,31 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
                     <Text style={styles.translationContent}>{result.hongTNotes}</Text>
                   </View>
                 ) : null}
-                {result.syntaxNotes && result.syntaxNotes.length > 0 ? (
-                  result.syntaxNotes.map((n) => (
-                    <View key={n.id} style={styles.translationRow}>
-                      {n.id === 1 ? (
-                        <View style={styles.translationBar} />
-                      ) : (
-                        <View style={{ width: 2, marginRight: 4, flexShrink: 0 }} />
-                      )}
-                      <Text style={styles.translationLabel}>
-                        {n.id === 1 ? "구문" : ""}
-                      </Text>
-                      <Text style={{ fontFamily: "SourceSerif4", fontSize: 7, width: 10, flexShrink: 0, color: "#333", lineHeight: 1.6 }}>
-                        {n.id}.
-                      </Text>
-                      <Text style={styles.translationContent}>
-                        {n.content.replace(/^\s*[•·\-\*]\s*/, "")}
-                      </Text>
-                    </View>
-                  ))
-                ) : null}
+                {result.syntaxNotes && result.syntaxNotes.length > 0
+                  ? result.syntaxNotes.map((n) => (
+                      <View key={n.id} style={styles.translationRow}>
+                        {n.id === 1 ? (
+                          <View style={styles.translationBar} />
+                        ) : (
+                          <View style={{ width: 2, marginRight: 4, flexShrink: 0 }} />
+                        )}
+                        <Text style={styles.translationLabel}>{n.id === 1 ? "구문" : ""}</Text>
+                        <Text
+                          style={{
+                            fontFamily: "SourceSerif4",
+                            fontSize: 7,
+                            width: 10,
+                            flexShrink: 0,
+                            color: "#333",
+                            lineHeight: 1.6,
+                          }}
+                        >
+                          {n.id}.
+                        </Text>
+                        <Text style={styles.translationContent}>{n.content.replace(/^\s*[•·\-\*]\s*/, "")}</Text>
+                      </View>
+                    ))
+                  : null}
               </View>
             )}
           </View>
