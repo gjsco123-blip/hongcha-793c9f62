@@ -9,6 +9,15 @@ Font.register({
   ],
 });
 
+Font.register({
+  family: "Inter",
+  fonts: [
+    { src: "https://cdn.jsdelivr.net/gh/rsms/inter@v4.1/docs/font-files/InterDisplay-Regular.otf", fontWeight: 400 },
+    { src: "https://cdn.jsdelivr.net/gh/rsms/inter@v4.1/docs/font-files/InterDisplay-SemiBold.otf", fontWeight: 600 },
+    { src: "https://cdn.jsdelivr.net/gh/rsms/inter@v4.1/docs/font-files/InterDisplay-Bold.otf", fontWeight: 700 },
+  ],
+});
+
 Font.registerHyphenationCallback((word) => [word]);
 
 interface SyntaxNote {
@@ -83,7 +92,7 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   englishText: {
-    fontFamily: "Helvetica",
+    fontFamily: "Inter",
     fontSize: 10,
     lineHeight: 2.3,
     flex: 1,
@@ -131,7 +140,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   passageText: {
-    fontFamily: "Helvetica",
+    fontFamily: "Inter",
     fontSize: 9,
     lineHeight: 2,
     textAlign: "justify",
@@ -230,7 +239,7 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
                       <Text style={styles.translationLabel}>
                         {n.id === 1 ? "구문" : ""}
                       </Text>
-                      <Text style={{ fontFamily: "Helvetica", fontSize: 7, width: 10, flexShrink: 0, color: "#333", lineHeight: 1.6 }}>
+                      <Text style={{ fontFamily: "Inter", fontSize: 7, width: 10, flexShrink: 0, color: "#333", lineHeight: 1.6 }}>
                         {n.id}.
                       </Text>
                       <Text style={styles.translationContent}>

@@ -8,6 +8,15 @@ Font.register({
   ],
 });
 
+Font.register({
+  family: "Inter",
+  fonts: [
+    { src: "https://cdn.jsdelivr.net/gh/rsms/inter@v4.1/docs/font-files/InterDisplay-Regular.otf", fontWeight: 400 },
+    { src: "https://cdn.jsdelivr.net/gh/rsms/inter@v4.1/docs/font-files/InterDisplay-SemiBold.otf", fontWeight: 600 },
+    { src: "https://cdn.jsdelivr.net/gh/rsms/inter@v4.1/docs/font-files/InterDisplay-Bold.otf", fontWeight: 700 },
+  ],
+});
+
 Font.registerHyphenationCallback((word) => [word]);
 
 interface VocabItem {
@@ -50,7 +59,7 @@ const s = StyleSheet.create({
     borderBottomColor: "#222",
   },
   title: {
-    fontFamily: "Helvetica",
+    fontFamily: "Inter",
     fontSize: 16,
     fontWeight: 700,
     letterSpacing: 2,
@@ -67,7 +76,7 @@ const s = StyleSheet.create({
     marginBottom: 6,
   },
   sectionBadge: {
-    fontFamily: "Helvetica",
+    fontFamily: "Inter",
     fontSize: 7,
     fontWeight: 700,
     color: "#fff",
@@ -106,7 +115,7 @@ const s = StyleSheet.create({
     backgroundColor: "#fafafa",
   },
   vocabNum: { width: 14, fontSize: 5.5, color: "#aaa", textAlign: "center" },
-  vocabWord: { width: 60, fontFamily: "Helvetica", fontSize: 7, fontWeight: 700 },
+  vocabWord: { width: 60, fontFamily: "Inter", fontSize: 7, fontWeight: 600 },
   vocabPos: { width: 20, fontSize: 5.5, color: "#888", textAlign: "center" },
   vocabMeaning: { flex: 1, fontSize: 6.5 },
   vocabHeaderText: { fontSize: 5.5, fontWeight: 700, color: "#666" },
@@ -117,9 +126,9 @@ const s = StyleSheet.create({
     alignItems: "flex-start",
   },
   stepNum: {
-    fontFamily: "Helvetica",
+    fontFamily: "Inter",
     fontSize: 8,
-    fontWeight: 700,
+    fontWeight: 600,
     color: "#333",
     width: 14,
     marginRight: 4,
