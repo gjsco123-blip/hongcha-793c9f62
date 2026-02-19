@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
   },
   translationLabel: {
     fontWeight: 700,
-    fontSize: 6,
+    fontSize: 7,
     width: 24,
     flexShrink: 0,
     lineHeight: 1.6,
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   },
   translationContent: {
     flex: 1,
-    fontSize: 6,
+    fontSize: 7,
     color: "#333",
     lineHeight: 1.6,
   },
