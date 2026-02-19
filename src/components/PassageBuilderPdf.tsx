@@ -1,19 +1,10 @@
 import { Document, Page, View, Text, StyleSheet, Font } from "@react-pdf/renderer";
 
 Font.register({
-  family: "Noto Sans KR",
+  family: "Pretendard",
   fonts: [
-    { src: "https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-kr@latest/korean-400-normal.ttf", fontWeight: 400 },
-    { src: "https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-kr@latest/korean-700-normal.ttf", fontWeight: 700 },
-  ],
-});
-
-Font.register({
-  family: "Source Serif 4",
-  fonts: [
-    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@latest/latin-400-normal.ttf", fontWeight: 400 },
-    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@latest/latin-400-italic.ttf", fontWeight: 400, fontStyle: "italic" },
-    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@latest/latin-700-normal.ttf", fontWeight: 700 },
+    { src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-Regular.subset.woff2", fontWeight: 400 },
+    { src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-Bold.subset.woff2", fontWeight: 700 },
   ],
 });
 
@@ -44,7 +35,7 @@ const s = StyleSheet.create({
     paddingBottom: 24,
     paddingLeft: 36,
     paddingRight: 36,
-    fontFamily: "Noto Sans KR",
+    fontFamily: "Pretendard",
     fontSize: 7,
     color: "#222",
   },
@@ -59,7 +50,7 @@ const s = StyleSheet.create({
     borderBottomColor: "#222",
   },
   title: {
-    fontFamily: "Source Serif 4",
+    fontFamily: "Helvetica",
     fontSize: 16,
     fontWeight: 700,
     letterSpacing: 2,
@@ -76,7 +67,7 @@ const s = StyleSheet.create({
     marginBottom: 6,
   },
   sectionBadge: {
-    fontFamily: "Source Serif 4",
+    fontFamily: "Helvetica",
     fontSize: 7,
     fontWeight: 700,
     color: "#fff",
@@ -115,7 +106,7 @@ const s = StyleSheet.create({
     backgroundColor: "#fafafa",
   },
   vocabNum: { width: 14, fontSize: 5.5, color: "#aaa", textAlign: "center" },
-  vocabWord: { width: 60, fontFamily: "Source Serif 4", fontSize: 7, fontWeight: 700 },
+  vocabWord: { width: 60, fontFamily: "Helvetica", fontSize: 7, fontWeight: 700 },
   vocabPos: { width: 20, fontSize: 5.5, color: "#888", textAlign: "center" },
   vocabMeaning: { flex: 1, fontSize: 6.5 },
   vocabHeaderText: { fontSize: 5.5, fontWeight: 700, color: "#666" },
@@ -126,7 +117,7 @@ const s = StyleSheet.create({
     alignItems: "flex-start",
   },
   stepNum: {
-    fontFamily: "Source Serif 4",
+    fontFamily: "Helvetica",
     fontSize: 8,
     fontWeight: 700,
     color: "#333",
@@ -193,7 +184,7 @@ export function PassageBuilderPdf({ vocab, structure, explanation }: Props) {
               <View key={colIdx} style={{ flex: 1 }}>
                 <View style={s.vocabHeader}>
                   <Text style={{ ...s.vocabNum, ...s.vocabHeaderText }}>#</Text>
-                  <Text style={{ ...s.vocabWord, ...s.vocabHeaderText, fontFamily: "Noto Sans KR" }}>Word</Text>
+                  <Text style={{ ...s.vocabWord, ...s.vocabHeaderText, fontFamily: "Pretendard" }}>Word</Text>
                   <Text style={{ ...s.vocabPos, ...s.vocabHeaderText }}>품사</Text>
                   <Text style={{ ...s.vocabMeaning, ...s.vocabHeaderText }}>뜻</Text>
                 </View>

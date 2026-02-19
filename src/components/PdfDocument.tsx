@@ -2,18 +2,10 @@ import { Document, Page, View, Text, StyleSheet, Font } from "@react-pdf/rendere
 import { Chunk, segmentsToWords } from "@/lib/chunk-utils";
 
 Font.register({
-  family: "Noto Sans KR",
+  family: "Pretendard",
   fonts: [
-    { src: "https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-kr@latest/korean-400-normal.ttf", fontWeight: 400 },
-    { src: "https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-kr@latest/korean-700-normal.ttf", fontWeight: 700 },
-  ],
-});
-
-Font.register({
-  family: "Source Serif 4",
-  fonts: [
-    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@latest/latin-400-normal.ttf", fontWeight: 400 },
-    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@latest/latin-700-normal.ttf", fontWeight: 700 },
+    { src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-Regular.subset.woff2", fontWeight: 400 },
+    { src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-Bold.subset.woff2", fontWeight: 700 },
   ],
 });
 
@@ -49,7 +41,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     paddingLeft: 57,
     paddingRight: 120,
-    fontFamily: "Noto Sans KR",
+    fontFamily: "Pretendard",
     fontSize: 9,
     lineHeight: 1.8,
   },
@@ -91,7 +83,7 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   englishText: {
-    fontFamily: "Source Serif 4",
+    fontFamily: "Helvetica",
     fontSize: 10,
     lineHeight: 2.3,
     flex: 1,
@@ -139,7 +131,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   passageText: {
-    fontFamily: "Source Serif 4",
+    fontFamily: "Helvetica",
     fontSize: 9,
     lineHeight: 2,
     textAlign: "justify",
@@ -238,7 +230,7 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
                       <Text style={styles.translationLabel}>
                         {n.id === 1 ? "구문" : ""}
                       </Text>
-                      <Text style={{ fontFamily: "Source Serif 4", fontSize: 7, width: 10, flexShrink: 0, color: "#333", lineHeight: 1.6 }}>
+                      <Text style={{ fontFamily: "Helvetica", fontSize: 7, width: 10, flexShrink: 0, color: "#333", lineHeight: 1.6 }}>
                         {n.id}.
                       </Text>
                       <Text style={styles.translationContent}>

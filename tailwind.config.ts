@@ -14,10 +14,10 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Noto Sans KR", "sans-serif"],
-        serif: ["Source Serif 4", "Georgia", "serif"],
-        korean: ["Noto Sans KR", "sans-serif"],
-        english: ["Source Serif 4", "Georgia", "serif"],
+        sans: ["Pretendard", "sans-serif"],
+        serif: ["Helvetica", "Arial", "sans-serif"],
+        korean: ["Pretendard", "sans-serif"],
+        english: ["Helvetica", "Arial", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
