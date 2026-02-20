@@ -31,7 +31,6 @@ interface ExamBlock {
 
 type SectionStatus = "idle" | "loading" | "done" | "error";
 
-// ── Retry helper ──
 async function invokeRetry(fn: string, body: any, maxRetries = 3) {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const { data, error } = await supabase.functions.invoke(fn, { body });
@@ -55,10 +54,8 @@ export default function Preview() {
 
   const [vocab, setVocab] = useState<VocabItem[]>([]);
   const [vocabStatus, setVocabStatus] = useState<SectionStatus>("idle");
-
   const [structure, setStructure] = useState<StructureStep[]>([]);
   const [structureStatus, setStructureStatus] = useState<SectionStatus>("idle");
-
   const [summary, setSummary] = useState("");
   const [examBlock, setExamBlock] = useState<ExamBlock | null>(null);
   const [previewStatus, setPreviewStatus] = useState<SectionStatus>("idle");
@@ -67,7 +64,6 @@ export default function Preview() {
 
   const handleGenerate = async () => {
     if (!passage.trim() || isGenerating) return;
-
     setVocabStatus("loading");
     setStructureStatus("loading");
     setPreviewStatus("loading");
@@ -81,12 +77,8 @@ export default function Preview() {
       .catch((e) => { toast.error(`구조 흐름 생성 실패: ${e.message}`); setStructureStatus("error"); });
 
     const previewPromise = invokeRetry("analyze-preview", { passage })
-      .then((d) => {
-        setSummary(d.summary || "");
-        setExamBlock(d.exam_block || null);
-        setPreviewStatus("done");
-      })
-      .catch((e) => { toast.error(`요약/시험형 생성 실패: ${e.message}`); setPreviewStatus("error"); });
+      .then((d) => { setSummary(d.summary || ""); setExamBlock(d.exam_block || null); setPreviewStatus("done"); })
+      .catch((e) => { toast.error(`요약 생성 실패: ${e.message}`); setPreviewStatus("error"); });
 
     await Promise.allSettled([vocabPromise, structPromise, previewPromise]);
   };
@@ -113,6 +105,11 @@ export default function Preview() {
   const canExport = vocab.length > 0 || structure.length > 0 || summary;
   const LoadingDot = () => <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground inline-block" />;
 
+  /* ── Shared sub-label style ── */
+  const subLabel = "text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1";
+  const enText = "text-sm font-english leading-relaxed";
+  const koText = "text-xs text-muted-foreground/70 mt-0.5";
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -126,12 +123,8 @@ export default function Preview() {
             <h1 className="text-xl font-bold tracking-wide">Preview</h1>
           </div>
           {canExport && (
-            <button
-              onClick={handleExportPdf}
-              className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors"
-            >
-              <FileDown className="w-3.5 h-3.5" />
-              PDF 저장
+            <button onClick={handleExportPdf} className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors">
+              <FileDown className="w-3.5 h-3.5" /> PDF 저장
             </button>
           )}
         </div>
@@ -140,30 +133,21 @@ export default function Preview() {
       <main className="max-w-4xl mx-auto px-6 py-6 space-y-8">
         {/* Input */}
         <div>
-          <textarea
-            value={passage}
-            onChange={(e) => setPassage(e.target.value)}
-            placeholder="영어 지문 전체를 붙여넣으세요."
-            rows={6}
-            className="w-full bg-card border border-border px-4 py-3 text-sm font-english leading-relaxed text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-foreground transition-colors resize-y"
-          />
+          <textarea value={passage} onChange={(e) => setPassage(e.target.value)} placeholder="영어 지문 전체를 붙여넣으세요." rows={6}
+            className="w-full bg-card border border-border px-4 py-3 text-sm font-english leading-relaxed text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-foreground transition-colors resize-y" />
           <div className="flex justify-end mt-3">
-            <button
-              onClick={handleGenerate}
-              disabled={isGenerating || !passage.trim()}
-              className="px-6 py-2 bg-foreground text-background text-xs font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
-            >
+            <button onClick={handleGenerate} disabled={isGenerating || !passage.trim()}
+              className="px-6 py-2 bg-foreground text-background text-xs font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
               {isGenerating ? "생성 중..." : "Generate"}
             </button>
           </div>
         </div>
 
-        {/* ═══ ① Vocabulary ═══ */}
+        {/* ═══ Vocabulary ═══ */}
         {vocabStatus !== "idle" && (
           <section className="border-t border-border pt-5">
             <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
-              Vocabulary
-              {vocabStatus === "loading" && <LoadingDot />}
+              Vocabulary {vocabStatus === "loading" && <LoadingDot />}
             </h2>
             {vocabStatus === "error" && <p className="text-xs text-destructive">어휘 생성에 실패했습니다.</p>}
             {vocab.length > 0 && (
@@ -194,28 +178,28 @@ export default function Preview() {
           </section>
         )}
 
-        {/* ═══ ② Key Summary ═══ */}
+        {/* ═══ Key Summary ═══ */}
         {previewStatus !== "idle" && (
           <section className="border-t border-border pt-5">
             <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
-              Key Summary
-              {previewStatus === "loading" && <LoadingDot />}
+              Key Summary {previewStatus === "loading" && <LoadingDot />}
             </h2>
             {previewStatus === "error" && <p className="text-xs text-destructive">요약 생성에 실패했습니다.</p>}
             {summary && (
               <div className="border-l-2 border-muted-foreground/30 pl-4">
-                <p className="text-sm leading-relaxed whitespace-pre-line">{summary}</p>
+                {summary.split("\n").map((line, i) => (
+                  <p key={i} className="text-sm leading-relaxed">{line}</p>
+                ))}
               </div>
             )}
           </section>
         )}
 
-        {/* ═══ ③ Structure ═══ */}
+        {/* ═══ Structure ═══ */}
         {structureStatus !== "idle" && (
           <section className="border-t border-border pt-5">
             <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
-              Structure
-              {structureStatus === "loading" && <LoadingDot />}
+              Structure {structureStatus === "loading" && <LoadingDot />}
             </h2>
             {structureStatus === "error" && <p className="text-xs text-destructive">구조 흐름 생성에 실패했습니다.</p>}
             {structure.length > 0 && (
@@ -231,23 +215,23 @@ export default function Preview() {
           </section>
         )}
 
-        {/* ═══ ④ Topic / Title / Summary ═══ */}
+        {/* ═══ Topic / Title / Summary ═══ */}
         {previewStatus !== "idle" && examBlock && (
-          <section className="border-t border-border pt-5 space-y-4">
+          <section className="border-t border-border pt-5 space-y-5">
             <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Topic</p>
-              <p className="text-sm font-english">{examBlock.topic}</p>
-              {examBlock.topic_ko && <p className="text-xs text-muted-foreground mt-0.5">{examBlock.topic_ko}</p>}
+              <p className={subLabel}>Topic</p>
+              <p className={enText}>{examBlock.topic}</p>
+              {examBlock.topic_ko && <p className={koText}>{examBlock.topic_ko}</p>}
             </div>
             <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Title</p>
-              <p className="text-sm font-english font-semibold">{examBlock.title}</p>
-              {examBlock.title_ko && <p className="text-xs text-muted-foreground mt-0.5">{examBlock.title_ko}</p>}
+              <p className={subLabel}>Title</p>
+              <p className={`${enText} font-semibold`}>{examBlock.title}</p>
+              {examBlock.title_ko && <p className={koText}>{examBlock.title_ko}</p>}
             </div>
             <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Summary</p>
-              <p className="text-sm font-english leading-relaxed">{examBlock.one_sentence_summary}</p>
-              {examBlock.one_sentence_summary_ko && <p className="text-xs text-muted-foreground mt-0.5">{examBlock.one_sentence_summary_ko}</p>}
+              <p className={subLabel}>Summary</p>
+              <p className={enText}>{examBlock.one_sentence_summary}</p>
+              {examBlock.one_sentence_summary_ko && <p className={koText}>{examBlock.one_sentence_summary_ko}</p>}
             </div>
           </section>
         )}
