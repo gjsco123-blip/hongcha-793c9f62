@@ -72,11 +72,11 @@ const s = StyleSheet.create({
   summaryBox: { borderLeftWidth: 2, borderLeftColor: T.g30, paddingLeft: 10, paddingVertical: 3 },
   summaryLine: { fontSize: 9, lineHeight: 1.7 },
 
-  // Structure — arrow flow, left bar accent
+  // Structure — centered text with arrow below
   structureBox: { borderLeftWidth: 2, borderLeftColor: T.g30, paddingLeft: 10, paddingVertical: 3 },
-  structRow: { flexDirection: "row" as const, marginBottom: 4, alignItems: "flex-start" as const },
-  structArrow: { fontSize: 7, color: T.g30, width: 10, marginTop: 1 },
-  structText: { flex: 1, fontSize: 8.5, lineHeight: 1.7 },
+  structItem: { alignItems: "center" as const },
+  structText: { fontSize: 8.5, lineHeight: 1.7, textAlign: "center" as const },
+  structArrow: { fontSize: 7, color: T.g30, marginVertical: 3 },
 
   // Topic/Title/Summary fields
   fieldLabel: { fontSize: 6.5, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: 3, marginTop: 12 },
@@ -153,10 +153,10 @@ export function PreviewPdf({ vocab, structure, summary, examBlock }: Props) {
             {(hasVocab || hasSummary) && <View style={s.thinRule} />}
             <Text style={s.secTitle}>Structure</Text>
             <View style={s.structureBox}>
-              {structure.map((step) => (
-                <View key={step.step} style={s.structRow}>
-                  <Text style={s.structArrow}>↓</Text>
+              {structure.map((step, idx) => (
+                <View key={step.step} style={s.structItem}>
                   <Text style={s.structText}>{step.one_line}</Text>
+                  {idx < structure.length - 1 && <Text style={s.structArrow}>↓</Text>}
                 </View>
               ))}
             </View>

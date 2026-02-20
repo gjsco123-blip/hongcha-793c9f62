@@ -198,11 +198,13 @@ export default function Preview() {
             </h2>
             {structureStatus === "error" && <p className="text-xs text-destructive">구조 흐름 생성에 실패했습니다.</p>}
             {structure.length > 0 && (
-              <div className="border-l-[2px] border-muted-foreground/25 pl-5 py-1 space-y-1.5">
-                {structure.map((st) => (
-                  <div key={st.step} className="flex items-start gap-2">
-                    <span className="text-muted-foreground/40 text-xs mt-[2px] shrink-0">↓</span>
-                    <p className="text-[13px] leading-[1.7]">{st.one_line}</p>
+              <div className="border-l-[2px] border-muted-foreground/25 pl-5 py-1">
+                {structure.map((st, idx) => (
+                  <div key={st.step} className="flex flex-col items-center">
+                    <p className="text-[13px] leading-[1.7] text-center">{st.one_line}</p>
+                    {idx < structure.length - 1 && (
+                      <span className="text-muted-foreground/30 text-[10px] my-1.5">↓</span>
+                    )}
                   </div>
                 ))}
               </div>
