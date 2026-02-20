@@ -57,14 +57,14 @@ const s = StyleSheet.create({
 
   // Vocabulary
   vocabWarn: { fontSize: 6.5, color: T.g50, marginBottom: 5, fontStyle: "italic" as const },
-  vocabRow2Col: { flexDirection: "row" as const, gap: 14 },
+  vocabRow2Col: { flexDirection: "row" as const, gap: 20 },
   vocabCol: { flex: 1 },
   vocabTable: { borderWidth: 0.5, borderColor: T.rule },
-  vocabHdr: { flexDirection: "row" as const, paddingVertical: 3, paddingHorizontal: 5, borderBottomWidth: 0.5, borderBottomColor: T.rule },
-  vocabRow: { flexDirection: "row" as const, paddingVertical: 3, paddingHorizontal: 5, borderBottomWidth: 0.3, borderBottomColor: "#e4e4e4" },
-  vNum: { width: 14, fontSize: 6.5, color: T.g30, textAlign: "center" as const },
-  vWord: { width: 62, fontFamily: T.en, fontSize: 8.5, fontWeight: 600 },
-  vPos: { width: 16, fontSize: 6, color: T.g50, textAlign: "center" as const },
+  vocabHdr: { flexDirection: "row" as const, paddingVertical: 4, paddingHorizontal: 8, borderBottomWidth: 0.5, borderBottomColor: T.rule },
+  vocabRow: { flexDirection: "row" as const, paddingVertical: 5, paddingHorizontal: 8, borderBottomWidth: 0.3, borderBottomColor: "#e4e4e4" },
+  vNum: { width: 18, fontSize: 6.5, color: T.g30, textAlign: "center" as const },
+  vWord: { width: 68, fontFamily: T.en, fontSize: 8.5, fontWeight: 600 },
+  vPos: { width: 22, fontSize: 6, color: T.g50, textAlign: "center" as const },
   vMeaning: { flex: 1, fontSize: 8, lineHeight: 1.5 },
   vHdrText: { fontSize: 6, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.4 },
 
@@ -96,7 +96,7 @@ function VocabColumn({ items, startNum }: { items: VocabItem[]; startNum: number
           <Text style={{ ...s.vMeaning, ...s.vHdrText }}>Meaning</Text>
         </View>
         {items.map((v, i) => (
-          <View key={i} style={[s.vocabRow, i % 2 === 1 ? { backgroundColor: T.g05 } : {}]}>
+          <View key={i} style={s.vocabRow}>
             <Text style={s.vNum}>{startNum + i}</Text>
             <Text style={s.vWord}>{v.word}</Text>
             <Text style={s.vPos}>{v.pos}</Text>
