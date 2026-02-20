@@ -1,54 +1,36 @@
 
-# PDF 영어 폰트 Helvetica -> Inter 변경
+## Preview PDF를 웹 화면과 동일한 구조로 변경
 
-## 문제
-- react-pdf 내장 Helvetica는 실제 인쇄 시 글자가 얇고 선명하지 않음
-- 특히 작은 폰트 사이즈(7~10pt)에서 가독성이 떨어짐
+### 현재 문제
+- **웹 UI**: 단일 컬럼, 세로 배치 (Vocabulary → Key Summary → Structure → Topic/Title/Summary)
+- **PDF**: 2단 레이아웃, 상단에 Topic/Title/Summary 헤더, 좌측 Key Summary+Structure, 우측 Vocabulary
+- 순서와 레이아웃이 완전히 다름
 
-## 해결 방안
-영어 폰트를 **Inter**로 변경. Inter는 Pretendard와 같은 디자인 계열이라 한영 혼용 시 자연스럽고, Regular/Bold/SemiBold 등 다양한 weight를 지원하여 인쇄 품질이 우수함.
+### 변경 계획
 
-## 변경 내용
+**`src/components/PreviewPdf.tsx` 전면 재구성:**
 
-### 1. PassageBuilderPdf.tsx (Pre-Study Guide PDF)
-- Inter 폰트 등록 (Regular 400 + SemiBold 600 + Bold 700)
-- SemiBold 추가로 Bold가 너무 굵은 문제 해결 (어휘 단어 등에 SemiBold 적용)
-- `fontFamily: "Helvetica"` -> `fontFamily: "Inter"` 전체 교체
-- 어휘 단어(vocabWord): Bold(700) -> SemiBold(600)으로 변경하여 더 세련된 느낌
-- 제목(title): Inter Bold 유지
-- 섹션 배지(sectionBadge): Inter Bold 유지
-- 구조 번호(stepNum): Inter SemiBold로 변경
+1. **2단 레이아웃 제거** -- 웹과 동일한 단일 컬럼 세로 배치로 변경
+2. **섹션 순서를 웹과 동일하게 정렬:**
+   - Vocabulary (2열 테이블, 1-10 / 11-20 나란히)
+   - Key Summary (왼쪽 세로 바 + 3줄)
+   - Structure (번호 + 한국어 한 줄씩)
+   - Topic / Title / Summary (각각 라벨 + 영어 + 한국어 해석)
+3. **Topic/Title/Summary 스타일링:**
+   - 영어: 기본 크기 (9pt)
+   - 한국어: 85-90% 크기 (7.5pt), 연한 색상
+   - Title만 볼드 + 약간 큰 크기
+4. **섹션 구분**: 얇은 구분선 (0.5pt) 으로 각 섹션 분리
+5. **Vocabulary 테이블**: 웹과 동일하게 좌우 2열 (1-10, 11-20), 헤더 포함
 
-### 2. PdfDocument.tsx (분석지 PDF)
-- Inter 폰트 등록 (Regular 400 + SemiBold 600 + Bold 700)
-- `fontFamily: "Helvetica"` -> `fontFamily: "Inter"` 전체 교체
-- englishText: Inter Regular 유지
-- passageText: Inter Regular 유지
-- 구문 번호: Helvetica -> Inter로 변경
+### 기술 세부사항
 
-## 기술 세부사항
+- 폰트: Pretendard(한글) + Source Serif 4(영문) 유지
+- 본문 8-9pt, 보조 7-7.5pt
+- lineHeight 1.6-1.8
+- 여백 좌우 36pt 유지
+- 빈 섹션은 숨김 처리 유지
+- 어휘 20개 미만 경고 유지
 
-Inter 폰트 CDN 소스:
-- Regular: `https://cdn.jsdelivr.net/gh/nicholasgasior/gfonts@master/dist/Inter/Inter-Regular.ttf`  
-  (또는 Google Fonts static TTF)
-- SemiBold: Inter-SemiBold.ttf
-- Bold: Inter-Bold.ttf
-
-Google Fonts 공식 TTF 경로 사용:
-```
-https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2
-```
--> TTF가 더 안정적이므로 GitHub 미러 또는 CDN의 .ttf 파일 사용
-
-안정적인 소스로 rsms/inter GitHub 릴리스 사용:
-```
-https://cdn.jsdelivr.net/gh/rsms/inter@v4.1/docs/font-files/InterDisplay-Regular.otf
-https://cdn.jsdelivr.net/gh/rsms/inter@v4.1/docs/font-files/InterDisplay-SemiBold.otf  
-https://cdn.jsdelivr.net/gh/rsms/inter@v4.1/docs/font-files/InterDisplay-Bold.otf
-```
-
-## 기대 효과
-- 인쇄 시 글자가 더 선명하고 균일한 두께로 출력
-- 작은 사이즈에서도 높은 가독성
-- Pretendard와 자연스러운 한영 조합
-- SemiBold weight 활용으로 Bold 일변도가 아닌 세련된 타이포그래피
+### 수정 파일
+- `src/components/PreviewPdf.tsx` -- 전면 재작성 (단일 컬럼, 웹 순서)
