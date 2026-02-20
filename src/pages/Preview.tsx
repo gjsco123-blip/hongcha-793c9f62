@@ -105,11 +105,6 @@ export default function Preview() {
   const canExport = vocab.length > 0 || structure.length > 0 || summary;
   const LoadingDot = () => <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground inline-block" />;
 
-  /* ── Shared sub-label style ── */
-  const subLabel = "text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1";
-  const enText = "text-sm font-english leading-relaxed";
-  const koText = "text-xs text-muted-foreground/70 mt-0.5";
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -146,27 +141,27 @@ export default function Preview() {
         {/* ═══ Vocabulary ═══ */}
         {vocabStatus !== "idle" && (
           <section className="border-t border-border pt-5">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-4 flex items-center gap-2">
               Vocabulary {vocabStatus === "loading" && <LoadingDot />}
             </h2>
             {vocabStatus === "error" && <p className="text-xs text-destructive">어휘 생성에 실패했습니다.</p>}
             {vocab.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
                 {[vocab.slice(0, 10), vocab.slice(10, 20)].map((col, colIdx) => (
-                  <div key={colIdx} className="border border-border divide-y divide-border">
+                  <div key={colIdx} className="border border-border/60 divide-y divide-border/40">
                     <div className="flex items-center gap-3 px-3 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                       <span className="w-5 text-center">#</span>
                       <span className="min-w-[80px]">Word</span>
-                      <span className="w-10 text-center">POS</span>
+                      <span className="w-8 text-center">POS</span>
                       <span className="flex-1">Meaning</span>
                     </div>
                     {col.map((v, i) => {
                       const num = colIdx * 10 + i + 1;
                       return (
                         <div key={num} className="flex items-center gap-3 px-3 py-1.5 text-xs">
-                          <span className="w-5 text-center text-muted-foreground text-[10px]">{num}</span>
-                          <span className="font-english font-semibold min-w-[80px]">{v.word}</span>
-                          <span className="text-muted-foreground w-10 text-center text-[10px]">{v.pos}</span>
+                          <span className="w-5 text-center text-muted-foreground/50 text-[10px]">{num}</span>
+                          <span className="font-english font-semibold min-w-[80px] whitespace-nowrap">{v.word}</span>
+                          <span className="text-muted-foreground/60 w-8 text-center text-[10px]">{v.pos}</span>
                           <span className="flex-1">{v.meaning_ko}</span>
                         </div>
                       );
@@ -181,14 +176,14 @@ export default function Preview() {
         {/* ═══ Key Summary ═══ */}
         {previewStatus !== "idle" && (
           <section className="border-t border-border pt-5">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-4 flex items-center gap-2">
               Key Summary {previewStatus === "loading" && <LoadingDot />}
             </h2>
             {previewStatus === "error" && <p className="text-xs text-destructive">요약 생성에 실패했습니다.</p>}
             {summary && (
-              <div className="border-l-2 border-muted-foreground/30 pl-4">
-                {summary.split("\n").map((line, i) => (
-                  <p key={i} className="text-sm leading-relaxed">{line}</p>
+              <div className="border-l-[2px] border-muted-foreground/25 pl-5 py-1 space-y-1">
+                {summary.split("\n").filter(Boolean).map((line, i) => (
+                  <p key={i} className="text-[13px] leading-[1.7]">{line}</p>
                 ))}
               </div>
             )}
@@ -198,16 +193,16 @@ export default function Preview() {
         {/* ═══ Structure ═══ */}
         {structureStatus !== "idle" && (
           <section className="border-t border-border pt-5">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-4 flex items-center gap-2">
               Structure {structureStatus === "loading" && <LoadingDot />}
             </h2>
             {structureStatus === "error" && <p className="text-xs text-destructive">구조 흐름 생성에 실패했습니다.</p>}
             {structure.length > 0 && (
-              <div className="space-y-2">
-                {structure.map((s) => (
-                  <div key={s.step} className="flex items-start gap-3">
-                    <span className="text-sm font-bold font-english w-5 shrink-0 text-right text-muted-foreground">{s.step}.</span>
-                    <p className="text-sm leading-relaxed">{s.one_line}</p>
+              <div className="border-l-[2px] border-muted-foreground/25 pl-5 py-1 space-y-1.5">
+                {structure.map((st) => (
+                  <div key={st.step} className="flex items-start gap-2">
+                    <span className="text-muted-foreground/40 text-xs mt-[2px] shrink-0">↓</span>
+                    <p className="text-[13px] leading-[1.7]">{st.one_line}</p>
                   </div>
                 ))}
               </div>
@@ -219,19 +214,19 @@ export default function Preview() {
         {previewStatus !== "idle" && examBlock && (
           <section className="border-t border-border pt-5 space-y-5">
             <div>
-              <p className={subLabel}>Topic</p>
-              <p className={enText}>{examBlock.topic}</p>
-              {examBlock.topic_ko && <p className={koText}>{examBlock.topic_ko}</p>}
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em] mb-1.5">Topic</p>
+              <p className="text-sm font-english leading-relaxed">{examBlock.topic}</p>
+              {examBlock.topic_ko && <p className="text-xs text-muted-foreground/60 mt-0.5">{examBlock.topic_ko}</p>}
             </div>
             <div>
-              <p className={subLabel}>Title</p>
-              <p className={`${enText} font-semibold`}>{examBlock.title}</p>
-              {examBlock.title_ko && <p className={koText}>{examBlock.title_ko}</p>}
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em] mb-1.5">Title</p>
+              <p className="text-[15px] font-english leading-relaxed">{examBlock.title}</p>
+              {examBlock.title_ko && <p className="text-xs text-muted-foreground/60 mt-0.5">{examBlock.title_ko}</p>}
             </div>
             <div>
-              <p className={subLabel}>Summary</p>
-              <p className={enText}>{examBlock.one_sentence_summary}</p>
-              {examBlock.one_sentence_summary_ko && <p className={koText}>{examBlock.one_sentence_summary_ko}</p>}
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em] mb-1.5">Summary</p>
+              <p className="text-sm font-english leading-relaxed">{examBlock.one_sentence_summary}</p>
+              {examBlock.one_sentence_summary_ko && <p className="text-xs text-muted-foreground/60 mt-0.5">{examBlock.one_sentence_summary_ko}</p>}
             </div>
           </section>
         )}

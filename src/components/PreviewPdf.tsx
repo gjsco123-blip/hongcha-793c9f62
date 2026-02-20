@@ -39,49 +39,50 @@ const T = {
   g50: "#888",
   g30: "#bbb",
   g10: "#f0f0f0",
-  g05: "#f7f7f7",
-  rule: "#ccc",
-  mH: 36,
-  mT: 36,
-  mB: 30,
+  g05: "#f8f8f8",
+  rule: "#d0d0d0",
+  mH: 40,
+  mT: 40,
+  mB: 36,
 };
 
 const s = StyleSheet.create({
-  page: { paddingTop: T.mT, paddingBottom: T.mB, paddingLeft: T.mH, paddingRight: T.mH, fontFamily: T.ko, fontSize: 8, color: T.black },
+  page: { paddingTop: T.mT, paddingBottom: T.mB, paddingLeft: T.mH, paddingRight: T.mH, fontFamily: T.ko, fontSize: 8.5, color: T.black },
 
-  // Section title
-  secTitle: { fontSize: 8, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase" as const, color: T.g50, marginBottom: 8 },
+  // Section title — clean, understated
+  secTitle: { fontSize: 7.5, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase" as const, color: T.g50, marginBottom: 10 },
 
   // Thin rule between sections
-  thinRule: { height: 0.5, backgroundColor: T.rule, marginVertical: 14 },
+  thinRule: { height: 0.5, backgroundColor: T.rule, marginVertical: 16 },
 
-  // Vocabulary - 2-column table side by side
-  vocabWarn: { fontSize: 6, color: T.g50, marginBottom: 4, fontStyle: "italic" as const },
-  vocabRow2Col: { flexDirection: "row" as const, gap: 10 },
+  // Vocabulary
+  vocabWarn: { fontSize: 6.5, color: T.g50, marginBottom: 5, fontStyle: "italic" as const },
+  vocabRow2Col: { flexDirection: "row" as const, gap: 14 },
   vocabCol: { flex: 1 },
   vocabTable: { borderWidth: 0.5, borderColor: T.rule },
-  vocabHdr: { flexDirection: "row" as const, paddingVertical: 3, paddingHorizontal: 4, borderBottomWidth: 0.5, borderBottomColor: T.rule },
-  vocabRow: { flexDirection: "row" as const, paddingVertical: 3, paddingHorizontal: 4, borderBottomWidth: 0.3, borderBottomColor: "#e8e8e8" },
-  vNum: { width: 12, fontSize: 6, color: T.g30, textAlign: "center" as const },
-  vWord: { width: 58, fontFamily: T.en, fontSize: 8, fontWeight: 600 },
+  vocabHdr: { flexDirection: "row" as const, paddingVertical: 3, paddingHorizontal: 5, borderBottomWidth: 0.5, borderBottomColor: T.rule },
+  vocabRow: { flexDirection: "row" as const, paddingVertical: 3, paddingHorizontal: 5, borderBottomWidth: 0.3, borderBottomColor: "#e4e4e4" },
+  vNum: { width: 14, fontSize: 6.5, color: T.g30, textAlign: "center" as const },
+  vWord: { width: 62, fontFamily: T.en, fontSize: 8.5, fontWeight: 600 },
   vPos: { width: 16, fontSize: 6, color: T.g50, textAlign: "center" as const },
-  vMeaning: { flex: 1, fontSize: 7.5, lineHeight: 1.4 },
-  vHdrText: { fontSize: 6, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.5 },
+  vMeaning: { flex: 1, fontSize: 8, lineHeight: 1.5 },
+  vHdrText: { fontSize: 6, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.4 },
 
-  // Key Summary
-  summaryBox: { borderLeftWidth: 2, borderLeftColor: T.g30, paddingLeft: 8, paddingVertical: 4 },
-  summaryLine: { fontSize: 8, lineHeight: 1.8 },
+  // Key Summary — left bar accent
+  summaryBox: { borderLeftWidth: 2, borderLeftColor: T.g30, paddingLeft: 10, paddingVertical: 3 },
+  summaryLine: { fontSize: 9, lineHeight: 1.7 },
 
-  // Structure
-  stepRow: { flexDirection: "row" as const, marginBottom: 5, alignItems: "flex-start" as const },
-  stepNum: { fontFamily: T.en, fontSize: 8, fontWeight: 700, color: T.black, width: 12, textAlign: "right" as const, marginRight: 6, marginTop: 0 },
-  stepText: { flex: 1, fontSize: 8, lineHeight: 1.7 },
+  // Structure — arrow flow, left bar accent
+  structureBox: { borderLeftWidth: 2, borderLeftColor: T.g30, paddingLeft: 10, paddingVertical: 3 },
+  structRow: { flexDirection: "row" as const, marginBottom: 4, alignItems: "flex-start" as const },
+  structArrow: { fontSize: 7, color: T.g30, width: 10, marginTop: 1 },
+  structText: { flex: 1, fontSize: 8.5, lineHeight: 1.7 },
 
   // Topic/Title/Summary fields
-  fieldLabel: { fontSize: 7, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: 2, marginTop: 10 },
+  fieldLabel: { fontSize: 6.5, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: 3, marginTop: 12 },
   fieldEn: { fontFamily: T.en, fontSize: 9, color: T.black, lineHeight: 1.6 },
-  fieldEnBold: { fontFamily: T.en, fontSize: 9.5, fontWeight: 700, color: T.black, lineHeight: 1.5 },
-  fieldKo: { fontSize: 8, color: T.g70, lineHeight: 1.5, marginTop: 1 },
+  fieldEnTitle: { fontFamily: T.en, fontSize: 10, color: T.black, lineHeight: 1.5 },
+  fieldKo: { fontSize: 7.5, color: T.g70, lineHeight: 1.5, marginTop: 1.5 },
 });
 
 function VocabColumn({ items, startNum }: { items: VocabItem[]; startNum: number }) {
@@ -151,12 +152,14 @@ export function PreviewPdf({ vocab, structure, summary, examBlock }: Props) {
           <View>
             {(hasVocab || hasSummary) && <View style={s.thinRule} />}
             <Text style={s.secTitle}>Structure</Text>
-            {structure.map((step) => (
-              <View key={step.step} style={s.stepRow}>
-                <Text style={s.stepNum}>{step.step}</Text>
-                <Text style={s.stepText}>{step.one_line}</Text>
-              </View>
-            ))}
+            <View style={s.structureBox}>
+              {structure.map((step) => (
+                <View key={step.step} style={s.structRow}>
+                  <Text style={s.structArrow}>↓</Text>
+                  <Text style={s.structText}>{step.one_line}</Text>
+                </View>
+              ))}
+            </View>
           </View>
         )}
 
@@ -170,7 +173,7 @@ export function PreviewPdf({ vocab, structure, summary, examBlock }: Props) {
             {examBlock.topic_ko && <Text style={s.fieldKo}>{examBlock.topic_ko}</Text>}
 
             <Text style={s.fieldLabel}>Title</Text>
-            <Text style={s.fieldEnBold}>{examBlock.title}</Text>
+            <Text style={s.fieldEnTitle}>{examBlock.title}</Text>
             {examBlock.title_ko && <Text style={s.fieldKo}>{examBlock.title_ko}</Text>}
 
             <Text style={s.fieldLabel}>Summary</Text>
