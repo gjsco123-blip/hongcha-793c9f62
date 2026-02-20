@@ -30,24 +30,32 @@ serve(async (req) => {
 
     const systemPrompt = `너는 한국 고등학생용 영어 독해 지문의 프리뷰를 생성하는 엔진이다.
 
-지문을 읽고 아래 두 항목을 JSON으로만 출력하라.
+지문을 읽고 아래 항목을 JSON으로만 출력하라.
 
-1. summary: 지문 전체의 핵심 요약 (한국어, 2~3줄, 80~120자)
+1. summary: 지문 전체의 핵심 요약 (한국어)
+   - 반드시 정확히 3줄로 구성 (줄바꿈 \\n으로 구분)
+   - 1줄: 핵심 주장
+   - 2줄: 전개 방향
+   - 3줄: 결론 또는 의미
    - 문장 단위 해석 금지
    - 예시 세부 내용 포함 금지
-   - 중심 개념만 압축
+   - 간결하고 단정하게
 
 2. exam_block:
-   - topic: 주제 (한국어, 1문장 또는 명사구, "~에 대한 글" 허용)
+   - topic: 주제 (영어, 1문장 또는 명사구)
+   - topic_ko: topic의 한국어 번역
    - title: 제목 (영어, 5~9단어, 문학적 표현 금지, 수능 스타일)
+   - title_ko: title의 한국어 번역
    - one_sentence_summary: 한 문장 요약 (영어, 25~40단어, 세부 예시 포함 금지, 수능 선택지 수준)
+   - one_sentence_summary_ko: one_sentence_summary의 한국어 번역
 
 절대 규칙:
 - JSON 객체만 출력. 다른 텍스트 금지.
 - 분석 용어 금지 (대조, 예시, 역설 등)
+- summary는 반드시 \\n으로 구분된 3줄이어야 한다.
 
 출력 형식:
-{"summary":"...","exam_block":{"topic":"...","title":"...","one_sentence_summary":"..."}}`;
+{"summary":"1줄\\n2줄\\n3줄","exam_block":{"topic":"...","topic_ko":"...","title":"...","title_ko":"...","one_sentence_summary":"...","one_sentence_summary_ko":"..."}}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

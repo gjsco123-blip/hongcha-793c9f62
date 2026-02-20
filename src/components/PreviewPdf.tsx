@@ -21,202 +21,71 @@ Font.register({
 Font.registerHyphenationCallback((word) => [word]);
 
 // ── Types ──
-interface VocabItem {
-  word: string;
-  pos: string;
-  meaning_ko: string;
-  in_context: string;
-}
-
-interface StructureStep {
-  step: number;
-  one_line: string;
-  evidence: string;
-}
-
+interface VocabItem { word: string; pos: string; meaning_ko: string; in_context: string; }
+interface StructureStep { step: number; one_line: string; evidence: string; }
 interface ExamBlock {
-  topic: string;
-  topic_ko?: string;
-  title: string;
-  title_ko?: string;
-  one_sentence_summary: string;
-  one_sentence_summary_ko?: string;
+  topic: string; topic_ko?: string;
+  title: string; title_ko?: string;
+  one_sentence_summary: string; one_sentence_summary_ko?: string;
 }
-
-interface Props {
-  vocab: VocabItem[];
-  structure: StructureStep[];
-  summary: string;
-  examBlock: ExamBlock | null;
-}
+interface Props { vocab: VocabItem[]; structure: StructureStep[]; summary: string; examBlock: ExamBlock | null; }
 
 // ── Design tokens ──
 const T = {
-  fontKo: "Pretendard",
-  fontEn: "SourceSerif4",
+  ko: "Pretendard",
+  en: "SourceSerif4",
   black: "#1a1a1a",
-  gray70: "#555",
-  gray50: "#888",
-  gray30: "#bbb",
-  gray10: "#f0f0f0",
-  gray05: "#f7f7f7",
+  g70: "#555",
+  g50: "#888",
+  g30: "#bbb",
+  g10: "#f0f0f0",
+  g05: "#f7f7f7",
   rule: "#ccc",
-  marginH: 36,
-  marginTop: 32,
-  marginBottom: 24,
+  mH: 36,
+  mT: 32,
+  mB: 24,
 };
 
 const s = StyleSheet.create({
-  page: {
-    paddingTop: T.marginTop,
-    paddingBottom: T.marginBottom,
-    paddingLeft: T.marginH,
-    paddingRight: T.marginH,
-    fontFamily: T.fontKo,
-    fontSize: 7,
-    color: T.black,
-  },
+  page: { paddingTop: T.mT, paddingBottom: T.mB, paddingLeft: T.mH, paddingRight: T.mH, fontFamily: T.ko, fontSize: 7, color: T.black },
 
   // Header
-  header: {
-    marginBottom: 10,
-    paddingBottom: 8,
-    borderBottomWidth: 0.5,
-    borderBottomColor: T.gray50,
-  },
-  headerTitle: {
-    fontFamily: T.fontEn,
-    fontSize: 14,
-    fontWeight: 700,
-    letterSpacing: 0.3,
-    marginBottom: 2,
-  },
-  headerTitleKo: {
-    fontSize: 8,
-    color: T.gray70,
-    marginBottom: 6,
-  },
-  headerRow: {
-    flexDirection: "row",
-    gap: 6,
-    alignItems: "flex-start",
-    marginBottom: 2,
-  },
-  headerLabel: {
-    fontSize: 5.5,
-    fontWeight: 700,
-    color: T.gray50,
-    textTransform: "uppercase" as const,
-    letterSpacing: 0.8,
-    width: 36,
-    marginTop: 0.5,
-  },
-  headerValueEn: {
-    fontFamily: T.fontEn,
-    fontSize: 7,
-    color: T.gray70,
-    flex: 1,
-    lineHeight: 1.5,
-  },
-  headerValueKo: {
-    fontSize: 6.5,
-    color: T.gray50,
-    flex: 1,
-    lineHeight: 1.4,
-  },
+  header: { marginBottom: 10, paddingBottom: 8, borderBottomWidth: 0.5, borderBottomColor: T.g50 },
+  // Topic/Title/Summary in header
+  fieldLabel: { fontSize: 5.5, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: 1, marginTop: 6 },
+  fieldEn: { fontFamily: T.en, fontSize: 9, color: T.black, lineHeight: 1.6 },
+  fieldEnBold: { fontFamily: T.en, fontSize: 13, fontWeight: 700, color: T.black, lineHeight: 1.5 },
+  fieldKo: { fontSize: 7.5, color: T.g70, lineHeight: 1.5, marginTop: 1 },
 
-  // 2-column body
-  body: {
-    flexDirection: "row",
-    gap: 14,
-  },
-  colLeft: { flex: 6 },
-  colRight: { flex: 4 },
+  // 2-col body
+  body: { flexDirection: "row", gap: 14 },
+  colL: { flex: 6 },
+  colR: { flex: 4 },
 
-  // Section label
-  sectionLabel: {
-    marginBottom: 6,
-  },
-  sectionTitle: {
-    fontSize: 7,
-    fontWeight: 700,
-    letterSpacing: 1,
-    textTransform: "uppercase" as const,
-    color: T.gray50,
-  },
+  // Section title
+  secTitle: { fontSize: 7, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" as const, color: T.g50, marginBottom: 6 },
 
-  // Structure steps
-  stepRow: {
-    flexDirection: "row",
-    marginBottom: 5,
-    alignItems: "flex-start",
-  },
-  stepNum: {
-    fontFamily: T.fontEn,
-    fontSize: 10,
-    fontWeight: 700,
-    color: T.black,
-    width: 14,
-    textAlign: "right" as const,
-    marginRight: 6,
-    marginTop: -1,
-  },
-  stepText: {
-    flex: 1,
-    fontSize: 8,
-    lineHeight: 1.7,
-  },
+  // Structure
+  stepRow: { flexDirection: "row", marginBottom: 5, alignItems: "flex-start" },
+  stepNum: { fontFamily: T.en, fontSize: 10, fontWeight: 700, color: T.black, width: 14, textAlign: "right" as const, marginRight: 6, marginTop: -1 },
+  stepText: { flex: 1, fontSize: 8, lineHeight: 1.7 },
 
   // Summary
-  summaryBox: {
-    borderLeftWidth: 1.5,
-    borderLeftColor: T.gray30,
-    paddingLeft: 8,
-    paddingVertical: 4,
-    marginTop: 10,
-  },
-  summaryText: {
-    fontSize: 7.5,
-    lineHeight: 1.8,
-  },
+  summaryBox: { borderLeftWidth: 1.5, borderLeftColor: T.g30, paddingLeft: 8, paddingVertical: 4, marginBottom: 10 },
+  summaryLine: { fontSize: 7.5, lineHeight: 1.8 },
 
-  // Vocab table
-  vocabWarning: {
-    fontSize: 5,
-    color: T.gray50,
-    marginBottom: 4,
-    fontStyle: "italic" as const,
-  },
-  vocabTable: {
-    borderWidth: 0.5,
-    borderColor: T.rule,
-  },
-  vocabHeaderRow: {
-    flexDirection: "row",
-    paddingVertical: 2.5,
-    paddingHorizontal: 3,
-    borderBottomWidth: 0.5,
-    borderBottomColor: T.rule,
-  },
-  vocabRow: {
-    flexDirection: "row",
-    paddingVertical: 2,
-    paddingHorizontal: 3,
-    borderBottomWidth: 0.3,
-    borderBottomColor: "#e8e8e8",
-  },
-  vocabNum: { width: 10, fontSize: 5, color: T.gray30, textAlign: "center" as const },
-  vocabWord: { width: 50, fontFamily: T.fontEn, fontSize: 6.5, fontWeight: 600 },
-  vocabPos: { width: 14, fontSize: 5, color: T.gray50, textAlign: "center" as const },
-  vocabMeaning: { flex: 1, fontSize: 6, lineHeight: 1.4 },
-  vocabHeaderText: { fontSize: 5, fontWeight: 700, color: T.gray50, textTransform: "uppercase" as const, letterSpacing: 0.5 },
+  // Vocab
+  vocabWarn: { fontSize: 5, color: T.g50, marginBottom: 4, fontStyle: "italic" as const },
+  vocabTable: { borderWidth: 0.5, borderColor: T.rule },
+  vocabHdr: { flexDirection: "row", paddingVertical: 2.5, paddingHorizontal: 3, borderBottomWidth: 0.5, borderBottomColor: T.rule },
+  vocabRow: { flexDirection: "row", paddingVertical: 2, paddingHorizontal: 3, borderBottomWidth: 0.3, borderBottomColor: "#e8e8e8" },
+  vNum: { width: 10, fontSize: 5, color: T.g30, textAlign: "center" as const },
+  vWord: { width: 50, fontFamily: T.en, fontSize: 6.5, fontWeight: 600 },
+  vPos: { width: 14, fontSize: 5, color: T.g50, textAlign: "center" as const },
+  vMeaning: { flex: 1, fontSize: 6, lineHeight: 1.4 },
+  vHdrText: { fontSize: 5, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.5 },
 
-  // Divider
-  thinRule: {
-    height: 0.5,
-    backgroundColor: T.rule,
-    marginVertical: 8,
-  },
+  thinRule: { height: 0.5, backgroundColor: T.rule, marginVertical: 8 },
 });
 
 export function PreviewPdf({ vocab, structure, summary, examBlock }: Props) {
@@ -224,51 +93,42 @@ export function PreviewPdf({ vocab, structure, summary, examBlock }: Props) {
   const hasSummary = !!summary;
   const hasVocab = vocab.length > 0;
   const hasExam = !!examBlock;
+  const summaryLines = summary ? summary.split("\n").filter(Boolean) : [];
 
   return (
     <Document>
       <Page size="A4" style={s.page}>
-        {/* ══ Header: Title / Topic / Summary ══ */}
+        {/* ══ Header: Topic → Title → Summary ══ */}
         {hasExam && (
           <View style={s.header}>
-            <Text style={s.headerTitle}>{examBlock.title}</Text>
-            {examBlock.title_ko && <Text style={s.headerTitleKo}>{examBlock.title_ko}</Text>}
+            {/* Topic */}
+            <Text style={s.fieldLabel}>Topic</Text>
+            <Text style={s.fieldEn}>{examBlock.topic}</Text>
+            {examBlock.topic_ko && <Text style={s.fieldKo}>{examBlock.topic_ko}</Text>}
 
-            <View style={s.headerRow}>
-              <Text style={s.headerLabel}>Topic</Text>
-              <Text style={s.headerValueEn}>{examBlock.topic}</Text>
-            </View>
-            {examBlock.topic_ko && (
-              <View style={s.headerRow}>
-                <Text style={{ ...s.headerLabel, color: "transparent" }}>Topic</Text>
-                <Text style={s.headerValueKo}>{examBlock.topic_ko}</Text>
-              </View>
-            )}
+            {/* Title */}
+            <Text style={s.fieldLabel}>Title</Text>
+            <Text style={s.fieldEnBold}>{examBlock.title}</Text>
+            {examBlock.title_ko && <Text style={s.fieldKo}>{examBlock.title_ko}</Text>}
 
-            <View style={{ ...s.headerRow, marginTop: 2 }}>
-              <Text style={s.headerLabel}>Sum.</Text>
-              <Text style={s.headerValueEn}>{examBlock.one_sentence_summary}</Text>
-            </View>
-            {examBlock.one_sentence_summary_ko && (
-              <View style={s.headerRow}>
-                <Text style={{ ...s.headerLabel, color: "transparent" }}>Sum.</Text>
-                <Text style={s.headerValueKo}>{examBlock.one_sentence_summary_ko}</Text>
-              </View>
-            )}
+            {/* Summary */}
+            <Text style={s.fieldLabel}>Summary</Text>
+            <Text style={s.fieldEn}>{examBlock.one_sentence_summary}</Text>
+            {examBlock.one_sentence_summary_ko && <Text style={s.fieldKo}>{examBlock.one_sentence_summary_ko}</Text>}
           </View>
         )}
 
         {/* ══ 2-Column Body ══ */}
         <View style={s.body}>
           {/* ── LEFT: Key Summary + Structure ── */}
-          <View style={s.colLeft}>
+          <View style={s.colL}>
             {hasSummary && (
               <View>
-                <View style={s.sectionLabel}>
-                  <Text style={s.sectionTitle}>Key Summary</Text>
-                </View>
+                <Text style={s.secTitle}>Key Summary</Text>
                 <View style={s.summaryBox}>
-                  <Text style={s.summaryText}>{summary}</Text>
+                  {summaryLines.map((line, i) => (
+                    <Text key={i} style={s.summaryLine}>{line}</Text>
+                  ))}
                 </View>
               </View>
             )}
@@ -276,9 +136,7 @@ export function PreviewPdf({ vocab, structure, summary, examBlock }: Props) {
             {hasStructure && (
               <View>
                 {hasSummary && <View style={s.thinRule} />}
-                <View style={s.sectionLabel}>
-                  <Text style={s.sectionTitle}>Structure</Text>
-                </View>
+                <Text style={s.secTitle}>Structure</Text>
                 {structure.map((step) => (
                   <View key={step.step} style={s.stepRow}>
                     <Text style={s.stepNum}>{step.step}</Text>
@@ -291,29 +149,23 @@ export function PreviewPdf({ vocab, structure, summary, examBlock }: Props) {
 
           {/* ── RIGHT: Vocabulary ── */}
           {hasVocab && (
-            <View style={s.colRight}>
-              <View style={s.sectionLabel}>
-                <Text style={s.sectionTitle}>Vocabulary</Text>
-              </View>
-
-              {vocab.length < 20 && (
-                <Text style={s.vocabWarning}>⚠ {vocab.length}/20</Text>
-              )}
+            <View style={s.colR}>
+              <Text style={s.secTitle}>Vocabulary</Text>
+              {vocab.length < 20 && <Text style={s.vocabWarn}>⚠ {vocab.length}/20</Text>}
 
               <View style={s.vocabTable}>
-                <View style={s.vocabHeaderRow}>
-                  <Text style={{ ...s.vocabNum, ...s.vocabHeaderText }}>#</Text>
-                  <Text style={{ ...s.vocabWord, ...s.vocabHeaderText, fontFamily: T.fontKo }}>Word</Text>
-                  <Text style={{ ...s.vocabPos, ...s.vocabHeaderText }}>POS</Text>
-                  <Text style={{ ...s.vocabMeaning, ...s.vocabHeaderText }}>Meaning</Text>
+                <View style={s.vocabHdr}>
+                  <Text style={{ ...s.vNum, ...s.vHdrText }}>#</Text>
+                  <Text style={{ ...s.vWord, ...s.vHdrText, fontFamily: T.ko }}>Word</Text>
+                  <Text style={{ ...s.vPos, ...s.vHdrText }}>POS</Text>
+                  <Text style={{ ...s.vMeaning, ...s.vHdrText }}>Meaning</Text>
                 </View>
-
                 {vocab.map((v, i) => (
-                  <View key={i} style={[s.vocabRow, i % 2 === 1 ? { backgroundColor: T.gray05 } : {}]}>
-                    <Text style={s.vocabNum}>{i + 1}</Text>
-                    <Text style={s.vocabWord}>{v.word}</Text>
-                    <Text style={s.vocabPos}>{v.pos}</Text>
-                    <Text style={s.vocabMeaning}>{v.meaning_ko}</Text>
+                  <View key={i} style={[s.vocabRow, i % 2 === 1 ? { backgroundColor: T.g05 } : {}]}>
+                    <Text style={s.vNum}>{i + 1}</Text>
+                    <Text style={s.vWord}>{v.word}</Text>
+                    <Text style={s.vPos}>{v.pos}</Text>
+                    <Text style={s.vMeaning}>{v.meaning_ko}</Text>
                   </View>
                 ))}
               </View>
