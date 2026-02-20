@@ -42,46 +42,46 @@ const T = {
   g05: "#f7f7f7",
   rule: "#ccc",
   mH: 36,
-  mT: 32,
-  mB: 24,
+  mT: 36,
+  mB: 30,
 };
 
 const s = StyleSheet.create({
-  page: { paddingTop: T.mT, paddingBottom: T.mB, paddingLeft: T.mH, paddingRight: T.mH, fontFamily: T.ko, fontSize: 7, color: T.black },
+  page: { paddingTop: T.mT, paddingBottom: T.mB, paddingLeft: T.mH, paddingRight: T.mH, fontFamily: T.ko, fontSize: 8, color: T.black },
 
   // Section title
-  secTitle: { fontSize: 7, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" as const, color: T.g50, marginBottom: 6 },
+  secTitle: { fontSize: 8, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase" as const, color: T.g50, marginBottom: 8 },
 
   // Thin rule between sections
-  thinRule: { height: 0.5, backgroundColor: T.rule, marginVertical: 10 },
+  thinRule: { height: 0.5, backgroundColor: T.rule, marginVertical: 14 },
 
   // Vocabulary - 2-column table side by side
-  vocabWarn: { fontSize: 5, color: T.g50, marginBottom: 4, fontStyle: "italic" as const },
+  vocabWarn: { fontSize: 6, color: T.g50, marginBottom: 4, fontStyle: "italic" as const },
   vocabRow2Col: { flexDirection: "row" as const, gap: 10 },
   vocabCol: { flex: 1 },
   vocabTable: { borderWidth: 0.5, borderColor: T.rule },
-  vocabHdr: { flexDirection: "row" as const, paddingVertical: 2.5, paddingHorizontal: 3, borderBottomWidth: 0.5, borderBottomColor: T.rule },
-  vocabRow: { flexDirection: "row" as const, paddingVertical: 2, paddingHorizontal: 3, borderBottomWidth: 0.3, borderBottomColor: "#e8e8e8" },
-  vNum: { width: 10, fontSize: 5, color: T.g30, textAlign: "center" as const },
-  vWord: { width: 50, fontFamily: T.en, fontSize: 6.5, fontWeight: 600 },
-  vPos: { width: 14, fontSize: 5, color: T.g50, textAlign: "center" as const },
-  vMeaning: { flex: 1, fontSize: 6, lineHeight: 1.4 },
-  vHdrText: { fontSize: 5, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.5 },
+  vocabHdr: { flexDirection: "row" as const, paddingVertical: 3, paddingHorizontal: 4, borderBottomWidth: 0.5, borderBottomColor: T.rule },
+  vocabRow: { flexDirection: "row" as const, paddingVertical: 3, paddingHorizontal: 4, borderBottomWidth: 0.3, borderBottomColor: "#e8e8e8" },
+  vNum: { width: 12, fontSize: 6, color: T.g30, textAlign: "center" as const },
+  vWord: { width: 58, fontFamily: T.en, fontSize: 8, fontWeight: 600 },
+  vPos: { width: 16, fontSize: 6, color: T.g50, textAlign: "center" as const },
+  vMeaning: { flex: 1, fontSize: 7.5, lineHeight: 1.4 },
+  vHdrText: { fontSize: 6, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.5 },
 
   // Key Summary
-  summaryBox: { borderLeftWidth: 1.5, borderLeftColor: T.g30, paddingLeft: 8, paddingVertical: 4 },
-  summaryLine: { fontSize: 7.5, lineHeight: 1.8 },
+  summaryBox: { borderLeftWidth: 2, borderLeftColor: T.g30, paddingLeft: 8, paddingVertical: 4 },
+  summaryLine: { fontSize: 8, lineHeight: 1.8 },
 
   // Structure
   stepRow: { flexDirection: "row" as const, marginBottom: 5, alignItems: "flex-start" as const },
-  stepNum: { fontFamily: T.en, fontSize: 9, fontWeight: 700, color: T.black, width: 14, textAlign: "right" as const, marginRight: 6, marginTop: -1 },
+  stepNum: { fontFamily: T.en, fontSize: 8, fontWeight: 700, color: T.black, width: 12, textAlign: "right" as const, marginRight: 6, marginTop: 0 },
   stepText: { flex: 1, fontSize: 8, lineHeight: 1.7 },
 
   // Topic/Title/Summary fields
-  fieldLabel: { fontSize: 5.5, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: 1, marginTop: 6 },
+  fieldLabel: { fontSize: 7, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: 2, marginTop: 10 },
   fieldEn: { fontFamily: T.en, fontSize: 9, color: T.black, lineHeight: 1.6 },
-  fieldEnBold: { fontFamily: T.en, fontSize: 11, fontWeight: 700, color: T.black, lineHeight: 1.5 },
-  fieldKo: { fontSize: 7.5, color: T.g70, lineHeight: 1.5, marginTop: 1 },
+  fieldEnBold: { fontFamily: T.en, fontSize: 9.5, fontWeight: 700, color: T.black, lineHeight: 1.5 },
+  fieldKo: { fontSize: 8, color: T.g70, lineHeight: 1.5, marginTop: 1 },
 });
 
 function VocabColumn({ items, startNum }: { items: VocabItem[]; startNum: number }) {
