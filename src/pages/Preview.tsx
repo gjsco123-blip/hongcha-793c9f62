@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { useNavigate, useLocation } from "react-router-dom";
 import { pdf } from "@react-pdf/renderer";
 import { ArrowLeft, Loader2, FileDown, Eye } from "lucide-react";
-import { PassageBuilderPdf } from "@/components/PassageBuilderPdf";
+import { PreviewPdf } from "@/components/PreviewPdf";
 
 // ── Types ──
 interface VocabItem {
@@ -90,7 +90,7 @@ export default function Preview() {
   };
 
   const handleExportPdf = async () => {
-    const doc = createElement(PassageBuilderPdf, { vocab, structure, explanation: summary }) as any;
+    const doc = createElement(PreviewPdf, { vocab, structure, summary, examBlock }) as any;
     const blob = await pdf(doc).toBlob();
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
