@@ -40,7 +40,7 @@ serve(async (req) => {
 지문(passage)을 읽고 중요한 어휘 ${count}개를 JSON으로만 출력하라.
 
 각 항목:
-- word: 영단어
+- word: 영단어 (반드시 단일 단어만. 콜로케이션/복합 명사 금지. "historical fiction" → "historical"과 "fiction" 각각 별도 항목으로)
 - pos: 동/명/형/부/접/전 중 하나만
 - meaning_ko: 짧은 직역 (한국어)
 - in_context: 반드시 원문에서 연속된 2~6단어 그대로 인용
@@ -48,6 +48,7 @@ serve(async (req) => {
 절대 규칙:
 - JSON 배열만 출력. 다른 텍스트 금지.
 - 정확히 ${count}개 반드시 맞출 것
+- word는 반드시 공백 없는 단일 단어여야 한다. 2단어 이상 조합 절대 금지.
 - exclude_words에 포함된 단어는 절대 포함하지 말 것: [${exclude_words.join(", ")}]
 - 단순 반복 단어 제외
 - 주제 이해에 기여하지 않는 단어 제외
