@@ -245,7 +245,7 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
                         <Text style={styles.translationLabel}>{n.id === 1 ? "구문" : ""}</Text>
                         <Text
                           style={{
-                            fontFamily: "SourceSerif4",
+                            fontFamily: "Pretendard",
                             fontSize: 7,
                             width: 10,
                             flexShrink: 0,
