@@ -22,8 +22,11 @@ interface StructureStep {
 
 interface ExamBlock {
   topic: string;
+  topic_ko?: string;
   title: string;
+  title_ko?: string;
   one_sentence_summary: string;
+  one_sentence_summary_ko?: string;
 }
 
 type SectionStatus = "idle" | "loading" | "done" | "error";
@@ -50,7 +53,6 @@ export default function Preview() {
   const location = useLocation();
   const [passage, setPassage] = useState((location.state as any)?.passage || "");
 
-  // ── Section states ──
   const [vocab, setVocab] = useState<VocabItem[]>([]);
   const [vocabStatus, setVocabStatus] = useState<SectionStatus>("idle");
 
@@ -90,26 +92,31 @@ export default function Preview() {
   };
 
   const handleExportPdf = async () => {
-    const doc = createElement(PreviewPdf, { vocab, structure, summary, examBlock }) as any;
-    const blob = await pdf(doc).toBlob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "preview.pdf";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    toast.success("PDF가 저장되었습니다.");
+    try {
+      const doc = createElement(PreviewPdf, { vocab, structure, summary, examBlock }) as any;
+      const blob = await pdf(doc).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "preview.pdf";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success("PDF가 저장되었습니다.");
+    } catch (err: any) {
+      console.error("PDF export error:", err);
+      toast.error(`PDF 저장 실패: ${err.message}`);
+    }
   };
 
   const canExport = vocab.length > 0 || structure.length > 0 || summary;
-  const Spinner = () => <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />;
+  const LoadingDot = () => <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground inline-block" />;
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-card border-b-2 border-foreground">
+      <header className="bg-card border-b border-border">
         <div className="max-w-4xl mx-auto px-6 py-5 flex items-center gap-4">
           <button onClick={() => navigate("/")} className="text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="w-5 h-5" />
@@ -151,32 +158,31 @@ export default function Preview() {
           </div>
         </div>
 
-        {/* ═══ ① 핵심 어휘 20 ═══ */}
+        {/* ═══ ① Vocabulary ═══ */}
         {vocabStatus !== "idle" && (
-          <section className="border-t-2 border-foreground pt-5">
-            <h2 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 mb-4">
-              <span className="inline-flex items-center justify-center w-5 h-5 bg-foreground text-background text-[10px] font-bold">1</span>
-              핵심 어휘 ({vocab.length})
-              {vocabStatus === "loading" && <Spinner />}
+          <section className="border-t border-border pt-5">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
+              Vocabulary
+              {vocabStatus === "loading" && <LoadingDot />}
             </h2>
             {vocabStatus === "error" && <p className="text-xs text-destructive">어휘 생성에 실패했습니다.</p>}
             {vocab.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
                 {[vocab.slice(0, 10), vocab.slice(10, 20)].map((col, colIdx) => (
                   <div key={colIdx} className="border border-border divide-y divide-border">
-                    <div className="flex items-center gap-3 px-3 py-1.5 bg-muted text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                    <div className="flex items-center gap-3 px-3 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                       <span className="w-5 text-center">#</span>
                       <span className="min-w-[80px]">Word</span>
-                      <span className="w-8 text-center">품사</span>
-                      <span className="flex-1">뜻</span>
+                      <span className="w-10 text-center">POS</span>
+                      <span className="flex-1">Meaning</span>
                     </div>
                     {col.map((v, i) => {
                       const num = colIdx * 10 + i + 1;
                       return (
-                        <div key={num} className={`flex items-center gap-3 px-3 py-2 text-xs ${i % 2 === 1 ? "bg-muted/30" : ""}`}>
+                        <div key={num} className="flex items-center gap-3 px-3 py-1.5 text-xs">
                           <span className="w-5 text-center text-muted-foreground text-[10px]">{num}</span>
                           <span className="font-english font-semibold min-w-[80px]">{v.word}</span>
-                          <span className="text-muted-foreground w-8 text-center">{v.pos}</span>
+                          <span className="text-muted-foreground w-10 text-center text-[10px]">{v.pos}</span>
                           <span className="flex-1">{v.meaning_ko}</span>
                         </div>
                       );
@@ -188,24 +194,36 @@ export default function Preview() {
           </section>
         )}
 
-        {/* ═══ ② 구조 흐름 5단계 ═══ */}
+        {/* ═══ ② Key Summary ═══ */}
+        {previewStatus !== "idle" && (
+          <section className="border-t border-border pt-5">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
+              Key Summary
+              {previewStatus === "loading" && <LoadingDot />}
+            </h2>
+            {previewStatus === "error" && <p className="text-xs text-destructive">요약 생성에 실패했습니다.</p>}
+            {summary && (
+              <div className="border-l-2 border-muted-foreground/30 pl-4">
+                <p className="text-sm leading-relaxed whitespace-pre-line">{summary}</p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* ═══ ③ Structure ═══ */}
         {structureStatus !== "idle" && (
-          <section className="border-t-2 border-foreground pt-5">
-            <h2 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 mb-4">
-              <span className="inline-flex items-center justify-center w-5 h-5 bg-foreground text-background text-[10px] font-bold">2</span>
-              구조 흐름 ({structure.length})
-              {structureStatus === "loading" && <Spinner />}
+          <section className="border-t border-border pt-5">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
+              Structure
+              {structureStatus === "loading" && <LoadingDot />}
             </h2>
             {structureStatus === "error" && <p className="text-xs text-destructive">구조 흐름 생성에 실패했습니다.</p>}
             {structure.length > 0 && (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {structure.map((s) => (
                   <div key={s.step} className="flex items-start gap-3">
-                    <span className="text-sm font-bold font-english w-5 shrink-0 text-right">{s.step}.</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm leading-relaxed">{s.one_line}</p>
-                      <p className="text-xs text-muted-foreground font-english italic mt-0.5">"{s.evidence}"</p>
-                    </div>
+                    <span className="text-sm font-bold font-english w-5 shrink-0 text-right text-muted-foreground">{s.step}.</span>
+                    <p className="text-sm leading-relaxed">{s.one_line}</p>
                   </div>
                 ))}
               </div>
@@ -213,43 +231,23 @@ export default function Preview() {
           </section>
         )}
 
-        {/* ═══ ③ 핵심 요약 ═══ */}
-        {previewStatus !== "idle" && (
-          <section className="border-t-2 border-foreground pt-5">
-            <h2 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 mb-4">
-              <span className="inline-flex items-center justify-center w-5 h-5 bg-foreground text-background text-[10px] font-bold">3</span>
-              핵심 요약
-              {previewStatus === "loading" && <Spinner />}
-            </h2>
-            {previewStatus === "error" && <p className="text-xs text-destructive">요약 생성에 실패했습니다.</p>}
-            {summary && (
-              <div className="bg-muted/40 border-l-[3px] border-foreground px-5 py-4">
-                <p className="text-sm leading-relaxed">{summary}</p>
-              </div>
-            )}
-          </section>
-        )}
-
-        {/* ═══ ④ 시험형 블록 ═══ */}
+        {/* ═══ ④ Topic / Title / Summary ═══ */}
         {previewStatus !== "idle" && examBlock && (
-          <section className="border-t-2 border-foreground pt-5">
-            <h2 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 mb-4">
-              <span className="inline-flex items-center justify-center w-5 h-5 bg-foreground text-background text-[10px] font-bold">4</span>
-              시험형 블록
-            </h2>
-            <div className="border border-border divide-y divide-border">
-              <div className="flex items-start gap-4 px-4 py-3">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-16 shrink-0 pt-0.5">Topic</span>
-                <p className="text-sm flex-1">{examBlock.topic}</p>
-              </div>
-              <div className="flex items-start gap-4 px-4 py-3">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-16 shrink-0 pt-0.5">Title</span>
-                <p className="text-sm font-english font-semibold flex-1">{examBlock.title}</p>
-              </div>
-              <div className="flex items-start gap-4 px-4 py-3">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-16 shrink-0 pt-0.5">Summary</span>
-                <p className="text-sm font-english flex-1 leading-relaxed">{examBlock.one_sentence_summary}</p>
-              </div>
+          <section className="border-t border-border pt-5 space-y-4">
+            <div>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Topic</p>
+              <p className="text-sm font-english">{examBlock.topic}</p>
+              {examBlock.topic_ko && <p className="text-xs text-muted-foreground mt-0.5">{examBlock.topic_ko}</p>}
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Title</p>
+              <p className="text-sm font-english font-semibold">{examBlock.title}</p>
+              {examBlock.title_ko && <p className="text-xs text-muted-foreground mt-0.5">{examBlock.title_ko}</p>}
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Summary</p>
+              <p className="text-sm font-english leading-relaxed">{examBlock.one_sentence_summary}</p>
+              {examBlock.one_sentence_summary_ko && <p className="text-xs text-muted-foreground mt-0.5">{examBlock.one_sentence_summary_ko}</p>}
             </div>
           </section>
         )}
