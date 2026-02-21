@@ -129,13 +129,13 @@ const s = StyleSheet.create({
 
   // Key Summary — left bar accent
   summaryBox: { borderLeftWidth: 2, borderLeftColor: T.g30, paddingLeft: 10, paddingVertical: 3 },
-  summaryLine: { fontSize: 7, lineHeight: 1.7 },
+  summaryText: { fontSize: 7, lineHeight: 1.7 },
 
   // Structure — centered text with arrow below
   structureBox: { borderLeftWidth: 2, borderLeftColor: T.g30, paddingLeft: 10, paddingVertical: 3 },
   structItem: { alignItems: "center" as const },
   structText: { fontSize: 7, lineHeight: 1.7, textAlign: "center" as const },
-  structArrow: { fontSize: 7, color: T.g30, marginVertical: 3 },
+  structArrow: { fontSize: 8, color: T.g30, marginVertical: 2 },
 
   // Topic/Title/Summary fields
   fieldLabel: {
@@ -214,11 +214,9 @@ export function PreviewPdf({ vocab, structure, summary, examBlock }: Props) {
             {hasVocab && <View style={s.thinRule} />}
             <Text style={s.secTitle}>Key Summary</Text>
             <View style={s.summaryBox}>
-              {summaryLines.map((line, i) => (
-                <Text key={i} style={s.summaryLine}>
-                  {line}
-                </Text>
-              ))}
+              <Text style={s.summaryText}>
+                {summaryLines.join("\n")}
+              </Text>
             </View>
           </View>
         )}
@@ -232,7 +230,7 @@ export function PreviewPdf({ vocab, structure, summary, examBlock }: Props) {
               {structure.map((step, idx) => (
                 <View key={step.step} style={s.structItem}>
                   <Text style={s.structText}>{step.one_line}</Text>
-                  {idx < structure.length - 1 && <Text style={s.structArrow}>{">"}</Text>}
+                  {idx < structure.length - 1 && <Text style={s.structArrow}>{"\u2193"}</Text>}
                 </View>
               ))}
             </View>
