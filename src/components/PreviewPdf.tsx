@@ -94,7 +94,15 @@ const s = StyleSheet.create({
   thinRule: { height: 0.5, backgroundColor: T.rule, marginVertical: 16 },
 
   // Vocabulary
-  vocabWarn: { fontSize: 6.5, color: T.g50, marginBottom: 5, fontStyle: "italic" as const },
+  vocabEmptyRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    paddingVertical: 5,
+    paddingHorizontal: 4,
+    borderBottomWidth: 0.3,
+    borderBottomColor: "#e4e4e4",
+    minHeight: 14,
+  },
   vocabRow2Col: { flexDirection: "row" as const, gap: 12 },
   vocabCol: { flex: 1 },
   vocabTable: { borderWidth: 0.5, borderColor: T.rule },
@@ -143,7 +151,8 @@ const s = StyleSheet.create({
   fieldKo: { fontSize: 6, color: T.g70, lineHeight: 1.5, marginTop: 1.5 },
 });
 
-function VocabColumn({ items, startNum }: { items: VocabItem[]; startNum: number }) {
+function VocabColumn({ items, startNum, totalSlots = 10 }: { items: VocabItem[]; startNum: number; totalSlots?: number }) {
+  const rows = Array.from({ length: totalSlots }, (_, i) => items[i] || null);
   return (
     <View style={s.vocabCol}>
       <View style={s.vocabTable}>
@@ -153,13 +162,22 @@ function VocabColumn({ items, startNum }: { items: VocabItem[]; startNum: number
           <Text style={{ ...s.vPos, ...s.vHdrText }}>POS</Text>
           <Text style={{ ...s.vMeaning, ...s.vHdrText }}>Meaning</Text>
         </View>
-        {items.map((v, i) => (
-          <View key={i} style={s.vocabRow}>
-            <Text style={s.vNum}>{startNum + i}</Text>
-            <Text style={s.vWord}>{v.word}</Text>
-            <Text style={s.vPos}>{v.pos}</Text>
-            <Text style={s.vMeaning}>{v.meaning_ko}</Text>
-          </View>
+        {rows.map((v, i) => (
+          v ? (
+            <View key={i} style={s.vocabRow}>
+              <Text style={s.vNum}>{startNum + i}</Text>
+              <Text style={s.vWord}>{v.word}</Text>
+              <Text style={s.vPos}>{v.pos}</Text>
+              <Text style={s.vMeaning}>{v.meaning_ko}</Text>
+            </View>
+          ) : (
+            <View key={i} style={s.vocabEmptyRow}>
+              <Text style={s.vNum}>{startNum + i}</Text>
+              <Text style={s.vWord}> </Text>
+              <Text style={s.vPos}> </Text>
+              <Text style={s.vMeaning}> </Text>
+            </View>
+          )
         ))}
       </View>
     </View>
@@ -173,7 +191,7 @@ export function PreviewPdf({ vocab, structure, summary, examBlock }: Props) {
   const hasExam = !!examBlock;
   const summaryLines = summary ? summary.split("\n").filter(Boolean) : [];
 
-  const vocabColumns = Array.from({ length: Math.ceil(vocab.length / 10) }, (_, i) => vocab.slice(i * 10, i * 10 + 10));
+  // Always 3 columns of 10
 
   return (
     <Document>
@@ -182,10 +200,9 @@ export function PreviewPdf({ vocab, structure, summary, examBlock }: Props) {
         {hasVocab && (
           <View>
             <Text style={s.secTitle}>Vocabulary</Text>
-            {vocab.length < 30 && <Text style={s.vocabWarn}>⚠ {vocab.length}/30</Text>}
             <View style={s.vocabRow2Col}>
-              {vocabColumns.map((col, idx) => (
-                <VocabColumn key={idx} items={col} startNum={idx * 10 + 1} />
+              {[0, 1, 2].map((colIdx) => (
+                <VocabColumn key={colIdx} items={vocab.slice(colIdx * 10, colIdx * 10 + 10)} startNum={colIdx * 10 + 1} totalSlots={10} />
               ))}
             </View>
           </View>
@@ -215,7 +232,7 @@ export function PreviewPdf({ vocab, structure, summary, examBlock }: Props) {
               {structure.map((step, idx) => (
                 <View key={step.step} style={s.structItem}>
                   <Text style={s.structText}>{step.one_line}</Text>
-                  {idx < structure.length - 1 && <Text style={s.structArrow}>↓</Text>}
+                  {idx < structure.length - 1 && <Text style={s.structArrow}>{">"}</Text>}
                 </View>
               ))}
             </View>
