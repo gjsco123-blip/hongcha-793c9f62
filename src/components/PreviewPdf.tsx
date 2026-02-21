@@ -173,8 +173,9 @@ export function PreviewPdf({ vocab, structure, summary, examBlock }: Props) {
   const hasExam = !!examBlock;
   const summaryLines = summary ? summary.split("\n").filter(Boolean) : [];
 
-  const vocabLeft = vocab.slice(0, 10);
-  const vocabRight = vocab.slice(10, 20);
+  const vocabColumns = Array.from({ length: Math.ceil(vocab.length / 10) }, (_, i) =>
+    vocab.slice(i * 10, i * 10 + 10)
+  );
 
   return (
     <Document>
@@ -183,10 +184,11 @@ export function PreviewPdf({ vocab, structure, summary, examBlock }: Props) {
         {hasVocab && (
           <View>
             <Text style={s.secTitle}>Vocabulary</Text>
-            {vocab.length < 20 && <Text style={s.vocabWarn}>⚠ {vocab.length}/20</Text>}
+            {vocab.length < 30 && <Text style={s.vocabWarn}>⚠ {vocab.length}/30</Text>}
             <View style={s.vocabRow2Col}>
-              <VocabColumn items={vocabLeft} startNum={1} />
-              {vocabRight.length > 0 && <VocabColumn items={vocabRight} startNum={11} />}
+              {vocabColumns.map((col, idx) => (
+                <VocabColumn key={idx} items={col} startNum={idx * 10 + 1} />
+              ))}
             </View>
           </View>
         )}

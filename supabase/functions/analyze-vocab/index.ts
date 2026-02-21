@@ -29,7 +29,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { passage, count = 20, exclude_words = [], difficulty = "고등" } = await req.json();
+    const { passage, count = 30, exclude_words = [], difficulty = "고등" } = await req.json();
     if (!passage) throw new Error("Missing passage");
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -41,7 +41,7 @@ serve(async (req) => {
 
 각 항목:
 - word: 영단어 (반드시 단일 단어만. 콜로케이션/복합 명사 금지. "historical fiction" → "historical"과 "fiction" 각각 별도 항목으로)
-- pos: 동/명/형/부/접/전 중 하나만
+- pos: 동/명/형/부/접/전 중 하나만 (주의: 과거분사가 명사를 수식하거나 보어로 쓰이면 반드시 '형'으로 표기. 과거분사를 '동'으로 표기하지 말 것)
 - meaning_ko: 짧은 직역 (한국어)
 - in_context: 반드시 원문에서 연속된 2~6단어 그대로 인용
 
