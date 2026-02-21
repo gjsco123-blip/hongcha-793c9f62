@@ -216,17 +216,17 @@ export default function Preview() {
         {previewStatus !== "idle" && examBlock && (
           <section className="border-t border-border pt-5 space-y-5">
             <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em] mb-1.5">Topic</p>
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.08em] mb-1.5">Topic</p>
               <p className="text-sm font-english leading-relaxed">{examBlock.topic}</p>
               {examBlock.topic_ko && <p className="text-xs text-muted-foreground/60 mt-0.5">{examBlock.topic_ko}</p>}
             </div>
             <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em] mb-1.5">Title</p>
-              <p className="text-[15px] font-english leading-relaxed">{examBlock.title}</p>
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.08em] mb-1.5">Title</p>
+              <p className="text-sm font-english leading-relaxed">{examBlock.title}</p>
               {examBlock.title_ko && <p className="text-xs text-muted-foreground/60 mt-0.5">{examBlock.title_ko}</p>}
             </div>
             <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em] mb-1.5">Summary</p>
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.08em] mb-1.5">Summary</p>
               <p className="text-sm font-english leading-relaxed">{examBlock.one_sentence_summary}</p>
               {examBlock.one_sentence_summary_ko && <p className="text-xs text-muted-foreground/60 mt-0.5">{examBlock.one_sentence_summary_ko}</p>}
             </div>

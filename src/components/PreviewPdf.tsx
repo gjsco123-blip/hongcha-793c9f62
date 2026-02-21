@@ -131,16 +131,15 @@ const s = StyleSheet.create({
 
   // Topic/Title/Summary fields
   fieldLabel: {
-    fontSize: 6.5,
+    fontSize: 7.5,
     fontWeight: 700,
-    color: T.g50,
+    letterSpacing: 0.6,
     textTransform: "uppercase" as const,
-    letterSpacing: 0.8,
+    color: T.g50,
     marginBottom: 3,
     marginTop: 12,
   },
   fieldEn: { fontFamily: T.en, fontSize: 8, color: T.black, lineHeight: 1.6 },
-  fieldEnTitle: { fontFamily: T.en, fontSize: 8, color: T.black, lineHeight: 1.5 },
   fieldKo: { fontSize: 6, color: T.g70, lineHeight: 1.5, marginTop: 1.5 },
 });
 
@@ -233,7 +232,7 @@ export function PreviewPdf({ vocab, structure, summary, examBlock }: Props) {
             {examBlock.topic_ko && <Text style={s.fieldKo}>{examBlock.topic_ko}</Text>}
 
             <Text style={s.fieldLabel}>Title</Text>
-            <Text style={s.fieldEnTitle}>{examBlock.title}</Text>
+            <Text style={s.fieldEn}>{examBlock.title}</Text>
             {examBlock.title_ko && <Text style={s.fieldKo}>{examBlock.title_ko}</Text>}
 
             <Text style={s.fieldLabel}>Summary</Text>
