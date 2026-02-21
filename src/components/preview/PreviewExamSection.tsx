@@ -8,9 +8,9 @@ interface Props {
   examBlock: ExamBlock | null;
   status: SectionStatus;
   onExamChange: (v: ExamBlock) => void;
-  onRegenerateTopic: () => Promise<string>;
-  onRegenerateTitle: () => Promise<string>;
-  onRegenerateSummary: () => Promise<string>;
+  onRegenerateTopic: () => Promise<{ en: string; ko?: string }>;
+  onRegenerateTitle: () => Promise<{ en: string; ko?: string }>;
+  onRegenerateSummary: () => Promise<{ en: string; ko?: string }>;
 }
 
 function FieldRegenButton({ onClick, loading }: { onClick: () => void; loading: boolean }) {
@@ -27,18 +27,19 @@ function FieldRegenButton({ onClick, loading }: { onClick: () => void; loading: 
 
 export function PreviewExamSection({ examBlock, status, onExamChange, onRegenerateTopic, onRegenerateTitle, onRegenerateSummary }: Props) {
   const [regenField, setRegenField] = useState<string | null>(null);
-  const [candidate, setCandidate] = useState<{ field: string; oldVal: string; newVal: string } | null>(null);
+  const [candidate, setCandidate] = useState<{ field: string; oldVal: string; oldKo?: string; newVal: string; newKo?: string } | null>(null);
 
   if (status === "idle" || !examBlock) return null;
 
   const update = (patch: Partial<ExamBlock>) => onExamChange({ ...examBlock, ...patch });
 
-  const handleRegen = async (field: string, fn: () => Promise<string>) => {
+  const handleRegen = async (field: string, fn: () => Promise<{ en: string; ko?: string }>) => {
     setRegenField(field);
     try {
-      const newVal = await fn();
+      const result = await fn();
       const oldVal = field === "topic" ? examBlock.topic : field === "title" ? examBlock.title : examBlock.one_sentence_summary;
-      setCandidate({ field, oldVal, newVal });
+      const oldKo = field === "topic" ? examBlock.topic_ko : field === "title" ? examBlock.title_ko : examBlock.one_sentence_summary_ko;
+      setCandidate({ field, oldVal, oldKo, newVal: result.en, newKo: result.ko });
     } finally {
       setRegenField(null);
     }
@@ -46,9 +47,9 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
 
   const acceptCandidate = () => {
     if (!candidate) return;
-    if (candidate.field === "topic") update({ topic: candidate.newVal });
-    else if (candidate.field === "title") update({ title: candidate.newVal });
-    else update({ one_sentence_summary: candidate.newVal });
+    if (candidate.field === "topic") update({ topic: candidate.newVal, topic_ko: candidate.newKo });
+    else if (candidate.field === "title") update({ title: candidate.newVal, title_ko: candidate.newKo });
+    else update({ one_sentence_summary: candidate.newVal, one_sentence_summary_ko: candidate.newKo });
     setCandidate(null);
   };
 
@@ -102,8 +103,18 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
       {candidate && (
         <CompareOverlay
           title={`${candidate.field.charAt(0).toUpperCase() + candidate.field.slice(1)}`}
-          oldContent={<p className="text-sm leading-relaxed">{candidate.oldVal}</p>}
-          newContent={<p className="text-sm leading-relaxed">{candidate.newVal}</p>}
+          oldContent={
+            <div>
+              <p className="text-sm leading-relaxed">{candidate.oldVal}</p>
+              {candidate.oldKo && <p className="text-xs text-muted-foreground/60 mt-0.5">{candidate.oldKo}</p>}
+            </div>
+          }
+          newContent={
+            <div>
+              <p className="text-sm leading-relaxed">{candidate.newVal}</p>
+              {candidate.newKo && <p className="text-xs text-muted-foreground/60 mt-0.5">{candidate.newKo}</p>}
+            </div>
+          }
           onAccept={acceptCandidate}
           onReject={() => setCandidate(null)}
         />

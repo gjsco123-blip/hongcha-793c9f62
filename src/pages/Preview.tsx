@@ -105,19 +105,19 @@ export default function Preview() {
     return (data.structure_steps || []).slice(0, 5);
   }, [passage]);
 
-  const regenExamTopic = useCallback(async (): Promise<string> => {
+  const regenExamTopic = useCallback(async () => {
     const data = await invokeRetry("analyze-preview", { passage });
-    return data.exam_block?.topic || "";
+    return { en: data.exam_block?.topic || "", ko: data.exam_block?.topic_ko };
   }, [passage]);
 
-  const regenExamTitle = useCallback(async (): Promise<string> => {
+  const regenExamTitle = useCallback(async () => {
     const data = await invokeRetry("analyze-preview", { passage });
-    return data.exam_block?.title || "";
+    return { en: data.exam_block?.title || "", ko: data.exam_block?.title_ko };
   }, [passage]);
 
-  const regenExamSummary = useCallback(async (): Promise<string> => {
+  const regenExamSummary = useCallback(async () => {
     const data = await invokeRetry("analyze-preview", { passage });
-    return data.exam_block?.one_sentence_summary || "";
+    return { en: data.exam_block?.one_sentence_summary || "", ko: data.exam_block?.one_sentence_summary_ko };
   }, [passage]);
 
   // ── PDF export ──
