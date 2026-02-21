@@ -146,14 +146,14 @@ export default function Preview() {
             </h2>
             {vocabStatus === "error" && <p className="text-xs text-destructive">어휘 생성에 실패했습니다.</p>}
             {vocab.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4">
                 {Array.from({ length: Math.ceil(vocab.length / 10) }, (_, colIdx) =>
                   vocab.slice(colIdx * 10, colIdx * 10 + 10)
                 ).map((col, colIdx) => (
                   <div key={colIdx} className="border border-border/60 divide-y divide-border/40">
                     <div className="flex items-center gap-3 px-3 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                       <span className="w-5 text-center">#</span>
-                      <span className="min-w-[70px]">Word</span>
+                      <span className="min-w-[60px]">Word</span>
                       <span className="w-8 text-center">POS</span>
                       <span className="flex-1">Meaning</span>
                     </div>
@@ -162,7 +162,7 @@ export default function Preview() {
                       return (
                         <div key={num} className="flex items-center gap-3 px-3 py-1.5 text-xs">
                           <span className="w-5 text-center text-muted-foreground/50 text-[10px]">{num}</span>
-                          <span className="font-english font-semibold min-w-[70px] whitespace-nowrap">{v.word}</span>
+                          <span className="font-english font-semibold min-w-[60px] whitespace-nowrap">{v.word}</span>
                           <span className="text-muted-foreground/60 w-8 text-center text-[10px]">{v.pos}</span>
                           <span className="flex-1">{v.meaning_ko}</span>
                         </div>

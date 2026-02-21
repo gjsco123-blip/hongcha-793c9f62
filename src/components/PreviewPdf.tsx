@@ -95,7 +95,7 @@ const s = StyleSheet.create({
 
   // Vocabulary
   vocabWarn: { fontSize: 6.5, color: T.g50, marginBottom: 5, fontStyle: "italic" as const },
-  vocabRow2Col: { flexDirection: "row" as const, gap: 20 },
+  vocabRow2Col: { flexDirection: "row" as const, gap: 12 },
   vocabCol: { flex: 1 },
   vocabTable: { borderWidth: 0.5, borderColor: T.rule },
   vocabHdr: {
@@ -113,9 +113,9 @@ const s = StyleSheet.create({
     borderBottomWidth: 0.3,
     borderBottomColor: "#e4e4e4",
   },
-  vNum: { width: 18, fontSize: 6.5, color: T.g30, textAlign: "center" as const, lineHeight: 1 },
-  vWord: { width: 68, fontFamily: T.en, fontSize: 7, fontWeight: 600, lineHeight: 1 },
-  vPos: { width: 22, fontSize: 6, color: T.g50, textAlign: "center" as const, lineHeight: 1 },
+  vNum: { width: 16, fontSize: 6.5, color: T.g30, textAlign: "center" as const, lineHeight: 1 },
+  vWord: { width: 58, fontFamily: T.en, fontSize: 7, fontWeight: 600, lineHeight: 1 },
+  vPos: { width: 18, fontSize: 6, color: T.g50, textAlign: "center" as const, lineHeight: 1 },
   vMeaning: { flex: 1, fontSize: 7, lineHeight: 1 },
   vHdrText: { fontSize: 6, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.4 },
 
