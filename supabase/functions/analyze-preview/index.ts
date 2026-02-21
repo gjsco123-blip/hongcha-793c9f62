@@ -49,7 +49,7 @@ serve(async (req) => {
 2. exam_block:
    - topic: 주제 (영어, 1문장 또는 명사구)
    - topic_ko: topic의 한국어 번역
-   - title: 제목 (영어, 5~9단어, 문학적 표현 금지, 수능 스타일)
+   - title: 제목 (영어, 5~9단어, 문학적 표현 금지, 수능 스타일, sentence case — 첫 단어의 첫 글자만 대문자, 나머지는 소문자)
    - title_ko: title의 한국어 번역
    - one_sentence_summary: 한 문장 요약 (영어, 25~40단어, 세부 예시 포함 금지, 수능 선택지 수준)
    - one_sentence_summary_ko: one_sentence_summary의 한국어 번역
