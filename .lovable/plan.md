@@ -1,48 +1,22 @@
 
+# Vocabulary 3열 가로 배치 수정
 
-## Preview PDF 세부 디자인 정교화
+## 문제
+현재 30개 단어가 2열(1-10, 11-20)까지만 가로로 나오고, 21-30은 아래로 떨어져서 표시됨. 사용자가 원하는 것은 1-10 / 11-20 / 21-30 이 모두 가로로 나란히 배치되는 것.
 
-### 수정 파일
-- `src/components/PreviewPdf.tsx`
+## 변경 사항
 
-### 변경 사항
+### 1. 웹 UI (`src/pages/Preview.tsx`)
+- 그리드를 `grid-cols-1 md:grid-cols-3`으로 변경하여 md 이상에서 항상 3열 표시
+- 열 간 간격(`gap-x`)을 6에서 4로 줄여 더 콤팩트하게
+- Word 열의 `min-w`를 70px에서 60px로 줄여 3열에 맞게 조정
 
-#### 1. 섹션 제목 (secTitle)
-- letterSpacing: 1 → 0.5 (과도한 자간 축소)
-- fontSize: 7 → 8 (가독성 확보)
-- marginBottom: 6 → 8
+### 2. PDF (`src/components/PreviewPdf.tsx`)
+- `vocabRow2Col`의 `gap`을 20에서 12로 줄여 3열이 A4 폭에 맞도록 조정
+- `vWord` 너비를 68에서 58로 축소
+- `vNum` 너비를 18에서 16으로 축소
+- `vPos` 너비를 22에서 18로 축소
 
-#### 2. Vocabulary 테이블 글씨 키우기
-- vWord: 6.5pt → 8pt
-- vMeaning: 6pt → 7.5pt
-- vPos: 5pt → 6pt
-- vNum: 5pt → 6pt
-- vHdrText: 5pt → 6pt
-- vocabRow paddingVertical: 2 → 3
-- vWord width: 50 → 58 (긴 단어 대응)
-
-#### 3. Structure 번호 크기 조정
-- stepNum: 9pt 700 → 8pt 700 (본문과 동일 크기로 통일)
-- stepText: 8pt → 8pt 유지
-- stepNum width: 14 → 12
-
-#### 4. Topic/Title/Summary 크기 통일
-- fieldLabel: 5.5pt → 7pt (라벨 가독성 확보)
-- fieldEn: 9pt 유지
-- fieldEnBold (Title): 11pt → 9.5pt, fontWeight 700 유지 (크기 차이 최소화, 볼드로만 구분)
-- fieldKo: 7.5pt → 8pt (85-90% 비율 준수)
-- fieldLabel marginTop: 6 → 10 (필드 간 간격 확보)
-
-#### 5. Key Summary
-- summaryLine: 7.5pt → 8pt, lineHeight 1.8 유지
-- summaryBox borderLeftWidth: 1.5 → 2 (웹과 동일하게 약간 굵게)
-
-#### 6. 섹션 구분선
-- thinRule marginVertical: 10 → 14 (섹션 간 호흡 확보)
-
-#### 7. 페이지 여백
-- paddingTop: 32 → 36 (상단 여백 약간 확대)
-- paddingBottom: 24 → 30
-
-### 요약
-글씨 크기를 전체적으로 7.5-9pt 범위로 통일하고, 섹션 제목의 과도한 자간을 줄이며, 구분선 전후 여백을 넓혀서 웹 화면과 동일한 단정하고 절제된 느낌을 구현합니다.
+## 기술 세부사항
+- 웹: `md:grid-cols-2 lg:grid-cols-3` -> `md:grid-cols-3`으로 변경하여 태블릿 크기부터 3열 적용
+- PDF: react-pdf는 flexbox 기반이므로 `flex: 1`이 이미 3등분을 처리하며, gap과 셀 너비만 축소하면 됨
