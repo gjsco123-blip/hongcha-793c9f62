@@ -113,7 +113,7 @@ const s = StyleSheet.create({
     borderBottomWidth: 0.3,
     borderBottomColor: "#e4e4e4",
   },
-  vNum: { width: 14, fontSize: 6.5, color: T.g30, textAlign: "center" as const, lineHeight: 1 },
+  vNum: { width: 14, marginRight: 4, fontSize: 6.5, color: T.g30, textAlign: "center" as const, lineHeight: 1 },
   vWord: { width: 56, fontFamily: T.en, fontSize: 7, fontWeight: 600, lineHeight: 1 },
   vPos: { width: 18, fontSize: 6, color: T.g50, textAlign: "center" as const, lineHeight: 1, marginRight: 4 },
   vMeaning: { flex: 1, fontSize: 6.5, lineHeight: 1.3 },
@@ -173,9 +173,7 @@ export function PreviewPdf({ vocab, structure, summary, examBlock }: Props) {
   const hasExam = !!examBlock;
   const summaryLines = summary ? summary.split("\n").filter(Boolean) : [];
 
-  const vocabColumns = Array.from({ length: Math.ceil(vocab.length / 10) }, (_, i) =>
-    vocab.slice(i * 10, i * 10 + 10)
-  );
+  const vocabColumns = Array.from({ length: Math.ceil(vocab.length / 10) }, (_, i) => vocab.slice(i * 10, i * 10 + 10));
 
   return (
     <Document>
