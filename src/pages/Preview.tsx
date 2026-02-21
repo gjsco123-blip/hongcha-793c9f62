@@ -1,35 +1,16 @@
-import { useState, createElement } from "react";
+import { useState, createElement, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate, useLocation } from "react-router-dom";
 import { pdf } from "@react-pdf/renderer";
-import { ArrowLeft, Loader2, FileDown, Eye } from "lucide-react";
+import { ArrowLeft, FileDown, Eye } from "lucide-react";
 import { PreviewPdf } from "@/components/PreviewPdf";
-
-// ── Types ──
-interface VocabItem {
-  word: string;
-  pos: string;
-  meaning_ko: string;
-  in_context: string;
-}
-
-interface StructureStep {
-  step: number;
-  one_line: string;
-  evidence: string;
-}
-
-interface ExamBlock {
-  topic: string;
-  topic_ko?: string;
-  title: string;
-  title_ko?: string;
-  one_sentence_summary: string;
-  one_sentence_summary_ko?: string;
-}
-
-type SectionStatus = "idle" | "loading" | "done" | "error";
+import { PreviewPassageInput } from "@/components/preview/PreviewPassageInput";
+import { PreviewVocabSection } from "@/components/preview/PreviewVocabSection";
+import { PreviewSummarySection } from "@/components/preview/PreviewSummarySection";
+import { PreviewStructureSection } from "@/components/preview/PreviewStructureSection";
+import { PreviewExamSection } from "@/components/preview/PreviewExamSection";
+import type { VocabItem, StructureStep, ExamBlock, SectionStatus } from "@/components/preview/types";
 
 async function invokeRetry(fn: string, body: any, maxRetries = 3) {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -59,6 +40,7 @@ export default function Preview() {
   const [summary, setSummary] = useState("");
   const [examBlock, setExamBlock] = useState<ExamBlock | null>(null);
   const [previewStatus, setPreviewStatus] = useState<SectionStatus>("idle");
+  const [addingWord, setAddingWord] = useState<string | null>(null);
 
   const isGenerating = vocabStatus === "loading" || structureStatus === "loading" || previewStatus === "loading";
 
@@ -83,6 +65,52 @@ export default function Preview() {
     await Promise.allSettled([vocabPromise, structPromise, previewPromise]);
   };
 
+  // ── Vocab: add word from passage click ──
+  const handleWordClick = useCallback(async (word: string) => {
+    const lower = word.toLowerCase();
+    if (vocab.some((v) => v.word.toLowerCase() === lower)) {
+      toast.info("이미 추가된 단어입니다.");
+      return;
+    }
+    setAddingWord(lower);
+    try {
+      const data = await invokeRetry("analyze-single-vocab", { word, passage });
+      if (data.vocab) {
+        setVocab((prev) => [...prev, data.vocab]);
+        toast.success(`"${word}" 추가됨`);
+      }
+    } catch (e: any) {
+      toast.error(`단어 추가 실패: ${e.message}`);
+    } finally {
+      setAddingWord(null);
+    }
+  }, [vocab, passage]);
+
+  const handleVocabDelete = useCallback((index: number) => {
+    setVocab((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const handleVocabEdit = useCallback((index: number, field: keyof VocabItem, value: string) => {
+    setVocab((prev) => prev.map((v, i) => i === index ? { ...v, [field]: value } : v));
+  }, []);
+
+  // ── Regenerate handlers (return new data for compare) ──
+  const regenSummary = useCallback(async (): Promise<string> => {
+    const data = await invokeRetry("analyze-preview", { passage });
+    return data.summary || "";
+  }, [passage]);
+
+  const regenStructure = useCallback(async (): Promise<StructureStep[]> => {
+    const data = await invokeRetry("analyze-structure", { passage, step_count: 5 });
+    return (data.structure_steps || []).slice(0, 5);
+  }, [passage]);
+
+  const regenExam = useCallback(async (): Promise<ExamBlock> => {
+    const data = await invokeRetry("analyze-preview", { passage });
+    return data.exam_block || { topic: "", title: "", one_sentence_summary: "" };
+  }, [passage]);
+
+  // ── PDF export ──
   const handleExportPdf = async () => {
     try {
       const doc = createElement(PreviewPdf, { vocab, structure, summary, examBlock }) as any;
@@ -97,17 +125,14 @@ export default function Preview() {
       URL.revokeObjectURL(url);
       toast.success("PDF가 저장되었습니다.");
     } catch (err: any) {
-      console.error("PDF export error:", err);
       toast.error(`PDF 저장 실패: ${err.message}`);
     }
   };
 
   const canExport = vocab.length > 0 || structure.length > 0 || summary;
-  const LoadingDot = () => <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground inline-block" />;
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="bg-card border-b border-border">
         <div className="max-w-4xl mx-auto px-6 py-5 flex items-center gap-4">
           <button onClick={() => navigate("/")} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -126,114 +151,43 @@ export default function Preview() {
       </header>
 
       <main className="max-w-4xl mx-auto px-6 py-6 space-y-8">
-        {/* Input */}
-        <div>
-          <textarea value={passage} onChange={(e) => setPassage(e.target.value)} placeholder="영어 지문 전체를 붙여넣으세요." rows={6}
-            className="w-full bg-card border border-border px-4 py-3 text-sm font-english leading-relaxed text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-foreground transition-colors resize-y" />
-          <div className="flex justify-end mt-3">
-            <button onClick={handleGenerate} disabled={isGenerating || !passage.trim()}
-              className="px-6 py-2 bg-foreground text-background text-xs font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
-              {isGenerating ? "생성 중..." : "Generate"}
-            </button>
-          </div>
-        </div>
+        <PreviewPassageInput
+          passage={passage}
+          setPassage={setPassage}
+          isGenerating={isGenerating}
+          onGenerate={handleGenerate}
+          vocabReady={vocabStatus === "done"}
+          onWordClick={handleWordClick}
+          addingWord={addingWord}
+        />
 
-        {/* ═══ Vocabulary ═══ */}
-        {vocabStatus !== "idle" && (
-          <section className="border-t border-border pt-5">
-            <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-4 flex items-center gap-2">
-              Vocabulary {vocabStatus === "loading" && <LoadingDot />}
-            </h2>
-            {vocabStatus === "error" && <p className="text-xs text-destructive">어휘 생성에 실패했습니다.</p>}
-            {vocab.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4">
-                {Array.from({ length: Math.ceil(vocab.length / 10) }, (_, colIdx) =>
-                  vocab.slice(colIdx * 10, colIdx * 10 + 10)
-                ).map((col, colIdx) => (
-                  <div key={colIdx} className="border border-border/60 divide-y divide-border/40">
-                    <div className="flex items-center gap-3 px-3 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                      <span className="w-5 text-center">#</span>
-                      <span className="min-w-[60px]">Word</span>
-                      <span className="w-8 text-center">POS</span>
-                      <span className="flex-1">Meaning</span>
-                    </div>
-                    {col.map((v, i) => {
-                      const num = colIdx * 10 + i + 1;
-                      return (
-                        <div key={num} className="flex items-center gap-3 px-3 py-1.5 text-xs">
-                          <span className="w-5 text-center text-muted-foreground/50 text-[10px]">{num}</span>
-                          <span className="font-english font-semibold min-w-[60px] whitespace-nowrap">{v.word}</span>
-                          <span className="text-muted-foreground/60 w-8 text-center text-[10px]">{v.pos}</span>
-                          <span className="flex-1">{v.meaning_ko}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
+        <PreviewVocabSection
+          vocab={vocab}
+          status={vocabStatus}
+          onDelete={handleVocabDelete}
+          onEdit={handleVocabEdit}
+        />
 
-        {/* ═══ Key Summary ═══ */}
-        {previewStatus !== "idle" && (
-          <section className="border-t border-border pt-5">
-            <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-4 flex items-center gap-2">
-              Key Summary {previewStatus === "loading" && <LoadingDot />}
-            </h2>
-            {previewStatus === "error" && <p className="text-xs text-destructive">요약 생성에 실패했습니다.</p>}
-            {summary && (
-              <div className="border-l-[2px] border-muted-foreground/25 pl-5 py-1 space-y-1">
-                {summary.split("\n").filter(Boolean).map((line, i) => (
-                  <p key={i} className="text-[13px] leading-[1.7]">{line}</p>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
+        <PreviewSummarySection
+          summary={summary}
+          status={previewStatus}
+          onSummaryChange={setSummary}
+          onRegenerate={regenSummary}
+        />
 
-        {/* ═══ Structure ═══ */}
-        {structureStatus !== "idle" && (
-          <section className="border-t border-border pt-5">
-            <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-4 flex items-center gap-2">
-              Structure {structureStatus === "loading" && <LoadingDot />}
-            </h2>
-            {structureStatus === "error" && <p className="text-xs text-destructive">구조 흐름 생성에 실패했습니다.</p>}
-            {structure.length > 0 && (
-              <div className="border-l-[2px] border-muted-foreground/25 pl-5 py-1">
-                {structure.map((st, idx) => (
-                  <div key={st.step} className="flex flex-col items-center">
-                    <p className="text-[13px] leading-[1.7] text-center">{st.one_line}</p>
-                    {idx < structure.length - 1 && (
-                      <span className="text-muted-foreground/30 text-[10px] my-1.5">↓</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
+        <PreviewStructureSection
+          structure={structure}
+          status={structureStatus}
+          onStructureChange={setStructure}
+          onRegenerate={regenStructure}
+        />
 
-        {/* ═══ Topic / Title / Summary ═══ */}
-        {previewStatus !== "idle" && examBlock && (
-          <section className="border-t border-border pt-5 space-y-5">
-            <div>
-              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.08em] mb-1.5">Topic</p>
-              <p className="text-sm font-english leading-relaxed">{examBlock.topic}</p>
-              {examBlock.topic_ko && <p className="text-xs text-muted-foreground/60 mt-0.5">{examBlock.topic_ko}</p>}
-            </div>
-            <div>
-              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.08em] mb-1.5">Title</p>
-              <p className="text-sm font-english leading-relaxed">{examBlock.title}</p>
-              {examBlock.title_ko && <p className="text-xs text-muted-foreground/60 mt-0.5">{examBlock.title_ko}</p>}
-            </div>
-            <div>
-              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.08em] mb-1.5">Summary</p>
-              <p className="text-sm font-english leading-relaxed">{examBlock.one_sentence_summary}</p>
-              {examBlock.one_sentence_summary_ko && <p className="text-xs text-muted-foreground/60 mt-0.5">{examBlock.one_sentence_summary_ko}</p>}
-            </div>
-          </section>
-        )}
+        <PreviewExamSection
+          examBlock={examBlock}
+          status={previewStatus}
+          onExamChange={setExamBlock}
+          onRegenerate={regenExam}
+        />
       </main>
     </div>
   );
