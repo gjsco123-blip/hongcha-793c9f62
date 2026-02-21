@@ -105,9 +105,19 @@ export default function Preview() {
     return (data.structure_steps || []).slice(0, 5);
   }, [passage]);
 
-  const regenExam = useCallback(async (): Promise<ExamBlock> => {
+  const regenExamTopic = useCallback(async (): Promise<string> => {
     const data = await invokeRetry("analyze-preview", { passage });
-    return data.exam_block || { topic: "", title: "", one_sentence_summary: "" };
+    return data.exam_block?.topic || "";
+  }, [passage]);
+
+  const regenExamTitle = useCallback(async (): Promise<string> => {
+    const data = await invokeRetry("analyze-preview", { passage });
+    return data.exam_block?.title || "";
+  }, [passage]);
+
+  const regenExamSummary = useCallback(async (): Promise<string> => {
+    const data = await invokeRetry("analyze-preview", { passage });
+    return data.exam_block?.one_sentence_summary || "";
   }, [passage]);
 
   // ── PDF export ──
@@ -186,7 +196,9 @@ export default function Preview() {
           examBlock={examBlock}
           status={previewStatus}
           onExamChange={setExamBlock}
-          onRegenerate={regenExam}
+          onRegenerateTopic={regenExamTopic}
+          onRegenerateTitle={regenExamTitle}
+          onRegenerateSummary={regenExamSummary}
         />
       </main>
     </div>
