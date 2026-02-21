@@ -101,7 +101,7 @@ const s = StyleSheet.create({
   vocabHdr: {
     flexDirection: "row" as const,
     paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
     borderBottomWidth: 0.5,
     borderBottomColor: T.rule,
   },
@@ -109,14 +109,14 @@ const s = StyleSheet.create({
     flexDirection: "row" as const,
     alignItems: "center" as const,
     paddingVertical: 5,
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
     borderBottomWidth: 0.3,
     borderBottomColor: "#e4e4e4",
   },
-  vNum: { width: 16, fontSize: 6.5, color: T.g30, textAlign: "center" as const, lineHeight: 1 },
-  vWord: { width: 58, fontFamily: T.en, fontSize: 7, fontWeight: 600, lineHeight: 1 },
-  vPos: { width: 18, fontSize: 6, color: T.g50, textAlign: "center" as const, lineHeight: 1 },
-  vMeaning: { flex: 1, fontSize: 7, lineHeight: 1 },
+  vNum: { width: 14, fontSize: 6.5, color: T.g30, textAlign: "center" as const, lineHeight: 1 },
+  vWord: { width: 56, fontFamily: T.en, fontSize: 7, fontWeight: 600, lineHeight: 1 },
+  vPos: { width: 18, fontSize: 6, color: T.g50, textAlign: "center" as const, lineHeight: 1, marginRight: 4 },
+  vMeaning: { flex: 1, fontSize: 6.5, lineHeight: 1.3 },
   vHdrText: { fontSize: 6, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.4 },
 
   // Key Summary — left bar accent
