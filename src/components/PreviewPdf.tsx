@@ -115,7 +115,7 @@ const s = StyleSheet.create({
   },
   vNum: { width: 18, fontSize: 6.5, color: T.g30, textAlign: "center" as const, lineHeight: 1 },
   vWord: { width: 68, fontFamily: T.en, fontSize: 7, fontWeight: 600, lineHeight: 1 },
-  vPos: { width: 22, fontSize: 6.5, color: T.g50, textAlign: "center" as const, lineHeight: 1 },
+  vPos: { width: 22, fontSize: 6, color: T.g50, textAlign: "center" as const, lineHeight: 1 },
   vMeaning: { flex: 1, fontSize: 7, lineHeight: 1 },
   vHdrText: { fontSize: 6, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.4 },
 
@@ -139,8 +139,8 @@ const s = StyleSheet.create({
     marginBottom: 3,
     marginTop: 12,
   },
-  fieldEn: { fontFamily: T.en, fontSize: 7, color: T.black, lineHeight: 1.6 },
-  fieldEnTitle: { fontFamily: T.en, fontSize: 7, color: T.black, lineHeight: 1.5 },
+  fieldEn: { fontFamily: T.en, fontSize: 8, color: T.black, lineHeight: 1.6 },
+  fieldEnTitle: { fontFamily: T.en, fontSize: 8, color: T.black, lineHeight: 1.5 },
   fieldKo: { fontSize: 6, color: T.g70, lineHeight: 1.5, marginTop: 1.5 },
 });
 
