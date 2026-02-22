@@ -114,6 +114,11 @@ ONLY finite verbs — verbs that serve as the predicate of a clause with a subje
 - Auxiliary + main: <v>has been working</v>, <v>were conducted</v>
 - Modal + verb: <v>can affect</v>, <v>should consider</v>
 - Multi-word verbs in ONE tag: <v>sought out</v>, <v>turned off</v>
+- **Contracted verbs**: 's (= is/has), 're (= are), 've (= have), 'd (= would/had), 'll (= will) are finite verbs and MUST be tagged.
+  - CORRECT: there<v>'s</v> no reason → 's = is = finite verb
+  - CORRECT: they<v>'ve discovered</v> → 've = have = finite verb
+  - CORRECT: it<v>'ll change</v> → 'll = will = finite verb
+  - WRONG: there's no reason → missing <v> tag on 's
 
 ### NEVER tag these — they are NOT verbs:
 1. **To-infinitives**: "to cause", "to achieve", "to engage", "to switch off" → NO <v> tag. The word "to" before a verb = infinitive = NOT a finite verb.
