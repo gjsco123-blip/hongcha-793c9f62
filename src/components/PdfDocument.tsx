@@ -119,23 +119,23 @@ const styles = StyleSheet.create({
   },
   translationBar: {
     width: 2,
-    height: 10,
+    height: 9,
     backgroundColor: "#000",
     marginRight: 2,
-    marginTop: 2,
+    marginTop: 1,
     flexShrink: 0,
   },
   translationLabel: {
     fontWeight: 700,
-    fontSize: 7,
-    width: 19,
+    fontSize: 6,
+    width: 17,
     flexShrink: 0,
     lineHeight: 1.6,
     color: "#333",
   },
   translationContent: {
     flex: 1,
-    fontSize: 7,
+    fontSize: 6,
     color: "#333",
     lineHeight: 1.6,
   },
@@ -259,17 +259,19 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
                         {n.id === 1 ? (
                           <View style={styles.translationBar} />
                         ) : (
-                          <View style={{ width: 2, marginRight: 4, flexShrink: 0 }} />
+                          <View style={{ width: 2, marginRight: 2, flexShrink: 0 }} />
                         )}
                         <Text style={styles.translationLabel}>{n.id === 1 ? "구문" : ""}</Text>
                         <Text
                           style={{
                             fontFamily: "Pretendard",
-                            fontSize: 7,
+                            fontSize: 6,
                             width: 10,
                             flexShrink: 0,
                             color: "#333",
                             lineHeight: 1.6,
+                            textAlign: "right" as const,
+                            marginRight: 2,
                           }}
                         >
                           {n.id}.
