@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   translationContainer: {
-    marginLeft: 10,
+    marginLeft: 0,
   },
   translationRow: {
     flexDirection: "row",
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     width: 2,
     height: 10,
     backgroundColor: "#000",
-    marginRight: 4,
+    marginRight: 1,
     marginTop: 2,
     flexShrink: 0,
   },
