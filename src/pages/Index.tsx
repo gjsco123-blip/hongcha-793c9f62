@@ -523,7 +523,7 @@ export default function Index() {
                   <span className="text-sm font-semibold shrink-0 w-6">
                     {String(index + 1).padStart(2, "0")}
                   </span>
-                  <p className="font-english text-base leading-relaxed text-foreground flex-1">
+                  <p className="font-sans font-semibold text-base leading-relaxed text-foreground flex-1">
                     {result.original}
                   </p>
                   <button

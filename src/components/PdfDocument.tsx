@@ -9,6 +9,10 @@ Font.register({
       fontWeight: 400,
     },
     {
+      src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-SemiBold.otf",
+      fontWeight: 600,
+    },
+    {
       src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-Bold.otf",
       fontWeight: 700,
     },
@@ -98,7 +102,8 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   englishText: {
-    fontFamily: "SourceSerif4",
+    fontFamily: "Pretendard",
+    fontWeight: 600,
     fontSize: 9,
     lineHeight: 2.3,
     flex: 1,
