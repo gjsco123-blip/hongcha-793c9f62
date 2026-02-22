@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
   },
   passageNumber: {
     fontWeight: 600,
-    fontSize: 7,
+    fontSize: 5,
     verticalAlign: "super",
     marginRight: 2,
     color: "#000",
