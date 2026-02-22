@@ -148,6 +148,8 @@ const styles = StyleSheet.create({
   passageSectionTitle: {
     fontSize: 10,
     fontWeight: 700,
+    letterSpacing: 0.6,
+    textTransform: "uppercase" as const,
     marginBottom: 4,
   },
   passageText: {
@@ -283,7 +285,7 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
 
         {/* 지문 전체 — 소제목 없이 */}
         <View style={styles.passageSection} wrap={false}>
-          <Text style={styles.passageSectionTitle}>Original Passage</Text>
+          <Text style={styles.passageSectionTitle}>TEST</Text>
           <Text style={styles.passageText}>
             {results.map((r, i) => (
               <Text key={r.id}>
