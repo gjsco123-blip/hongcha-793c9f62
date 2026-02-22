@@ -176,11 +176,22 @@ function renderChunksWithVerbUnderline(chunks: Chunk[]) {
   chunks.forEach((chunk, ci) => {
     chunk.segments.forEach((seg, si) => {
       if (seg.isVerb) {
-        elements.push(
-          <Text key={`${ci}-${si}`} style={styles.verbUnderline}>
-            {seg.text}
-          </Text>,
-        );
+        // Split trailing punctuation so underline only covers the word
+        const match = seg.text.match(/^(.*\S)([\s,.:;!?]+)$/);
+        if (match) {
+          elements.push(
+            <Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>
+              {match[1]}
+            </Text>,
+          );
+          elements.push(<Text key={`${ci}-${si}-p`}>{match[2]}</Text>);
+        } else {
+          elements.push(
+            <Text key={`${ci}-${si}`} style={styles.verbUnderline}>
+              {seg.text}
+            </Text>,
+          );
+        }
       } else {
         elements.push(<Text key={`${ci}-${si}`}>{seg.text}</Text>);
       }
