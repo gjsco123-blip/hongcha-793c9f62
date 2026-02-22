@@ -126,7 +126,7 @@ const s = StyleSheet.create({
     borderBottomColor: "#e4e4e4",
   },
   vNum: { width: 14, marginRight: 4, fontSize: 6.5, color: T.g30, textAlign: "center" as const, lineHeight: 1 },
-  vWord: { width: 56, fontFamily: T.en, fontSize: 7, fontWeight: 600, lineHeight: 1 },
+  vWord: { width: 56, fontSize: 7, fontWeight: 600, lineHeight: 1 },
   vPos: { width: 18, fontSize: 6, color: T.g50, textAlign: "center" as const, lineHeight: 1, marginRight: 4 },
   vMeaning: { flex: 1, fontSize: 6.5, lineHeight: 1.3 },
   vHdrText: { fontSize: 6, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.4 },
@@ -155,7 +155,15 @@ const s = StyleSheet.create({
   fieldKo: { fontSize: 6, color: T.g70, lineHeight: 1.5, marginTop: 1.5 },
 });
 
-function VocabColumn({ items, startNum, totalSlots = 10 }: { items: VocabItem[]; startNum: number; totalSlots?: number }) {
+function VocabColumn({
+  items,
+  startNum,
+  totalSlots = 10,
+}: {
+  items: VocabItem[];
+  startNum: number;
+  totalSlots?: number;
+}) {
   const rows = Array.from({ length: totalSlots }, (_, i) => items[i] || null);
   return (
     <View style={s.vocabCol}>
@@ -166,7 +174,7 @@ function VocabColumn({ items, startNum, totalSlots = 10 }: { items: VocabItem[];
           <Text style={{ ...s.vPos, ...s.vHdrText }}>POS</Text>
           <Text style={{ ...s.vMeaning, ...s.vHdrText }}>Meaning</Text>
         </View>
-        {rows.map((v, i) => (
+        {rows.map((v, i) =>
           v ? (
             <View key={i} style={s.vocabRow}>
               <Text style={s.vNum}>{startNum + i}</Text>
@@ -181,8 +189,8 @@ function VocabColumn({ items, startNum, totalSlots = 10 }: { items: VocabItem[];
               <Text style={s.vPos}> </Text>
               <Text style={s.vMeaning}> </Text>
             </View>
-          )
-        ))}
+          ),
+        )}
       </View>
     </View>
   );
@@ -206,7 +214,12 @@ export function PreviewPdf({ vocab, structure, summary, examBlock }: Props) {
             <Text style={s.secTitle}>Vocabulary</Text>
             <View style={s.vocabRow2Col}>
               {[0, 1, 2].map((colIdx) => (
-                <VocabColumn key={colIdx} items={vocab.slice(colIdx * 10, colIdx * 10 + 10)} startNum={colIdx * 10 + 1} totalSlots={10} />
+                <VocabColumn
+                  key={colIdx}
+                  items={vocab.slice(colIdx * 10, colIdx * 10 + 10)}
+                  startNum={colIdx * 10 + 1}
+                  totalSlots={10}
+                />
               ))}
             </View>
           </View>
@@ -218,9 +231,7 @@ export function PreviewPdf({ vocab, structure, summary, examBlock }: Props) {
             {hasVocab && <View style={s.thinRule} />}
             <Text style={s.secTitle}>Key Summary</Text>
             <View style={s.summaryBox}>
-              <Text style={s.summaryText}>
-                {summaryLines.join("\n")}
-              </Text>
+              <Text style={s.summaryText}>{summaryLines.join("\n")}</Text>
             </View>
           </View>
         )}
