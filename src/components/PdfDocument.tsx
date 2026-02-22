@@ -151,7 +151,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   passageText: {
-    fontFamily: "SourceSerif4",
+    fontFamily: "Pretendard",
+    fontWeight: 600,
     fontSize: 9,
     lineHeight: 2,
     textAlign: "justify",
