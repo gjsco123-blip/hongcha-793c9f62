@@ -152,6 +152,12 @@ const styles = StyleSheet.create({
     textTransform: "uppercase" as const,
     marginBottom: 4,
   },
+  passageTextBox: {
+    backgroundColor: "#f2f2f2",
+    padding: 12,
+    paddingTop: 10,
+    paddingBottom: 10,
+  },
   passageText: {
     fontFamily: "Pretendard",
     fontWeight: 400,
@@ -287,14 +293,16 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
         {/* 지문 전체 — 소제목 없이 */}
         <View style={styles.passageSection} wrap={false}>
           <Text style={styles.passageSectionTitle}>TEST</Text>
-          <Text style={styles.passageText}>
-            {results.map((r, i) => (
-              <Text key={r.id}>
-                <Text style={styles.passageNumber}>{i + 1} </Text>
-                <Text>{r.original} </Text>
-              </Text>
-            ))}
-          </Text>
+          <View style={styles.passageTextBox}>
+            <Text style={styles.passageText}>
+              {results.map((r, i) => (
+                <Text key={r.id}>
+                  <Text style={styles.passageNumber}>{i + 1} </Text>
+                  <Text>{r.original} </Text>
+                </Text>
+              ))}
+            </Text>
+          </View>
         </View>
       </Page>
     </Document>
