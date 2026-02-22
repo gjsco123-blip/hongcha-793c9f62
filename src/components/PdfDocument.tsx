@@ -266,12 +266,11 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
                           style={{
                             fontFamily: "Pretendard",
                             fontSize: 6,
-                            width: 10,
+                            width: 12,
                             flexShrink: 0,
                             color: "#333",
                             lineHeight: 1.6,
-                            textAlign: "right" as const,
-                            marginRight: 2,
+                            textAlign: "left" as const,
                           }}
                         >
                           {n.id}.
