@@ -152,13 +152,13 @@ const styles = StyleSheet.create({
   },
   passageText: {
     fontFamily: "Pretendard",
-    fontWeight: 600,
+    fontWeight: 400,
     fontSize: 9,
     lineHeight: 2,
     textAlign: "justify",
   },
   passageNumber: {
-    fontWeight: 700,
+    fontWeight: 600,
     fontSize: 7,
     verticalAlign: "super",
     marginRight: 2,
