@@ -9,6 +9,10 @@ Font.register({
       fontWeight: 400,
     },
     {
+      src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-SemiBold.otf",
+      fontWeight: 600,
+    },
+    {
       src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-Bold.otf",
       fontWeight: 700,
     },
