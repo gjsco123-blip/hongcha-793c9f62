@@ -67,7 +67,28 @@ interface SentenceResult {
 const PRESETS: Preset[] = ["고1", "고2", "수능"];
 
 function splitIntoSentences(text: string): string[] {
-  return text.split(/(?<=[.!?]["'"\u201C\u201D\u2018\u2019]?)\s+/).map((s) => s.trim()).filter((s) => s.length > 0);
+  // Split on sentence-ending punctuation followed by whitespace,
+  // but NOT after single-letter abbreviations like "U.S." or "Dr." etc.
+  // Negative lookbehind: don't split after a single uppercase letter + dot (e.g. U.S.)
+  const raw = text.split(/(?<=[.!?]["'"\u201C\u201D\u2018\u2019]?)\s+/).map((s) => s.trim()).filter((s) => s.length > 0);
+  
+  // Merge fragments that were incorrectly split at abbreviations (e.g. "U.S.")
+  const merged: string[] = [];
+  for (let i = 0; i < raw.length; i++) {
+    const frag = raw[i];
+    // If previous fragment ends with an abbreviation pattern (single letter + dot, or known abbrevs)
+    if (merged.length > 0) {
+      const prev = merged[merged.length - 1];
+      // Ends with single uppercase letter + "." or common abbreviations
+      const abbrPattern = /(?:\b[A-Z]\.|(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|vs|etc|Inc|Corp|Ltd|Co|U\.S|U\.K|U\.N|e\.g|i\.e)\.)$/;
+      if (abbrPattern.test(prev)) {
+        merged[merged.length - 1] = prev + " " + frag;
+        continue;
+      }
+    }
+    merged.push(frag);
+  }
+  return merged;
 }
 
 export default function Index() {
