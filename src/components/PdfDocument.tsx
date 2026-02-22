@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
   },
   translationBar: {
     width: 2,
-    height: 7,
+    height: 6.5,
     backgroundColor: "#000",
     marginRight: 2,
     marginTop: 1,
