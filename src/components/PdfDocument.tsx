@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
     paddingTop: 42,
     paddingBottom: 40,
     paddingLeft: 57,
-    paddingRight: 120,
+    paddingRight: 150,
     fontFamily: "Pretendard",
     fontSize: 9,
     lineHeight: 1.8,
@@ -229,9 +229,7 @@ function estimateMemoLines(results: SentenceResult[]): number {
   // Calculate individual block heights
   const blockHeights: number[] = [];
   for (const r of results) {
-    const engText = r.englishChunks.length > 0
-      ? r.englishChunks.map(c => c.text).join(" / ")
-      : r.original;
+    const engText = r.englishChunks.length > 0 ? r.englishChunks.map((c) => c.text).join(" / ") : r.original;
     const engLines = Math.max(1, Math.ceil(engText.length / 90));
     const engHeight = engLines * (9 * 2.3) + 6;
 
@@ -242,7 +240,7 @@ function estimateMemoLines(results: SentenceResult[]): number {
         return lines * TRANS_LINE_H + TRANS_ROW_GAP;
       };
       if (!r.hideLiteral) {
-        const litText = r.koreanLiteralChunks.map(c => c.text).join(" / ");
+        const litText = r.koreanLiteralChunks.map((c) => c.text).join(" / ");
         transHeight += estimateRowH(litText);
       }
       if (!r.hideNatural) {
@@ -262,9 +260,9 @@ function estimateMemoLines(results: SentenceResult[]): number {
   }
 
   // 스스로 분석 section height
-  const passageText = results.map(r => r.original).join(" ");
+  const passageText = results.map((r) => r.original).join(" ");
   const passageLines = Math.max(1, Math.ceil(passageText.length / 72));
-  const passageBlockHeight = 3 + 7 + 6 + 12 + (passageLines * 9 * 2) + 12;
+  const passageBlockHeight = 3 + 7 + 6 + 12 + passageLines * 9 * 2 + 12;
 
   // MEMO header
   const memoHeaderHeight = 14 + 7 + 6;
