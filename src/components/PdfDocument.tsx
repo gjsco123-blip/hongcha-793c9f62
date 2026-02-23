@@ -223,27 +223,45 @@ function estimateMemoLines(results: SentenceResult[]): number {
   // Header: title + subtitle + border + margins
   const headerHeight = 16 + 9 + 12 + 24 + 14; // ~75
 
+  const TRANS_CHARS_PER_LINE = 60; // 6pt 한국어 기준 ~60자/줄
+  const TRANS_LINE_H = 6 * 1.6; // 9.6pt per wrapped line
+  const TRANS_ROW_GAP = 3;
+
   // Each sentence block estimation
   let sentencesHeight = 0;
   for (const r of results) {
-    // English row: estimate line wraps (approx 75 chars per line at 9pt in available width ~360pt)
+    // English row: estimate line wraps (보수적으로 60자/줄)
     const engText = r.englishChunks.length > 0
       ? r.englishChunks.map(c => c.text).join(" / ")
       : r.original;
-    const engLines = Math.max(1, Math.ceil(engText.length / 70));
-    const engHeight = engLines * (9 * 2.3) + 6; // lineHeight 2.3 * fontSize + marginBottom
+    const engLines = Math.max(1, Math.ceil(engText.length / 60));
+    const engHeight = engLines * (9 * 2.3) + 6;
 
-    // Translation rows (each ~10pt)
-    let transRows = 0;
+    // Translation rows — 텍스트 길이 기반 줄바꿈 추정
+    let transHeight = 0;
     if (r.englishChunks.length > 0) {
-      if (!r.hideLiteral) transRows++;
-      if (!r.hideNatural) transRows++;
-      if (r.hongTNotes && !r.hideHongT) transRows++;
-      if (r.syntaxNotes) transRows += r.syntaxNotes.length;
+      const estimateRowH = (text: string) => {
+        const lines = Math.max(1, Math.ceil(text.length / TRANS_CHARS_PER_LINE));
+        return lines * TRANS_LINE_H + TRANS_ROW_GAP;
+      };
+      if (!r.hideLiteral) {
+        const litText = r.koreanLiteralChunks.map(c => c.text).join(" / ");
+        transHeight += estimateRowH(litText);
+      }
+      if (!r.hideNatural) {
+        transHeight += estimateRowH(r.koreanNatural);
+      }
+      if (r.hongTNotes && !r.hideHongT) {
+        transHeight += estimateRowH(r.hongTNotes);
+      }
+      if (r.syntaxNotes) {
+        for (const n of r.syntaxNotes) {
+          transHeight += estimateRowH(n.content);
+        }
+      }
     }
-    const transHeight = transRows * (6 * 1.6 + 3); // fontSize*lineHeight + marginBottom
 
-    sentencesHeight += engHeight + transHeight + 14 + 8; // marginBottom + paddingBottom
+    sentencesHeight += engHeight + transHeight + 14 + 8;
   }
 
   // 스스로 분석 section
@@ -258,7 +276,7 @@ function estimateMemoLines(results: SentenceResult[]): number {
   const remainingHeight = TWO_PAGES - usedHeight;
 
   const MEMO_LINE_HEIGHT = 18;
-  const safetyMargin = 2; // subtract 2 lines as safety buffer
+  const safetyMargin = 3; // subtract 3 lines as safety buffer
   const calculatedLines = Math.floor(remainingHeight / MEMO_LINE_HEIGHT) - safetyMargin;
 
   // Clamp: minimum 3, maximum 10
@@ -360,7 +378,7 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
         </View>
 
         {/* 메모 영역 — 남은 공간 기반 동적 줄 수 */}
-        <View style={{ marginTop: 14 }} wrap={false}>
+        <View style={{ marginTop: 14 }}>
           <Text style={{ fontSize: 7, fontWeight: 700, letterSpacing: 0.5, marginBottom: 6, color: "#999" }}>MEMO</Text>
           <View style={{ borderTopWidth: 0.5, borderTopColor: "#e0e0e0" }}>
             {Array.from({ length: memoLineCount }).map((_, i) => (
