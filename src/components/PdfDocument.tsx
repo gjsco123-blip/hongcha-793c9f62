@@ -89,6 +89,8 @@ const styles = StyleSheet.create({
   contentRow: {
     flexDirection: "row",
     alignItems: "stretch",
+    flexGrow: 0,
+    flexShrink: 0,
   },
   leftColumn: {
     flex: 1,
