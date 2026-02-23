@@ -55,7 +55,7 @@ interface PdfDocumentProps {
 }
 
 // 5mm = 14.17pt, 12mm = 34.02pt
-const GAP = 6;
+const GAP = 8.5;
 const MEMO_WIDTH = 100;
 
 const styles = StyleSheet.create({
@@ -104,9 +104,9 @@ const styles = StyleSheet.create({
     paddingTop: 6,
   },
   memoLabel: {
-    fontSize: 9,
+    fontSize: 7,
     fontWeight: 700,
-    color: "#ffffff",
+    color: "#222,
     letterSpacing: 1,
     marginBottom: 4,
   },
