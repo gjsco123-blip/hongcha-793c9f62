@@ -305,6 +305,21 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
             </Text>
           </View>
         </View>
+
+        {/* 메모 영역 — 남는 공간 채우기 */}
+        <View style={{ marginTop: 14, flex: 1 }}>
+          <Text style={{ fontSize: 7, fontWeight: 700, letterSpacing: 0.5, marginBottom: 6, color: "#999" }}>MEMO</Text>
+          {Array.from({ length: 20 }).map((_, i) => (
+            <View
+              key={`memo-line-${i}`}
+              style={{
+                borderBottomWidth: 0.5,
+                borderBottomColor: "#e0e0e0",
+                height: 18,
+              }}
+            />
+          ))}
+        </View>
       </Page>
     </Document>
   );
