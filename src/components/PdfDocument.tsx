@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     paddingTop: 6,
   },
   memoLabel: {
-    fontSize: 5.5,
+    fontSize: 9,
     fontWeight: 700,
     color: "#ffffff",
     letterSpacing: 1,
@@ -247,9 +247,8 @@ function renderChunksSlashPlain(chunks: Chunk[]): string {
 function estimateSentenceHeight(result: SentenceResult, isLast: boolean): number {
   let h = 0;
   // English text row: fontSize 9 * lineHeight 2.3 ≈ 21pt
-  const engText = result.englishChunks.length > 0
-    ? result.englishChunks.map(c => c.text).join(" / ")
-    : result.original;
+  const engText =
+    result.englishChunks.length > 0 ? result.englishChunks.map((c) => c.text).join(" / ") : result.original;
   const engLines = Math.ceil(engText.length / 55); // rough chars per line
   h += engLines * 21;
   h += 6; // sentenceRow marginBottom
@@ -286,13 +285,12 @@ function paginateResults(results: SentenceResult[]): SentenceResult[][] {
     const isLastInPage = isLastResult; // will be recalculated
     const h = estimateSentenceHeight(results[i], false);
 
-    const pageCapacity = PAGE_HEIGHT - PADDING_V
-      - (isFirstPage ? HEADER_H : 0);
+    const pageCapacity = PAGE_HEIGHT - PADDING_V - (isFirstPage ? HEADER_H : 0);
 
     // Check if adding this sentence would exceed page capacity
     // For the last page, also reserve space for passage section
     const remainingResults = results.length - i;
-    const wouldBeLastPage = remainingResults === 1 || (usedHeight + h > pageCapacity * 0.85);
+    const wouldBeLastPage = remainingResults === 1 || usedHeight + h > pageCapacity * 0.85;
 
     if (usedHeight + h > pageCapacity - (isLastResult ? PASSAGE_H : 0)) {
       // Current page is full, start new page
@@ -319,18 +317,17 @@ function SentenceBlock({ result, index, isLast }: { result: SentenceResult; inde
   return (
     <View
       key={result.id}
-      style={isLast
-        ? { ...styles.sentenceContainer, marginBottom: 0, paddingBottom: 0, borderBottomWidth: 0 }
-        : styles.sentenceContainer
+      style={
+        isLast
+          ? { ...styles.sentenceContainer, marginBottom: 0, paddingBottom: 0, borderBottomWidth: 0 }
+          : styles.sentenceContainer
       }
       wrap={false}
     >
       <View style={styles.sentenceRow}>
         <Text style={styles.sentenceNumber}>{String(index + 1).padStart(2, "0")} </Text>
         <Text style={styles.englishText}>
-          {result.englishChunks.length > 0
-            ? renderChunksWithVerbUnderline(result.englishChunks)
-            : result.original}
+          {result.englishChunks.length > 0 ? renderChunksWithVerbUnderline(result.englishChunks) : result.original}
         </Text>
       </View>
 
@@ -422,12 +419,7 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
                 {pageResults.map((result, idx) => {
                   const isLastInPage = idx === pageResults.length - 1;
                   return (
-                    <SentenceBlock
-                      key={result.id}
-                      result={result}
-                      index={pageStartIndex + idx}
-                      isLast={isLastInPage}
-                    />
+                    <SentenceBlock key={result.id} result={result} index={pageStartIndex + idx} isLast={isLastInPage} />
                   );
                 })}
               </View>
