@@ -181,7 +181,8 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   passageTextBox: {
-    backgroundColor: "#f9f9f7",
+    borderWidth: 0.5,
+    borderColor: "#ccc",
     borderRadius: 4,
     padding: 14,
     paddingTop: 12,
