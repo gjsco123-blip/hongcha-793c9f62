@@ -109,6 +109,7 @@ const styles = StyleSheet.create({
     color: "#222",
     letterSpacing: 1,
     marginBottom: 4,
+    textAlign: "right",
   },
   sentenceContainer: {
     marginBottom: 14,
