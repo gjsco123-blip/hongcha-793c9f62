@@ -117,48 +117,92 @@ export default function Index() {
 
   const { exportToPdf } = usePdfExport();
 
-  // PDF 페이지 구분선 계산 (A4: 842pt, 상42 하85 = 사용가능 715pt)
+  // PDF 페이지 구분선 계산 (A4: 842pt, padding top 42 + bottom 40 = usable 759.89pt)
   const pageBreakInfo = useMemo(() => {
     if (results.length === 0) return { page1EndIndex: -1, totalPages: 0, passageFits: false };
 
-    const PAGE_USABLE = [665, 715]; // page1 has header ~50pt
-    const SENTENCE_BASE = 30;
-    const CHUNK_ROW = 14;
-    const TRANS_ROW = 12;
-    const HONG_T_ROW = 14;
-    const SYNTAX_ROW = 14;
-    const CONTAINER_GAP = 20;
-    const PASSAGE_SECTION = 60;
+    const PAGE_USABLE = 841.89 - 42 - 40; // 759.89
+    const headerHeight = 16 + 9 + 12 + 24 + 14; // ~75
+    const TRANS_CHARS_PER_LINE = 60;
+    const TRANS_LINE_H = 6 * 1.6;
+    const TRANS_ROW_GAP = 3;
 
-    let currentPage = 0;
-    let usedHeight = 0;
+    // Calculate block heights (same logic as PdfDocument estimateMemoLines)
+    const blockHeights: number[] = [];
+    for (const r of results) {
+      const engText = r.englishChunks.length > 0
+        ? r.englishChunks.map(c => c.text).join(" / ")
+        : r.original;
+      const engLines = Math.max(1, Math.ceil(engText.length / 75));
+      const engHeight = engLines * (9 * 2.3) + 6;
+
+      let transHeight = 0;
+      if (r.englishChunks.length > 0) {
+        const estimateRowH = (text: string) => {
+          const lines = Math.max(1, Math.ceil(text.length / TRANS_CHARS_PER_LINE));
+          return lines * TRANS_LINE_H + TRANS_ROW_GAP;
+        };
+        if (!r.hideLiteral) {
+          const litText = r.koreanLiteralChunks.map(c => c.text).join(" / ");
+          transHeight += estimateRowH(litText);
+        }
+        if (!r.hideNatural) {
+          transHeight += estimateRowH(r.koreanNatural);
+        }
+        if (r.hongTNotes && !r.hideHongT) {
+          transHeight += estimateRowH(r.hongTNotes);
+        }
+        if (r.syntaxNotes) {
+          for (const n of r.syntaxNotes) {
+            transHeight += estimateRowH(n.content);
+          }
+        }
+      }
+      blockHeights.push(engHeight + transHeight + 14 + 8);
+    }
+
+    // Passage section height
+    const passageText = results.map(r => r.original).join(" ");
+    const passageLines = Math.max(1, Math.ceil(passageText.length / 72));
+    const passageBlockHeight = 3 + 7 + 6 + 12 + (passageLines * 9 * 2) + 12;
+
+    // Page-break simulation (same as PdfDocument)
+    let cursor = headerHeight;
     let page1EndIndex = -1;
 
-    for (let i = 0; i < results.length; i++) {
-      const r = results[i];
-      let h = SENTENCE_BASE + CHUNK_ROW;
-      if (!r.hideLiteral) h += TRANS_ROW;
-      if (!r.hideNatural) h += TRANS_ROW;
-      if (r.hongTNotes) h += HONG_T_ROW;
-      if (r.syntaxNotes && r.syntaxNotes.length > 0) h += SYNTAX_ROW * r.syntaxNotes.length;
-      h += CONTAINER_GAP;
-
-      if (usedHeight + h > (PAGE_USABLE[currentPage] ?? 715)) {
-        if (currentPage === 0) page1EndIndex = i - 1;
-        currentPage++;
-        usedHeight = h;
+    const fitBlock = (blockH: number) => {
+      const currentPageStart = Math.floor(cursor / PAGE_USABLE) * PAGE_USABLE;
+      const currentPageEnd = currentPageStart + PAGE_USABLE;
+      if (cursor + blockH > currentPageEnd) {
+        cursor = currentPageEnd + blockH;
       } else {
-        usedHeight += h;
+        cursor += blockH;
+      }
+    };
+
+    for (let i = 0; i < blockHeights.length; i++) {
+      const prevPage = Math.floor(cursor / PAGE_USABLE);
+      fitBlock(blockHeights[i]);
+      const newPage = Math.floor((cursor - 0.01) / PAGE_USABLE);
+      if (prevPage === 0 && newPage >= 1 && page1EndIndex === -1) {
+        page1EndIndex = i - 1;
       }
     }
 
-    if (page1EndIndex === -1 && currentPage === 0) page1EndIndex = results.length - 1;
+    if (page1EndIndex === -1) page1EndIndex = results.length - 1;
 
-    const remaining = (PAGE_USABLE[currentPage] ?? 715) - usedHeight;
-    const passageFits = currentPage <= 1 && remaining >= PASSAGE_SECTION;
-    const totalPages = currentPage + 1 + (passageFits ? 0 : 1);
+    // Check if passage fits before page 3
+    const cursorBeforePassage = cursor;
+    fitBlock(passageBlockHeight);
+    const passageEndPage = Math.floor((cursor - 0.01) / PAGE_USABLE);
+    const passageFits = passageEndPage <= 1;
 
-    return { page1EndIndex, totalPages, passageFits };
+    // Total pages = page where MEMO ends (passage + memo header)
+    const memoHeaderHeight = 14 + 7 + 6;
+    cursor += memoHeaderHeight;
+    const totalPages = Math.floor((cursor - 0.01) / PAGE_USABLE) + 1;
+
+    return { page1EndIndex, totalPages: Math.min(totalPages, 3), passageFits };
   }, [results]);
 
 
@@ -666,7 +710,7 @@ export default function Index() {
               <div className={`flex items-center gap-2 py-3 px-2 mt-2 border border-dashed ${pageBreakInfo.totalPages <= 2 ? 'border-green-500/50 bg-green-50/50 dark:bg-green-950/20' : 'border-destructive/50 bg-destructive/5'}`}>
                 <span className={`text-xs font-medium ${pageBreakInfo.totalPages <= 2 ? 'text-green-700 dark:text-green-400' : 'text-destructive'}`}>
                   📄 예상 PDF: {pageBreakInfo.totalPages}페이지 {pageBreakInfo.totalPages <= 2 ? '✅' : '⚠️ 2페이지 초과'}
-                  {' · '}Original Passage: {pageBreakInfo.passageFits ? '2페이지 안에 포함 ✅' : '별도 페이지 ⚠️'}
+                  {' · '}스스로 분석: {pageBreakInfo.passageFits ? '2페이지 안에 포함 ✅' : '별도 페이지 ⚠️'}
                 </span>
               </div>
             )}
