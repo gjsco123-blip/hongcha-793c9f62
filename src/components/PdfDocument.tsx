@@ -215,7 +215,59 @@ function renderChunksSlashPlain(chunks: Chunk[]): string {
   return chunks.map((c) => c.text).join(" / ");
 }
 
+/** Estimate total content height to calculate remaining space for MEMO */
+function estimateMemoLines(results: SentenceResult[]): number {
+  const PAGE_USABLE = 841.89 - 42 - 40; // A4 height minus paddingTop/Bottom
+  const TWO_PAGES = PAGE_USABLE * 2;
+
+  // Header: title + subtitle + border + margins
+  const headerHeight = 16 + 9 + 12 + 24 + 14; // ~75
+
+  // Each sentence block estimation
+  let sentencesHeight = 0;
+  for (const r of results) {
+    // English row: estimate line wraps (approx 75 chars per line at 9pt in available width ~360pt)
+    const engText = r.englishChunks.length > 0
+      ? r.englishChunks.map(c => c.text).join(" / ")
+      : r.original;
+    const engLines = Math.max(1, Math.ceil(engText.length / 70));
+    const engHeight = engLines * (9 * 2.3) + 6; // lineHeight 2.3 * fontSize + marginBottom
+
+    // Translation rows (each ~10pt)
+    let transRows = 0;
+    if (r.englishChunks.length > 0) {
+      if (!r.hideLiteral) transRows++;
+      if (!r.hideNatural) transRows++;
+      if (r.hongTNotes && !r.hideHongT) transRows++;
+      if (r.syntaxNotes) transRows += r.syntaxNotes.length;
+    }
+    const transHeight = transRows * (6 * 1.6 + 3); // fontSize*lineHeight + marginBottom
+
+    sentencesHeight += engHeight + transHeight + 14 + 8; // marginBottom + paddingBottom
+  }
+
+  // 스스로 분석 section
+  const passageText = results.map(r => r.original).join(" ");
+  const passageLines = Math.max(1, Math.ceil(passageText.length / 65));
+  const passageHeight = 3 + 7 + 6 + 12 + (passageLines * 9 * 2) + 12; // margins + padding + text
+
+  // MEMO header
+  const memoHeaderHeight = 14 + 7 + 6; // marginTop + label + marginBottom
+
+  const usedHeight = headerHeight + sentencesHeight + passageHeight + memoHeaderHeight;
+  const remainingHeight = TWO_PAGES - usedHeight;
+
+  const MEMO_LINE_HEIGHT = 18;
+  const safetyMargin = 2; // subtract 2 lines as safety buffer
+  const calculatedLines = Math.floor(remainingHeight / MEMO_LINE_HEIGHT) - safetyMargin;
+
+  // Clamp: minimum 3, maximum 40
+  return Math.max(3, Math.min(40, calculatedLines));
+}
+
 export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
+  const memoLineCount = estimateMemoLines(results);
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -307,18 +359,17 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
           </View>
         </View>
 
-        {/* 메모 영역 — 남는 공간을 꽉 채우되 절대 다음 페이지로 넘기지 않음 */}
-        <View style={{ marginTop: 14, flex: 1 }}>
+        {/* 메모 영역 — 남은 공간 기반 동적 줄 수 */}
+        <View style={{ marginTop: 14 }} wrap={false}>
           <Text style={{ fontSize: 7, fontWeight: 700, letterSpacing: 0.5, marginBottom: 6, color: "#999" }}>MEMO</Text>
-          <View style={{ flex: 1, borderTopWidth: 0.5, borderTopColor: "#e0e0e0" }}>
-            {Array.from({ length: 50 }).map((_, i) => (
+          <View style={{ borderTopWidth: 0.5, borderTopColor: "#e0e0e0" }}>
+            {Array.from({ length: memoLineCount }).map((_, i) => (
               <View
                 key={`memo-line-${i}`}
                 style={{
                   borderBottomWidth: 0.5,
                   borderBottomColor: "#e0e0e0",
                   height: 18,
-                  flexShrink: 1,
                 }}
               />
             ))}
