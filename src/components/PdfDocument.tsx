@@ -255,8 +255,10 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
         <View style={styles.contentRow}>
           {/* Left column — sentence analysis */}
           <View style={styles.leftColumn}>
-            {results.map((result, index) => (
-              <View key={result.id} style={styles.sentenceContainer} wrap={false}>
+            {results.map((result, index) => {
+              const isLast = index === results.length - 1;
+              return (
+              <View key={result.id} style={isLast ? { ...styles.sentenceContainer, marginBottom: 0, paddingBottom: 0, borderBottomWidth: 0 } : styles.sentenceContainer} wrap={false}>
                 <View style={styles.sentenceRow}>
                   <Text style={styles.sentenceNumber}>{String(index + 1).padStart(2, "0")} </Text>
                   <Text style={styles.englishText}>
@@ -321,7 +323,8 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
                   </View>
                 )}
               </View>
-            ))}
+              );
+            })}
           </View>
 
           {/* Right column — MEMO */}
