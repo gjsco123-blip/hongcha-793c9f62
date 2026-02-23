@@ -261,8 +261,8 @@ function estimateMemoLines(results: SentenceResult[]): number {
   const safetyMargin = 2; // subtract 2 lines as safety buffer
   const calculatedLines = Math.floor(remainingHeight / MEMO_LINE_HEIGHT) - safetyMargin;
 
-  // Clamp: minimum 3, maximum 40
-  return Math.max(3, Math.min(40, calculatedLines));
+  // Clamp: minimum 3, maximum 10
+  return Math.max(3, Math.min(10, calculatedLines));
 }
 
 export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
