@@ -272,7 +272,8 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
                           style={{
                             fontFamily: "Pretendard",
                             fontSize: 6,
-                            width: 12,
+                            fontWeight: 600,
+                            width: 10,
                             flexShrink: 0,
                             color: "#333",
                             lineHeight: 1.6,
