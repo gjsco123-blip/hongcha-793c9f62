@@ -1,32 +1,63 @@
 
 
-## 문제 원인
+# MEMO 선 개수 수정 (최대 10선, 공간 활용 극대화)
 
-`react-pdf`의 `Page` 컴포넌트는 기본적으로 자식 요소를 페이지 전체 높이로 늘립니다 (flex container의 기본 `alignItems`가 `stretch`). 따라서 `contentRow`가 페이지 높이 전체를 차지하고, 그 안의 MEMO 컬럼도 함께 늘어납니다.
+## 문제 요약
 
-## 수정 방안
+1. "선 10개"가 최대인데, 현재 코드는 `memoLineCount=10`일 때 선 11개가 나옴 (상단 테두리 + 하단 테두리 10개)
+2. 공간이 충분한데도 선이 4개(memoLineCount=3)만 생성됨 - 추정 함수가 콘텐츠 높이를 과대 계산
 
-**`src/components/PdfDocument.tsx`** 한 파일만 수정:
+## 원인: 페이지 경계 빈 공간 미반영
 
-1. **Page 스타일에 `flexGrow` 제어 추가**: Page 내부에서 contentRow가 콘텐츠 높이만큼만 차지하도록 `page` 스타일에 `justifyContent: "flex-start"`를 명시적으로 추가
-2. **contentRow에 `alignSelf: "flex-start"` 추가**: 부모(Page)가 stretch하더라도 contentRow 자체가 콘텐츠 높이만 차지하도록 강제
-3. **contentRow를 View로 한 번 더 감싸기**: Page의 직접 자식이 아닌 래퍼 안에 넣어서 stretch 영향을 차단
+각 문장 블록과 스스로 분석 블록에 `wrap={false}`가 적용되어 있어서, 페이지 1 하단에 블록이 안 들어가면 통째로 페이지 2로 넘어갑니다. 이때 페이지 1 하단에 50~150pt의 빈 공간이 발생하는데, `estimateMemoLines`는 이를 고려하지 않고 콘텐츠가 2페이지를 빈틈없이 채운다고 가정합니다.
 
-구체적으로는 `contentRow` 스타일에 다음을 추가합니다:
-
+```text
+[페이지 1]                    [추정 함수가 보는 모델]
+┌──────────────┐              ┌──────────────┐
+│  문장 1~4    │              │  문장 1~4    │
+│              │              │  문장 5      │  <- 빈틈 없이 연속
+│  (빈 공간)   │  <-- 낭비    │  ...         │
+├──────────────┤              │              │
+[페이지 2]                    │              │
+│  문장 5~7    │              └──────────────┘
+│  스스로분석  │
+│  MEMO (4선)  │
+│  (여백 많음) │
+└──────────────┘
 ```
-contentRow: {
-  flexDirection: "row",
-  alignItems: "stretch",  // 좌우 컬럼 높이 동일 (유지)
-  flexGrow: 0,
-  flexShrink: 0,
-  alignSelf: "flex-start",  // <-- 핵심: Page가 stretch해도 이 row는 콘텐츠 높이만 유지
-},
+
+추정 함수는 빈 공간 없이 연속 배치를 가정하므로 "이미 꽉 찼다"고 판단하지만, 실제로는 페이지 2 하단에 여유가 많습니다.
+
+## 수정 내용
+
+### 파일: `src/components/PdfDocument.tsx`
+
+### 수정 1: 최대값 10 -> 9 (선 10개 = 상단1 + 하단9)
+- `Math.min(10, ...)` -> `Math.min(9, ...)`
+
+### 수정 2: 페이지 경계 빈 공간 시뮬레이션
+`estimateMemoLines` 함수에 페이지 브레이크 시뮬레이션 로직을 추가합니다:
+
+- 각 문장 블록의 높이를 개별적으로 계산한 뒤, 하나씩 "현재 페이지 위치"에 쌓아감
+- 블록이 현재 페이지에 안 들어가면 다음 페이지로 넘기고, 남은 공간은 "빈 공간"으로 기록
+- 스스로 분석 블록도 동일하게 처리
+- 최종 사용 높이 = 실제 콘텐츠 높이 + 페이지 경계 빈 공간
+
+이렇게 하면 실제 PDF 렌더링과 동일한 방식으로 높이를 계산하여, 남은 공간을 정확히 파악할 수 있습니다.
+
+```text
+시뮬레이션 로직 (의사코드):
+  cursor = headerHeight
+  for each sentence block:
+    if cursor + blockHeight > PAGE_USABLE:
+      cursor = blockHeight  (다음 페이지로)
+    else:
+      cursor += blockHeight
+  // passageSection도 동일 처리
+  // 최종 cursor 위치가 2페이지 내 실제 위치
+  remaining = TWO_PAGES_TOTAL - cursor - memoHeader
 ```
 
-이렇게 하면:
-- `alignItems: "stretch"` -- 좌측 본문과 우측 MEMO가 같은 높이 유지
-- `alignSelf: "flex-start"` -- contentRow 자체는 콘텐츠(왼쪽 문장들)의 실제 높이만큼만 차지
-- 결과: MEMO 하단이 마지막 문장의 직역/의역/홍T/구문독해 중 마지막 요소 끝 부분과 정확히 일치
+### 수정 3: 최소값 유지
+- 최소 3은 유지 (너무 적은 선이 나오지 않도록)
 
-만약 `alignSelf`만으로 해결되지 않으면, 대안으로 contentRow 전체를 `<View style={{ flexGrow: 0 }}>` 래퍼로 감싸는 방식을 적용합니다.

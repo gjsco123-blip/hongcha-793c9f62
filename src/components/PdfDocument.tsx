@@ -91,7 +91,6 @@ const styles = StyleSheet.create({
     alignItems: "stretch",
     flexGrow: 0,
     flexShrink: 0,
-    alignSelf: "flex-start",
   },
   leftColumn: {
     flex: 1,
