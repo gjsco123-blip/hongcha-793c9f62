@@ -281,7 +281,7 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
                         >
                           {n.id}.
                         </Text>
-                        <Text style={styles.translationContent}>{n.content.replace(/^\s*[•·\-\*]\s*/, "")}</Text>
+                        <Text style={{ ...styles.translationContent, fontWeight: 600 }}>{n.content.replace(/^\s*[•·\-\*]\s*/, "")}</Text>
                       </View>
                     ))
                   : null}
