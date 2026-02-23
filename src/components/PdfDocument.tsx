@@ -160,12 +160,12 @@ const styles = StyleSheet.create({
     width: 17,
     flexShrink: 0,
     lineHeight: 1.6,
-    color: "#333",
+    color: "#000",
   },
   translationContent: {
     flex: 1,
     fontSize: 6,
-    color: "#333",
+    color: "#000",
     lineHeight: 1.6,
   },
   passageSection: {
