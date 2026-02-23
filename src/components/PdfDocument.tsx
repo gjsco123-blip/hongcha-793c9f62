@@ -270,26 +270,26 @@ function estimateMemoLines(results: SentenceResult[]): number {
   const memoHeaderHeight = 14 + 7 + 6;
 
   // --- Page-break simulation (wrap={false} blocks) ---
+  // cursor = absolute position across all pages
   let cursor = headerHeight;
 
-  for (const bh of blockHeights) {
-    if (cursor + bh > PAGE_USABLE) {
+  const fitBlock = (blockH: number) => {
+    const currentPageStart = Math.floor(cursor / PAGE_USABLE) * PAGE_USABLE;
+    const currentPageEnd = currentPageStart + PAGE_USABLE;
+    if (cursor + blockH > currentPageEnd) {
       // Block doesn't fit on current page → jump to next page
-      cursor = PAGE_USABLE + bh; // next page starts at PAGE_USABLE, block occupies bh
+      cursor = currentPageEnd + blockH;
     } else {
-      cursor += bh;
+      cursor += blockH;
     }
+  };
+
+  for (const bh of blockHeights) {
+    fitBlock(bh);
   }
 
   // Passage block (also wrap={false})
-  if (cursor + passageBlockHeight > PAGE_USABLE && cursor < PAGE_USABLE) {
-    cursor = PAGE_USABLE + passageBlockHeight;
-  } else if (cursor + passageBlockHeight > PAGE_USABLE * 2) {
-    // Already on page 2 and doesn't fit — push to theoretical page 3 area
-    cursor = PAGE_USABLE * 2 + passageBlockHeight;
-  } else {
-    cursor += passageBlockHeight;
-  }
+  fitBlock(passageBlockHeight);
 
   cursor += memoHeaderHeight;
 
