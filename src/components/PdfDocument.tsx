@@ -243,113 +243,220 @@ function renderChunksSlashPlain(chunks: Chunk[]): string {
   return chunks.map((c) => c.text).join(" / ");
 }
 
-export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
-  return (
-    <Document>
-      <Page size="A4" style={styles.page}>
-        {/* Header — full width */}
-        <View style={styles.header}>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.subtitle}>{subtitle}</Text>
-        </View>
+/** Estimate the height of a single sentence block in points */
+function estimateSentenceHeight(result: SentenceResult, isLast: boolean): number {
+  let h = 0;
+  // English text row: fontSize 9 * lineHeight 2.3 ≈ 21pt
+  const engText = result.englishChunks.length > 0
+    ? result.englishChunks.map(c => c.text).join(" / ")
+    : result.original;
+  const engLines = Math.ceil(engText.length / 55); // rough chars per line
+  h += engLines * 21;
+  h += 6; // sentenceRow marginBottom
 
-        {/* Two-column layout: Left (sentences) + Right (MEMO) */}
-        <View style={styles.contentRow}>
-          {/* Left column — sentence analysis */}
-          <View style={styles.leftColumn}>
-            {results.map((result, index) => {
-              const isLast = index === results.length - 1;
-              return (
-              <View key={result.id} style={isLast ? { ...styles.sentenceContainer, marginBottom: 0, paddingBottom: 0, borderBottomWidth: 0 } : styles.sentenceContainer} wrap={false}>
-                <View style={styles.sentenceRow}>
-                  <Text style={styles.sentenceNumber}>{String(index + 1).padStart(2, "0")} </Text>
-                  <Text style={styles.englishText}>
-                    {result.englishChunks.length > 0
-                      ? renderChunksWithVerbUnderline(result.englishChunks)
-                      : result.original}
+  if (result.englishChunks.length > 0) {
+    const rowH = 13; // 6pt * 1.6 lineHeight + 3pt marginBottom
+    if (!result.hideLiteral) h += rowH;
+    if (!result.hideNatural) h += rowH;
+    if (result.hongTNotes && !result.hideHongT) h += rowH;
+    if (result.syntaxNotes) h += result.syntaxNotes.length * rowH;
+  }
+
+  if (!isLast) {
+    h += 14 + 8; // marginBottom + paddingBottom + border area
+  }
+
+  return h;
+}
+
+/** Split results into pages based on estimated heights */
+function paginateResults(results: SentenceResult[]): SentenceResult[][] {
+  const PAGE_HEIGHT = 841.89; // A4
+  const PADDING_V = 42 + 40; // top + bottom
+  const HEADER_H = 54; // header height on page 1
+  const PASSAGE_H = 90; // reserve for 스스로 분석 section
+
+  const pages: SentenceResult[][] = [];
+  let currentPage: SentenceResult[] = [];
+  let usedHeight = 0;
+  let isFirstPage = true;
+
+  for (let i = 0; i < results.length; i++) {
+    const isLastResult = i === results.length - 1;
+    const isLastInPage = isLastResult; // will be recalculated
+    const h = estimateSentenceHeight(results[i], false);
+
+    const pageCapacity = PAGE_HEIGHT - PADDING_V
+      - (isFirstPage ? HEADER_H : 0);
+
+    // Check if adding this sentence would exceed page capacity
+    // For the last page, also reserve space for passage section
+    const remainingResults = results.length - i;
+    const wouldBeLastPage = remainingResults === 1 || (usedHeight + h > pageCapacity * 0.85);
+
+    if (usedHeight + h > pageCapacity - (isLastResult ? PASSAGE_H : 0)) {
+      // Current page is full, start new page
+      if (currentPage.length > 0) {
+        pages.push(currentPage);
+        currentPage = [];
+        usedHeight = 0;
+        isFirstPage = false;
+      }
+    }
+
+    currentPage.push(results[i]);
+    usedHeight += h;
+  }
+
+  if (currentPage.length > 0) {
+    pages.push(currentPage);
+  }
+
+  return pages;
+}
+
+function SentenceBlock({ result, index, isLast }: { result: SentenceResult; index: number; isLast: boolean }) {
+  return (
+    <View
+      key={result.id}
+      style={isLast
+        ? { ...styles.sentenceContainer, marginBottom: 0, paddingBottom: 0, borderBottomWidth: 0 }
+        : styles.sentenceContainer
+      }
+      wrap={false}
+    >
+      <View style={styles.sentenceRow}>
+        <Text style={styles.sentenceNumber}>{String(index + 1).padStart(2, "0")} </Text>
+        <Text style={styles.englishText}>
+          {result.englishChunks.length > 0
+            ? renderChunksWithVerbUnderline(result.englishChunks)
+            : result.original}
+        </Text>
+      </View>
+
+      {result.englishChunks.length > 0 && (
+        <View style={styles.translationContainer}>
+          {!result.hideLiteral && (
+            <View style={styles.translationRow}>
+              <View style={styles.translationBar} />
+              <Text style={styles.translationLabel}>직역</Text>
+              <Text style={styles.translationContent}>{renderChunksSlashPlain(result.koreanLiteralChunks)}</Text>
+            </View>
+          )}
+          {!result.hideNatural && (
+            <View style={styles.translationRow}>
+              <View style={styles.translationBar} />
+              <Text style={styles.translationLabel}>의역</Text>
+              <Text style={styles.translationContent}>{result.koreanNatural}</Text>
+            </View>
+          )}
+          {result.hongTNotes && !result.hideHongT ? (
+            <View style={styles.translationRow}>
+              <View style={styles.translationBar} />
+              <Text style={styles.translationLabel}>홍T</Text>
+              <Text style={styles.translationContent}>{result.hongTNotes}</Text>
+            </View>
+          ) : null}
+          {result.syntaxNotes && result.syntaxNotes.length > 0
+            ? result.syntaxNotes.map((n) => (
+                <View key={n.id} style={styles.translationRow}>
+                  {n.id === 1 ? (
+                    <View style={styles.translationBar} />
+                  ) : (
+                    <View style={{ width: 2, marginRight: 2, flexShrink: 0 }} />
+                  )}
+                  <Text style={styles.translationLabel}>{n.id === 1 ? "구문" : ""}</Text>
+                  <Text
+                    style={{
+                      fontFamily: "Pretendard",
+                      fontSize: 6,
+                      fontWeight: 600,
+                      width: 10,
+                      flexShrink: 0,
+                      color: "#333",
+                      lineHeight: 1.6,
+                      textAlign: "left" as const,
+                    }}
+                  >
+                    {n.id}.
+                  </Text>
+                  <Text style={{ ...styles.translationContent, fontWeight: 600 }}>
+                    {n.content.replace(/^\s*[•·\-\*]\s*/, "")}
                   </Text>
                 </View>
+              ))
+            : null}
+        </View>
+      )}
+    </View>
+  );
+}
 
-                {result.englishChunks.length > 0 && (
-                  <View style={styles.translationContainer}>
-                    {!result.hideLiteral && (
-                      <View style={styles.translationRow}>
-                        <View style={styles.translationBar} />
-                        <Text style={styles.translationLabel}>직역</Text>
-                        <Text style={styles.translationContent}>{renderChunksSlashPlain(result.koreanLiteralChunks)}</Text>
-                      </View>
-                    )}
-                    {!result.hideNatural && (
-                      <View style={styles.translationRow}>
-                        <View style={styles.translationBar} />
-                        <Text style={styles.translationLabel}>의역</Text>
-                        <Text style={styles.translationContent}>{result.koreanNatural}</Text>
-                      </View>
-                    )}
-                    {result.hongTNotes && !result.hideHongT ? (
-                      <View style={styles.translationRow}>
-                        <View style={styles.translationBar} />
-                        <Text style={styles.translationLabel}>홍T</Text>
-                        <Text style={styles.translationContent}>{result.hongTNotes}</Text>
-                      </View>
-                    ) : null}
-                    {result.syntaxNotes && result.syntaxNotes.length > 0
-                      ? result.syntaxNotes.map((n) => (
-                          <View key={n.id} style={styles.translationRow}>
-                            {n.id === 1 ? (
-                              <View style={styles.translationBar} />
-                            ) : (
-                              <View style={{ width: 2, marginRight: 2, flexShrink: 0 }} />
-                            )}
-                            <Text style={styles.translationLabel}>{n.id === 1 ? "구문" : ""}</Text>
-                            <Text
-                              style={{
-                                fontFamily: "Pretendard",
-                                fontSize: 6,
-                                fontWeight: 600,
-                                width: 10,
-                                flexShrink: 0,
-                                color: "#333",
-                                lineHeight: 1.6,
-                                textAlign: "left" as const,
-                              }}
-                            >
-                              {n.id}.
-                            </Text>
-                            <Text style={{ ...styles.translationContent, fontWeight: 600 }}>
-                              {n.content.replace(/^\s*[•·\-\*]\s*/, "")}
-                            </Text>
-                          </View>
-                        ))
-                      : null}
-                  </View>
-                )}
+export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
+  const pages = paginateResults(results);
+
+  // Track global sentence index across pages
+  let globalIndex = 0;
+
+  return (
+    <Document>
+      {pages.map((pageResults, pageIdx) => {
+        const isFirstPage = pageIdx === 0;
+        const isLastPage = pageIdx === pages.length - 1;
+        const pageStartIndex = globalIndex;
+        globalIndex += pageResults.length;
+
+        return (
+          <Page key={pageIdx} size="A4" style={styles.page}>
+            {/* Header — only on first page */}
+            {isFirstPage && (
+              <View style={styles.header}>
+                <Text style={styles.title}>{title}</Text>
+                <Text style={styles.subtitle}>{subtitle}</Text>
               </View>
-              );
-            })}
-          </View>
+            )}
 
-          {/* Right column — MEMO */}
-          <View style={styles.memoColumn}>
-            <Text style={styles.memoLabel}>MEMO</Text>
-          </View>
-        </View>
+            {/* Two-column layout: Left (sentences) + Right (MEMO) — per page */}
+            <View style={styles.contentRow}>
+              <View style={styles.leftColumn}>
+                {pageResults.map((result, idx) => {
+                  const isLastInPage = idx === pageResults.length - 1;
+                  return (
+                    <SentenceBlock
+                      key={result.id}
+                      result={result}
+                      index={pageStartIndex + idx}
+                      isLast={isLastInPage}
+                    />
+                  );
+                })}
+              </View>
 
-        {/* 스스로 분석 — full width, below the two-column area */}
-        <View style={styles.passageSection} wrap={false}>
-          <Text style={styles.passageSectionTitle}>스스로 분석</Text>
-          <View style={styles.passageTextBox}>
-            <Text style={styles.passageText}>
-              {results.map((r, i) => (
-                <Text key={r.id}>
-                  <Text style={styles.passageNumber}>{i + 1} </Text>
-                  <Text>{r.original} </Text>
-                </Text>
-              ))}
-            </Text>
-          </View>
-        </View>
-      </Page>
+              {/* Right column — MEMO, height matches left column via stretch */}
+              <View style={styles.memoColumn}>
+                <Text style={styles.memoLabel}>MEMO</Text>
+              </View>
+            </View>
+
+            {/* 스스로 분석 — only on last page */}
+            {isLastPage && (
+              <View style={styles.passageSection} wrap={false}>
+                <Text style={styles.passageSectionTitle}>스스로 분석</Text>
+                <View style={styles.passageTextBox}>
+                  <Text style={styles.passageText}>
+                    {results.map((r, i) => (
+                      <Text key={r.id}>
+                        <Text style={styles.passageNumber}>{i + 1} </Text>
+                        <Text>{r.original} </Text>
+                      </Text>
+                    ))}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </Page>
+        );
+      })}
     </Document>
   );
 }
