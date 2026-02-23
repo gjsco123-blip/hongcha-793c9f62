@@ -144,20 +144,15 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   passageSectionTitle: {
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: 700,
-    letterSpacing: 1.5,
-    textTransform: "uppercase" as const,
-    backgroundColor: "#000",
-    color: "#fff",
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    marginBottom: 0,
+    letterSpacing: 0.5,
+    color: "#999",
+    marginBottom: 6,
   },
   passageTextBox: {
-    borderWidth: 0.5,
-    borderColor: "#000",
-    borderTopWidth: 0,
+    backgroundColor: "#f9f9f7",
+    borderRadius: 4,
     padding: 14,
     paddingTop: 12,
     paddingBottom: 12,
@@ -297,7 +292,7 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
 
         {/* 지문 전체 — 소제목 없이 */}
         <View style={styles.passageSection} wrap={false}>
-          <Text style={styles.passageSectionTitle}>TEST</Text>
+          <Text style={styles.passageSectionTitle}>스스로 분석</Text>
           <View style={styles.passageTextBox}>
             <Text style={styles.passageText}>
               {results.map((r, i) => (
