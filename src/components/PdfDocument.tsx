@@ -218,26 +218,23 @@ function renderChunksSlashPlain(chunks: Chunk[]): string {
 /** Estimate total content height to calculate remaining space for MEMO */
 function estimateMemoLines(results: SentenceResult[]): number {
   const PAGE_USABLE = 841.89 - 42 - 40; // A4 height minus paddingTop/Bottom
-  const TWO_PAGES = PAGE_USABLE * 2;
 
   // Header: title + subtitle + border + margins
   const headerHeight = 16 + 9 + 12 + 24 + 14; // ~75
 
-  const TRANS_CHARS_PER_LINE = 60; // 6pt 한국어 기준 ~60자/줄
-  const TRANS_LINE_H = 6 * 1.6; // 9.6pt per wrapped line
+  const TRANS_CHARS_PER_LINE = 60;
+  const TRANS_LINE_H = 6 * 1.6; // 9.6pt
   const TRANS_ROW_GAP = 3;
 
-  // Each sentence block estimation
-  let sentencesHeight = 0;
+  // Calculate individual block heights
+  const blockHeights: number[] = [];
   for (const r of results) {
-    // English row: estimate line wraps (보수적으로 60자/줄)
     const engText = r.englishChunks.length > 0
       ? r.englishChunks.map(c => c.text).join(" / ")
       : r.original;
     const engLines = Math.max(1, Math.ceil(engText.length / 75));
     const engHeight = engLines * (9 * 2.3) + 6;
 
-    // Translation rows — 텍스트 길이 기반 줄바꿈 추정
     let transHeight = 0;
     if (r.englishChunks.length > 0) {
       const estimateRowH = (text: string) => {
@@ -261,26 +258,50 @@ function estimateMemoLines(results: SentenceResult[]): number {
       }
     }
 
-    sentencesHeight += engHeight + transHeight + 14 + 8;
+    blockHeights.push(engHeight + transHeight + 14 + 8);
   }
 
-  // 스스로 분석 section
+  // 스스로 분석 section height
   const passageText = results.map(r => r.original).join(" ");
   const passageLines = Math.max(1, Math.ceil(passageText.length / 72));
-  const passageHeight = 3 + 7 + 6 + 12 + (passageLines * 9 * 2) + 12; // margins + padding + text
+  const passageBlockHeight = 3 + 7 + 6 + 12 + (passageLines * 9 * 2) + 12;
 
   // MEMO header
-  const memoHeaderHeight = 14 + 7 + 6; // marginTop + label + marginBottom
+  const memoHeaderHeight = 14 + 7 + 6;
 
-  const usedHeight = headerHeight + sentencesHeight + passageHeight + memoHeaderHeight;
-  const remainingHeight = TWO_PAGES - usedHeight;
+  // --- Page-break simulation (wrap={false} blocks) ---
+  let cursor = headerHeight;
+
+  for (const bh of blockHeights) {
+    if (cursor + bh > PAGE_USABLE) {
+      // Block doesn't fit on current page → jump to next page
+      cursor = PAGE_USABLE + bh; // next page starts at PAGE_USABLE, block occupies bh
+    } else {
+      cursor += bh;
+    }
+  }
+
+  // Passage block (also wrap={false})
+  if (cursor + passageBlockHeight > PAGE_USABLE && cursor < PAGE_USABLE) {
+    cursor = PAGE_USABLE + passageBlockHeight;
+  } else if (cursor + passageBlockHeight > PAGE_USABLE * 2) {
+    // Already on page 2 and doesn't fit — push to theoretical page 3 area
+    cursor = PAGE_USABLE * 2 + passageBlockHeight;
+  } else {
+    cursor += passageBlockHeight;
+  }
+
+  cursor += memoHeaderHeight;
+
+  const TWO_PAGES_TOTAL = PAGE_USABLE * 2;
+  const remainingHeight = TWO_PAGES_TOTAL - cursor;
 
   const MEMO_LINE_HEIGHT = 18;
-  const safetyMargin = 1; // subtract 1 line as safety buffer
+  const safetyMargin = 1;
   const calculatedLines = Math.floor(remainingHeight / MEMO_LINE_HEIGHT) - safetyMargin;
 
-  // Clamp: minimum 3, maximum 10
-  return Math.max(3, Math.min(10, calculatedLines));
+  // Clamp: minimum 3, maximum 9 (9 rows + 1 top border = 10 visible lines)
+  return Math.max(3, Math.min(9, calculatedLines));
 }
 
 export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
