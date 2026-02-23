@@ -55,7 +55,7 @@ interface PdfDocumentProps {
 }
 
 // 5mm = 14.17pt, 12mm = 34.02pt
-const GAP = 8.5;
+const GAP = 6;
 const MEMO_WIDTH = 100;
 
 const styles = StyleSheet.create({
