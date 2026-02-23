@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
     lineHeight: 1.6,
   },
   passageSection: {
-    marginTop: 3,
+    marginTop: 16,
     paddingTop: 0,
   },
   passageSectionTitle: {
