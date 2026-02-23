@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
     lineHeight: 1.6,
   },
   passageSection: {
-    marginTop: 8,
+    marginTop: 3,
     paddingTop: 0,
   },
   passageSectionTitle: {
@@ -281,7 +281,9 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
                         >
                           {n.id}.
                         </Text>
-                        <Text style={{ ...styles.translationContent, fontWeight: 600 }}>{n.content.replace(/^\s*[•·\-\*]\s*/, "")}</Text>
+                        <Text style={{ ...styles.translationContent, fontWeight: 600 }}>
+                          {n.content.replace(/^\s*[•·\-\*]\s*/, "")}
+                        </Text>
                       </View>
                     ))
                   : null}
@@ -306,7 +308,7 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
         </View>
 
         {/* 메모 영역 — 남는 공간 채우기 */}
-        <View style={{ marginTop: 14, flex: 1, overflow: 'hidden' }} wrap={false}>
+        <View style={{ marginTop: 14, flex: 1, overflow: "hidden" }} wrap={false}>
           <Text style={{ fontSize: 7, fontWeight: 700, letterSpacing: 0.5, marginBottom: 6, color: "#999" }}>MEMO</Text>
           {Array.from({ length: 30 }).map((_, i) => (
             <View
