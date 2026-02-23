@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
   page: {
     paddingTop: 42,
     paddingBottom: 40,
-    paddingLeft: 57,
+    paddingLeft: 42,
     paddingRight: 150,
     fontFamily: "Pretendard",
     fontSize: 9,
