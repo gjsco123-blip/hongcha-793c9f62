@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
   passageSectionTitle: {
     fontSize: 7,
     fontWeight: 700,
-    letterSpacing: 0.5,
+    letterSpacing: 1.2,
     color: "#999",
     marginBottom: 6,
   },
@@ -435,7 +435,7 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
             {/* 스스로 분석 — only on last page */}
             {isLastPage && (
               <View style={styles.passageSection} wrap={false}>
-                <Text style={styles.passageSectionTitle}>Text Analysis</Text>
+                <Text style={styles.passageSectionTitle}>TEXT ANALYSIS </Text>
                 <View style={styles.passageTextBox}>
                   <Text style={styles.passageText}>
                     {results.map((r, i) => (
