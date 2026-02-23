@@ -435,7 +435,7 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
             {/* 스스로 분석 — only on last page */}
             {isLastPage && (
               <View style={styles.passageSection} wrap={false}>
-                <Text style={styles.passageSectionTitle}>스스로 분석</Text>
+                <Text style={styles.passageSectionTitle}>Text Analysis</Text>
                 <View style={styles.passageTextBox}>
                   <Text style={styles.passageText}>
                     {results.map((r, i) => (
