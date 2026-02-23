@@ -123,7 +123,7 @@ export default function Index() {
 
     const PAGE_USABLE = 841.89 - 42 - 40; // 759.89
     const headerHeight = 16 + 9 + 12 + 24 + 14; // ~75
-    const TRANS_CHARS_PER_LINE = 60;
+    const TRANS_CHARS_PER_LINE = 80;
     const TRANS_LINE_H = 6 * 1.6;
     const TRANS_ROW_GAP = 3;
 
@@ -133,7 +133,7 @@ export default function Index() {
       const engText = r.englishChunks.length > 0
         ? r.englishChunks.map(c => c.text).join(" / ")
         : r.original;
-      const engLines = Math.max(1, Math.ceil(engText.length / 75));
+      const engLines = Math.max(1, Math.ceil(engText.length / 90));
       const engHeight = engLines * (9 * 2.3) + 6;
 
       let transHeight = 0;
