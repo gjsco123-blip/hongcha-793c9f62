@@ -54,12 +54,16 @@ interface PdfDocumentProps {
   subtitle: string;
 }
 
+// 5mm = 14.17pt, 12mm = 34.02pt
+const GAP = 14.17;
+const MEMO_WIDTH = 100;
+
 const styles = StyleSheet.create({
   page: {
     paddingTop: 42,
     paddingBottom: 40,
     paddingLeft: 42,
-    paddingRight: 150,
+    paddingRight: 34, // 12mm from right edge
     fontFamily: "Pretendard",
     fontSize: 9,
     lineHeight: 1.8,
@@ -80,6 +84,29 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: "#666",
     marginTop: 4,
+  },
+  // Two-column row
+  contentRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+  },
+  leftColumn: {
+    flex: 1,
+    paddingRight: GAP,
+  },
+  memoColumn: {
+    width: MEMO_WIDTH,
+    backgroundColor: "#f3f3f0",
+    borderRadius: 3,
+    padding: 8,
+    paddingTop: 6,
+  },
+  memoLabel: {
+    fontSize: 5.5,
+    fontWeight: 700,
+    color: "#ffffff",
+    letterSpacing: 1,
+    marginBottom: 4,
   },
   sentenceContainer: {
     marginBottom: 14,
@@ -183,7 +210,6 @@ function renderChunksWithVerbUnderline(chunks: Chunk[]) {
   chunks.forEach((chunk, ci) => {
     chunk.segments.forEach((seg, si) => {
       if (seg.isVerb) {
-        // Split trailing punctuation so underline only covers the word
         const match = seg.text.match(/^(.*\S)([\s,.:;!?]+)$/);
         if (match) {
           elements.push(
@@ -215,173 +241,96 @@ function renderChunksSlashPlain(chunks: Chunk[]): string {
   return chunks.map((c) => c.text).join(" / ");
 }
 
-/** Estimate total content height to calculate remaining space for MEMO */
-function estimateMemoLines(results: SentenceResult[]): number {
-  const PAGE_USABLE = 841.89 - 42 - 40; // A4 height minus paddingTop/Bottom
-
-  // Header: title + subtitle + border + margins
-  const headerHeight = 16 + 9 + 12 + 24 + 14; // ~75
-
-  const TRANS_CHARS_PER_LINE = 80; // 6pt Korean in ~397pt width
-  const TRANS_LINE_H = 6 * 1.6; // 9.6pt
-  const TRANS_ROW_GAP = 3;
-
-  // Calculate individual block heights
-  const blockHeights: number[] = [];
-  for (const r of results) {
-    const engText = r.englishChunks.length > 0 ? r.englishChunks.map((c) => c.text).join(" / ") : r.original;
-    const engLines = Math.max(1, Math.ceil(engText.length / 90));
-    const engHeight = engLines * (9 * 2.3) + 6;
-
-    let transHeight = 0;
-    if (r.englishChunks.length > 0) {
-      const estimateRowH = (text: string) => {
-        const lines = Math.max(1, Math.ceil(text.length / TRANS_CHARS_PER_LINE));
-        return lines * TRANS_LINE_H + TRANS_ROW_GAP;
-      };
-      if (!r.hideLiteral) {
-        const litText = r.koreanLiteralChunks.map((c) => c.text).join(" / ");
-        transHeight += estimateRowH(litText);
-      }
-      if (!r.hideNatural) {
-        transHeight += estimateRowH(r.koreanNatural);
-      }
-      if (r.hongTNotes && !r.hideHongT) {
-        transHeight += estimateRowH(r.hongTNotes);
-      }
-      if (r.syntaxNotes) {
-        for (const n of r.syntaxNotes) {
-          transHeight += estimateRowH(n.content);
-        }
-      }
-    }
-
-    blockHeights.push(engHeight + transHeight + 14 + 8);
-  }
-
-  // 스스로 분석 section height
-  const passageText = results.map((r) => r.original).join(" ");
-  const passageLines = Math.max(1, Math.ceil(passageText.length / 72));
-  const passageBlockHeight = 3 + 7 + 6 + 12 + passageLines * 9 * 2 + 12;
-
-  // MEMO header
-  const memoHeaderHeight = 14 + 7 + 6;
-
-  // --- Page-break simulation (wrap={false} blocks) ---
-  // cursor = absolute position across all pages
-  let cursor = headerHeight;
-
-  const fitBlock = (blockH: number) => {
-    const currentPageStart = Math.floor(cursor / PAGE_USABLE) * PAGE_USABLE;
-    const currentPageEnd = currentPageStart + PAGE_USABLE;
-    if (cursor + blockH > currentPageEnd) {
-      // Block doesn't fit on current page → jump to next page
-      cursor = currentPageEnd + blockH;
-    } else {
-      cursor += blockH;
-    }
-  };
-
-  for (const bh of blockHeights) {
-    fitBlock(bh);
-  }
-
-  // Passage block (also wrap={false})
-  fitBlock(passageBlockHeight);
-
-  cursor += memoHeaderHeight;
-
-  const TWO_PAGES_TOTAL = PAGE_USABLE * 2;
-  const remainingHeight = TWO_PAGES_TOTAL - cursor;
-
-  const MEMO_LINE_HEIGHT = 18;
-  const safetyMargin = 1;
-  const calculatedLines = Math.floor(remainingHeight / MEMO_LINE_HEIGHT) - safetyMargin;
-
-  // Clamp: minimum 3, maximum 9 (9 rows + 1 top border = 10 visible lines)
-  return Math.max(3, Math.min(9, calculatedLines));
-}
-
 export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
-  const memoLineCount = estimateMemoLines(results);
-
   return (
     <Document>
       <Page size="A4" style={styles.page}>
+        {/* Header — full width */}
         <View style={styles.header}>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.subtitle}>{subtitle}</Text>
         </View>
 
-        {results.map((result, index) => (
-          <View key={result.id} style={styles.sentenceContainer} wrap={false}>
-            <View style={styles.sentenceRow}>
-              <Text style={styles.sentenceNumber}>{String(index + 1).padStart(2, "0")} </Text>
-              <Text style={styles.englishText}>
-                {result.englishChunks.length > 0
-                  ? renderChunksWithVerbUnderline(result.englishChunks)
-                  : result.original}
-              </Text>
-            </View>
+        {/* Two-column layout: Left (sentences) + Right (MEMO) */}
+        <View style={styles.contentRow}>
+          {/* Left column — sentence analysis */}
+          <View style={styles.leftColumn}>
+            {results.map((result, index) => (
+              <View key={result.id} style={styles.sentenceContainer} wrap={false}>
+                <View style={styles.sentenceRow}>
+                  <Text style={styles.sentenceNumber}>{String(index + 1).padStart(2, "0")} </Text>
+                  <Text style={styles.englishText}>
+                    {result.englishChunks.length > 0
+                      ? renderChunksWithVerbUnderline(result.englishChunks)
+                      : result.original}
+                  </Text>
+                </View>
 
-            {result.englishChunks.length > 0 && (
-              <View style={styles.translationContainer}>
-                {!result.hideLiteral && (
-                  <View style={styles.translationRow}>
-                    <View style={styles.translationBar} />
-                    <Text style={styles.translationLabel}>직역</Text>
-                    <Text style={styles.translationContent}>{renderChunksSlashPlain(result.koreanLiteralChunks)}</Text>
-                  </View>
-                )}
-                {!result.hideNatural && (
-                  <View style={styles.translationRow}>
-                    <View style={styles.translationBar} />
-                    <Text style={styles.translationLabel}>의역</Text>
-                    <Text style={styles.translationContent}>{result.koreanNatural}</Text>
-                  </View>
-                )}
-                {result.hongTNotes && !result.hideHongT ? (
-                  <View style={styles.translationRow}>
-                    <View style={styles.translationBar} />
-                    <Text style={styles.translationLabel}>홍T</Text>
-                    <Text style={styles.translationContent}>{result.hongTNotes}</Text>
-                  </View>
-                ) : null}
-                {result.syntaxNotes && result.syntaxNotes.length > 0
-                  ? result.syntaxNotes.map((n) => (
-                      <View key={n.id} style={styles.translationRow}>
-                        {n.id === 1 ? (
-                          <View style={styles.translationBar} />
-                        ) : (
-                          <View style={{ width: 2, marginRight: 2, flexShrink: 0 }} />
-                        )}
-                        <Text style={styles.translationLabel}>{n.id === 1 ? "구문" : ""}</Text>
-                        <Text
-                          style={{
-                            fontFamily: "Pretendard",
-                            fontSize: 6,
-                            fontWeight: 600,
-                            width: 10,
-                            flexShrink: 0,
-                            color: "#333",
-                            lineHeight: 1.6,
-                            textAlign: "left" as const,
-                          }}
-                        >
-                          {n.id}.
-                        </Text>
-                        <Text style={{ ...styles.translationContent, fontWeight: 600 }}>
-                          {n.content.replace(/^\s*[•·\-\*]\s*/, "")}
-                        </Text>
+                {result.englishChunks.length > 0 && (
+                  <View style={styles.translationContainer}>
+                    {!result.hideLiteral && (
+                      <View style={styles.translationRow}>
+                        <View style={styles.translationBar} />
+                        <Text style={styles.translationLabel}>직역</Text>
+                        <Text style={styles.translationContent}>{renderChunksSlashPlain(result.koreanLiteralChunks)}</Text>
                       </View>
-                    ))
-                  : null}
+                    )}
+                    {!result.hideNatural && (
+                      <View style={styles.translationRow}>
+                        <View style={styles.translationBar} />
+                        <Text style={styles.translationLabel}>의역</Text>
+                        <Text style={styles.translationContent}>{result.koreanNatural}</Text>
+                      </View>
+                    )}
+                    {result.hongTNotes && !result.hideHongT ? (
+                      <View style={styles.translationRow}>
+                        <View style={styles.translationBar} />
+                        <Text style={styles.translationLabel}>홍T</Text>
+                        <Text style={styles.translationContent}>{result.hongTNotes}</Text>
+                      </View>
+                    ) : null}
+                    {result.syntaxNotes && result.syntaxNotes.length > 0
+                      ? result.syntaxNotes.map((n) => (
+                          <View key={n.id} style={styles.translationRow}>
+                            {n.id === 1 ? (
+                              <View style={styles.translationBar} />
+                            ) : (
+                              <View style={{ width: 2, marginRight: 2, flexShrink: 0 }} />
+                            )}
+                            <Text style={styles.translationLabel}>{n.id === 1 ? "구문" : ""}</Text>
+                            <Text
+                              style={{
+                                fontFamily: "Pretendard",
+                                fontSize: 6,
+                                fontWeight: 600,
+                                width: 10,
+                                flexShrink: 0,
+                                color: "#333",
+                                lineHeight: 1.6,
+                                textAlign: "left" as const,
+                              }}
+                            >
+                              {n.id}.
+                            </Text>
+                            <Text style={{ ...styles.translationContent, fontWeight: 600 }}>
+                              {n.content.replace(/^\s*[•·\-\*]\s*/, "")}
+                            </Text>
+                          </View>
+                        ))
+                      : null}
+                  </View>
+                )}
               </View>
-            )}
+            ))}
           </View>
-        ))}
 
-        {/* 지문 전체 — 소제목 없이 */}
+          {/* Right column — MEMO */}
+          <View style={styles.memoColumn}>
+            <Text style={styles.memoLabel}>MEMO</Text>
+          </View>
+        </View>
+
+        {/* 스스로 분석 — full width, below the two-column area */}
         <View style={styles.passageSection} wrap={false}>
           <Text style={styles.passageSectionTitle}>스스로 분석</Text>
           <View style={styles.passageTextBox}>
@@ -393,23 +342,6 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
                 </Text>
               ))}
             </Text>
-          </View>
-        </View>
-
-        {/* 메모 영역 — 남은 공간 기반 동적 줄 수 */}
-        <View style={{ marginTop: 14 }}>
-          <Text style={{ fontSize: 7, fontWeight: 700, letterSpacing: 0.5, marginBottom: 6, color: "#999" }}>MEMO</Text>
-          <View style={{ borderTopWidth: 0.5, borderTopColor: "#e0e0e0" }}>
-            {Array.from({ length: memoLineCount }).map((_, i) => (
-              <View
-                key={`memo-line-${i}`}
-                style={{
-                  borderBottomWidth: 0.5,
-                  borderBottomColor: "#e0e0e0",
-                  height: 18,
-                }}
-              />
-            ))}
           </View>
         </View>
       </Page>

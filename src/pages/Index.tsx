@@ -117,23 +117,24 @@ export default function Index() {
 
   const { exportToPdf } = usePdfExport();
 
-  // PDF 페이지 구분선 계산 (A4: 842pt, padding top 42 + bottom 40 = usable 759.89pt)
+  // PDF 페이지 구분선 계산 (2컬럼 레이아웃 — 좌측 본문 기준)
   const pageBreakInfo = useMemo(() => {
-    if (results.length === 0) return { page1EndIndex: -1, totalPages: 0, passageFits: false };
+    if (results.length === 0) return { page1EndIndex: -1, totalPages: 0 };
 
     const PAGE_USABLE = 841.89 - 42 - 40; // 759.89
     const headerHeight = 16 + 9 + 12 + 24 + 14; // ~75
-    const TRANS_CHARS_PER_LINE = 80;
+    // Left column width is narrower now (flex:1 minus MEMO+gap)
+    const LEFT_COL_CHARS = 70; // narrower column → fewer chars per line
+    const TRANS_CHARS_PER_LINE = 65;
     const TRANS_LINE_H = 6 * 1.6;
     const TRANS_ROW_GAP = 3;
 
-    // Calculate block heights (same logic as PdfDocument estimateMemoLines)
     const blockHeights: number[] = [];
     for (const r of results) {
       const engText = r.englishChunks.length > 0
         ? r.englishChunks.map(c => c.text).join(" / ")
         : r.original;
-      const engLines = Math.max(1, Math.ceil(engText.length / 90));
+      const engLines = Math.max(1, Math.ceil(engText.length / LEFT_COL_CHARS));
       const engHeight = engLines * (9 * 2.3) + 6;
 
       let transHeight = 0;
@@ -161,12 +162,7 @@ export default function Index() {
       blockHeights.push(engHeight + transHeight + 14 + 8);
     }
 
-    // Passage section height
-    const passageText = results.map(r => r.original).join(" ");
-    const passageLines = Math.max(1, Math.ceil(passageText.length / 72));
-    const passageBlockHeight = 3 + 7 + 6 + 12 + (passageLines * 9 * 2) + 12;
-
-    // Page-break simulation (same as PdfDocument)
+    // Page-break simulation
     let cursor = headerHeight;
     let page1EndIndex = -1;
 
@@ -191,18 +187,15 @@ export default function Index() {
 
     if (page1EndIndex === -1) page1EndIndex = results.length - 1;
 
-    // Check if passage fits before page 3
-    const cursorBeforePassage = cursor;
+    // Passage section height (below the two-column area)
+    const passageText = results.map(r => r.original).join(" ");
+    const passageLines = Math.max(1, Math.ceil(passageText.length / 72));
+    const passageBlockHeight = 3 + 7 + 6 + 12 + (passageLines * 9 * 2) + 12;
     fitBlock(passageBlockHeight);
-    const passageEndPage = Math.floor((cursor - 0.01) / PAGE_USABLE);
-    const passageFits = passageEndPage <= 1;
 
-    // Total pages = page where MEMO ends (passage + memo header)
-    const memoHeaderHeight = 14 + 7 + 6;
-    cursor += memoHeaderHeight;
     const totalPages = Math.floor((cursor - 0.01) / PAGE_USABLE) + 1;
 
-    return { page1EndIndex, totalPages: Math.min(totalPages, 3), passageFits };
+    return { page1EndIndex, totalPages: Math.min(totalPages, 4) };
   }, [results]);
 
 
@@ -710,7 +703,6 @@ export default function Index() {
               <div className={`flex items-center gap-2 py-3 px-2 mt-2 border border-dashed ${pageBreakInfo.totalPages <= 2 ? 'border-green-500/50 bg-green-50/50 dark:bg-green-950/20' : 'border-destructive/50 bg-destructive/5'}`}>
                 <span className={`text-xs font-medium ${pageBreakInfo.totalPages <= 2 ? 'text-green-700 dark:text-green-400' : 'text-destructive'}`}>
                   📄 예상 PDF: {pageBreakInfo.totalPages}페이지 {pageBreakInfo.totalPages <= 2 ? '✅' : '⚠️ 2페이지 초과'}
-                  {' · '}스스로 분석: {pageBreakInfo.passageFits ? '2페이지 안에 포함 ✅' : '별도 페이지 ⚠️'}
                 </span>
               </div>
             )}
