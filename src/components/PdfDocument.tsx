@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
   },
   memoColumn: {
     width: MEMO_WIDTH,
-    backgroundColor: "#f3f3f0",
+    backgroundColor: "#f9f9f7",
     borderRadius: 3,
     padding: 8,
     paddingTop: 6,
