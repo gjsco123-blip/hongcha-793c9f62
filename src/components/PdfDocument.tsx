@@ -234,7 +234,7 @@ function estimateMemoLines(results: SentenceResult[]): number {
     const engText = r.englishChunks.length > 0
       ? r.englishChunks.map(c => c.text).join(" / ")
       : r.original;
-    const engLines = Math.max(1, Math.ceil(engText.length / 60));
+    const engLines = Math.max(1, Math.ceil(engText.length / 75));
     const engHeight = engLines * (9 * 2.3) + 6;
 
     // Translation rows — 텍스트 길이 기반 줄바꿈 추정
@@ -266,7 +266,7 @@ function estimateMemoLines(results: SentenceResult[]): number {
 
   // 스스로 분석 section
   const passageText = results.map(r => r.original).join(" ");
-  const passageLines = Math.max(1, Math.ceil(passageText.length / 65));
+  const passageLines = Math.max(1, Math.ceil(passageText.length / 72));
   const passageHeight = 3 + 7 + 6 + 12 + (passageLines * 9 * 2) + 12; // margins + padding + text
 
   // MEMO header
@@ -276,7 +276,7 @@ function estimateMemoLines(results: SentenceResult[]): number {
   const remainingHeight = TWO_PAGES - usedHeight;
 
   const MEMO_LINE_HEIGHT = 18;
-  const safetyMargin = 3; // subtract 3 lines as safety buffer
+  const safetyMargin = 1; // subtract 1 line as safety buffer
   const calculatedLines = Math.floor(remainingHeight / MEMO_LINE_HEIGHT) - safetyMargin;
 
   // Clamp: minimum 3, maximum 10
