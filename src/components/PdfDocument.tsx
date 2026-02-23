@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
   memoLabel: {
     fontSize: 7,
     fontWeight: 700,
-    color: "#222,
+    color: "#222",
     letterSpacing: 1,
     marginBottom: 4,
   },
