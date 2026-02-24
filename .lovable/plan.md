@@ -1,50 +1,29 @@
 
 
-## 문제 원인
+## Builder 관련 코드 전체 삭제 계획
 
-`@react-pdf/renderer`는 인라인 `<Text>`에 `transform`, `marginTop`을 **무시**합니다. 그래서 아무리 값을 바꿔도 위첨자가 올라가지 않았습니다.
+### 삭제 대상 파일
+- `src/pages/PassageBuilder.tsx` — 빌더 페이지 전체
+- `src/components/PassageBuilderPdf.tsx` — 빌더 PDF 컴포넌트
 
-그런데 같은 파일 199~205줄의 `passageNumber` 스타일을 보면:
-```
-passageNumber: {
-  fontWeight: 600,
-  fontSize: 5,
-  verticalAlign: "super",  // ← 이게 동작함
-  marginRight: 2,
-  color: "#000",
-},
-```
-이 스타일은 TEXT ANALYSIS 섹션에서 정상적으로 위첨자가 올라갑니다.
+### 삭제 대상 엣지 함수
+- `supabase/functions/analyze-explanation/index.ts`
+- `supabase/functions/analyze-structure/index.ts`
+- `supabase/functions/analyze-vocab/index.ts`
+- `supabase/functions/analyze-single-vocab/index.ts`
 
-**차이점**: `passageNumber`는 `verticalAlign: "super"`만 쓰고 일반 숫자를 출력합니다. 현재 `supStyle`은 유니코드 위첨자(¹²³) + `transform`을 조합하는데, transform이 무시되니 유니코드 위첨자가 기본 위치(베이스라인)에 그냥 찍히는 것입니다.
+(이 4개 함수는 빌더 전용 분석 함수들입니다.)
 
-## 수정 계획
+### 수정 대상 파일
 
-**`supStyle`을 `passageNumber`와 동일한 방식으로 변경:**
+**`src/App.tsx`**
+- `import PassageBuilder` 제거 (7줄)
+- `<Route path="/passage-builder" ...>` 제거 (21줄)
 
-- `verticalAlign: "super"` 사용 (react-pdf가 실제로 지원하는 속성)
-- 유니코드 위첨자(⁰¹²...) 대신 **일반 숫자** 출력 (`verticalAlign`이 올려주므로)
-- `transform`, `lineHeight: 1` 제거
+**`src/pages/Index.tsx`**
+- Builder 버튼 (535~542줄) 제거
+- `BookOpen` import에서 제거
 
-```typescript
-// 변경 전 (line 249)
-const supStyle = { fontSize: 5, lineHeight: 1, transform: "translateY(-3.2)" as const };
-
-// 변경 후
-const supStyle = { fontSize: 5, verticalAlign: "super" as const };
-```
-
-```typescript
-// renderSup에서 유니코드 위첨자 대신 일반 숫자 출력
-const renderSup = (key: string, id: number) => (
-  <Text key={key} style={supStyle}>
-    {String(id)}
-  </Text>
-);
-```
-
-`toSuperscriptNumber` 헬퍼 함수는 더 이상 사용되지 않으므로 제거합니다.
-
-## 변경 파일
-- `src/components/PdfDocument.tsx` — supStyle + renderSup 수정, toSuperscriptNumber 제거
+### 변경 없는 파일
+- Preview 관련 파일, engine/grammar/hongt/regenerate/spellcheck 엣지 함수 등은 빌더와 무관하므로 유지
 
