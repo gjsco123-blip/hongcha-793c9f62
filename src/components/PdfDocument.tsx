@@ -213,32 +213,30 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
   const elements: React.ReactNode[] = [];
   const annotations = (syntaxNotes || []).filter((n) => n.targetText);
 
-  // Build a flat position map WITHOUT " / " separators — matching original text offsets
-  const segPositions: { ci: number; si: number; start: number; end: number }[] = [];
-  let cursor = 0;
-  chunks.forEach((chunk, ci) => {
-    chunk.segments.forEach((seg, si) => {
-      const start = cursor;
-      cursor += seg.text.length;
-      segPositions.push({ ci, si, start, end: cursor });
-    });
-    // Between chunks in original text there's typically a space, not " / "
-    // We skip adding any extra offset — the segments already contain their whitespace
-  });
-  // Use original text for matching if available, otherwise concatenate segments without " / "
-  const matchText = original || chunks.map((c) => c.segments.map((s) => s.text).join("")).join("");
-
-  // Find where each targetText starts in the original text, then map to the correct segment
+  // Simple approach: search each chunk's text directly for targetText
   const superscriptMap = new Map<string, number>();
   for (const ann of annotations) {
     const targetLower = ann.targetText!.toLowerCase().trim();
-    const idx = matchText.toLowerCase().indexOf(targetLower);
-    if (idx === -1) continue;
-    // Find which segment contains this start position
-    for (const sp of segPositions) {
-      if (idx >= sp.start && idx < sp.end) {
-        superscriptMap.set(`${sp.ci}-${sp.si}`, ann.id);
-        break;
+    let found = false;
+    for (let ci = 0; ci < chunks.length && !found; ci++) {
+      const chunkText = chunks[ci].text.toLowerCase();
+      const idx = chunkText.indexOf(targetLower);
+      if (idx === -1) continue;
+      // Find which segment within this chunk contains position idx
+      let segCursor = 0;
+      for (let si = 0; si < chunks[ci].segments.length; si++) {
+        const segEnd = segCursor + chunks[ci].segments[si].text.length;
+        if (idx >= segCursor && idx < segEnd) {
+          superscriptMap.set(`${ci}-${si}`, ann.id);
+          found = true;
+          break;
+        }
+        segCursor = segEnd;
+      }
+      if (!found) {
+        // Fallback: attach to first segment of this chunk
+        superscriptMap.set(`${ci}-0`, ann.id);
+        found = true;
       }
     }
   }
