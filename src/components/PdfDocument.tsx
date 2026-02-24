@@ -214,7 +214,7 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
   const annotations = (syntaxNotes || []).filter((n) => n.targetText);
 
   // Simple approach: search each chunk's text directly for targetText
-  const superscriptMap = new Map<string, number>();
+  const superscriptMap = new Map<string, { id: number; offset: number }>();
   for (const ann of annotations) {
     const targetLower = ann.targetText!.toLowerCase().trim();
     let found = false;
@@ -222,20 +222,19 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
       const chunkText = chunks[ci].text.toLowerCase();
       const idx = chunkText.indexOf(targetLower);
       if (idx === -1) continue;
-      // Find which segment within this chunk contains position idx
       let segCursor = 0;
       for (let si = 0; si < chunks[ci].segments.length; si++) {
         const segEnd = segCursor + chunks[ci].segments[si].text.length;
         if (idx >= segCursor && idx < segEnd) {
-          superscriptMap.set(`${ci}-${si}`, ann.id);
+          const offsetInSeg = idx - segCursor;
+          superscriptMap.set(`${ci}-${si}`, { id: ann.id, offset: offsetInSeg });
           found = true;
           break;
         }
         segCursor = segEnd;
       }
       if (!found) {
-        // Fallback: attach to first segment of this chunk
-        superscriptMap.set(`${ci}-0`, ann.id);
+        superscriptMap.set(`${ci}-0`, { id: ann.id, offset: 0 });
         found = true;
       }
     }
@@ -243,47 +242,47 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
 
   chunks.forEach((chunk, ci) => {
     chunk.segments.forEach((seg, si) => {
-      const supId = superscriptMap.get(`${ci}-${si}`);
+      const sup = superscriptMap.get(`${ci}-${si}`);
+      const supStyle = { fontSize: 4, verticalAlign: "super" as const, marginTop: -3 };
+
+      const renderSup = (key: string) => (
+        <Text key={key} style={supStyle}>{sup!.id}</Text>
+      );
 
       if (seg.isVerb) {
-        const match = seg.text.match(/^(.*\S)([\s,.:;!?]+)$/);
-        if (match) {
-          if (supId) {
-            elements.push(
-              <Text key={`${ci}-${si}-sup`} style={{ fontSize: 4, verticalAlign: "super" as const, marginTop: -3 }}>
-                {supId}
-              </Text>,
-            );
+        if (sup && sup.offset > 0) {
+          // Split verb text at offset
+          const before = seg.text.slice(0, sup.offset);
+          const after = seg.text.slice(sup.offset);
+          elements.push(<Text key={`${ci}-${si}-pre`} style={styles.verbUnderline}>{before}</Text>);
+          elements.push(renderSup(`${ci}-${si}-sup`));
+          const matchAfter = after.match(/^(.*\S)([\s,.:;!?]+)$/);
+          if (matchAfter) {
+            elements.push(<Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>{matchAfter[1]}</Text>);
+            elements.push(<Text key={`${ci}-${si}-p`}>{matchAfter[2]}</Text>);
+          } else {
+            elements.push(<Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>{after}</Text>);
           }
-          elements.push(
-            <Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>
-              {match[1]}
-            </Text>,
-          );
-          elements.push(<Text key={`${ci}-${si}-p`}>{match[2]}</Text>);
         } else {
-          if (supId) {
-            elements.push(
-              <Text key={`${ci}-${si}-sup`} style={{ fontSize: 4, verticalAlign: "super" as const, marginTop: -3 }}>
-                {supId}
-              </Text>,
-            );
+          const match = seg.text.match(/^(.*\S)([\s,.:;!?]+)$/);
+          if (sup) elements.push(renderSup(`${ci}-${si}-sup`));
+          if (match) {
+            elements.push(<Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>{match[1]}</Text>);
+            elements.push(<Text key={`${ci}-${si}-p`}>{match[2]}</Text>);
+          } else {
+            elements.push(<Text key={`${ci}-${si}`} style={styles.verbUnderline}>{seg.text}</Text>);
           }
-          elements.push(
-            <Text key={`${ci}-${si}`} style={styles.verbUnderline}>
-              {seg.text}
-            </Text>,
-          );
         }
       } else {
-        if (supId) {
-          elements.push(
-            <Text key={`${ci}-${si}-sup`} style={{ fontSize: 4, verticalAlign: "super" as const, marginTop: -3 }}>
-              {supId}
-            </Text>,
-          );
+        if (sup && sup.offset > 0) {
+          // Split plain text at offset
+          elements.push(<Text key={`${ci}-${si}-pre`}>{seg.text.slice(0, sup.offset)}</Text>);
+          elements.push(renderSup(`${ci}-${si}-sup`));
+          elements.push(<Text key={`${ci}-${si}-post`}>{seg.text.slice(sup.offset)}</Text>);
+        } else {
+          if (sup) elements.push(renderSup(`${ci}-${si}-sup`));
+          elements.push(<Text key={`${ci}-${si}`}>{seg.text}</Text>);
         }
-        elements.push(<Text key={`${ci}-${si}`}>{seg.text}</Text>);
       }
     });
     if (ci < chunks.length - 1) {
