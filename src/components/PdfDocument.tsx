@@ -209,11 +209,11 @@ const styles = StyleSheet.create({
 });
 
 /** Render chunks with slash, applying underline to verbs and superscript for syntax notes */
-function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote[]) {
+function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote[], original?: string) {
   const elements: React.ReactNode[] = [];
   const annotations = (syntaxNotes || []).filter((n) => n.targetText);
 
-  // Build a flat position map: each segment's start offset in the full text
+  // Build a flat position map WITHOUT " / " separators — matching original text offsets
   const segPositions: { ci: number; si: number; start: number; end: number }[] = [];
   let cursor = 0;
   chunks.forEach((chunk, ci) => {
@@ -222,17 +222,17 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
       cursor += seg.text.length;
       segPositions.push({ ci, si, start, end: cursor });
     });
-    if (ci < chunks.length - 1) {
-      cursor += 3; // " / " separator
-    }
+    // Between chunks in original text there's typically a space, not " / "
+    // We skip adding any extra offset — the segments already contain their whitespace
   });
-  const fullText = chunks.map((c) => c.segments.map((s) => s.text).join("")).join(" / ");
+  // Use original text for matching if available, otherwise concatenate segments without " / "
+  const matchText = original || chunks.map((c) => c.segments.map((s) => s.text).join("")).join("");
 
-  // Find where each targetText starts in fullText, then map to the correct segment
+  // Find where each targetText starts in the original text, then map to the correct segment
   const superscriptMap = new Map<string, number>();
   for (const ann of annotations) {
     const targetLower = ann.targetText!.toLowerCase().trim();
-    const idx = fullText.toLowerCase().indexOf(targetLower);
+    const idx = matchText.toLowerCase().indexOf(targetLower);
     if (idx === -1) continue;
     // Find which segment contains this start position
     for (const sp of segPositions) {
@@ -385,7 +385,7 @@ function SentenceBlock({ result, index, isLast }: { result: SentenceResult; inde
         <Text style={styles.sentenceNumber}>{String(index + 1).padStart(2, "0")} </Text>
         <Text style={styles.englishText}>
           {result.englishChunks.length > 0
-            ? renderChunksWithVerbUnderline(result.englishChunks, result.syntaxNotes)
+            ? renderChunksWithVerbUnderline(result.englishChunks, result.syntaxNotes, result.original)
             : result.original}
         </Text>
       </View>
