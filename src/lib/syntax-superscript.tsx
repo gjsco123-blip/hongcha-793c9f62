@@ -48,8 +48,8 @@ export function renderWithSuperscripts(
     }
     elements.push(
       <React.Fragment key={`sup-${m.id}`}>
+        <sup className="text-[9px] font-bold text-muted-foreground mr-[1px]">{m.id}</sup>
         {text.slice(m.start, m.end)}
-        <sup className="text-[9px] font-bold text-muted-foreground ml-[1px]">{m.id}</sup>
       </React.Fragment>
     );
     cursor = m.end;

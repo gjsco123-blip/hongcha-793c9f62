@@ -300,44 +300,14 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
         )}
 
         {displayChunks.map((chunk, i) => {
-          // Build full text of all chunks for matching
-          const fullText = displayChunks.map(c => segmentsToWords(c.segments).map(w => w.word).join(" ")).join(" ");
           const words = segmentsToWords(chunk.segments);
-          
-          // Calculate word offset for this chunk
-          let wordOffset = 0;
-          for (let ci = 0; ci < i; ci++) {
-            const cWords = segmentsToWords(displayChunks[ci].segments).map(w => w.word).join(" ");
-            wordOffset += cWords.length + 1; // +1 for space
-          }
 
           return (
           <div key={`${chunk.tag}-${i}`} className="flex items-center gap-1 max-w-full">
             <span
               className="inline-flex items-center gap-0.5 px-2 py-1 text-xs font-english border border-border bg-background text-foreground flex-wrap break-words max-w-full"
             >
-              {words.map((w, wi) => {
-                // Check if this word ends a superscript target
-                const wordsBefore = words.slice(0, wi).map(ww => ww.word).join(" ");
-                const wordEndPos = wordOffset + (wordsBefore ? wordsBefore.length + 1 : 0) + w.word.length;
-                const wordStartPos = wordEndPos - w.word.length;
-                
-                let supId: number | null = null;
-                const lowerFull = fullText.toLowerCase();
-                for (const note of syntaxNotes) {
-                  if (!note.targetText) continue;
-                  const tLower = note.targetText.toLowerCase();
-                  const matchIdx = lowerFull.indexOf(tLower);
-                  if (matchIdx === -1) continue;
-                  const matchEnd = matchIdx + tLower.length;
-                  // Show sup on the last word of the matched range
-                  if (wordEndPos >= matchEnd && wordEndPos <= matchEnd + 1 && wordStartPos >= matchIdx) {
-                    supId = note.id;
-                    break;
-                  }
-                }
-
-                return (
+              {words.map((w, wi) => (
                 <span
                   key={wi}
                   onClick={isEditing ? () => handleWordInteraction(i, wi) : undefined}
@@ -347,11 +317,8 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
                   title={isEditing ? "클릭: 분할 / 더블클릭: 동사 표시" : ""}
                 >
                   {w.word}
-                  {supId && (
-                    <sup className="text-[8px] font-bold text-muted-foreground ml-[1px]">{supId}</sup>
-                  )}
                 </span>
-              )})}
+              ))}
             </span>
             {i < displayChunks.length - 1 && isEditing && (
               <button
