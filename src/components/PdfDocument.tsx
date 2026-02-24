@@ -251,7 +251,7 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
         if (match) {
           if (supId) {
             elements.push(
-              <Text key={`${ci}-${si}-sup`} style={{ fontSize: 5, verticalAlign: "super" as const }}>{supId}</Text>
+              <Text key={`${ci}-${si}-sup`} style={{ fontSize: 4, verticalAlign: "super" as const, marginTop: -2 }}>{supId}</Text>
             );
           }
           elements.push(
@@ -263,7 +263,7 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
         } else {
           if (supId) {
             elements.push(
-              <Text key={`${ci}-${si}-sup`} style={{ fontSize: 5, verticalAlign: "super" as const }}>{supId}</Text>
+              <Text key={`${ci}-${si}-sup`} style={{ fontSize: 4, verticalAlign: "super" as const, marginTop: -2 }}>{supId}</Text>
             );
           }
           elements.push(
@@ -275,7 +275,7 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
       } else {
         if (supId) {
           elements.push(
-            <Text key={`${ci}-${si}-sup`} style={{ fontSize: 5, verticalAlign: "super" as const }}>{supId}</Text>
+            <Text key={`${ci}-${si}-sup`} style={{ fontSize: 4, verticalAlign: "super" as const, marginTop: -2 }}>{supId}</Text>
           );
         }
         elements.push(<Text key={`${ci}-${si}`}>{seg.text}</Text>);
