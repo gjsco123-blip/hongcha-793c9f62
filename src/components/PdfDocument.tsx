@@ -243,10 +243,12 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
   chunks.forEach((chunk, ci) => {
     chunk.segments.forEach((seg, si) => {
       const sup = superscriptMap.get(`${ci}-${si}`);
-      const supStyle = { fontSize: 4, verticalAlign: "super" as const, marginTop: -6 };
+      const supStyle = { fontSize: 4, verticalAlign: "super" as const, marginTop: -10 };
 
       const renderSup = (key: string) => (
-        <Text key={key} style={supStyle}>{sup!.id}</Text>
+        <Text key={key} style={supStyle}>
+          {sup!.id}
+        </Text>
       );
 
       if (seg.isVerb) {
@@ -254,23 +256,43 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
           // Split verb text at offset
           const before = seg.text.slice(0, sup.offset);
           const after = seg.text.slice(sup.offset);
-          elements.push(<Text key={`${ci}-${si}-pre`} style={styles.verbUnderline}>{before}</Text>);
+          elements.push(
+            <Text key={`${ci}-${si}-pre`} style={styles.verbUnderline}>
+              {before}
+            </Text>,
+          );
           elements.push(renderSup(`${ci}-${si}-sup`));
           const matchAfter = after.match(/^(.*\S)([\s,.:;!?]+)$/);
           if (matchAfter) {
-            elements.push(<Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>{matchAfter[1]}</Text>);
+            elements.push(
+              <Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>
+                {matchAfter[1]}
+              </Text>,
+            );
             elements.push(<Text key={`${ci}-${si}-p`}>{matchAfter[2]}</Text>);
           } else {
-            elements.push(<Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>{after}</Text>);
+            elements.push(
+              <Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>
+                {after}
+              </Text>,
+            );
           }
         } else {
           const match = seg.text.match(/^(.*\S)([\s,.:;!?]+)$/);
           if (sup) elements.push(renderSup(`${ci}-${si}-sup`));
           if (match) {
-            elements.push(<Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>{match[1]}</Text>);
+            elements.push(
+              <Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>
+                {match[1]}
+              </Text>,
+            );
             elements.push(<Text key={`${ci}-${si}-p`}>{match[2]}</Text>);
           } else {
-            elements.push(<Text key={`${ci}-${si}`} style={styles.verbUnderline}>{seg.text}</Text>);
+            elements.push(
+              <Text key={`${ci}-${si}`} style={styles.verbUnderline}>
+                {seg.text}
+              </Text>,
+            );
           }
         }
       } else {
