@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
   translationContent: {
     flex: 1,
     fontSize: 7,
-    color: "#000",
+    color: "#222",
     lineHeight: 1.6,
   },
   passageSection: {
@@ -368,11 +368,11 @@ function SentenceBlock({ result, index, isLast }: { result: SentenceResult; inde
                   <Text
                     style={{
                       fontFamily: "Pretendard",
-                      fontSize: 6,
+                      fontSize: 7,
                       fontWeight: 600,
                       width: 10,
                       flexShrink: 0,
-                      color: "#333",
+                      color: "#222",
                       lineHeight: 1.6,
                       textAlign: "left" as const,
                     }}
