@@ -48,7 +48,7 @@ export function renderWithSuperscripts(
     }
     elements.push(
       <React.Fragment key={`sup-${m.id}`}>
-        <sup className="text-[9px] font-bold text-muted-foreground mr-[1px]">{m.id}</sup>
+        <sup className="text-[8px] font-bold text-muted-foreground mr-[1px]" style={{ verticalAlign: 'super', position: 'relative', top: '-0.6em' }}>{m.id}</sup>
         {text.slice(m.start, m.end)}
       </React.Fragment>
     );
