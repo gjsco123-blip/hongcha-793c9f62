@@ -239,7 +239,7 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
     }
   }
 
-  const supStyle = { fontSize: 5, verticalAlign: "super" as const };
+  const supStyle = { fontSize: 5, marginRight: 1, verticalAlign: "super" as const };
 
   const renderSup = (key: string, id: number) => (
     <Text key={key} style={supStyle}>
@@ -256,19 +256,25 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
           const before = seg.text.slice(0, sup.offset);
           const after = seg.text.slice(sup.offset);
           elements.push(
-            <Text key={`${ci}-${si}-pre`} style={styles.verbUnderline}>{before}</Text>,
+            <Text key={`${ci}-${si}-pre`} style={styles.verbUnderline}>
+              {before}
+            </Text>,
           );
           elements.push(renderSup(`${ci}-${si}-sup`, sup.id));
           // Strip trailing punctuation/spaces from underlined portion
           const matchAfter = after.match(/^(.*\S)([\s,.:;!?]+)$/);
           if (matchAfter) {
             elements.push(
-              <Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>{matchAfter[1]}</Text>,
+              <Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>
+                {matchAfter[1]}
+              </Text>,
             );
             elements.push(<Text key={`${ci}-${si}-p`}>{matchAfter[2]}</Text>);
           } else {
             elements.push(
-              <Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>{after}</Text>,
+              <Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>
+                {after}
+              </Text>,
             );
           }
         } else {
@@ -276,12 +282,16 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
           if (sup) elements.push(renderSup(`${ci}-${si}-sup`, sup.id));
           if (match) {
             elements.push(
-              <Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>{match[1]}</Text>,
+              <Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>
+                {match[1]}
+              </Text>,
             );
             elements.push(<Text key={`${ci}-${si}-p`}>{match[2]}</Text>);
           } else {
             elements.push(
-              <Text key={`${ci}-${si}`} style={styles.verbUnderline}>{seg.text}</Text>,
+              <Text key={`${ci}-${si}`} style={styles.verbUnderline}>
+                {seg.text}
+              </Text>,
             );
           }
         }
