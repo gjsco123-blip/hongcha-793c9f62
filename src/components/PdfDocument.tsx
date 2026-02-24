@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     fontFamily: "Pretendard",
     fontWeight: 600,
     fontSize: 9.5,
-    lineHeight: 2.3,
+    lineHeight: 2.5,
     flex: 1,
     marginLeft: 6,
   },
