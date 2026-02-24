@@ -208,12 +208,17 @@ const styles = StyleSheet.create({
   },
 });
 
+/** Convert number to unicode superscript characters */
+function toSuperscriptNumber(n: number): string {
+  const supDigits = ["⁰", "¹", "²", "³", "⁴", "⁵", "⁶", "⁷", "⁸", "⁹"];
+  return String(n).split("").map(d => supDigits[parseInt(d)]).join("");
+}
+
 /** Render chunks with slash, applying underline to verbs and superscript for syntax notes */
 function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote[], original?: string) {
   const elements: React.ReactNode[] = [];
   const annotations = (syntaxNotes || []).filter((n) => n.targetText);
 
-  // Simple approach: search each chunk's text directly for targetText
   const superscriptMap = new Map<string, { id: number; offset: number }>();
   for (const ann of annotations) {
     const targetLower = ann.targetText!.toLowerCase().trim();
@@ -240,69 +245,60 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
     }
   }
 
+  // Superscript style: use unicode chars, no marginTop/verticalAlign needed
+  const supStyle = { fontSize: 6, lineHeight: 1 };
+
+  const renderSup = (key: string, id: number) => (
+    <Text key={key} style={supStyle}>
+      {toSuperscriptNumber(id)}
+    </Text>
+  );
+
   chunks.forEach((chunk, ci) => {
     chunk.segments.forEach((seg, si) => {
       const sup = superscriptMap.get(`${ci}-${si}`);
-      const supStyle = { fontSize: 4, verticalAlign: "super" as const, marginTop: -15 };
-
-      const renderSup = (key: string) => (
-        <Text key={key} style={supStyle}>
-          {sup!.id}
-        </Text>
-      );
 
       if (seg.isVerb) {
         if (sup && sup.offset > 0) {
-          // Split verb text at offset
           const before = seg.text.slice(0, sup.offset);
           const after = seg.text.slice(sup.offset);
           elements.push(
-            <Text key={`${ci}-${si}-pre`} style={styles.verbUnderline}>
-              {before}
-            </Text>,
+            <Text key={`${ci}-${si}-pre`} style={styles.verbUnderline}>{before}</Text>,
           );
-          elements.push(renderSup(`${ci}-${si}-sup`));
+          elements.push(renderSup(`${ci}-${si}-sup`, sup.id));
+          // Strip trailing punctuation/spaces from underlined portion
           const matchAfter = after.match(/^(.*\S)([\s,.:;!?]+)$/);
           if (matchAfter) {
             elements.push(
-              <Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>
-                {matchAfter[1]}
-              </Text>,
+              <Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>{matchAfter[1]}</Text>,
             );
             elements.push(<Text key={`${ci}-${si}-p`}>{matchAfter[2]}</Text>);
           } else {
             elements.push(
-              <Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>
-                {after}
-              </Text>,
+              <Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>{after}</Text>,
             );
           }
         } else {
           const match = seg.text.match(/^(.*\S)([\s,.:;!?]+)$/);
-          if (sup) elements.push(renderSup(`${ci}-${si}-sup`));
+          if (sup) elements.push(renderSup(`${ci}-${si}-sup`, sup.id));
           if (match) {
             elements.push(
-              <Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>
-                {match[1]}
-              </Text>,
+              <Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>{match[1]}</Text>,
             );
             elements.push(<Text key={`${ci}-${si}-p`}>{match[2]}</Text>);
           } else {
             elements.push(
-              <Text key={`${ci}-${si}`} style={styles.verbUnderline}>
-                {seg.text}
-              </Text>,
+              <Text key={`${ci}-${si}`} style={styles.verbUnderline}>{seg.text}</Text>,
             );
           }
         }
       } else {
         if (sup && sup.offset > 0) {
-          // Split plain text at offset
           elements.push(<Text key={`${ci}-${si}-pre`}>{seg.text.slice(0, sup.offset)}</Text>);
-          elements.push(renderSup(`${ci}-${si}-sup`));
+          elements.push(renderSup(`${ci}-${si}-sup`, sup.id));
           elements.push(<Text key={`${ci}-${si}-post`}>{seg.text.slice(sup.offset)}</Text>);
         } else {
-          if (sup) elements.push(renderSup(`${ci}-${si}-sup`));
+          if (sup) elements.push(renderSup(`${ci}-${si}-sup`, sup.id));
           elements.push(<Text key={`${ci}-${si}`}>{seg.text}</Text>);
         }
       }
