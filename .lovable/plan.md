@@ -1,62 +1,29 @@
 
 
-## 구문분석 번호 위첨자 표시 기능
+## PDF 위첨자 매칭 로직 수정
 
-### 개요
-사용자가 ChunkEditor에서 텍스트를 드래그하여 구문분석을 생성할 때, 해당 구문분석 번호(1, 2, 3...)가 영문 청크 위에 위첨자로 표시되도록 하는 기능입니다.
+### 문제 원인
+현재 `renderChunksWithVerbUnderline` 함수에서 `fullText`를 청크들을 `" / "`로 join해서 만들고, 그 텍스트에서 `targetText`를 검색함. 하지만 사용자가 드래그한 `targetText`는 원문(`result.original`) 기준이라 `" / "` 구분자가 없는 텍스트임. 이 때문에 위치가 3글자씩 밀려서 엉뚱한 곳에 위첨자가 붙음.
 
-### 현재 구조 분석
+### 해결 방법
+`renderChunksWithVerbUnderline`에 `original` 텍스트를 추가 파라미터로 전달하고, `targetText` 매칭은 원문 기준으로 수행한 뒤, 그 위치를 청크 세그먼트에 매핑.
 
-현재 `SyntaxNote`는 `{ id: number, content: string }`만 저장하고 있어, 어떤 텍스트를 선택해서 생성했는지 정보가 없습니다. 위첨자를 표시하려면 "어떤 단어/구문에 몇 번이 달려야 하는지" 알아야 합니다.
+### 변경 내용 (`src/components/PdfDocument.tsx`)
 
-### 구현 계획
+1. `renderChunksWithVerbUnderline` 함수 시그니처에 `original: string` 파라미터 추가
+2. 위치 매핑 로직 변경:
+   - `fullText`를 `" / "` 없이 (공백 없이 이어 붙여서가 아니라) 원문 기준으로 매칭
+   - 원문에서 `targetText`의 시작 위치를 찾음
+   - 세그먼트 위치 맵을 `" / "` 구분자 없이 빌드하여, 원문 기준 offset과 일치시킴
+3. `SentenceBlock`에서 호출 시 `result.original`을 함께 전달
 
-**1. SyntaxNote 인터페이스 확장** (`src/pages/Index.tsx`)
-```typescript
-export interface SyntaxNote {
-  id: number;
-  content: string;
-  targetText?: string; // 드래그한 원문 텍스트 (예: "so little variation")
-}
+```
+변경 전: renderChunksWithVerbUnderline(result.englishChunks, result.syntaxNotes)
+변경 후: renderChunksWithVerbUnderline(result.englishChunks, result.syntaxNotes, result.original)
 ```
 
-**2. 선택 텍스트 저장** (`src/pages/Index.tsx` — `handleGenerateSyntax`)
-- 수동 모드(selectedText 있을 때): `targetText`에 선택한 텍스트를 함께 저장
-- 자동 생성 모드: `targetText` 없이 기존대로 동작 (위첨자 없음)
-
-**3. 웹 UI — 영문 문장에 위첨자 표시** (`src/pages/Index.tsx` 또는 별도 컴포넌트)
-- 현재 `result.original`을 단순 텍스트로 렌더하는 부분(line 584-585)을 수정
-- `syntaxNotes` 중 `targetText`가 있는 항목들에 대해, 원문에서 해당 텍스트를 찾아 끝 부분에 위첨자 `<sup>` 번호를 삽입
-- 매칭은 대소문자 무시, 단어 경계 기준
-
-**4. ChunkEditor 영역에도 위첨자 표시** (`src/components/ChunkEditor.tsx`)
-- 청크 표시 영역에서도 해당 단어 위에 작은 위첨자 번호 표시
-- `syntaxNotes` prop을 ChunkEditor에 전달 필요
-
-**5. PDF에도 위첨자 반영** (`src/components/PdfDocument.tsx`)
-- `renderChunksWithVerbUnderline` 함수에서 `syntaxNotes`의 `targetText`를 매칭하여 위첨자 `<Text>` 추가
-- `SentenceResult` 인터페이스에 이미 `syntaxNotes`가 있으므로 데이터 전달은 문제 없음
-
-### 매칭 로직 (핵심)
-```
-입력: original = "Most humans are genetically very similar and there is so little variation..."
-syntaxNotes = [{ id: 1, targetText: "so little variation", content: "..." }]
-
-결과: "Most humans are genetically very similar and there is so little variation¹..."
-```
-
-- 원문 텍스트에서 `targetText`의 위치를 찾고, 끝 부분 바로 뒤에 위첨자 번호 삽입
-- 여러 구문이 겹칠 수 있으므로 위치 기준 정렬 후 뒤에서부터 삽입
-
-### 복잡도 평가
-복잡하지 않습니다. 핵심은:
-1. `targetText` 필드 하나 추가 (데이터)
-2. 텍스트 매칭 + 위첨자 렌더링 유틸 함수 하나 (로직)
-3. 3곳에 적용 (원문 표시, 청크 에디터, PDF)
+핵심: 세그먼트 position map에서 `" / "` (3글자)를 더하지 않고 원문 기준의 연속된 오프셋으로 계산하면, `targetText` 매칭이 정확해짐.
 
 ### 변경 파일
-- `src/pages/Index.tsx` — SyntaxNote 타입 확장 + targetText 저장 + 원문에 위첨자 렌더
-- `src/components/ChunkEditor.tsx` — syntaxNotes prop 추가, 위첨자 표시
-- `src/components/PdfDocument.tsx` — PDF 영문에 위첨자 반영
-- `src/hooks/usePdfExport.ts` — SyntaxNote 타입 동기화
+- `src/components/PdfDocument.tsx` — 함수 시그니처 + 매칭 로직 + 호출부
 
