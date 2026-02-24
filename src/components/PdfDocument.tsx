@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
 /** Render chunks with slash, applying underline to verbs and superscript for syntax notes */
 function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote[]) {
   const elements: React.ReactNode[] = [];
-  const annotations = (syntaxNotes || []).filter(n => n.targetText);
+  const annotations = (syntaxNotes || []).filter((n) => n.targetText);
 
   // Build a map: "ci-si" -> noteId by matching targetText's first word against segment text
   const superscriptMap = new Map<string, number>();
@@ -219,7 +219,10 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
     const targetLower = ann.targetText!.toLowerCase().trim();
     let found = false;
     for (let ci = 0; ci < chunks.length && !found; ci++) {
-      const chunkText = chunks[ci].segments.map(s => s.text).join("").toLowerCase();
+      const chunkText = chunks[ci].segments
+        .map((s) => s.text)
+        .join("")
+        .toLowerCase();
       if (chunkText.includes(targetLower) || targetLower.startsWith(chunkText.trim())) {
         // Find the first segment that contains the beginning of targetText
         let pos = 0;
@@ -251,7 +254,9 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
         if (match) {
           if (supId) {
             elements.push(
-              <Text key={`${ci}-${si}-sup`} style={{ fontSize: 4, verticalAlign: "super" as const, marginTop: -2 }}>{supId}</Text>
+              <Text key={`${ci}-${si}-sup`} style={{ fontSize: 4, verticalAlign: "super" as const, marginTop: -3 }}>
+                {supId}
+              </Text>,
             );
           }
           elements.push(
@@ -263,7 +268,9 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
         } else {
           if (supId) {
             elements.push(
-              <Text key={`${ci}-${si}-sup`} style={{ fontSize: 4, verticalAlign: "super" as const, marginTop: -2 }}>{supId}</Text>
+              <Text key={`${ci}-${si}-sup`} style={{ fontSize: 4, verticalAlign: "super" as const, marginTop: -3 }}>
+                {supId}
+              </Text>,
             );
           }
           elements.push(
@@ -275,7 +282,9 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
       } else {
         if (supId) {
           elements.push(
-            <Text key={`${ci}-${si}-sup`} style={{ fontSize: 4, verticalAlign: "super" as const, marginTop: -2 }}>{supId}</Text>
+            <Text key={`${ci}-${si}-sup`} style={{ fontSize: 4, verticalAlign: "super" as const, marginTop: -3 }}>
+              {supId}
+            </Text>,
           );
         }
         elements.push(<Text key={`${ci}-${si}`}>{seg.text}</Text>);
@@ -377,7 +386,9 @@ function SentenceBlock({ result, index, isLast }: { result: SentenceResult; inde
       <View style={styles.sentenceRow}>
         <Text style={styles.sentenceNumber}>{String(index + 1).padStart(2, "0")} </Text>
         <Text style={styles.englishText}>
-          {result.englishChunks.length > 0 ? renderChunksWithVerbUnderline(result.englishChunks, result.syntaxNotes) : result.original}
+          {result.englishChunks.length > 0
+            ? renderChunksWithVerbUnderline(result.englishChunks, result.syntaxNotes)
+            : result.original}
         </Text>
       </View>
 
