@@ -213,34 +213,32 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
   const elements: React.ReactNode[] = [];
   const annotations = (syntaxNotes || []).filter((n) => n.targetText);
 
-  // Build a map: "ci-si" -> noteId by matching targetText's first word against segment text
+  // Build a flat position map: each segment's start offset in the full text
+  const segPositions: { ci: number; si: number; start: number; end: number }[] = [];
+  let cursor = 0;
+  chunks.forEach((chunk, ci) => {
+    chunk.segments.forEach((seg, si) => {
+      const start = cursor;
+      cursor += seg.text.length;
+      segPositions.push({ ci, si, start, end: cursor });
+    });
+    if (ci < chunks.length - 1) {
+      cursor += 3; // " / " separator
+    }
+  });
+  const fullText = chunks.map((c) => c.segments.map((s) => s.text).join("")).join(" / ");
+
+  // Find where each targetText starts in fullText, then map to the correct segment
   const superscriptMap = new Map<string, number>();
   for (const ann of annotations) {
     const targetLower = ann.targetText!.toLowerCase().trim();
-    let found = false;
-    for (let ci = 0; ci < chunks.length && !found; ci++) {
-      const chunkText = chunks[ci].segments
-        .map((s) => s.text)
-        .join("")
-        .toLowerCase();
-      if (chunkText.includes(targetLower) || targetLower.startsWith(chunkText.trim())) {
-        // Find the first segment that contains the beginning of targetText
-        let pos = 0;
-        for (let si = 0; si < chunks[ci].segments.length; si++) {
-          const segLower = chunks[ci].segments[si].text.toLowerCase();
-          const targetStart = targetLower.slice(0, Math.min(targetLower.length, 4));
-          if (segLower.includes(targetStart)) {
-            superscriptMap.set(`${ci}-${si}`, ann.id);
-            found = true;
-            break;
-          }
-          pos += chunks[ci].segments[si].text.length;
-        }
-        if (!found) {
-          // fallback: mark first segment of this chunk
-          superscriptMap.set(`${ci}-0`, ann.id);
-          found = true;
-        }
+    const idx = fullText.toLowerCase().indexOf(targetLower);
+    if (idx === -1) continue;
+    // Find which segment contains this start position
+    for (const sp of segPositions) {
+      if (idx >= sp.start && idx < sp.end) {
+        superscriptMap.set(`${sp.ci}-${sp.si}`, ann.id);
+        break;
       }
     }
   }
