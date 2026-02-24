@@ -246,7 +246,7 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
   }
 
   // Superscript style: use unicode chars, no marginTop/verticalAlign needed
-  const supStyle = { fontSize: 6, lineHeight: 1 };
+  const supStyle = { fontSize: 5, lineHeight: 1, transform: "translateY(-3.2)" as const };
 
   const renderSup = (key: string, id: number) => (
     <Text key={key} style={supStyle}>
