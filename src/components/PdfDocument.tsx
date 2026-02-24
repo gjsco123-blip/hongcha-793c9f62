@@ -243,7 +243,7 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
   chunks.forEach((chunk, ci) => {
     chunk.segments.forEach((seg, si) => {
       const sup = superscriptMap.get(`${ci}-${si}`);
-      const supStyle = { fontSize: 4, verticalAlign: "super" as const, marginTop: -10 };
+      const supStyle = { fontSize: 4, verticalAlign: "super" as const, marginTop: -15 };
 
       const renderSup = (key: string) => (
         <Text key={key} style={supStyle}>
