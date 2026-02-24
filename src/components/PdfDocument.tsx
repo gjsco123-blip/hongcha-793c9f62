@@ -213,34 +213,38 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
   const elements: React.ReactNode[] = [];
   const annotations = (syntaxNotes || []).filter(n => n.targetText);
 
-  // Build full text for matching
-  const fullText = chunks.map(c => c.segments.map(s => s.text).join("")).join(" / ");
-  const lowerFull = fullText.toLowerCase();
-
-  // Find match start positions
-  const matchStarts: Map<number, number> = new Map(); // position -> note id
+  // Build a map: "ci-si" -> noteId by matching targetText's first word against segment text
+  const superscriptMap = new Map<string, number>();
   for (const ann of annotations) {
-    const idx = lowerFull.indexOf(ann.targetText!.toLowerCase());
-    if (idx !== -1) {
-      matchStarts.set(idx, ann.id);
+    const targetLower = ann.targetText!.toLowerCase().trim();
+    let found = false;
+    for (let ci = 0; ci < chunks.length && !found; ci++) {
+      const chunkText = chunks[ci].segments.map(s => s.text).join("").toLowerCase();
+      if (chunkText.includes(targetLower) || targetLower.startsWith(chunkText.trim())) {
+        // Find the first segment that contains the beginning of targetText
+        let pos = 0;
+        for (let si = 0; si < chunks[ci].segments.length; si++) {
+          const segLower = chunks[ci].segments[si].text.toLowerCase();
+          const targetStart = targetLower.slice(0, Math.min(targetLower.length, 4));
+          if (segLower.includes(targetStart)) {
+            superscriptMap.set(`${ci}-${si}`, ann.id);
+            found = true;
+            break;
+          }
+          pos += chunks[ci].segments[si].text.length;
+        }
+        if (!found) {
+          // fallback: mark first segment of this chunk
+          superscriptMap.set(`${ci}-0`, ann.id);
+          found = true;
+        }
+      }
     }
   }
 
-  let charPos = 0;
-
   chunks.forEach((chunk, ci) => {
     chunk.segments.forEach((seg, si) => {
-      const segStart = charPos;
-      const segEnd = charPos + seg.text.length;
-      
-      // Check if any match starts within this segment
-      let supId: number | undefined;
-      for (const [startPos, noteId] of matchStarts) {
-        if (startPos >= segStart && startPos < segEnd) {
-          supId = noteId;
-          break;
-        }
-      }
+      const supId = superscriptMap.get(`${ci}-${si}`);
 
       if (seg.isVerb) {
         const match = seg.text.match(/^(.*\S)([\s,.:;!?]+)$/);
@@ -276,12 +280,9 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
         }
         elements.push(<Text key={`${ci}-${si}`}>{seg.text}</Text>);
       }
-      
-      charPos = segEnd;
     });
     if (ci < chunks.length - 1) {
       elements.push(<Text key={`slash-${ci}`}> / </Text>);
-      charPos += 3; // " / "
     }
   });
 
