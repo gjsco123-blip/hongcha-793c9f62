@@ -33,6 +33,7 @@ Font.registerHyphenationCallback((word) => [word]);
 interface SyntaxNote {
   id: number;
   content: string;
+  targetText?: string;
 }
 
 interface SentenceResult {
@@ -207,12 +208,40 @@ const styles = StyleSheet.create({
   },
 });
 
-/** Render chunks with slash, applying underline to verbs */
-function renderChunksWithVerbUnderline(chunks: Chunk[]) {
+/** Render chunks with slash, applying underline to verbs and superscript for syntax notes */
+function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote[]) {
   const elements: React.ReactNode[] = [];
+  const annotations = (syntaxNotes || []).filter(n => n.targetText);
+
+  // Build full text for matching
+  const fullText = chunks.map(c => c.segments.map(s => s.text).join("")).join(" / ");
+  const lowerFull = fullText.toLowerCase();
+
+  // Find match positions
+  const matchEnds: Map<number, number> = new Map(); // position -> note id
+  for (const ann of annotations) {
+    const idx = lowerFull.indexOf(ann.targetText!.toLowerCase());
+    if (idx !== -1) {
+      matchEnds.set(idx + ann.targetText!.length, ann.id);
+    }
+  }
+
+  let charPos = 0;
 
   chunks.forEach((chunk, ci) => {
     chunk.segments.forEach((seg, si) => {
+      const segStart = charPos;
+      const segEnd = charPos + seg.text.length;
+      
+      // Check if any match ends within this segment
+      let supId: number | undefined;
+      for (const [endPos, noteId] of matchEnds) {
+        if (endPos > segStart && endPos <= segEnd) {
+          supId = noteId;
+          break;
+        }
+      }
+
       if (seg.isVerb) {
         const match = seg.text.match(/^(.*\S)([\s,.:;!?]+)$/);
         if (match) {
@@ -221,6 +250,11 @@ function renderChunksWithVerbUnderline(chunks: Chunk[]) {
               {match[1]}
             </Text>,
           );
+          if (supId) {
+            elements.push(
+              <Text key={`${ci}-${si}-sup`} style={{ fontSize: 5, verticalAlign: "super" as const }}>{supId}</Text>
+            );
+          }
           elements.push(<Text key={`${ci}-${si}-p`}>{match[2]}</Text>);
         } else {
           elements.push(
@@ -228,13 +262,26 @@ function renderChunksWithVerbUnderline(chunks: Chunk[]) {
               {seg.text}
             </Text>,
           );
+          if (supId) {
+            elements.push(
+              <Text key={`${ci}-${si}-sup`} style={{ fontSize: 5, verticalAlign: "super" as const }}>{supId}</Text>
+            );
+          }
         }
       } else {
         elements.push(<Text key={`${ci}-${si}`}>{seg.text}</Text>);
+        if (supId) {
+          elements.push(
+            <Text key={`${ci}-${si}-sup`} style={{ fontSize: 5, verticalAlign: "super" as const }}>{supId}</Text>
+          );
+        }
       }
+      
+      charPos = segEnd;
     });
     if (ci < chunks.length - 1) {
       elements.push(<Text key={`slash-${ci}`}> / </Text>);
+      charPos += 3; // " / "
     }
   });
 
@@ -329,7 +376,7 @@ function SentenceBlock({ result, index, isLast }: { result: SentenceResult; inde
       <View style={styles.sentenceRow}>
         <Text style={styles.sentenceNumber}>{String(index + 1).padStart(2, "0")} </Text>
         <Text style={styles.englishText}>
-          {result.englishChunks.length > 0 ? renderChunksWithVerbUnderline(result.englishChunks) : result.original}
+          {result.englishChunks.length > 0 ? renderChunksWithVerbUnderline(result.englishChunks, result.syntaxNotes) : result.original}
         </Text>
       </View>
 

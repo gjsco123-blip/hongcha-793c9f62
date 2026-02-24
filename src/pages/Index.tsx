@@ -7,6 +7,7 @@ import { HongTSection } from "@/components/HongTSection";
 import { SentencePreview } from "@/components/SentencePreview";
 import { Chunk, parseTagged, chunksToTagged } from "@/lib/chunk-utils";
 import { usePdfExport } from "@/hooks/usePdfExport";
+import { renderWithSuperscripts } from "@/lib/syntax-superscript";
 import { toast } from "sonner";
 import { FileDown, RotateCw, X, Scissors, RefreshCw, BookOpen, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -44,6 +45,7 @@ async function invokeWithRetry(
 export interface SyntaxNote {
   id: number; // 1~5
   content: string;
+  targetText?: string; // 드래그한 원문 텍스트
 }
 
 interface SentenceResult {
@@ -390,10 +392,11 @@ export default function Index() {
           if (slotNumber) {
             // 특정 번호 슬롯에 저장
             const existingIdx = newNotes.findIndex((n) => n.id === slotNumber);
+            const noteEntry: SyntaxNote = { id: slotNumber, content: data.syntaxNotes, targetText: selectedText };
             if (existingIdx >= 0) {
-              newNotes[existingIdx] = { id: slotNumber, content: data.syntaxNotes };
+              newNotes[existingIdx] = noteEntry;
             } else {
-              newNotes.push({ id: slotNumber, content: data.syntaxNotes });
+              newNotes.push(noteEntry);
               newNotes.sort((a, b) => a.id - b.id);
             }
           } else {
@@ -582,7 +585,7 @@ export default function Index() {
                     {String(index + 1).padStart(2, "0")}
                   </span>
                   <p className="font-sans font-semibold text-base leading-relaxed text-foreground flex-1">
-                    {result.original}
+                    {renderWithSuperscripts(result.original, result.syntaxNotes || [])}
                   </p>
                   <button
                     onClick={() => handleReanalyze(result.id)}
@@ -612,6 +615,7 @@ export default function Index() {
                         disabled={result.regenerating}
                         onAnalyzeSelection={(text, hint, slotNumber) => handleGenerateSyntax(result.id, result.original, text, hint, slotNumber)}
                         usedSlots={(result.syntaxNotes || []).map(n => n.id)}
+                        syntaxNotes={result.syntaxNotes || []}
                       />
                     </div>
 

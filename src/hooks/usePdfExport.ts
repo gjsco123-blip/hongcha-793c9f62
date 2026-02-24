@@ -6,6 +6,7 @@ import { Chunk } from "@/lib/chunk-utils";
 interface SyntaxNote {
   id: number;
   content: string;
+  targetText?: string;
 }
 
 interface SentenceResult {
