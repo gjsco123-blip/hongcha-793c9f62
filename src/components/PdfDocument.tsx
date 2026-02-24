@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   sentenceNumber: {
-    fontSize: 9,
+    fontSize: 9.5,
     fontWeight: 700,
     width: "auto",
     flexShrink: 6,
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
   englishText: {
     fontFamily: "Pretendard",
     fontWeight: 600,
-    fontSize: 9,
+    fontSize: 9.5,
     lineHeight: 2.3,
     flex: 1,
     marginLeft: 6,
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
   },
   translationLabel: {
     fontWeight: 700,
-    fontSize: 6,
+    fontSize: 7,
     width: 17,
     flexShrink: 0,
     lineHeight: 1.6,
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
   },
   translationContent: {
     flex: 1,
-    fontSize: 6,
+    fontSize: 7,
     color: "#000",
     lineHeight: 1.6,
   },
