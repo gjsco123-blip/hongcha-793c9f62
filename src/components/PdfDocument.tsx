@@ -208,12 +208,6 @@ const styles = StyleSheet.create({
   },
 });
 
-/** Convert number to unicode superscript characters */
-function toSuperscriptNumber(n: number): string {
-  const supDigits = ["⁰", "¹", "²", "³", "⁴", "⁵", "⁶", "⁷", "⁸", "⁹"];
-  return String(n).split("").map(d => supDigits[parseInt(d)]).join("");
-}
-
 /** Render chunks with slash, applying underline to verbs and superscript for syntax notes */
 function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote[], original?: string) {
   const elements: React.ReactNode[] = [];
@@ -245,12 +239,11 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
     }
   }
 
-  // Superscript style: use unicode chars, no marginTop/verticalAlign needed
-  const supStyle = { fontSize: 5, lineHeight: 1, transform: "translateY(-3.2)" as const };
+  const supStyle = { fontSize: 5, verticalAlign: "super" as const };
 
   const renderSup = (key: string, id: number) => (
     <Text key={key} style={supStyle}>
-      {toSuperscriptNumber(id)}
+      {String(id)}
     </Text>
   );
 
