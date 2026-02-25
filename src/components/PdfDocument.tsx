@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
   translationBar: {
     width: 2,
     height: 6,
-    backgroundColor: "#000",
+    backgroundColor: "#222",
     marginRight: 2,
     marginTop: 1,
     flexShrink: 0,
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     width: 17,
     flexShrink: 0,
     lineHeight: 1.6,
-    color: "#000",
+    color: "#222",
   },
   translationContent: {
     flex: 1,
