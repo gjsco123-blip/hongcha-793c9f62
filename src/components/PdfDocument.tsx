@@ -239,7 +239,7 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
     }
   }
 
-  const supStyle = { fontSize: 5, marginRight: 3, verticalAlign: "super" as const };
+  const supStyle = { fontSize: 3, marginRight: 4, verticalAlign: "super" as const };
 
   const renderSup = (key: string, id: number) => (
     <Text key={key} style={supStyle}>
