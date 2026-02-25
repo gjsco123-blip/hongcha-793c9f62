@@ -1,29 +1,50 @@
 
 
-## Builder 관련 코드 전체 삭제 계획
+## 헤더 하단 줄 분리 계획
 
-### 삭제 대상 파일
-- `src/pages/PassageBuilder.tsx` — 빌더 페이지 전체
-- `src/components/PassageBuilderPdf.tsx` — 빌더 PDF 컴포넌트
+### 현재 구조
+- `header` 스타일: `borderBottomWidth: 2, borderBottomColor: "#000"` → 전체 너비 검은 줄
+- 본문: `leftColumn`(`flex: 1`, `paddingRight: GAP`) + `memoColumn`(`width: MEMO_WIDTH`)
+- `GAP = 8.5`pt, `MEMO_WIDTH = 100`pt
 
-### 삭제 대상 엣지 함수
-- `supabase/functions/analyze-explanation/index.ts`
-- `supabase/functions/analyze-structure/index.ts`
-- `supabase/functions/analyze-vocab/index.ts`
-- `supabase/functions/analyze-single-vocab/index.ts`
+### 변경 내용
 
-(이 4개 함수는 빌더 전용 분석 함수들입니다.)
+**`src/components/PdfDocument.tsx`**
 
-### 수정 대상 파일
+1. `styles.header`에서 `borderBottomWidth`, `borderBottomColor` 제거
 
-**`src/App.tsx`**
-- `import PassageBuilder` 제거 (7줄)
-- `<Route path="/passage-builder" ...>` 제거 (21줄)
+2. 헤더 JSX 내부, Title/Subtitle 아래에 `flexDirection: "row"` View 추가:
 
-**`src/pages/Index.tsx`**
-- Builder 버튼 (535~542줄) 제거
-- `BookOpen` import에서 제거
+```text
+변경 후 구조:
 
-### 변경 없는 파일
-- Preview 관련 파일, engine/grammar/hongt/regenerate/spellcheck 엣지 함수 등은 빌더와 무관하므로 유지
+│  Title / Subtitle                               │
+│                                                  │
+│  ████████████████████████│         │█████████████│
+│  회색 줄 (flex:1)        │ GAP     │ 검은 줄     │
+│  paddingRight: GAP       │ (8.5pt) │ width: 100  │
+│                          │         │             │
+│  본문 (flex:1)           │ GAP     │ MEMO (100)  │
+│  paddingRight: GAP       │ (8.5pt) │             │
+```
+
+핵심: 줄도 본문과 동일하게 `flex:1` + `paddingRight: GAP` / `width: MEMO_WIDTH` 구조를 사용하여 공백 위치와 너비가 정확히 일치하도록 함.
+
+구체적 JSX:
+```jsx
+{/* 헤더 하단 분리 줄 */}
+<View style={{ flexDirection: "row" }}>
+  <View style={{ flex: 1, paddingRight: GAP }}>
+    <View style={{ height: 2, backgroundColor: "#ccc" }} />
+  </View>
+  <View style={{ width: MEMO_WIDTH }}>
+    <View style={{ height: 2, backgroundColor: "#000" }} />
+  </View>
+</View>
+```
+
+`leftColumn`이 `flex:1`에 `paddingRight: GAP`을 사용하므로, 줄도 동일한 방식으로 배치하면 padding 영역이 자연스럽게 공백이 되어 본문의 좌우 컬럼 간격과 정확히 일치함.
+
+### 수정 파일
+- `src/components/PdfDocument.tsx` — header 스타일 및 JSX 수정
 
