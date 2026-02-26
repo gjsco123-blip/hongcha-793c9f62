@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
   translationBar: {
     width: 2,
     height: 6,
-    backgroundColor: "#222",
+    backgroundColor: "#666",
     marginRight: 2,
     marginTop: 1,
     flexShrink: 0,
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     width: 17,
     flexShrink: 0,
     lineHeight: 1.6,
-    color: "#222",
+    color: "#666",
   },
   translationContent: {
     flex: 1,
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
     fontSize: 7,
     fontWeight: 700,
     letterSpacing: 1.2,
-    color: "#999",
+    color: "#666",
     marginBottom: 3,
   },
   passageTextBox: {
