@@ -155,8 +155,8 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   translationLabel: {
-    fontWeight: 700,
-    fontSize: 7,
+    fontWeight: 600,
+    fontSize: 6.5,
     width: 17,
     flexShrink: 0,
     lineHeight: 1.6,
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   },
   translationContent: {
     flex: 1,
-    fontSize: 7,
+    fontSize: 6.5,
     color: "#222",
     lineHeight: 1.6,
   },
