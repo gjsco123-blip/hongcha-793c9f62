@@ -207,7 +207,7 @@ You MUST respond by calling the "analysis_result" function with the structured o
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "openai/gpt-5-mini",
           messages,
           tools,
           tool_choice: { type: "function", function: { name: "analysis_result" } },
