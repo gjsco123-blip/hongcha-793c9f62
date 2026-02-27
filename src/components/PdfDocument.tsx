@@ -484,8 +484,13 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
             {/* Header — only on first page */}
             {isFirstPage && (
               <View style={styles.header}>
-                <Text style={styles.title}>{title}</Text>
-                <Text style={styles.subtitle}>{subtitle}</Text>
+                <View style={{ flexDirection: "row", alignItems: "stretch" }}>
+                  <View style={{ width: 3, backgroundColor: "#222", marginRight: 10, borderRadius: 1 }} />
+                  <View>
+                    <Text style={styles.title}>{title}</Text>
+                    <Text style={styles.subtitle}>{subtitle}</Text>
+                  </View>
+                </View>
               </View>
             )}
 
