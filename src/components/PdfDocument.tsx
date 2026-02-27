@@ -323,23 +323,41 @@ function renderChunksSlashPlain(chunks: Chunk[]): string {
 /** Estimate the height of a single sentence block in points */
 function estimateSentenceHeight(result: SentenceResult, isLast: boolean): number {
   let h = 0;
-  // English text row: fontSize 9 * lineHeight 2.3 ≈ 21pt
   const engText =
     result.englishChunks.length > 0 ? result.englishChunks.map((c) => c.text).join(" / ") : result.original;
-  const engLines = Math.ceil(engText.length / 70); // rough chars per line
+  const engLines = Math.ceil(engText.length / 70);
   h += engLines * 21;
-  h += 6; // sentenceRow marginBottom
+  h += 6;
 
   if (result.englishChunks.length > 0) {
-    const rowH = 12; // 6pt * 1.6 lineHeight + 3pt marginBottom
-    if (!result.hideLiteral) h += rowH;
-    if (!result.hideNatural) h += rowH;
-    if (result.hongTNotes && !result.hideHongT) h += rowH;
-    if (result.syntaxNotes) h += result.syntaxNotes.length * rowH;
+    const TRANS_CHARS = 65;
+    const TRANS_LINE_H = 6.5 * 1.8;
+    const TRANS_ROW_GAP = 3;
+
+    const estimateRowH = (text: string) => {
+      const lines = Math.max(1, Math.ceil(text.length / TRANS_CHARS));
+      return lines * TRANS_LINE_H + TRANS_ROW_GAP;
+    };
+
+    if (!result.hideLiteral) {
+      const litText = result.koreanLiteralChunks.map(c => c.text).join(" / ");
+      h += estimateRowH(litText);
+    }
+    if (!result.hideNatural) {
+      h += estimateRowH(result.koreanNatural);
+    }
+    if (result.hongTNotes && !result.hideHongT) {
+      h += estimateRowH(result.hongTNotes);
+    }
+    if (result.syntaxNotes) {
+      for (const n of result.syntaxNotes) {
+        h += estimateRowH(n.content);
+      }
+    }
   }
 
   if (!isLast) {
-    h += 14 + 8; // marginBottom + paddingBottom + border area
+    h += 14 + 8;
   }
 
   return h;
