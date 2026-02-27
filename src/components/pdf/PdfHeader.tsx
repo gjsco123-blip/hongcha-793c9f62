@@ -23,9 +23,9 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end" as const,
   },
   title: {
-    fontFamily: "Jua",
-    fontSize: 15,
-    fontWeight: 600,
+    fontFamily: "Pretendard",
+    fontSize: 16,
+    fontWeight: 700,
     letterSpacing: 1,
     lineHeight: 1,
     margin: 0,
