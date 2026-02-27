@@ -147,6 +147,12 @@ ONLY finite verbs — verbs that serve as the predicate of a clause with a subje
 - Concatenating all chunks (removing tags) MUST reconstruct the original sentence exactly.
 - <v> tags go INSIDE <c> tags: <c1>The researchers <v>discovered</v></c1>
 
+## KOREAN TRANSLATION RULES
+- NEVER use Chinese characters (漢字/Hanja) in Korean translations.
+- Write all Korean in pure Hangul only.
+- Do NOT add parenthetical Hanja explanations like 현현(顯現).
+- Use simple, natural Korean words appropriate for middle/high school students.
+
 You MUST respond by calling the "analysis_result" function with the structured output.`;
 
     const tools = [
