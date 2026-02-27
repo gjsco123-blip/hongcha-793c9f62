@@ -486,7 +486,7 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
               <View style={styles.header}>
                 <View>
                   <Text style={styles.title}>{title}</Text>
-                  <View style={{ width: "100%", height: 1.5, backgroundColor: "#777", marginTop: 4 }} />
+                  <View style={{ width: "100%", height: 1.5, backgroundColor: "#666", marginTop: 4 }} />
                 </View>
               </View>
             )}
