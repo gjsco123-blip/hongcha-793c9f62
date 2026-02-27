@@ -1,12 +1,23 @@
 
 
-## 변경 계획
+## 제목 왼쪽 세로 액센트 바 추가
 
 **파일:** `src/components/PdfDocument.tsx`
 
-1. **헤더 하단 분리 줄 (488-495줄) 삭제** — `marginTop: 12`로 감싼 회색/검은 줄 View 전체 제거
-2. **`styles.header`의 `marginBottom` 줄이기** — 현재 `24` → `8` 정도로 줄여서 title/subtitle과 본문 사이 간격을 최소화하고, 문장과 MEMO가 더 위에서 시작하도록 함
-3. **`styles.header`의 `paddingBottom` 제거** — 현재 `12` → `0`으로 변경
+### 변경 내용
 
-결과: title/subtitle 바로 아래에서 01번 문장과 MEMO가 시작됨.
+1. **헤더 JSX 수정** (486-489줄): 제목+subtitle을 `flexDirection: "row"` 레이아웃으로 감싸고, 왼쪽에 세로 바 추가
+
+```jsx
+<View style={{ flexDirection: "row", alignItems: "stretch" }}>
+  <View style={{ width: 3, backgroundColor: "#222", marginRight: 10, borderRadius: 1 }} />
+  <View>
+    <Text style={styles.title}>{title}</Text>
+    <Text style={styles.subtitle}>{subtitle}</Text>
+  </View>
+</View>
+```
+
+- 세로 바: 너비 3pt, 색상 `#222`, 제목+subtitle 높이에 맞춰 자동 stretch
+- 바와 텍스트 간격: 10pt
 
