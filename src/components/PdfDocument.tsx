@@ -75,10 +75,10 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
   },
   title: {
-    fontSize: 13,
-    fontWeight: 600,
+    fontSize: 14,
+    fontWeight: 700,
     color: "#666",
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
   subtitle: {
     fontSize: 9,
