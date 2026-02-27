@@ -71,8 +71,8 @@ const styles = StyleSheet.create({
   },
   header: {
     marginTop: -14,
-    marginBottom: 24,
-    paddingBottom: 12,
+    marginBottom: 8,
+    paddingBottom: 0,
   },
   title: {
     fontSize: 16,
@@ -485,14 +485,6 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
               <View style={styles.header}>
                 <Text style={styles.title}>{title}</Text>
                 <Text style={styles.subtitle}>{subtitle}</Text>
-                <View style={{ flexDirection: "row", marginTop: 12 }}>
-                  <View style={{ flex: 1, paddingRight: GAP }}>
-                    <View style={{ height: 2, backgroundColor: "#ccc" }} />
-                  </View>
-                  <View style={{ width: MEMO_WIDTH }}>
-                    <View style={{ height: 2, backgroundColor: "#000" }} />
-                  </View>
-                </View>
               </View>
             )}
 
