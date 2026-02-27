@@ -1,4 +1,5 @@
 import { Document, Page, View, Text, StyleSheet, Font } from "@react-pdf/renderer";
+import { PdfHeader } from "@/components/pdf/PdfHeader";
 
 // ── Font Registration ──
 Font.register({
@@ -217,10 +218,7 @@ export function PreviewPdf({ vocab, structure, summary, examBlock, title: titleP
     <Document>
       <Page size="A4" style={s.page}>
         {/* ═══ Header ═══ */}
-        <View style={{ marginTop: -14, marginBottom: 16 }}>
-          <Text style={{ fontSize: 18, fontFamily: "Jua", fontWeight: 400, color: "#222", letterSpacing: 1 }}>{title}</Text>
-          <View style={{ width: "100%", height: 1.5, backgroundColor: "#000", marginTop: 4 }} />
-        </View>
+        <PdfHeader title={title} titleColor="#222" ruleColor="#000" />
 
         {/* ═══ 1. Vocabulary ═══ */}
         {hasVocab && (
