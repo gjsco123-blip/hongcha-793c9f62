@@ -326,12 +326,12 @@ function estimateSentenceHeight(result: SentenceResult, isLast: boolean): number
   // English text row: fontSize 9 * lineHeight 2.3 ≈ 21pt
   const engText =
     result.englishChunks.length > 0 ? result.englishChunks.map((c) => c.text).join(" / ") : result.original;
-  const engLines = Math.ceil(engText.length / 55); // rough chars per line
+  const engLines = Math.ceil(engText.length / 70); // rough chars per line
   h += engLines * 21;
   h += 6; // sentenceRow marginBottom
 
   if (result.englishChunks.length > 0) {
-    const rowH = 13; // 6pt * 1.6 lineHeight + 3pt marginBottom
+    const rowH = 12; // 6pt * 1.6 lineHeight + 3pt marginBottom
     if (!result.hideLiteral) h += rowH;
     if (!result.hideNatural) h += rowH;
     if (result.hongTNotes && !result.hideHongT) h += rowH;
@@ -349,8 +349,8 @@ function estimateSentenceHeight(result: SentenceResult, isLast: boolean): number
 function paginateResults(results: SentenceResult[]): SentenceResult[][] {
   const PAGE_HEIGHT = 841.89; // A4
   const PADDING_V = 42 + 40; // top + bottom
-  const HEADER_H = 54; // header height on page 1
-  const PASSAGE_H = 90; // reserve for 스스로 분석 section
+  const HEADER_H = 36; // header height on page 1 (PdfHeader actual ~31pt + margin)
+  const PASSAGE_H = 70; // reserve for 스스로 분석 section
 
   const pages: SentenceResult[][] = [];
   let currentPage: SentenceResult[] = [];
@@ -364,12 +364,16 @@ function paginateResults(results: SentenceResult[]): SentenceResult[][] {
 
     const pageCapacity = PAGE_HEIGHT - PADDING_V - (isFirstPage ? HEADER_H : 0);
 
-    // Check if adding this sentence would exceed page capacity
-    // For the last page, also reserve space for passage section
-    const remainingResults = results.length - i;
-    const wouldBeLastPage = remainingResults === 1 || usedHeight + h > pageCapacity * 0.85;
+    // Check if all remaining sentences (including this one) fit on this page
+    // If so, also need to reserve space for passage section on this page
+    let remainingHeight = h;
+    for (let j = i + 1; j < results.length; j++) {
+      remainingHeight += estimateSentenceHeight(results[j], j === results.length - 1);
+    }
+    const needsPassageSpace = remainingHeight + PASSAGE_H <= pageCapacity - usedHeight;
+    const passageReserve = (isLastResult || needsPassageSpace) ? PASSAGE_H : 0;
 
-    if (usedHeight + h > pageCapacity - (isLastResult ? PASSAGE_H : 0)) {
+    if (usedHeight + h > pageCapacity - passageReserve) {
       // Current page is full, start new page
       if (currentPage.length > 0) {
         pages.push(currentPage);
