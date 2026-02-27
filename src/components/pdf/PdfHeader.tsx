@@ -8,7 +8,7 @@ import { View, Text, StyleSheet } from "@react-pdf/renderer";
 
 // ── Shared constants ──
 const TITLE_BOX_HEIGHT = 22; // fixed box that contains the title text
-const RULE_TOP_OFFSET = 5.5; // gap between title box bottom → rule top
+const RULE_TOP_OFFSET = 7; // gap between title box bottom → rule top
 const RULE_THICKNESS = 1.5;
 const HEADER_MARGIN_TOP = -14;
 const HEADER_MARGIN_BOTTOM = 16;
@@ -24,8 +24,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: "Pretendard",
-    fontSize: 16,
-    fontWeight: 700,
+    fontSize: 17,
+    fontWeight: 800,
     letterSpacing: 1,
     lineHeight: 1,
     margin: 0,
