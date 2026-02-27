@@ -61,7 +61,7 @@ interface Props {
 // ── Design tokens ──
 const T = {
   ko: "Pretendard",
-  en: "SourceSerif4",
+  en: "Pretendard",
   black: "#1a1a1a",
   g70: "#555",
   g50: "#666",
