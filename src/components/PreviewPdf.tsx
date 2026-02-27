@@ -63,8 +63,9 @@ const T = {
   en: "SourceSerif4",
   black: "#1a1a1a",
   g70: "#555",
-  g50: "#888",
+  g50: "#666",
   g30: "#bbb",
+  g30text: "#666",
   g10: "#f0f0f0",
   g05: "#f8f8f8",
   rule: "#d0d0d0",
@@ -125,7 +126,7 @@ const s = StyleSheet.create({
     borderBottomWidth: 0.3,
     borderBottomColor: "#e4e4e4",
   },
-  vNum: { width: 14, marginRight: 4, fontSize: 6.5, color: T.g30, textAlign: "center" as const, lineHeight: 1 },
+  vNum: { width: 14, marginRight: 4, fontSize: 6.5, color: T.g30text, textAlign: "center" as const, lineHeight: 1 },
   vWord: { width: 56, fontSize: 7, fontWeight: 600, lineHeight: 1 },
   vPos: { width: 18, fontSize: 6, color: T.g50, textAlign: "center" as const, lineHeight: 1, marginRight: 4 },
   vMeaning: { flex: 1, fontSize: 6.5, lineHeight: 1.3 },
@@ -139,7 +140,7 @@ const s = StyleSheet.create({
   structureBox: { borderLeftWidth: 2, borderLeftColor: T.g30, paddingLeft: 10, paddingVertical: 3 },
   structItem: { alignItems: "center" as const },
   structText: { fontSize: 7, lineHeight: 1.7, textAlign: "center" as const },
-  structArrow: { fontSize: 8, color: T.g30, marginVertical: 2 },
+  structArrow: { fontSize: 8, color: T.g30text, marginVertical: 2 },
 
   // Topic/Title/Summary fields
   fieldLabel: {
