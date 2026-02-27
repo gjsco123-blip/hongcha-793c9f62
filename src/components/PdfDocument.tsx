@@ -437,9 +437,7 @@ function SentenceBlock({ result, index, isLast }: { result: SentenceResult; inde
             <View style={styles.translationRow}>
               <View style={styles.translationBar} />
               <Text style={styles.translationLabel}>홍T</Text>
-              <Text style={{ ...styles.translationContent, fontFamily: "GangwonEduSaeeum", fontSize: 9 }}>
-                {result.hongTNotes}
-              </Text>
+              <Text style={styles.translationContent}>{result.hongTNotes}</Text>
             </View>
           ) : null}
           {result.syntaxNotes && result.syntaxNotes.length > 0
