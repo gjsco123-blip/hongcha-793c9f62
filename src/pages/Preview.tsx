@@ -41,7 +41,7 @@ export default function Preview() {
   const [examBlock, setExamBlock] = useState<ExamBlock | null>(null);
   const [previewStatus, setPreviewStatus] = useState<SectionStatus>("idle");
   const [addingWord, setAddingWord] = useState<string | null>(null);
-  const [pdfTitle, setPdfTitle] = useState("Preview");
+  const pdfTitle = (location.state as any)?.pdfTitle || "Preview";
 
   const isGenerating = vocabStatus === "loading" || structureStatus === "loading" || previewStatus === "loading";
 
@@ -151,13 +151,7 @@ export default function Preview() {
           </button>
           <div className="flex items-center gap-2 flex-1">
             <Eye className="w-5 h-5" />
-            <input
-              type="text"
-              value={pdfTitle}
-              onChange={(e) => setPdfTitle(e.target.value)}
-              placeholder="제목"
-              className="text-xl font-bold tracking-wide bg-transparent outline-none border-none text-foreground placeholder:text-muted-foreground/50 w-full"
-            />
+            <h1 className="text-xl font-bold tracking-wide">{pdfTitle}</h1>
           </div>
           {canExport && (
             <button onClick={handleExportPdf} className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors">

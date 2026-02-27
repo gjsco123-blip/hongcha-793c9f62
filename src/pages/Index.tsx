@@ -518,7 +518,7 @@ export default function Index() {
                 </button>
               )}
               <button
-                onClick={() => navigate("/preview", { state: { passage } })}
+                onClick={() => navigate("/preview", { state: { passage, pdfTitle } })}
                 disabled={!passage.trim()}
                 className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors disabled:opacity-40"
               >

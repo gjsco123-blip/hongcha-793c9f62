@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 13,
     fontWeight: 600,
-    color: "#000",
+    color: "#666",
     letterSpacing: 0.5,
   },
   subtitle: {
@@ -486,7 +486,7 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
               <View style={styles.header}>
                 <View>
                   <Text style={styles.title}>{title}</Text>
-                  <View style={{ width: "100%", height: 2, backgroundColor: "#777", marginTop: 4 }} />
+                  <View style={{ width: "100%", height: 1.5, backgroundColor: "#777", marginTop: 4 }} />
                 </View>
               </View>
             )}

@@ -214,7 +214,7 @@ export function PreviewPdf({ vocab, structure, summary, examBlock, title: titleP
         {/* ═══ Header ═══ */}
         <View style={{ marginBottom: 16 }}>
           <Text style={{ fontSize: 13, fontWeight: 600, color: "#000", letterSpacing: 0.5 }}>{title}</Text>
-          <View style={{ width: "100%", height: 2, backgroundColor: "#000", marginTop: 4 }} />
+          <View style={{ width: "100%", height: 1.5, backgroundColor: "#000", marginTop: 4 }} />
         </View>
 
         {/* ═══ 1. Vocabulary ═══ */}
