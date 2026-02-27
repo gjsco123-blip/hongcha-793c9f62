@@ -497,7 +497,7 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
             {isFirstPage && (
               <View style={styles.header}>
                 <Text style={styles.title}>{title}</Text>
-                <View style={{ width: "100%", height: 1.5, backgroundColor: "#666", marginTop: 6 }} />
+                <View style={{ width: "100%", height: 1.5, backgroundColor: "#666", marginTop: 4 }} />
               </View>
             )}
 
