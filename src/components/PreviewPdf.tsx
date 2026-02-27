@@ -55,6 +55,7 @@ interface Props {
   structure: StructureStep[];
   summary: string;
   examBlock: ExamBlock | null;
+  title?: string;
 }
 
 // ── Design tokens ──
@@ -197,18 +198,25 @@ function VocabColumn({
   );
 }
 
-export function PreviewPdf({ vocab, structure, summary, examBlock }: Props) {
+export function PreviewPdf({ vocab, structure, summary, examBlock, title: titleProp }: Props) {
   const hasStructure = structure.length > 0;
   const hasSummary = !!summary;
   const hasVocab = vocab.length > 0;
   const hasExam = !!examBlock;
   const summaryLines = summary ? summary.split("\n").filter(Boolean) : [];
+  const title = titleProp || "Preview";
 
   // Always 3 columns of 10
 
   return (
     <Document>
       <Page size="A4" style={s.page}>
+        {/* ═══ Header ═══ */}
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ fontSize: 13, fontWeight: 600, color: "#000", letterSpacing: 0.5 }}>{title}</Text>
+          <View style={{ width: "100%", height: 2, backgroundColor: "#000", marginTop: 4 }} />
+        </View>
+
         {/* ═══ 1. Vocabulary ═══ */}
         {hasVocab && (
           <View>

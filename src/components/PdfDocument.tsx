@@ -486,10 +486,7 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
               <View style={styles.header}>
                 <View>
                   <Text style={styles.title}>{title}</Text>
-                  <View style={{ flexDirection: "row", marginTop: 4 }}>
-                    <View style={{ width: title.length * 7.5 + 20, maxWidth: 260, height: 2, backgroundColor: "#000" }} />
-                    <View style={{ flex: 1, height: 1.5, backgroundColor: "#555" }} />
-                  </View>
+                  <View style={{ width: "100%", height: 2, backgroundColor: "#777", marginTop: 4 }} />
                 </View>
               </View>
             )}
