@@ -7,8 +7,8 @@ import { View, Text, StyleSheet } from "@react-pdf/renderer";
  */
 
 // ── Shared constants ──
-const TITLE_BOX_HEIGHT = 22;   // fixed box that contains the title text
-const RULE_TOP_OFFSET = 4;     // gap between title box bottom → rule top
+const TITLE_BOX_HEIGHT = 22; // fixed box that contains the title text
+const RULE_TOP_OFFSET = 5.5; // gap between title box bottom → rule top
 const RULE_THICKNESS = 1.5;
 const HEADER_MARGIN_TOP = -14;
 const HEADER_MARGIN_BOTTOM = 16;
@@ -24,8 +24,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: "Jua",
-    fontSize: 18,
-    fontWeight: 400,
+    fontSize: 15,
+    fontWeight: 600,
     letterSpacing: 1,
     lineHeight: 1,
     margin: 0,
@@ -45,11 +45,7 @@ interface PdfHeaderProps {
   ruleColor?: string;
 }
 
-export function PdfHeader({
-  title,
-  titleColor = "#222",
-  ruleColor = "#000",
-}: PdfHeaderProps) {
+export function PdfHeader({ title, titleColor = "#222", ruleColor = "#000" }: PdfHeaderProps) {
   return (
     <View style={styles.wrapper}>
       <View style={styles.titleBox}>
