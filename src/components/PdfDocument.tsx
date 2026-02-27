@@ -71,12 +71,13 @@ const styles = StyleSheet.create({
   },
   header: {
     marginTop: -14,
-    marginBottom: 8,
+    marginBottom: 16,
     paddingBottom: 0,
   },
   title: {
-    fontSize: 16,
-    fontWeight: 700,
+    fontSize: 13,
+    fontWeight: 600,
+    color: "#666"
     letterSpacing: 0.5,
   },
   subtitle: {
