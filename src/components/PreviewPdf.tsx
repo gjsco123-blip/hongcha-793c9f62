@@ -213,7 +213,7 @@ export function PreviewPdf({ vocab, structure, summary, examBlock, title: titleP
       <Page size="A4" style={s.page}>
         {/* ═══ Header ═══ */}
         <View style={{ marginBottom: 16 }}>
-          <Text style={{ fontSize: 14, fontWeight: 700, color: "#000", letterSpacing: 1 }}>{title}</Text>
+          <Text style={{ fontSize: 18, fontWeight: 600, color: "#222", letterSpacing: 1 }}>{title}</Text>
           <View style={{ width: "100%", height: 1.5, backgroundColor: "#000", marginTop: 4 }} />
         </View>
 
