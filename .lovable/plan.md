@@ -1,29 +1,27 @@
 
 
-## 문제 원인
+## 원칙 확인
 
-MEMO 칼럼이 왼쪽 본문 높이에 맞춰 늘어나지 않는 이유:
+MEMO 칼럼의 원칙: **각 페이지 마지막 문장 블록 하단에 맞춰 끝남** (페이지 전체를 채우는 것이 아님).
 
-`contentRow`에 `flexGrow: 0, flexShrink: 0`이 설정되어 있어서, 이 행이 **페이지 전체 높이까지 확장되지 않음**. `alignItems: "stretch"`는 자식 간 높이를 맞추지만, 부모 자체가 콘텐츠 높이만큼만 차지하므로 MEMO도 본문 콘텐츠 높이까지만 늘어남 — 그 아래 빈 공간(TEXT ANALYSIS 전까지)은 비게 됨.
+## 문제
 
-즉, MEMO 배경이 페이지 하단(또는 TEXT ANALYSIS 섹션 직전)까지 채워지지 않고, 마지막 문장 블록 높이에서 끊김.
+이전 수정에서 `contentRow`의 `flexGrow`를 `1`로 변경하여 MEMO가 페이지 전체 높이까지 확장되도록 만들었는데, 이것이 원칙에 반함.
 
-## 해결 방법
+## 수정
 
-`contentRow`에 `flexGrow: 1`을 적용하여 남는 공간을 채우도록 변경. 이렇게 하면 MEMO 칼럼이 페이지 하단(또는 TEXT ANALYSIS 직전)까지 자동 확장됨.
+**파일**: `src/components/PdfDocument.tsx`
 
-## 수정 파일
-
-**`src/components/PdfDocument.tsx`** — `styles.contentRow` 변경:
+`contentRow.flexGrow`를 `1` → `0`으로 되돌림:
 
 ```
 contentRow: {
   flexDirection: "row",
   alignItems: "stretch",
-  flexGrow: 1,    // ← 0에서 1로 변경: 남은 페이지 공간을 채움
+  flexGrow: 0,    // 마지막 문장에 맞춰 끝남
   flexShrink: 0,
 }
 ```
 
-1줄 변경으로 해결.
+`alignItems: "stretch"`가 이미 좌우 컬럼 높이를 동일하게 맞추므로, MEMO는 자연스럽게 마지막 문장 하단에 정렬됨.
 
