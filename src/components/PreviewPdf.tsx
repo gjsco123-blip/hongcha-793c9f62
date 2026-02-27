@@ -82,7 +82,7 @@ const T = {
 
 const s = StyleSheet.create({
   page: {
-    paddingTop: T.mT,
+    paddingTop: 42,
     paddingBottom: T.mB,
     paddingLeft: T.mH,
     paddingRight: T.mH,
@@ -217,7 +217,7 @@ export function PreviewPdf({ vocab, structure, summary, examBlock, title: titleP
     <Document>
       <Page size="A4" style={s.page}>
         {/* ═══ Header ═══ */}
-        <View style={{ marginBottom: 16 }}>
+        <View style={{ marginTop: -14, marginBottom: 16 }}>
           <Text style={{ fontSize: 18, fontFamily: "Jua", fontWeight: 400, color: "#222", letterSpacing: 1 }}>{title}</Text>
           <View style={{ width: "100%", height: 1.5, backgroundColor: "#000", marginTop: 4 }} />
         </View>
