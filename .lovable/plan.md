@@ -1,38 +1,27 @@
 
-원인 요약
-- 지금 변경이 체감되지 않은 핵심 이유는 `PreviewPdf`와 `PdfDocument` 헤더가 “같아 보이지만 실제 렌더 기준이 다르기 때문”입니다.
-- Preview는 인라인 스타일 제목, 분석 PDF는 StyleSheet 기반 제목(`lineHeight`, `margin`)이라 텍스트 박스 높이 계산이 달라지고, 같은 `marginTop: 4`라도 제목-라인 간격이 다르게 보입니다.
-- 즉, 숫자 하나만 바꿔도 기준 박스가 달라서 시각적으로 “그대로”처럼 보였던 상태입니다.
 
-구현 계획
-1) 헤더를 공통 컴포넌트로 통합
-- `src/components/pdf/PdfHeader.tsx`(신규) 생성
-- 제목 시작 위치, 제목-라인 간격을 “고정 좌표 기반”으로 렌더하도록 설계
-- Preview/분석 PDF 둘 다 이 컴포넌트만 사용하게 변경
+## 원인 분석
 
-2) 간격 기준을 폰트 메트릭 의존 → 고정 레이아웃으로 전환
-- `header`의 top 시작점 동일화(현재 기준 유지: `paddingTop: 42`, `marginTop: -14`)
-- 제목과 라인 간격은 margin 조정이 아니라 고정 블록/고정 오프셋으로 지정
-- 예: `titleBoxHeight` + `ruleTopOffset`를 동일 상수로 관리
+페이지네이션 로직(`paginateResults`)에 3가지 과대 추정이 있어서, 실제로는 공간이 남는데도 문장을 다음 페이지로 밀어냄:
 
-3) 기존 개별 헤더 스타일 제거
-- `PreviewPdf.tsx`의 인라인 헤더 스타일 제거
-- `PdfDocument.tsx`의 `title/headerRule` 개별 정의 제거
-- 색상만 props로 분리(Preview: #000 계열, 분석: #666 계열), 간격값은 완전 공유
+1. **`engLines` 계산: 55자/줄** — MEMO 열(100pt)을 빼도 본문 가용 폭에서 실제 약 65-70자가 들어감. 55자 기준이면 줄 수를 ~25% 과대 추정
+2. **`HEADER_H = 54`** — 실제 PdfHeader는 titleBox(22) + rule(1.5) + ruleOffset(5.5) + marginBottom(16) - marginTop(14) ≈ 31pt. 54pt는 약 23pt 과대
+3. **`PASSAGE_H = 90`** — TEXT ANALYSIS 섹션이 마지막 페이지에만 필요한데, 마지막 문장 추가 시점에 90pt를 차감. 실제 필요 높이는 문장 수에 따라 다르지만 대부분 60-70pt면 충분
 
-4) 검증 루틴 추가
-- 두 PDF를 같은 제목으로 재생성
-- “페이지 상단→제목 시작점”, “제목 하단→라인 상단” 2개 거리만 비교
-- 값이 동일하면 완료, 아니면 공통 상수 1곳만 조정
+결과: 1페이지 가용 높이를 `841.89 - 82 - 54 = 705.89pt`로 계산하지만, 실제는 `841.89 - 82 - 31 = 728.89pt`. 여기에 각 문장 높이도 과대 추정되니 4번 문장이 넘침.
 
-기술 세부(변경 파일)
-- 수정: `src/components/PreviewPdf.tsx`
-- 수정: `src/components/PdfDocument.tsx`
-- 추가: `src/components/pdf/PdfHeader.tsx` (공통 헤더)
-- 공통 상수 예시: `HEADER_TOP_OFFSET`, `TITLE_RULE_GAP`, `RULE_THICKNESS`
+## 수정 계획
 
-완료 기준
-- Preview PDF와 구문분석 PDF에서
-  1) 제목 시작 y 위치 동일
-  2) 제목-라인 간격 동일
-- 이후 동일 이슈 재발 시 공통 헤더 파일 1곳만 수정하면 두 PDF가 동시에 반영됨
+**파일**: `src/components/PdfDocument.tsx`
+
+1. `estimateSentenceHeight` 조정:
+   - `engLines`: `Math.ceil(len / 55)` → `Math.ceil(len / 70)`
+   - `rowH`: `13` → `12`
+
+2. `paginateResults` 상수 조정:
+   - `HEADER_H`: `54` → `36` (PdfHeader 실측 기반)
+   - `PASSAGE_H`: `90` → `70`
+
+3. `PASSAGE_H` 차감 로직 개선:
+   - 현재: 마지막 문장(`isLastResult`)일 때만 차감 → 남은 문장 전체가 현재 페이지에 들어갈 수 있는지도 고려하도록 변경
+
