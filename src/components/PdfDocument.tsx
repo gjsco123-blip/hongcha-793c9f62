@@ -82,7 +82,6 @@ const styles = StyleSheet.create({
   header: {
     marginTop: -14,
     marginBottom: 16,
-    paddingBottom: 0,
   },
   title: {
     fontFamily: "Jua",
@@ -497,10 +496,8 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
             {/* Header — only on first page */}
             {isFirstPage && (
               <View style={styles.header}>
-                <View>
-                  <Text style={styles.title}>{title}</Text>
-                  <View style={{ width: "100%", height: 1.5, backgroundColor: "#666", marginTop: 4 }} />
-                </View>
+                <Text style={styles.title}>{title}</Text>
+                <View style={{ width: "100%", height: 1.5, backgroundColor: "#666", marginTop: 4 }} />
               </View>
             )}
 
