@@ -28,6 +28,16 @@ Font.register({
   ],
 });
 
+Font.register({
+  family: "Jua",
+  src: "https://cdn.jsdelivr.net/fontsource/fonts/jua@latest/korean-400-normal.ttf",
+});
+
+Font.register({
+  family: "GangwonEduSaeeum",
+  src: "https://cdn.jsdelivr.net/gh/fonts-archive/GangwonEduSaeeum/GangwonEduSaeeum-OTF.otf",
+});
+
 Font.registerHyphenationCallback((word) => [word]);
 
 interface SyntaxNote {
@@ -75,8 +85,9 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
   },
   title: {
+    fontFamily: "Jua",
     fontSize: 18,
-    fontWeight: 600,
+    fontWeight: 400,
     color: "#666",
     letterSpacing: 1,
   },
@@ -427,7 +438,7 @@ function SentenceBlock({ result, index, isLast }: { result: SentenceResult; inde
             <View style={styles.translationRow}>
               <View style={styles.translationBar} />
               <Text style={styles.translationLabel}>홍T</Text>
-              <Text style={styles.translationContent}>{result.hongTNotes}</Text>
+              <Text style={{ ...styles.translationContent, fontFamily: "GangwonEduSaeeum" }}>{result.hongTNotes}</Text>
             </View>
           ) : null}
           {result.syntaxNotes && result.syntaxNotes.length > 0
