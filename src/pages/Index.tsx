@@ -101,7 +101,7 @@ export default function Index() {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [pdfTitle, setPdfTitle] = useState("SYNTAX");
-  const [pdfSubtitle, setPdfSubtitle] = useState("문장 해석 연습");
+  
   const [editedSentences, setEditedSentences] = useState<string[]>([]);
 
   const autoSentences = useMemo(
@@ -460,7 +460,7 @@ export default function Index() {
   };
 
   const handleExportPdf = async () => {
-    await exportToPdf(results, pdfTitle, pdfSubtitle, "syntax-worksheet.pdf");
+    await exportToPdf(results, pdfTitle, "", "syntax-worksheet.pdf");
     toast.success("PDF가 저장되었습니다.");
   };
 
@@ -476,13 +476,6 @@ export default function Index() {
               onChange={(e) => setPdfTitle(e.target.value)}
               placeholder="제목"
               className="text-xl font-bold tracking-wide bg-transparent outline-none border-none text-foreground placeholder:text-muted-foreground/50 w-full"
-            />
-            <input
-              type="text"
-              value={pdfSubtitle}
-              onChange={(e) => setPdfSubtitle(e.target.value)}
-              placeholder="부제목"
-              className="text-xs text-muted-foreground bg-transparent outline-none border-none placeholder:text-muted-foreground/50 w-full"
             />
           </div>
         </div>
