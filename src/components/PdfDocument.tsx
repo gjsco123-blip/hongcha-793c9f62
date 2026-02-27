@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
   contentRow: {
     flexDirection: "row",
     alignItems: "stretch",
-    flexGrow: 1,
+    flexGrow: 0,
     flexShrink: 0,
   },
   leftColumn: {
