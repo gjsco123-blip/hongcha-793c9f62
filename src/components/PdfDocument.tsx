@@ -35,7 +35,7 @@ Font.register({
 
 Font.register({
   family: "GangwonEduSaeeum",
-  src: "https://cdn.jsdelivr.net/gh/fonts-archive/GangwonEduSaeeum/GangwonEduSaeeum-OTF.otf",
+  src: "https://cdn.jsdelivr.net/gh/fonts-archive/GangwonEduSaeeum@master/GangwonEduSaeeum.ttf",
 });
 
 Font.registerHyphenationCallback((word) => [word]);
