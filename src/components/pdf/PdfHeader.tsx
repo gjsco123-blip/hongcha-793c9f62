@@ -39,9 +39,9 @@ const styles = StyleSheet.create({
 
 interface PdfHeaderProps {
   title: string;
-  /** Title text colour  (Preview=#222, Analysis=#666) */
+  /** Title text colour  (Preview=#222, Analysis=#777) */
   titleColor?: string;
-  /** Rule colour          (Preview=#000, Analysis=#666) */
+  /** Rule colour          (Preview=#222, Analysis=#777) */
   ruleColor?: string;
 }
 
