@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     paddingTop: 42,
     paddingBottom: 40,
     paddingLeft: 42,
-    paddingRight: 30, // 12mm from right edge
+    paddingRight: 34, // 12mm from right edge
     fontFamily: "Pretendard",
     fontSize: 9,
     lineHeight: 1.8,
@@ -340,7 +340,7 @@ function estimateSentenceHeight(result: SentenceResult, isLast: boolean): number
     };
 
     if (!result.hideLiteral) {
-      const litText = result.koreanLiteralChunks.map((c) => c.text).join(" / ");
+      const litText = result.koreanLiteralChunks.map(c => c.text).join(" / ");
       h += estimateRowH(litText);
     }
     if (!result.hideNatural) {
@@ -389,7 +389,7 @@ function paginateResults(results: SentenceResult[]): SentenceResult[][] {
       remainingHeight += estimateSentenceHeight(results[j], j === results.length - 1);
     }
     const needsPassageSpace = remainingHeight + PASSAGE_H <= pageCapacity - usedHeight;
-    const passageReserve = isLastResult || needsPassageSpace ? PASSAGE_H : 0;
+    const passageReserve = (isLastResult || needsPassageSpace) ? PASSAGE_H : 0;
 
     if (usedHeight + h > pageCapacity - passageReserve) {
       // Current page is full, start new page
@@ -507,7 +507,9 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
         return (
           <Page key={pageIdx} size="A4" style={styles.page}>
             {/* Header — only on first page */}
-            {isFirstPage && <PdfHeader title={title} titleColor="#666" ruleColor="#666" />}
+            {isFirstPage && (
+              <PdfHeader title={title} titleColor="#666" ruleColor="#666" />
+            )}
 
             {/* Two-column layout: Left (sentences) + Right (MEMO) — per page */}
             <View style={styles.contentRow}>
