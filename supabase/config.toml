@@ -2,3 +2,6 @@ project_id = "lynybrjmbtmklloeqhvn"
 
 [functions.hongt-chat]
 verify_jwt = false
+
+[functions.parse-vocab-paste]
+verify_jwt = false
