@@ -175,6 +175,7 @@ const styles = StyleSheet.create({
   passageSection: {
     marginTop: 18,
     paddingTop: 0,
+    marginRight: 8,
   },
   passageSectionTitle: {
     fontSize: 7,
