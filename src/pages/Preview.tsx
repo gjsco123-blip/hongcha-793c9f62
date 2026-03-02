@@ -6,7 +6,7 @@ import { pdf } from "@react-pdf/renderer";
 import { ArrowLeft, FileDown, Eye } from "lucide-react";
 import { PreviewPdf } from "@/components/PreviewPdf";
 import { PreviewPassageInput } from "@/components/preview/PreviewPassageInput";
-import { PreviewVocabSection, type PhraseItem } from "@/components/preview/PreviewVocabSection";
+import { PreviewVocabSection } from "@/components/preview/PreviewVocabSection";
 import { PreviewSummarySection } from "@/components/preview/PreviewSummarySection";
 import { PreviewStructureSection } from "@/components/preview/PreviewStructureSection";
 import { PreviewExamSection } from "@/components/preview/PreviewExamSection";
@@ -34,7 +34,6 @@ export default function Preview() {
   const [passage, setPassage] = useState((location.state as any)?.passage || "");
 
   const [vocab, setVocab] = useState<VocabItem[]>([]);
-  const [phrases, setPhrases] = useState<PhraseItem[]>([]);
   const [vocabStatus, setVocabStatus] = useState<SectionStatus>("idle");
   const [structure, setStructure] = useState<StructureStep[]>([]);
   const [structureStatus, setStructureStatus] = useState<SectionStatus>("idle");
@@ -52,8 +51,8 @@ export default function Preview() {
     setStructureStatus("loading");
     setPreviewStatus("loading");
 
-    const vocabPromise = invokeRetry("analyze-vocab", { passage, count: 40 })
-      .then((d) => { setVocab(d.vocab || []); setPhrases(d.phrases || []); setVocabStatus("done"); })
+    const vocabPromise = invokeRetry("analyze-vocab", { passage, count: 30 })
+      .then((d) => { setVocab(d.vocab || []); setVocabStatus("done"); })
       .catch((e) => { toast.error(`어휘 생성 실패: ${e.message}`); setVocabStatus("error"); });
 
     const structPromise = invokeRetry("analyze-structure", { passage, step_count: 5 })
@@ -96,10 +95,6 @@ export default function Preview() {
     setVocab((prev) => prev.map((v, i) => i === index ? { ...v, [field]: value } : v));
   }, []);
 
-  const handlePhraseDelete = useCallback((index: number) => {
-    setPhrases((prev) => prev.filter((_, i) => i !== index));
-  }, []);
-
   // ── Regenerate handlers (return new data for compare) ──
   const regenSummary = useCallback(async (): Promise<string> => {
     const data = await invokeRetry("analyze-preview", { passage });
@@ -129,7 +124,7 @@ export default function Preview() {
   // ── PDF export ──
   const handleExportPdf = async () => {
     try {
-      const doc = createElement(PreviewPdf, { vocab, phrases, structure, summary, examBlock, title: pdfTitle }) as any;
+      const doc = createElement(PreviewPdf, { vocab, structure, summary, examBlock, title: pdfTitle }) as any;
       const blob = await pdf(doc).toBlob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -179,11 +174,9 @@ export default function Preview() {
 
         <PreviewVocabSection
           vocab={vocab}
-          phrases={phrases}
           status={vocabStatus}
           onDelete={handleVocabDelete}
           onEdit={handleVocabEdit}
-          onDeletePhrase={handlePhraseDelete}
         />
 
         <PreviewSummarySection
