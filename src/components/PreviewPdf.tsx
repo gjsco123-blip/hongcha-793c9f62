@@ -56,8 +56,13 @@ interface ExamBlock {
   one_sentence_summary: string;
   one_sentence_summary_ko?: string;
 }
+interface PhraseItem {
+  phrase: string;
+  meaning_ko: string;
+}
 interface Props {
   vocab: VocabItem[];
+  phrases?: PhraseItem[];
   structure: StructureStep[];
   summary: string;
   examBlock: ExamBlock | null;
@@ -133,11 +138,22 @@ const s = StyleSheet.create({
     borderBottomWidth: 0.3,
     borderBottomColor: "#e4e4e4",
   },
-  vNum: { width: 14, marginRight: 4, fontSize: 6.5, color: T.g30text, textAlign: "center" as const, lineHeight: 1 },
-  vWord: { width: 56, fontSize: 7, fontWeight: 600, lineHeight: 1 },
-  vPos: { width: 18, fontSize: 6, color: T.g50, textAlign: "center" as const, lineHeight: 1, marginRight: 4 },
-  vMeaning: { flex: 1, fontSize: 6.5, lineHeight: 1.3 },
-  vHdrText: { fontSize: 6, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.4 },
+  vNum: { width: 12, marginRight: 3, fontSize: 6, color: T.g30text, textAlign: "center" as const, lineHeight: 1 },
+  vWord: { width: 50, fontSize: 6.5, fontWeight: 600, lineHeight: 1 },
+  vPos: { width: 16, fontSize: 5.5, color: T.g50, textAlign: "center" as const, lineHeight: 1, marginRight: 3 },
+  vMeaning: { flex: 1, fontSize: 6, lineHeight: 1.3 },
+  vHdrText: { fontSize: 5.5, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.4 },
+  // Phrases
+  phraseRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    paddingVertical: 3,
+    paddingHorizontal: 4,
+    borderBottomWidth: 0.3,
+    borderBottomColor: "#e4e4e4",
+  },
+  phraseText: { width: 80, fontSize: 6.5, fontWeight: 600, lineHeight: 1 },
+  phraseMeaning: { flex: 1, fontSize: 6, lineHeight: 1.3 },
 
   // Key Summary — left bar accent
   summaryBox: { borderLeftWidth: 2, borderLeftColor: T.g30, paddingLeft: 10, paddingVertical: 3 },
@@ -204,15 +220,14 @@ function VocabColumn({
   );
 }
 
-export function PreviewPdf({ vocab, structure, summary, examBlock, title: titleProp }: Props) {
+export function PreviewPdf({ vocab, phrases = [], structure, summary, examBlock, title: titleProp }: Props) {
   const hasStructure = structure.length > 0;
   const hasSummary = !!summary;
   const hasVocab = vocab.length > 0;
+  const hasPhrases = phrases.length > 0;
   const hasExam = !!examBlock;
   const summaryLines = summary ? summary.split("\n").filter(Boolean) : [];
   const title = titleProp || "Preview";
-
-  // Always 3 columns of 10
 
   return (
     <Document>
@@ -225,13 +240,29 @@ export function PreviewPdf({ vocab, structure, summary, examBlock, title: titleP
           <View>
             <Text style={s.secTitle}>Vocabulary</Text>
             <View style={s.vocabRow2Col}>
-              {[0, 1, 2].map((colIdx) => (
+              {[0, 1, 2, 3].map((colIdx) => (
                 <VocabColumn
                   key={colIdx}
                   items={vocab.slice(colIdx * 10, colIdx * 10 + 10)}
                   startNum={colIdx * 10 + 1}
                   totalSlots={10}
                 />
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* ═══ 1b. Phrases ═══ */}
+        {hasPhrases && (
+          <View>
+            <View style={{ ...s.thinRule, marginVertical: 8 }} />
+            <Text style={{ ...s.secTitle, fontSize: 6.5 }}>Phrases</Text>
+            <View style={s.vocabTable}>
+              {phrases.map((p, i) => (
+                <View key={i} style={s.phraseRow}>
+                  <Text style={s.phraseText}>{p.phrase}</Text>
+                  <Text style={s.phraseMeaning}>{p.meaning_ko}</Text>
+                </View>
               ))}
             </View>
           </View>
