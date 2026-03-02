@@ -664,6 +664,8 @@ export default function Index() {
                           generateHongT(result.id, allSentences);
                         }}
                         onDelete={() => setResults(prev => prev.map(r => r.id === result.id ? { ...r, hideHongT: true } : r))}
+                        sentence={result.original}
+                        fullPassage={results.map((r) => r.original).join(" ")}
                       />
                     )}
 
