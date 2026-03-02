@@ -114,7 +114,7 @@ async function callAI(messages: Array<{ role: string; content: string }>, apiKey
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "google/gemini-3-flash-preview",
       messages,
       temperature: 0.15,
     }),

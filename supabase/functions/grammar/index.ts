@@ -286,7 +286,7 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "google/gemini-3-flash-preview",
           temperature: 0.2,
           max_tokens: 600,
           messages: [
@@ -379,7 +379,7 @@ serve(async (req) => {
 
     const systemPrompt = useFreestyle ? buildAutoSystemPrompt() : buildHintSystemPrompt();
 
-    const hintModel = useFreestyle ? "google/gemini-2.5-flash" : "google/gemini-2.5-pro";
+    const hintModel = useFreestyle ? "google/gemini-3-flash-preview" : "google/gemini-2.5-pro";
     const useToolCall = hintModel.includes("flash");
 
     const reqBody: any = {
