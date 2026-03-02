@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Sparkles, SpellCheck, X } from "lucide-react";
+import { Sparkles, SpellCheck, X, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { HongTChat } from "./HongTChat";
 
 interface HongTSectionProps {
   value: string;
@@ -9,11 +10,14 @@ interface HongTSectionProps {
   onGenerate?: () => void;
   generating?: boolean;
   onDelete?: () => void;
+  sentence?: string;
+  fullPassage?: string;
 }
 
-export function HongTSection({ value, onChange, onGenerate, generating, onDelete }: HongTSectionProps) {
+export function HongTSection({ value, onChange, onGenerate, generating, onDelete, sentence, fullPassage }: HongTSectionProps) {
   const [editing, setEditing] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   const handleSpellCheck = async () => {
     if (!value.trim()) return;
@@ -74,6 +78,15 @@ export function HongTSection({ value, onChange, onGenerate, generating, onDelete
                 자동 생성
               </button>
             )}
+            {value.trim() && sentence && (
+              <button
+                onClick={() => setChatOpen(true)}
+                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"
+              >
+                <MessageSquare className="w-3 h-3" />
+                AI 수정
+              </button>
+            )}
             {editing && value.trim() && (
               <button
                 onClick={handleSpellCheck}
@@ -108,6 +121,17 @@ export function HongTSection({ value, onChange, onGenerate, generating, onDelete
           )}
         </div>
       </div>
+
+      {sentence && (
+        <HongTChat
+          open={chatOpen}
+          onOpenChange={setChatOpen}
+          sentence={sentence}
+          currentExplanation={value}
+          fullPassage={fullPassage}
+          onApplySuggestion={(suggestion) => onChange(suggestion)}
+        />
+      )}
     </div>
   );
 }
