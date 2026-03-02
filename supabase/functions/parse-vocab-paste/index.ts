@@ -34,13 +34,14 @@ serve(async (req) => {
 
 각 항목:
 - word: 영단어 (단일 단어만)
-- pos: 품사를 반드시 다음 중 하나로 변환: 동/명/형/부/접/전
+- pos: 품사를 반드시 다음 중 하나로 변환: 동/명/형/부/접/전/숙
   - verb, v, 동사 → 동
   - noun, n, 명사 → 명
   - adjective, adj, 형용사 → 형 (과거분사가 수식/보어로 쓰이면 '형')
   - adverb, adv, 부사 → 부
   - conjunction, conj, 접속사 → 접
   - preposition, prep, 전치사 → 전
+  - idiom, phrase, 숙어, 숙, [숙] → 숙
   - 사용자가 제공한 품사를 최대한 존중하되, 위 체계로 변환
 - meaning_ko: 한국어 뜻 (짧은 직역). 사용자가 뜻을 제공했으면 그대로 사용, 없으면 생성
 - in_context: 제공된 지문(passage)에서 해당 단어가 포함된 연속 2~6단어 인용. 지문에 없으면 빈 문자열
