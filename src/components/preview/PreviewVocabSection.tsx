@@ -58,7 +58,7 @@ export function PreviewVocabSection({ vocab, status, passage, onDelete, onEdit, 
           <div key={colIdx} className="border border-border/60 divide-y divide-border/40">
             <div className="flex items-center gap-2 px-2 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
               <span className="w-4 text-center">#</span>
-              <span className="min-w-[45px] flex-shrink-0">Word</span>
+              <span className="min-w-[40px] flex-shrink-0">Word</span>
               <span className="w-7 text-center">POS</span>
               <span className="flex-1">Meaning</span>
               <span className="w-5" />
@@ -77,7 +77,7 @@ export function PreviewVocabSection({ vocab, status, passage, onDelete, onEdit, 
               return (
                 <div key={num} className="group flex items-center gap-2 px-2 py-1.5 text-xs">
                   <span className="w-4 text-center text-muted-foreground/50 text-[10px]">{num}</span>
-                  <span className="font-english font-semibold min-w-[45px] max-w-[70px] truncate flex-shrink-0" title={v.word}>{v.word}</span>
+                  <span className="font-english font-semibold min-w-[40px] max-w-[100px] truncate flex-shrink-0 text-[11px]" title={v.word}>{v.word}</span>
                   <input
                     value={v.pos}
                     onChange={(e) => onEdit(globalIdx, "pos", e.target.value)}

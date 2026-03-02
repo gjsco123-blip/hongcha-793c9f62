@@ -134,8 +134,8 @@ const s = StyleSheet.create({
     borderBottomColor: "#e4e4e4",
   },
   vNum: { width: 14, marginRight: 4, fontSize: 6.5, color: T.g30text, textAlign: "center" as const, lineHeight: 1 },
-  vWord: { width: 56, fontSize: 7, fontWeight: 600, lineHeight: 1 },
-  vPos: { width: 18, fontSize: 6, color: T.g50, textAlign: "center" as const, lineHeight: 1, marginRight: 4 },
+  vWord: { width: 68, fontSize: 7, fontWeight: 600, lineHeight: 1.2 },
+  vPos: { width: 14, fontSize: 6, color: T.g50, textAlign: "center" as const, lineHeight: 1, marginRight: 2 },
   vMeaning: { flex: 1, fontSize: 6.5, lineHeight: 1.3 },
   vHdrText: { fontSize: 6, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.4 },
 
