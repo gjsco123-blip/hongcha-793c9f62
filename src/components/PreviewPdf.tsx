@@ -134,8 +134,8 @@ const s = StyleSheet.create({
     borderBottomColor: "#e4e4e4",
   },
   vNum: { width: 14, marginRight: 4, fontSize: 6.5, color: T.g30text, textAlign: "center" as const, lineHeight: 1 },
-  vWord: { width: 68, fontSize: 7, fontWeight: 600, lineHeight: 1.2 },
-  vPos: { width: 14, fontSize: 6, color: T.g50, textAlign: "center" as const, lineHeight: 1, marginRight: 2 },
+  vWord: { width: 56, fontSize: 7, fontWeight: 600, lineHeight: 1 },
+  vPos: { width: 18, fontSize: 6, color: T.g50, textAlign: "center" as const, lineHeight: 1, marginRight: 4 },
   vMeaning: { flex: 1, fontSize: 6.5, lineHeight: 1.3 },
   vHdrText: { fontSize: 6, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.4 },
 
@@ -212,8 +212,7 @@ export function PreviewPdf({ vocab, structure, summary, examBlock, title: titleP
   const summaryLines = summary ? summary.split("\n").filter(Boolean) : [];
   const title = titleProp || "Preview";
 
-  // 3 columns: 14/13/13
-  const colSizes = [14, 13, 13];
+  // Always 3 columns of 10
 
   return (
     <Document>
@@ -226,17 +225,14 @@ export function PreviewPdf({ vocab, structure, summary, examBlock, title: titleP
           <View>
             <Text style={s.secTitle}>Vocabulary</Text>
             <View style={s.vocabRow2Col}>
-              {colSizes.map((size, colIdx) => {
-                const offset = colSizes.slice(0, colIdx).reduce((a, b) => a + b, 0);
-                return (
-                  <VocabColumn
-                    key={colIdx}
-                    items={vocab.slice(offset, offset + size)}
-                    startNum={offset + 1}
-                    totalSlots={size}
-                  />
-                );
-              })}
+              {[0, 1, 2].map((colIdx) => (
+                <VocabColumn
+                  key={colIdx}
+                  items={vocab.slice(colIdx * 10, colIdx * 10 + 10)}
+                  startNum={colIdx * 10 + 1}
+                  totalSlots={10}
+                />
+              ))}
             </View>
           </View>
         )}
