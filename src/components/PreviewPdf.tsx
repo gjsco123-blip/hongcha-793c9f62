@@ -212,7 +212,8 @@ export function PreviewPdf({ vocab, structure, summary, examBlock, title: titleP
   const summaryLines = summary ? summary.split("\n").filter(Boolean) : [];
   const title = titleProp || "Preview";
 
-  // Always 3 columns of 10
+  // 3 columns: 14/13/13
+  const colSizes = [14, 13, 13];
 
   return (
     <Document>
@@ -225,14 +226,17 @@ export function PreviewPdf({ vocab, structure, summary, examBlock, title: titleP
           <View>
             <Text style={s.secTitle}>Vocabulary</Text>
             <View style={s.vocabRow2Col}>
-              {[0, 1, 2].map((colIdx) => (
-                <VocabColumn
-                  key={colIdx}
-                  items={vocab.slice(colIdx * 10, colIdx * 10 + 10)}
-                  startNum={colIdx * 10 + 1}
-                  totalSlots={10}
-                />
-              ))}
+              {colSizes.map((size, colIdx) => {
+                const offset = colSizes.slice(0, colIdx).reduce((a, b) => a + b, 0);
+                return (
+                  <VocabColumn
+                    key={colIdx}
+                    items={vocab.slice(offset, offset + size)}
+                    startNum={offset + 1}
+                    totalSlots={size}
+                  />
+                );
+              })}
             </View>
           </View>
         )}

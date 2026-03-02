@@ -51,7 +51,7 @@ export default function Preview() {
     setStructureStatus("loading");
     setPreviewStatus("loading");
 
-    const vocabPromise = invokeRetry("analyze-vocab", { passage, count: 30 })
+    const vocabPromise = invokeRetry("analyze-vocab", { passage, count: 40 })
       .then((d) => { setVocab(d.vocab || []); setVocabStatus("done"); })
       .catch((e) => { toast.error(`어휘 생성 실패: ${e.message}`); setVocabStatus("error"); });
 
@@ -93,6 +93,13 @@ export default function Preview() {
 
   const handleVocabEdit = useCallback((index: number, field: keyof VocabItem, value: string) => {
     setVocab((prev) => prev.map((v, i) => i === index ? { ...v, [field]: value } : v));
+  }, []);
+
+  const handleBulkAdd = useCallback((items: VocabItem[]) => {
+    setVocab((prev) => {
+      const combined = [...prev, ...items];
+      return combined.slice(0, 40);
+    });
   }, []);
 
   // ── Regenerate handlers (return new data for compare) ──
@@ -175,8 +182,10 @@ export default function Preview() {
         <PreviewVocabSection
           vocab={vocab}
           status={vocabStatus}
+          passage={passage}
           onDelete={handleVocabDelete}
           onEdit={handleVocabEdit}
+          onBulkAdd={handleBulkAdd}
         />
 
         <PreviewSummarySection
