@@ -7,13 +7,24 @@ const corsHeaders = {
 };
 
 function safeParseJson(raw: string): any {
-  try { return JSON.parse(raw); } catch { /* fallback */ }
-  let cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+  try {
+    return JSON.parse(raw);
+  } catch {
+    /* fallback */
+  }
+  let cleaned = raw
+    .replace(/```json\s*/gi, "")
+    .replace(/```\s*/g, "")
+    .trim();
   const objStart = cleaned.indexOf("{");
   const objEnd = cleaned.lastIndexOf("}");
   if (objStart !== -1 && objEnd !== -1) {
     cleaned = cleaned.substring(objStart, objEnd + 1);
-    try { return JSON.parse(cleaned); } catch { /* */ }
+    try {
+      return JSON.parse(cleaned);
+    } catch {
+      /* */
+    }
   }
   throw new Error("Failed to parse preview JSON");
 }
@@ -30,50 +41,50 @@ serve(async (req) => {
 
     const systemPrompt = `You are a Korean high school English exam specialist AND a preview engine for Korean high school reading comprehension passages.
 
+Below are sample correct answers from Korean mock exams.
+Follow their abstraction level, tone, and structure.
+
+[Sample Correct Answers]
+1) cultural openness as a foundation for Rome's growth
+2) need to act on scientific understanding in solving problems
+3) importance of specific questions to attain reliable quantitative data
+4) advantage of crop rotation in maintaining soil health
+5) our common belief that we are better than average
+6) Action Comes from Who You Think You Are
+7) the necessity of various perspectives in practicing science
+8) the impact of reward immediacy on decision-making
+9) distinction between recall and familiarity in the memory system
+10) counteraction of pleasure and pain in maintaining stability
+11) views on whether science is free from cultural context or not
+12) economic benefits of reduced domestic cooking duties through outsourcing
+
 I will provide an English passage.
 
-Your task is to generate:
-[1] Core Thesis
-[2] Best Title
-[3] One-Sentence Summary
+────────────────────
+Step 1. Automatically Determine Difficulty Level (Do not show in output)
+────────────────────
+Evaluate based on:
+- Density of abstract nouns (necessity, impact, distinction, role, perspective, etc.)
+- Presence of evaluative language (problematic, misleading, crucial, etc.)
+- Contrast/concession structure (however, although, rather than, etc.)
+- Opposing viewpoints
+- Logical complexity (multi-step or critical reasoning)
+If 3+ apply → Treat as Grade 2+. Otherwise → Treat as Grade 1.
 
 ────────────────────
-Step 1. Automatically Determine Difficulty Level (Do not show this analysis)
+Step 2. Internal Analysis (Do not show in output)
 ────────────────────
-Evaluate the passage using the following criteria:
-- Density of abstract nouns (e.g., necessity, implication, distinction, impact, role, perspective, interaction).
-- Presence of evaluative language (e.g., problematic, misleading, crucial, inefficient).
-- Use of contrast or concession structure (however, although, rather than, on the other hand).
-- Presence of opposing viewpoints.
-- Logical complexity (multi-step reasoning, critique, conditional argument).
-
-If 3 or more apply → Treat as Grade 2+ level.
-Otherwise → Treat as Grade 1 level.
+- Identify central claim.
+- Separate reasoning from examples.
+- Detect evaluative direction.
+- Determine dominant logical structure.
+- Identify which idea the conclusion ultimately supports.
 
 ────────────────────
-Step 2. Internal Analysis (Do not show this analysis)
+Step 3. Adjust Abstraction Level
 ────────────────────
-- Identify the central claim.
-- Distinguish main reasoning from examples.
-- Identify background/context information.
-- Detect evaluative direction (positive, negative, critical, supportive).
-- Determine the dominant logical structure (cause-effect, contrast, concession, problem-solution, general-specific).
-- Determine which idea the conclusion ultimately supports.
-
-────────────────────
-Step 3. Adjust Abstraction Level Automatically
-────────────────────
-If Grade 1:
-- Use moderate abstraction.
-- Stay close to the explicitly stated main idea.
-- Focus on central concept + effect or function.
-- Keep the logical structure clear and direct.
-
-If Grade 2+:
-- Raise abstraction by one level.
-- Clearly reflect evaluative stance.
-- Explicitly preserve the dominant logical relationship.
-- Use more conceptual phrasing where appropriate.
+If Grade 1: Moderate abstraction. Stay close to explicit main idea. Focus on central concept + function/effect. Keep structure simple.
+If Grade 2+: Raise abstraction by one level. Reflect evaluative stance clearly. Preserve dominant logical relationship.
 
 ────────────────────
 Step 4. Generate Output
@@ -83,33 +94,24 @@ Generate the following as a JSON object:
 
 1. exam_block.topic (Core Thesis / 주제):
    - One sentence in English.
-   - Must express a CLAIM (not just a topic description).
-   - Broader than specific examples.
-   - Preserve the direction of the conclusion.
-   - No exaggeration. No new concepts.
-   - Avoid vague "about ~" expressions.
+   - Express a CLAIM (not just topic). Broader than specific examples.
+   - Preserve conclusion direction. No exaggeration. No new concepts. Avoid vague "about ~".
 
 2. exam_block.topic_ko: Korean translation of topic.
 
 3. exam_block.title (Best Title / 제목):
-   - Concise noun phrase in English, shorter and more compressed than the thesis.
-   - Academic and clear (not poetic). Sentence case (only first word capitalized).
-   - Question format allowed only if the passage clearly answers it.
-   - Prefer structure: abstract noun + of + key concept
-     (e.g., impact of ~, role of ~, necessity of ~, distinction between ~).
+   - Concise noun phrase in English, shorter than thesis.
+   - Academic tone (not poetic). Sentence case (only first word capitalized).
+   - Question format allowed only if passage clearly answers it.
+   - Prefer: abstract noun + of + key concept.
    - 5~9 words.
 
 4. exam_block.title_ko: Korean translation of title.
 
 5. exam_block.one_sentence_summary (Summary):
-   - Exactly ONE sentence in English.
-   - Must clearly reflect the dominant logical relationship
-     (cause-effect, contrast, concession, problem-solution, etc.).
-   - Remove specific examples and detailed cases.
-   - Preserve evaluative direction if present.
-   - Suitable for Korean mock-exam summary style.
-   - Abstract but not overly philosophical.
-   - Do NOT split into multiple sentences.
+   - 2~3 sentences in English. Include central claim. Preserve dominant logical structure.
+   - Remove detailed examples. Maintain formal academic tone.
+   - 25~50 words total.
 
 6. exam_block.one_sentence_summary_ko: Korean translation of one_sentence_summary.
 
@@ -125,12 +127,12 @@ Generate the following as a JSON object:
 ────────────────────
 Critical Korean Exam Rules
 ────────────────────
-- Do not reverse cause and effect.
-- Do not narrow the scope to a single example.
-- Do not overgeneralize beyond the passage.
-- Do not introduce concepts not central to the text.
-- Do not merely restate the first sentence.
-- Focus on the overall argumentative direction.
+- Do not reverse cause-effect.
+- Do not narrow scope to one example.
+- Do not overgeneralize.
+- Do not introduce non-central concepts.
+- Do not simply restate the first sentence.
+- Focus on overall argumentative direction.
 
 ────────────────────
 절대 규칙
@@ -149,7 +151,7 @@ Critical Korean Exam Rules
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: passage },
@@ -162,7 +164,8 @@ Critical Korean Exam Rules
       console.error("AI error:", response.status, errText);
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       throw new Error(`AI error: ${response.status}`);
@@ -180,7 +183,8 @@ Critical Korean Exam Rules
   } catch (e) {
     console.error("analyze-preview error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
