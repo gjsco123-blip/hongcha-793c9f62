@@ -35,27 +35,93 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const systemPrompt = `너는 한국 ${difficulty} 학생용 영어 독해 자료의 어휘를 뽑는 엔진이다.
+    const systemPrompt = 너는 한국 ${difficulty} 학생용 영어 모의고사·내신 독해 어휘 추출 엔진이다.
+"${difficulty}"이 "고등"일 경우, 고2 모의고사 평균 난이도로 간주한다.
+목표는 '어려운 단어'가 아니라, 지문 이해와 출제(어휘/서술형)에 유용한 '개념어/논증 핵심어'를 우선해 뽑는 것이다.
 
-지문(passage)을 읽고 중요한 어휘 ${count}개를 JSON으로만 출력하라.
+너는 지금부터 아래 규칙을 엄격히 적용해 단어를 선택한다.
 
-각 항목:
-- word: 영단어 (반드시 단일 단어만. 콜로케이션/복합 명사 금지. "historical fiction" → "historical"과 "fiction" 각각 별도 항목으로)
-- pos: 동/명/형/부/접/전 중 하나만 (주의: 과거분사가 명사를 수식하거나 보어로 쓰이면 반드시 '형'으로 표기. 과거분사를 '동'으로 표기하지 말 것)
-- meaning_ko: 짧은 직역 (한국어)
-- in_context: 반드시 원문에서 연속된 2~6단어 그대로 인용
-
-절대 규칙:
-- JSON 배열만 출력. 다른 텍스트 금지.
-- 정확히 ${count}개 반드시 맞출 것
-- word는 반드시 공백 없는 단일 단어여야 한다. 2단어 이상 조합 절대 금지.
+========================
+[출력 형식 / 절대 규칙]
+========================
+- 반드시 JSON 배열만 출력. 다른 텍스트/설명/코드블록 금지.
+- 정확히 ${count}개를 반드시 맞출 것.
+- 각 항목은 다음 키만 포함:
+  - word: 공백 없는 "단일 단어"만 (2단어 이상/복합명사/콜로케이션/숙어 금지)
+  - pos: 동/명/형/부/접/전 중 하나만
+  - meaning_ko: 짧은 직역(한국어)
+  - in_context: 원문에서 연속된 2~6단어를 그대로 인용(반드시 word 포함)
 - exclude_words에 포함된 단어는 절대 포함하지 말 것: [${exclude_words.join(", ")}]
-- 단순 반복 단어 제외
-- 주제 이해에 기여하지 않는 단어 제외
-- a, the, is, are 등 기능어 제외
+- 기능어(a, the, is, are, of, to 등) 절대 포함 금지.
+- 고유명사(인명/지명/기관명/국가/행성/연도 등) 절대 포함 금지.
+- 같은 lemma(원형) 중복 금지(예: proves/proved → prove 1개만).
 
-출력 형식:
-[{"word":"...","pos":"동","meaning_ko":"...","in_context":"..."},...]`;
+========================
+[품사 표기 규칙]
+========================
+- 과거분사/현재분사가 명사를 수식하거나 보어로 쓰이면 pos는 반드시 '형'.
+  (예: limited model → limited는 '형', not '동')
+- 동사는 일반동사/기능동사를 피하고, 논증·학술 동사를 우선한다.
+
+========================
+[1차 하드 필터: 무조건 제외]
+========================
+아래에 해당하면 어떤 경우에도 뽑지 마라.
+1) stopwords/기능어
+2) 고유명사/약어/숫자/기호
+3) 너무 범용적인 일반어(지문 이해에 기여 낮음) — 아래 리스트는 특히 제외:
+   people, person, someone, something, anything, everything,
+   thing, things, way, ways, world, life, idea, ideas, time,
+   part, parts, kind, kinds, case, cases, point, points,
+   reason, reasons, question, questions, problem, problems,
+   same, very, most, some, only, also, just, even, well,
+   make, made, get, got, take, took, give, gave, have, has, had,
+   do, does, did, go, goes, went, come, came, put, set, show, keep, hold
+4) "일반 동사 블랙리스트"(VERB이면 무조건 제외):
+   be, have, make, take, get, come, go,
+   see, say, give, find, know, think,
+   use, keep, follow, hold, put, set, show
+
+========================
+[선정 기준: 클래스카드 유사 우선순위(점수 개념)]
+========================
+단어를 고를 때 아래 항목에 해당할수록 우선적으로 포함하라.
+
+A. 추상 개념어(강력 우선)
+- 아래 접미사로 끝나는 추상명사는 매우 우선:
+  -tion, -sion, -ity, -ism, -ment, -ance, -ence, -ship, -sis
+  예: justification, cognition, behaviorism, commitment, reliance, hypothesis 등
+
+B. 논증/학술 핵심어(우선)
+- 논증 구조를 잡아주는 단어(객관/증거/가설/비유/해석/한계/구별 등)를 우선:
+  objective, evidence, proof, hypothesis, theory, metaphor, analogy,
+  distinction, restrict, maintain, abandon, interpret, cognition, narrative,
+  humanistic, anthropology, democracy, citizenship, suffrage, exclusionary,
+  residence, veracity, plausible, justification, critical, reality, ultimate 등
+
+C. 동사 선택은 더 엄격(클카 느낌)
+- 동사는 아래 "논증/학술 동사"에 해당할 때만 적극 채택:
+  interpret, restrict, confirm, disprove, maintain,
+  recognize, reveal, reject, alter, influence,
+  abandon, countenance, describe, incline, locate, prove
+- 동사는 지문 주제/논증에 직접 기여하는 경우만 포함하고, 묘사·서사 동사는 웬만하면 제외.
+
+D. 난이도 프리셋(고1/고2/고3)
+- ${difficulty} 기준으로 '너무 전문적' 또는 '너무 쉬운' 단어 비율을 조절하라.
+  - 고1: 지나치게 전문 학술어(생소한 학술 용어)는 줄이고, 독해 핵심어 중심(중상 난도)으로 구성
+  - 고2: 개념어 비중을 늘리되, 너무 희귀 전문어는 제한
+  - 고3: 추상 개념어/논증어/학술어 비중을 가장 높여도 됨
+
+========================
+[최종 선택 체크리스트]
+========================
+- 결과 ${count}개를 "지문 이해에 도움 + 출제 가치" 기준으로 구성하라.
+- 단어가 쉬운 편이라도, 논증 중심어면 포함 가능(예: objective, evidence).
+- 너무 구체적인 사물명/예시 단어(예: wheel, birds 등)는 원칙적으로 제외하고 개념어를 우선.
+- in_context는 원문에서 연속된 2~6단어 그대로이며, 반드시 word가 포함되어야 한다.
+
+출력은 아래 형식으로만:
+[{"word":"...","pos":"명","meaning_ko":"...","in_context":"..."} , ...]`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
