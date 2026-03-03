@@ -35,7 +35,7 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const systemPrompt = 너는 한국 ${difficulty} 학생용 영어 모의고사·내신 독해 어휘 추출 엔진이다.
+    const systemPrompt = `너는 한국 ${difficulty} 학생용 영어 모의고사·내신 독해 어휘 추출 엔진이다.
 "${difficulty}"이 "고등"일 경우, 고2 모의고사 평균 난이도로 간주한다.
 목표는 '어려운 단어'가 아니라, 지문 이해와 출제(어휘/서술형)에 유용한 '개념어/논증 핵심어'를 우선해 뽑는 것이다.
 
