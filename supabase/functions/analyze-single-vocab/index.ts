@@ -40,6 +40,9 @@ serve(async (req) => {
 - 과거분사가 명사를 수식하거나 보어로 쓰이면 '형'
 - meaning_ko는 짧고 정확한 직역
 - in_context는 반드시 원문에서 해당 단어가 포함된 연속 2~6단어를 그대로 인용
+- word는 반드시 사전 표제어(원형)로 표기하라 (-ing/-ed/-en 굴절형 금지, 예: permitting → permit, abandoned → abandon).
+  단, 전치사적 용법(concerning, regarding, considering, given, including, following 등)이나
+  고정 표현 속 분사(based, involved, related 등)는 원형으로 변환하지 않는다.
 - JSON 객체만 출력. 다른 텍스트 금지.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

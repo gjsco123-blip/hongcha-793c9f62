@@ -114,6 +114,9 @@ D. 난이도 프리셋(고1/고2/고3)
 
   [추가 정밀 규칙]
 - 과거분사/현재분사가 동사에서 파생된 경우 가능한 한 원형 동사로 표기하라 (abandoned → abandon, permitting → permit).
+  단, 다음은 원형으로 변환하지 않는다:
+  · 전치사적 용법의 분사: concerning, regarding, considering, given, including, following 등
+  · 고정 표현 속 분사: based (be based on), involved (be involved in), related (be related to) 등
 - 범용 형용사(entire, common, local, general 등)는 지문 핵심 개념어가 아니면 제외하라.
 - 동일 개념의 복수형은 하나만 남겨라 (resident/residents 중 하나).
 
