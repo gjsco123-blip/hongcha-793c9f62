@@ -128,8 +128,8 @@ export default function Index() {
     // Left column width is narrower now (flex:1 minus MEMO+gap)
     const LEFT_COL_CHARS = 70; // narrower column → fewer chars per line
     const TRANS_CHARS_PER_LINE = 65;
-    const TRANS_LINE_H = 6 * 1.6;
-    const TRANS_ROW_GAP = 3;
+    const TRANS_LINE_H = 6.5 * 1.65;
+    const TRANS_ROW_GAP = 2;
 
     const blockHeights: number[] = [];
     for (const r of results) {

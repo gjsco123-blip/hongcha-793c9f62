@@ -332,8 +332,8 @@ function estimateSentenceHeight(result: SentenceResult, isLast: boolean): number
 
   if (result.englishChunks.length > 0) {
     const TRANS_CHARS = 65;
-    const TRANS_LINE_H = 6.5 * 1.8;
-    const TRANS_ROW_GAP = 3;
+    const TRANS_LINE_H = 6.5 * 1.65;
+    const TRANS_ROW_GAP = 2;
 
     const estimateRowH = (text: string) => {
       const lines = Math.max(1, Math.ceil(text.length / TRANS_CHARS));
