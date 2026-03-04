@@ -163,6 +163,8 @@ export default function Index() {
       }
       blockHeights.push(engHeight + transHeight + 14 + 8);
     }
+    // Heights without separator (last item on page saves 22pt)
+    const blockHeightsLast = blockHeights.map(h => h - 22);
 
     // Page-break simulation
     let cursor = headerHeight;
@@ -180,7 +182,16 @@ export default function Index() {
 
     for (let i = 0; i < blockHeights.length; i++) {
       const prevPage = Math.floor(cursor / PAGE_USABLE);
-      fitBlock(blockHeights[i]);
+      // Check with last-item height (no separator) for overflow
+      const currentPageStart = Math.floor(cursor / PAGE_USABLE) * PAGE_USABLE;
+      const currentPageEnd = currentPageStart + PAGE_USABLE;
+      if (cursor + blockHeightsLast[i] > currentPageEnd) {
+        // Overflow — push to next page with full height
+        cursor = currentPageEnd + blockHeights[i];
+      } else {
+        // Fits — use full height for next calculation
+        cursor += blockHeights[i];
+      }
       const newPage = Math.floor((cursor - 0.01) / PAGE_USABLE);
       if (prevPage === 0 && newPage >= 1 && page1EndIndex === -1) {
         page1EndIndex = i - 1;
