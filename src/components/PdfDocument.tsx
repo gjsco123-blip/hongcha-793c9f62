@@ -383,14 +383,8 @@ function paginateResults(results: SentenceResult[]): SentenceResult[][] {
 
     const pageCapacity = PAGE_HEIGHT - PADDING_V - (isFirstPage ? HEADER_H : 0);
 
-    // Check if all remaining sentences (including this one) fit on this page
-    // If so, also need to reserve space for passage section on this page
-    let remainingHeight = hLast; // this sentence as potential last item
-    for (let j = i + 1; j < results.length; j++) {
-      remainingHeight += estimateSentenceHeight(results[j], j === results.length - 1);
-    }
-    const needsPassageSpace = remainingHeight + PASSAGE_H <= pageCapacity - usedHeight;
-    const passageReserve = isLastResult || needsPassageSpace ? PASSAGE_H : 0;
+    // Reserve passage space only for the very last sentence
+    const passageReserve = isLastResult ? PASSAGE_H : 0;
 
     // Use hLast for overflow check — if this ends up being the last sentence on the page,
     // the separator is removed, saving 22pt
