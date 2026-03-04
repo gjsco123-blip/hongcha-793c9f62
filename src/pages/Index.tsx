@@ -123,7 +123,7 @@ export default function Index() {
   const pageBreakInfo = useMemo(() => {
     if (results.length === 0) return { page1EndIndex: -1, totalPages: 0 };
 
-    const PAGE_USABLE = 841.89 - 42 - 40; // 759.89
+    const PAGE_USABLE = 841.89 - 42 - 30; // 769.89
     const headerHeight = 16 + 9 + 12 + 24 + 14; // ~75
     // Left column width is narrower now (flex:1 minus MEMO+gap)
     const LEFT_COL_CHARS = 70; // narrower column → fewer chars per line
