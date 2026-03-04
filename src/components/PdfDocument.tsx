@@ -378,21 +378,23 @@ function paginateResults(results: SentenceResult[]): SentenceResult[][] {
 
   for (let i = 0; i < results.length; i++) {
     const isLastResult = i === results.length - 1;
-    const isLastInPage = isLastResult; // will be recalculated
-    const h = estimateSentenceHeight(results[i], false);
+    const hFull = estimateSentenceHeight(results[i], false); // with separator
+    const hLast = estimateSentenceHeight(results[i], true);  // without separator (22pt less)
 
     const pageCapacity = PAGE_HEIGHT - PADDING_V - (isFirstPage ? HEADER_H : 0);
 
     // Check if all remaining sentences (including this one) fit on this page
     // If so, also need to reserve space for passage section on this page
-    let remainingHeight = h;
+    let remainingHeight = hLast; // this sentence as potential last item
     for (let j = i + 1; j < results.length; j++) {
       remainingHeight += estimateSentenceHeight(results[j], j === results.length - 1);
     }
     const needsPassageSpace = remainingHeight + PASSAGE_H <= pageCapacity - usedHeight;
     const passageReserve = isLastResult || needsPassageSpace ? PASSAGE_H : 0;
 
-    if (usedHeight + h > pageCapacity - passageReserve) {
+    // Use hLast for overflow check — if this ends up being the last sentence on the page,
+    // the separator is removed, saving 22pt
+    if (usedHeight + hLast > pageCapacity - passageReserve) {
       // Current page is full, start new page
       if (currentPage.length > 0) {
         pages.push(currentPage);
@@ -403,7 +405,7 @@ function paginateResults(results: SentenceResult[]): SentenceResult[][] {
     }
 
     currentPage.push(results[i]);
-    usedHeight += h;
+    usedHeight += hFull; // use full height for subsequent calculations
   }
 
   if (currentPage.length > 0) {
