@@ -367,8 +367,8 @@ function estimateSentenceHeight(result: SentenceResult, isLast: boolean): number
 /** Split results into pages based on estimated heights */
 function paginateResults(results: SentenceResult[]): SentenceResult[][] {
   const PAGE_HEIGHT = 841.89; // A4
-  const PADDING_V = 42 + 40; // top + bottom
-  const HEADER_H = 36; // header height on page 1 (PdfHeader actual ~31pt + margin)
+  const PADDING_V = 42 + 30; // top + bottom (paddingBottom is 30)
+  const HEADER_H = 33; // header height on page 1 (PdfHeader actual ~32.5pt)
   const PASSAGE_H = 70; // reserve for 스스로 분석 section
 
   const pages: SentenceResult[][] = [];

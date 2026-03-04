@@ -1,16 +1,22 @@
 
 
-## 페이지네이션 상수 보정
+## 모델 전환: `google/gemini-3-flash-preview`
 
-MEMO 컬럼과 무관한 순수 계산 상수 3개만 수정합니다.
+4개 edge function의 모델을 `google/gemini-2.5-flash` → `google/gemini-3-flash-preview`로 변경합니다.
 
-### 변경 사항
+### 변경 대상
 
-| 파일 | 상수 | 현재 | 변경 | 이유 |
-|------|------|------|------|------|
-| `PdfDocument.tsx` L370 | `PADDING_V` | `42 + 40 = 82` | `42 + 30 = 72` | 실제 `paddingBottom: 30` |
-| `PdfDocument.tsx` L371 | `HEADER_H` | `36` | `33` | PdfHeader 실제 높이 ~32.5pt |
-| `Index.tsx` L126 | `PAGE_USABLE` | `841.89 - 42 - 40 = 759.89` | `841.89 - 42 - 30 = 769.89` | 동기화 |
+| 파일 | 현재 모델 | 변경 후 |
+|------|-----------|---------|
+| `supabase/functions/engine/index.ts` (line 210) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/hongt/index.ts` (line 117) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/grammar/index.ts` (line 289) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/grammar/index.ts` (line 382) | `google/gemini-2.5-flash` (freestyle 모드) | `google/gemini-3-flash-preview` |
 
-MEMO 컬럼, 레이아웃 구조, 스타일은 변경 없음.
+### 변경하지 않는 것
+- `spellcheck` (gemini-2.5-flash-lite 유지)
+- `regenerate` (이미 gemini-3-flash-preview)
+- `analyze-vocab`, `analyze-single-vocab`, `analyze-preview`, `analyze-structure` (별도 요청 없음)
+
+각 파일에서 model 문자열 1줄씩만 수정, 총 4곳.
 
