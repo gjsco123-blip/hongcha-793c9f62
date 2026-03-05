@@ -44,6 +44,7 @@ export function SentencePreview({ sentences, onChange }: SentencePreviewProps) {
 
   const handleSave = () => {
     if (editingIndex === null) return;
+    pushHistory();
     const parts = editValue
       .split(" / ")
       .map((s) => s.trim())
