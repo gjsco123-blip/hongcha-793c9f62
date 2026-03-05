@@ -522,10 +522,22 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header - 간소화 */}
+      {/* Header */}
       <header className="bg-card border-b-2 border-foreground no-print">
-        <div className="max-w-4xl mx-auto px-6 py-5">
-          <div className="flex flex-col gap-1">
+        <div className="max-w-4xl mx-auto px-6 py-4">
+          <CategorySelector
+            schools={categories.schools}
+            passages={categories.passages}
+            selectedSchoolId={categories.selectedSchoolId}
+            selectedPassageId={categories.selectedPassageId}
+            onSelectSchool={categories.setSelectedSchoolId}
+            onSelectPassage={categories.setSelectedPassageId}
+            onAddSchool={categories.addSchool}
+            onAddPassage={categories.addPassage}
+            onDeleteSchool={categories.deleteSchool}
+            onDeletePassage={categories.deletePassage}
+          />
+          <div className="mt-3">
             <input
               type="text"
               value={pdfTitle}
