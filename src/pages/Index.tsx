@@ -1,12 +1,14 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChunkEditor } from "@/components/ChunkEditor";
 import { ResultDisplay } from "@/components/ResultDisplay";
 import { SyntaxNotesSection } from "@/components/SyntaxNotesSection";
 import { HongTSection } from "@/components/HongTSection";
 import { SentencePreview } from "@/components/SentencePreview";
+import { CategorySelector } from "@/components/CategorySelector";
 import { Chunk, parseTagged, chunksToTagged } from "@/lib/chunk-utils";
 import { usePdfExport } from "@/hooks/usePdfExport";
+import { useCategories } from "@/hooks/useCategories";
 import { renderWithSuperscripts } from "@/lib/syntax-superscript";
 import { toast } from "sonner";
 import { FileDown, RotateCw, X, Scissors, RefreshCw, Eye } from "lucide-react";
@@ -103,6 +105,49 @@ export default function Index() {
   const [pdfTitle, setPdfTitle] = useState("SYNTAX");
   
   const [editedSentences, setEditedSentences] = useState<string[]>([]);
+
+  const categories = useCategories();
+  const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Load passage data when a passage is selected
+  useEffect(() => {
+    const p = categories.selectedPassage;
+    if (p) {
+      setPassage(p.passage_text || "");
+      setPdfTitle(p.pdf_title || "SYNTAX");
+      setPreset((p.preset as Preset) || "수능");
+      if (p.results_json && Array.isArray(p.results_json)) {
+        const loaded = (p.results_json as any[]).map((r: any) => ({
+          ...r,
+          englishChunks: r.englishChunks || [],
+          koreanLiteralChunks: r.koreanLiteralChunks || [],
+          syntaxNotes: r.syntaxNotes || [],
+        }));
+        setResults(loaded);
+      } else {
+        setResults([]);
+      }
+    }
+  }, [categories.selectedPassageId]);
+
+  // Auto-save with debounce
+  const autoSave = useCallback(() => {
+    if (!categories.selectedPassageId) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      categories.updatePassage(categories.selectedPassageId!, {
+        passage_text: passage,
+        pdf_title: pdfTitle,
+        preset,
+        results_json: results.length > 0 ? results : null,
+      });
+    }, 2000);
+  }, [categories.selectedPassageId, passage, pdfTitle, preset, results]);
+
+  useEffect(() => {
+    autoSave();
+    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
+  }, [autoSave]);
 
   const autoSentences = useMemo(
     () => splitIntoSentences(passage),
@@ -477,10 +522,22 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header - 간소화 */}
+      {/* Header */}
       <header className="bg-card border-b-2 border-foreground no-print">
-        <div className="max-w-4xl mx-auto px-6 py-5">
-          <div className="flex flex-col gap-1">
+        <div className="max-w-4xl mx-auto px-6 py-4">
+          <CategorySelector
+            schools={categories.schools}
+            passages={categories.passages}
+            selectedSchoolId={categories.selectedSchoolId}
+            selectedPassageId={categories.selectedPassageId}
+            onSelectSchool={categories.setSelectedSchoolId}
+            onSelectPassage={categories.setSelectedPassageId}
+            onAddSchool={categories.addSchool}
+            onAddPassage={categories.addPassage}
+            onDeleteSchool={categories.deleteSchool}
+            onDeletePassage={categories.deletePassage}
+          />
+          <div className="mt-3">
             <input
               type="text"
               value={pdfTitle}
