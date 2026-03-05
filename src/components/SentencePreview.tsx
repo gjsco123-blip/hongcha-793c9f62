@@ -68,7 +68,6 @@ export function SentencePreview({ sentences, onChange }: SentencePreviewProps) {
   };
 
   const handleSplit = (index: number) => {
-    // 현재 선택 위치에서 문장 분할
     if (!textRef.current) return;
     const pos = textRef.current.selectionStart;
     const text = editValue;
@@ -78,6 +77,7 @@ export function SentencePreview({ sentences, onChange }: SentencePreviewProps) {
     const right = text.slice(pos).trim();
     if (!left || !right) return;
 
+    pushHistory();
     const next = [...sentences];
     next.splice(index, 1, left, right);
     onChange(next);
