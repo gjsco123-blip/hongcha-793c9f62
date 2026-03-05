@@ -106,6 +106,49 @@ export default function Index() {
   
   const [editedSentences, setEditedSentences] = useState<string[]>([]);
 
+  const categories = useCategories();
+  const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Load passage data when a passage is selected
+  useEffect(() => {
+    const p = categories.selectedPassage;
+    if (p) {
+      setPassage(p.passage_text || "");
+      setPdfTitle(p.pdf_title || "SYNTAX");
+      setPreset((p.preset as Preset) || "수능");
+      if (p.results_json && Array.isArray(p.results_json)) {
+        const loaded = (p.results_json as any[]).map((r: any) => ({
+          ...r,
+          englishChunks: r.englishChunks || [],
+          koreanLiteralChunks: r.koreanLiteralChunks || [],
+          syntaxNotes: r.syntaxNotes || [],
+        }));
+        setResults(loaded);
+      } else {
+        setResults([]);
+      }
+    }
+  }, [categories.selectedPassageId]);
+
+  // Auto-save with debounce
+  const autoSave = useCallback(() => {
+    if (!categories.selectedPassageId) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      categories.updatePassage(categories.selectedPassageId!, {
+        passage_text: passage,
+        pdf_title: pdfTitle,
+        preset,
+        results_json: results.length > 0 ? results : null,
+      });
+    }, 2000);
+  }, [categories.selectedPassageId, passage, pdfTitle, preset, results]);
+
+  useEffect(() => {
+    autoSave();
+    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
+  }, [autoSave]);
+
   const autoSentences = useMemo(
     () => splitIntoSentences(passage),
     [passage]
