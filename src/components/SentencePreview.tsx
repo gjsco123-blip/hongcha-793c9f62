@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { Merge, Scissors } from "lucide-react";
+import { Merge, Scissors, Undo2 } from "lucide-react";
 
 interface SentencePreviewProps {
   sentences: string[];
@@ -10,17 +10,30 @@ export function SentencePreview({ sentences, onChange }: SentencePreviewProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
   const [splitCursor, setSplitCursor] = useState<{ index: number; pos: number } | null>(null);
+  const [history, setHistory] = useState<string[][]>([]);
   const textRef = useRef<HTMLTextAreaElement>(null);
+
+  const pushHistory = useCallback(() => {
+    setHistory((prev) => [...prev.slice(-20), [...sentences]]);
+  }, [sentences]);
+
+  const handleUndo = useCallback(() => {
+    if (history.length === 0) return;
+    const prev = history[history.length - 1];
+    setHistory((h) => h.slice(0, -1));
+    onChange(prev);
+  }, [history, onChange]);
 
   const handleMerge = useCallback(
     (index: number) => {
       if (index >= sentences.length - 1) return;
+      pushHistory();
       const next = [...sentences];
       next[index] = `${next[index]} ${next[index + 1]}`;
       next.splice(index + 1, 1);
       onChange(next);
     },
-    [sentences, onChange]
+    [sentences, onChange, pushHistory]
   );
 
   const handleDoubleClick = (index: number) => {
@@ -31,6 +44,7 @@ export function SentencePreview({ sentences, onChange }: SentencePreviewProps) {
 
   const handleSave = () => {
     if (editingIndex === null) return;
+    pushHistory();
     const parts = editValue
       .split(" / ")
       .map((s) => s.trim())
@@ -54,7 +68,6 @@ export function SentencePreview({ sentences, onChange }: SentencePreviewProps) {
   };
 
   const handleSplit = (index: number) => {
-    // 현재 선택 위치에서 문장 분할
     if (!textRef.current) return;
     const pos = textRef.current.selectionStart;
     const text = editValue;
@@ -64,6 +77,7 @@ export function SentencePreview({ sentences, onChange }: SentencePreviewProps) {
     const right = text.slice(pos).trim();
     if (!left || !right) return;
 
+    pushHistory();
     const next = [...sentences];
     next.splice(index, 1, left, right);
     onChange(next);
@@ -75,9 +89,21 @@ export function SentencePreview({ sentences, onChange }: SentencePreviewProps) {
   return (
     <div className="border border-border bg-card">
       <div className="px-3 py-2 border-b border-border flex items-center justify-between">
-        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-          문장 미리보기
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+            문장 미리보기
+          </span>
+          {history.length > 0 && (
+            <button
+              onClick={handleUndo}
+              className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+              title="되돌리기"
+            >
+              <Undo2 className="w-3 h-3" />
+              되돌리기
+            </button>
+          )}
+        </div>
         <span className="text-[10px] text-muted-foreground">
           더블클릭 편집 · " / " 입력으로 분할 · 합치기로 병합
         </span>
