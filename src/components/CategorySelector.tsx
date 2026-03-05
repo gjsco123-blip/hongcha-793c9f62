@@ -174,7 +174,7 @@ export function CategoryFullScreen({
             /* Step 2: Passage selection */
             <div className="animate-fade-in">
               <button
-                onClick={() => onSelectSchool("")}
+                onClick={() => { onSelectSchool(""); }}
                 className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mb-6"
               >
                 ← 학교 목록으로
