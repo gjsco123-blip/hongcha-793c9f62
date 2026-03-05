@@ -25,8 +25,11 @@ export function useCategories() {
   const { user } = useAuth();
   const [schools, setSchools] = useState<School[]>([]);
   const [passages, setPassages] = useState<Passage[]>([]);
-  const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null);
-  const [selectedPassageId, setSelectedPassageId] = useState<string | null>(null);
+  const [selectedSchoolId, _setSelectedSchoolId] = useState<string | null>(null);
+  const [selectedPassageId, _setSelectedPassageId] = useState<string | null>(null);
+  
+  const setSelectedSchoolId = (id: string | null) => _setSelectedSchoolId(id || null);
+  const setSelectedPassageId = (id: string | null) => _setSelectedPassageId(id || null);
   const [loadingSchools, setLoadingSchools] = useState(false);
   const [loadingPassages, setLoadingPassages] = useState(false);
 
