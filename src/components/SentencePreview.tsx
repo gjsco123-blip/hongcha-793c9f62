@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { Merge, Scissors } from "lucide-react";
+import { Merge, Scissors, Undo2 } from "lucide-react";
 
 interface SentencePreviewProps {
   sentences: string[];
@@ -10,7 +10,19 @@ export function SentencePreview({ sentences, onChange }: SentencePreviewProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
   const [splitCursor, setSplitCursor] = useState<{ index: number; pos: number } | null>(null);
+  const [history, setHistory] = useState<string[][]>([]);
   const textRef = useRef<HTMLTextAreaElement>(null);
+
+  const pushHistory = useCallback(() => {
+    setHistory((prev) => [...prev.slice(-20), [...sentences]]);
+  }, [sentences]);
+
+  const handleUndo = useCallback(() => {
+    if (history.length === 0) return;
+    const prev = history[history.length - 1];
+    setHistory((h) => h.slice(0, -1));
+    onChange(prev);
+  }, [history, onChange]);
 
   const handleMerge = useCallback(
     (index: number) => {
