@@ -12,7 +12,7 @@ interface SyntaxNotesSectionProps {
   passageTitle?: string;
 }
 
-export function SyntaxNotesSection({ notes, onChange, onGenerate, generating }: SyntaxNotesSectionProps) {
+export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, passageTitle }: SyntaxNotesSectionProps) {
   const [editing, setEditing] = useState(false);
 
   const handleDeleteNote = (id: number) => {
