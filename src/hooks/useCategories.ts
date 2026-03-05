@@ -112,7 +112,7 @@ export function useCategories() {
     if (!user) return null;
     const { data, error } = await supabase
       .from("passages")
-      .insert({ school_id: schoolId, name, user_id: user.id })
+      .insert({ school_id: schoolId, name, user_id: user.id, pdf_title: name })
       .select("*")
       .single();
     if (error) {
