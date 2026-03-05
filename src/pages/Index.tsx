@@ -5,7 +5,7 @@ import { ResultDisplay } from "@/components/ResultDisplay";
 import { SyntaxNotesSection } from "@/components/SyntaxNotesSection";
 import { HongTSection } from "@/components/HongTSection";
 import { SentencePreview } from "@/components/SentencePreview";
-import { CategorySelector } from "@/components/CategorySelector";
+import { CategoryHeaderBar, CategoryFullScreen } from "@/components/CategorySelector";
 import { Chunk, parseTagged, chunksToTagged } from "@/lib/chunk-utils";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { useCategories } from "@/hooks/useCategories";
