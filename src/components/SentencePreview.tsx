@@ -27,12 +27,13 @@ export function SentencePreview({ sentences, onChange }: SentencePreviewProps) {
   const handleMerge = useCallback(
     (index: number) => {
       if (index >= sentences.length - 1) return;
+      pushHistory();
       const next = [...sentences];
       next[index] = `${next[index]} ${next[index + 1]}`;
       next.splice(index + 1, 1);
       onChange(next);
     },
-    [sentences, onChange]
+    [sentences, onChange, pushHistory]
   );
 
   const handleDoubleClick = (index: number) => {
