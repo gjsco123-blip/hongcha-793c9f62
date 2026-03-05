@@ -9,10 +9,9 @@ interface SyntaxNotesSectionProps {
   onChange: (notes: SyntaxNote[]) => void;
   onGenerate?: () => void;
   generating?: boolean;
-  passageTitle?: string;
 }
 
-export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, passageTitle }: SyntaxNotesSectionProps) {
+export function SyntaxNotesSection({ notes, onChange, onGenerate, generating }: SyntaxNotesSectionProps) {
   const [editing, setEditing] = useState(false);
 
   const handleDeleteNote = (id: number) => {
@@ -34,18 +33,13 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, pa
         </div>
       )}
       <div>
-        {passageTitle && (
-          <div className="text-sm font-bold text-foreground mb-3">
-            {passageTitle}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <div className="w-0.5 h-4 bg-foreground shrink-0" />
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+              구문분석
+            </span>
           </div>
-        )}
-         <div className="flex items-center justify-between mb-2">
-           <div className="flex items-center gap-3">
-             <div className="w-0.5 h-4 bg-foreground shrink-0" />
-             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-               구문분석
-             </span>
-           </div>
           <div className="flex items-center gap-1.5">
             {onGenerate && (
               <button
