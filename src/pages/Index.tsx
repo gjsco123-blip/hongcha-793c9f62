@@ -757,6 +757,7 @@ export default function Index() {
                       }
                       generating={result.generatingSyntax}
                       onGenerate={() => handleGenerateSyntax(result.id, result.original)}
+                      passageTitle={categories.selectedPassage?.name}
                     />
                   </div>
                 ) : (
