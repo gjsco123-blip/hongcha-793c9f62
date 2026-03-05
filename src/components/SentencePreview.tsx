@@ -89,9 +89,21 @@ export function SentencePreview({ sentences, onChange }: SentencePreviewProps) {
   return (
     <div className="border border-border bg-card">
       <div className="px-3 py-2 border-b border-border flex items-center justify-between">
-        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-          문장 미리보기
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+            문장 미리보기
+          </span>
+          {history.length > 0 && (
+            <button
+              onClick={handleUndo}
+              className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+              title="되돌리기"
+            >
+              <Undo2 className="w-3 h-3" />
+              되돌리기
+            </button>
+          )}
+        </div>
         <span className="text-[10px] text-muted-foreground">
           더블클릭 편집 · " / " 입력으로 분할 · 합치기로 병합
         </span>
