@@ -9,6 +9,7 @@ interface SyntaxNotesSectionProps {
   onChange: (notes: SyntaxNote[]) => void;
   onGenerate?: () => void;
   generating?: boolean;
+  passageTitle?: string;
 }
 
 export function SyntaxNotesSection({ notes, onChange, onGenerate, generating }: SyntaxNotesSectionProps) {
