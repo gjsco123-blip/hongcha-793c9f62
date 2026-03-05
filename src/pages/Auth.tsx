@@ -48,51 +48,56 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-foreground mb-1 tracking-wide">SYNTAX</h1>
-        <p className="text-sm text-muted-foreground mb-8">
-          {isLogin ? "로그인하여 작업을 계속하세요." : "계정을 만들어 시작하세요."}
-        </p>
+      <div className="w-full max-w-xs">
+        <h1 className="text-lg font-semibold text-foreground tracking-[0.2em] uppercase text-center mb-10">
+          Syntax
+        </h1>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">이메일</label>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+              이메일
+            </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full h-10 px-3 border border-border bg-card text-sm text-foreground outline-none focus:border-foreground transition-colors"
+              className="w-full h-11 px-3 border-b border-border bg-transparent text-sm text-foreground outline-none focus:border-foreground transition-colors placeholder:text-muted-foreground/50"
               placeholder="email@example.com"
             />
           </div>
-          <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">비밀번호</label>
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+              비밀번호
+            </label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              className="w-full h-10 px-3 border border-border bg-card text-sm text-foreground outline-none focus:border-foreground transition-colors"
+              className="w-full h-11 px-3 border-b border-border bg-transparent text-sm text-foreground outline-none focus:border-foreground transition-colors placeholder:text-muted-foreground/50"
               placeholder="6자 이상"
             />
           </div>
           <button
             type="submit"
             disabled={submitting}
-            className="w-full h-10 bg-foreground text-background text-sm font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+            className="w-full h-11 mt-2 bg-foreground text-background text-xs font-medium uppercase tracking-widest hover:opacity-85 disabled:opacity-40 transition-opacity"
           >
             {submitting ? "처리 중..." : isLogin ? "로그인" : "회원가입"}
           </button>
         </form>
 
-        <button
-          onClick={() => setIsLogin(!isLogin)}
-          className="mt-4 text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          {isLogin ? "계정이 없으신가요? 회원가입" : "이미 계정이 있으신가요? 로그인"}
-        </button>
+        <div className="flex items-center justify-center mt-6">
+          <button
+            onClick={() => setIsLogin(!isLogin)}
+            className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {isLogin ? "계정이 없으신가요? 회원가입" : "이미 계정이 있으신가요? 로그인"}
+          </button>
+        </div>
       </div>
     </div>
   );
