@@ -5,7 +5,7 @@ import { ResultDisplay } from "@/components/ResultDisplay";
 import { SyntaxNotesSection } from "@/components/SyntaxNotesSection";
 import { HongTSection } from "@/components/HongTSection";
 import { SentencePreview } from "@/components/SentencePreview";
-import { CategorySelector } from "@/components/CategorySelector";
+import { CategoryHeaderBar, CategoryFullScreen } from "@/components/CategorySelector";
 import { Chunk, parseTagged, chunksToTagged } from "@/lib/chunk-utils";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { useCategories } from "@/hooks/useCategories";
@@ -520,23 +520,31 @@ export default function Index() {
     toast.success("PDF가 저장되었습니다.");
   };
 
+  const categoryProps = {
+    schools: categories.schools,
+    passages: categories.passages,
+    selectedSchoolId: categories.selectedSchoolId,
+    selectedPassageId: categories.selectedPassageId,
+    onSelectSchool: categories.setSelectedSchoolId,
+    onSelectPassage: categories.setSelectedPassageId,
+    onAddSchool: categories.addSchool,
+    onAddPassage: categories.addPassage,
+    onDeleteSchool: categories.deleteSchool,
+    onDeletePassage: categories.deletePassage,
+    onClearPassage: () => categories.setSelectedPassageId(""),
+  };
+
+  // Show full-screen selection when no passage is selected
+  if (!categories.selectedPassageId) {
+    return <CategoryFullScreen {...categoryProps} />;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-card border-b-2 border-foreground no-print">
         <div className="max-w-4xl mx-auto px-6 py-4">
-          <CategorySelector
-            schools={categories.schools}
-            passages={categories.passages}
-            selectedSchoolId={categories.selectedSchoolId}
-            selectedPassageId={categories.selectedPassageId}
-            onSelectSchool={categories.setSelectedSchoolId}
-            onSelectPassage={categories.setSelectedPassageId}
-            onAddSchool={categories.addSchool}
-            onAddPassage={categories.addPassage}
-            onDeleteSchool={categories.deleteSchool}
-            onDeletePassage={categories.deletePassage}
-          />
+          <CategoryHeaderBar {...categoryProps} />
           <div className="mt-3">
             <input
               type="text"
