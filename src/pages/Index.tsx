@@ -114,7 +114,7 @@ export default function Index() {
     const p = categories.selectedPassage;
     if (p) {
       setPassage(p.passage_text || "");
-      setPdfTitle(p.pdf_title || "SYNTAX");
+      setPdfTitle(p.pdf_title || p.name || "SYNTAX");
       setPreset((p.preset as Preset) || "수능");
       if (p.results_json && Array.isArray(p.results_json)) {
         const loaded = (p.results_json as any[]).map((r: any) => ({
