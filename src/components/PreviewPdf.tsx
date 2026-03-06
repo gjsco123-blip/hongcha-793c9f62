@@ -152,9 +152,9 @@ const s = StyleSheet.create({
     borderBottomWidth: 0.3,
     borderBottomColor: "#e4e4e4",
   },
-  synWord: { width: "23%" as any, fontSize: 7, fontWeight: 600, color: T.g50, lineHeight: 1.3, borderRightWidth: 0.5, borderRightColor: T.rule, paddingRight: 4 },
-  synSyn: { width: "42%" as any, fontSize: 7, color: T.black, lineHeight: 1.3, paddingLeft: 4, paddingRight: 6 },
-  synAnt: { width: "35%" as any, fontSize: 7, color: T.black, lineHeight: 1.3, paddingLeft: 6, borderLeftWidth: 0.5, borderLeftColor: T.rule },
+  synWord: { width: "21%" as any, fontSize: 7, fontWeight: 600, color: T.g50, lineHeight: 1.3, borderRightWidth: 0.5, borderRightColor: T.rule, paddingRight: 4 },
+  synSyn: { width: "46%" as any, fontSize: 6.5, color: T.black, lineHeight: 1.3, paddingLeft: 4, paddingRight: 4 },
+  synAnt: { width: "33%" as any, fontSize: 6.5, color: T.black, lineHeight: 1.3, paddingLeft: 4, borderLeftWidth: 0.5, borderLeftColor: T.rule },
   synHdrText: { fontSize: 6, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.4 },
   fieldLabel: {
     fontSize: 7.5,
