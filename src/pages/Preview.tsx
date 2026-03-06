@@ -1,4 +1,4 @@
-import { useState, createElement, useCallback } from "react";
+import { useState, useEffect, createElement, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate, useLocation } from "react-router-dom";
