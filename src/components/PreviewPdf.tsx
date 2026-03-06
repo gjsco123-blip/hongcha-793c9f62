@@ -237,11 +237,11 @@ export function PreviewPdf({ vocab, structure, summary, examBlock, title: titleP
           </View>
         )}
 
-        {/* ═══ 2. Key Summary ═══ */}
+        {/* ═══ 2. Passage Logic ═══ */}
         {hasSummary && (
           <View>
             {hasVocab && <View style={s.thinRule} />}
-            <Text style={s.secTitle}>Key Summary</Text>
+            <Text style={s.secTitle}>Passage Logic</Text>
             <View style={s.summaryBox}>
               <Text style={s.summaryText}>{summaryLines.join("\n")}</Text>
             </View>

@@ -52,7 +52,7 @@ export function PreviewSummarySection({ summary, status, onSummaryChange, onRege
       )}
       {candidate && (
         <CompareOverlay
-          title="Key Summary"
+          title="Passage Logic"
           oldContent={lines.map((l, i) => <p key={i} className="leading-[1.7]">{l}</p>)}
           newContent={candidate.split("\n").filter(Boolean).map((l, i) => <p key={i} className="leading-[1.7]">{l}</p>)}
           onAccept={() => { onSummaryChange(candidate); setCandidate(null); }}
