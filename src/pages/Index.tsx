@@ -108,6 +108,7 @@ export default function Index() {
 
   const categories = useCategories();
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const dataLoadedRef = useRef(false);
 
   // Load passage data when a passage is selected
   useEffect(() => {
@@ -127,12 +128,13 @@ export default function Index() {
       } else {
         setResults([]);
       }
+      dataLoadedRef.current = true;
     }
   }, [categories.selectedPassageId, categories.selectedPassage]);
 
   // Auto-save with debounce
   const autoSave = useCallback(() => {
-    if (!categories.selectedPassageId) return;
+    if (!categories.selectedPassageId || !dataLoadedRef.current) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
       categories.updatePassage(categories.selectedPassageId!, {
