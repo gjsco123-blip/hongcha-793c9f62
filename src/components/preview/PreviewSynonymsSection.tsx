@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { SectionHeader } from "./SectionHeader";
 import { CompareOverlay } from "./CompareOverlay";
 import type { SynAntItem, SectionStatus } from "./types";
 
