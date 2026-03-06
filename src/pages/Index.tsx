@@ -128,7 +128,7 @@ export default function Index() {
         setResults([]);
       }
     }
-  }, [categories.selectedPassageId]);
+  }, [categories.selectedPassageId, categories.selectedPassage]);
 
   // Auto-save with debounce
   const autoSave = useCallback(() => {
