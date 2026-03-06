@@ -44,9 +44,9 @@ export function PreviewSynonymsSection({ synonyms, status, onSynonymsChange, onR
         <tbody>
           {items.map((item, idx) => (
             <tr key={idx} className="border-t border-border/50">
-              <td className="px-3 py-1.5 font-medium">{item.word}</td>
-              <td className="px-3 py-1.5 text-muted-foreground">{item.synonym}</td>
-              <td className="px-3 py-1.5 text-muted-foreground">{item.antonym}</td>
+              <td className="px-3 py-1.5 text-muted-foreground font-medium">{item.word}</td>
+              <td className="px-3 py-1.5 font-medium">{item.synonym}</td>
+              <td className="px-3 py-1.5 font-medium">{item.antonym}</td>
             </tr>
           ))}
         </tbody>
