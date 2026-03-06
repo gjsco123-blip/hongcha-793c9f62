@@ -1,22 +1,18 @@
 
 
-## 모델 전환: `google/gemini-3-flash-preview`
+## 문제
 
-4개 edge function의 모델을 `google/gemini-2.5-flash` → `google/gemini-3-flash-preview`로 변경합니다.
+Preview 페이지의 뒤로가기 버튼이 `navigate(-1)`을 사용하고 있어서:
+1. 새로고침 후에는 히스토리가 없어 버튼이 아무 동작도 안 함
+2. 정상 작동하더라도 카테고리 선택 화면으로 돌아가는 경우가 있음
 
-### 변경 대상
+사용자가 원하는 동작: Preview → 뒤로가기 → **구문분석 에디터 화면** (지문이 로드된 상태)
 
-| 파일 | 현재 모델 | 변경 후 |
-|------|-----------|---------|
-| `supabase/functions/engine/index.ts` (line 210) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/hongt/index.ts` (line 117) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/grammar/index.ts` (line 289) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/grammar/index.ts` (line 382) | `google/gemini-2.5-flash` (freestyle 모드) | `google/gemini-3-flash-preview` |
+## 해결
 
-### 변경하지 않는 것
-- `spellcheck` (gemini-2.5-flash-lite 유지)
-- `regenerate` (이미 gemini-3-flash-preview)
-- `analyze-vocab`, `analyze-single-vocab`, `analyze-preview`, `analyze-structure` (별도 요청 없음)
+**`src/pages/Preview.tsx`** — 1줄 수정
 
-각 파일에서 model 문자열 1줄씩만 수정, 총 4곳.
+`navigate(-1)` → `navigate("/")`로 변경.
+
+`selectedSchoolId`와 `selectedPassageId`가 이미 sessionStorage에 저장되어 있으므로, `/`로 이동하면 `useCategories` 훅이 자동으로 이전 선택 상태를 복원하여 구문분석 에디터 화면이 바로 표시됩니다 (`selectedPassageId`가 있으면 `CategoryFullScreen`을 건너뛰고 에디터를 렌더링).
 
