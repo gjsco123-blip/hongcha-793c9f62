@@ -1,41 +1,22 @@
 
 
-## 흑백 인쇄 최적화 — Synonyms & Antonyms 테이블 디자인 개선 옵션
+## 모델 전환: `google/gemini-3-flash-preview`
 
-현재 테이블은 기본적인 테두리+행 구분선 스타일입니다. 폰트/크기는 유지하면서 흑백 프린트에서 더 세련되게 보이는 방법 몇 가지를 제안합니다.
+4개 edge function의 모델을 `google/gemini-2.5-flash` → `google/gemini-3-flash-preview`로 변경합니다.
 
----
+### 변경 대상
 
-### 옵션 A: 줄무늬 행 (Zebra Stripes)
-- 짝수 행에 연한 회색 배경(`#f5f5f5` / PDF `T.g05`)을 적용
-- 행 구분선 제거 → 배경색 차이로 행 구분
-- 깔끔하고 눈이 덜 피로함
-- 헤더는 약간 더 진한 배경(`#eee`)
+| 파일 | 현재 모델 | 변경 후 |
+|------|-----------|---------|
+| `supabase/functions/engine/index.ts` (line 210) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/hongt/index.ts` (line 117) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/grammar/index.ts` (line 289) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/grammar/index.ts` (line 382) | `google/gemini-2.5-flash` (freestyle 모드) | `google/gemini-3-flash-preview` |
 
-### 옵션 B: 외곽선만 (Minimal Border)
-- 테이블 외곽 테두리만 유지, 내부 행 구분선 전부 제거
-- 헤더와 본문 사이에만 굵은 구분선(1pt) 하나
-- 가장 미니멀하고 모던한 느낌
+### 변경하지 않는 것
+- `spellcheck` (gemini-2.5-flash-lite 유지)
+- `regenerate` (이미 gemini-3-flash-preview)
+- `analyze-vocab`, `analyze-single-vocab`, `analyze-preview`, `analyze-structure` (별도 요청 없음)
 
-### 옵션 C: 헤더 강조 + 줄무늬 조합
-- 헤더 배경을 진한 회색(`#333`)으로, 텍스트 흰색
-- 본문은 줄무늬(짝수행 `#f5f5f5`)
-- 흑백 프린트에서 헤더가 확실히 구분됨
-- 가장 "프로페셔널 학습지" 느낌
-
-### 옵션 D: 현재 + 미세 조정
-- 현재 스타일 유지하되:
-  - 헤더 하단 구분선을 더 굵게(1pt)
-  - Word 컬럼과 Synonym/Antonym 컬럼 사이에 세로 구분선 추가
-  - 행 간격을 살짝 넓혀서 여백감 확보
-
----
-
-### 공통 적용 사항 (어떤 옵션이든)
-- Word 컬럼: `#666` (회색) — 현재 유지
-- Synonym/Antonym: `#1a1a1a` (검정) — 현재 유지
-- 흑백 프린트 제약: 색상 대비는 최소 `#666` vs `#1a1a1a`로 충분
-- 웹 UI와 PDF 모두 동일 스타일 적용
-
-어떤 방향이 마음에 드시나요?
+각 파일에서 model 문자열 1줄씩만 수정, 총 4곳.
 

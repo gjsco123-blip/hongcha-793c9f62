@@ -35,18 +35,18 @@ export function PreviewSynonymsSection({ synonyms, status, onSynonymsChange, onR
     <div className="border border-border rounded overflow-hidden">
       <table className="w-full text-[12px]">
         <thead>
-          <tr className="bg-muted/30">
-            <th className="text-left px-3 py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[30%]">Word</th>
-            <th className="text-left px-3 py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[35%]">Synonym</th>
-            <th className="text-left px-3 py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[35%]">Antonym</th>
+          <tr className="bg-muted/30 border-b-2 border-foreground/80">
+            <th className="text-left px-3 py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[30%] border-r border-border">Word</th>
+            <th className="text-left px-3 py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[35%]">Synonym</th>
+            <th className="text-left px-3 py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[35%]">Antonym</th>
           </tr>
         </thead>
         <tbody>
           {items.map((item, idx) => (
             <tr key={idx} className="border-t border-border/50">
-              <td className="px-3 py-1.5 text-muted-foreground font-medium">{item.word}</td>
-              <td className="px-3 py-1.5 font-medium">{item.synonym}</td>
-              <td className="px-3 py-1.5 font-medium">{item.antonym}</td>
+              <td className="px-3 py-2 text-muted-foreground font-medium border-r border-border">{item.word}</td>
+              <td className="px-3 py-2 font-medium">{item.synonym}</td>
+              <td className="px-3 py-2 font-medium">{item.antonym}</td>
             </tr>
           ))}
         </tbody>
@@ -59,27 +59,27 @@ export function PreviewSynonymsSection({ synonyms, status, onSynonymsChange, onR
       <SectionHeader title="Synonyms & Antonyms" status={status} onRegenerate={handleRegen} isRegenerating={isRegen} />
       {status === "error" && <p className="text-xs text-destructive">동/반의어 생성에 실패했습니다.</p>}
       {synonyms.length > 0 && (
-        <div className="border border-border rounded overflow-hidden">
+    <div className="border border-border rounded overflow-hidden">
           <table className="w-full text-[12px]">
             <thead>
-              <tr className="bg-muted/30">
-                <th className="text-left px-3 py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[30%]">Word</th>
-                <th className="text-left px-3 py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[35%]">Synonym</th>
-                <th className="text-left px-3 py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[35%]">Antonym</th>
+              <tr className="bg-muted/30 border-b-2 border-foreground/80">
+                <th className="text-left px-3 py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[30%] border-r border-border">Word</th>
+                <th className="text-left px-3 py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[35%]">Synonym</th>
+                <th className="text-left px-3 py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[35%]">Antonym</th>
               </tr>
             </thead>
             <tbody>
               {synonyms.map((item, idx) => (
                 <tr key={idx} className="border-t border-border/50">
-                  <td className="px-3 py-1.5 text-muted-foreground font-medium">{item.word}</td>
-                  <td className="px-3 py-1.5">
+                  <td className="px-3 py-2 text-muted-foreground font-medium border-r border-border">{item.word}</td>
+                  <td className="px-3 py-2">
                     <input
                       value={item.synonym}
                       onChange={(e) => handleEdit(idx, "synonym", e.target.value)}
                       className="w-full bg-transparent border-none outline-none text-[12px] font-medium focus:bg-muted/20 rounded px-1"
                     />
                   </td>
-                  <td className="px-3 py-1.5">
+                  <td className="px-3 py-2">
                     <input
                       value={item.antonym}
                       onChange={(e) => handleEdit(idx, "antonym", e.target.value)}
