@@ -1,4 +1,4 @@
-import { useState, createElement, useCallback } from "react";
+import { useState, useEffect, createElement, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -28,20 +28,40 @@ async function invokeRetry(fn: string, body: any, maxRetries = 3) {
   throw new Error("Max retries exceeded");
 }
 
+const STORAGE_KEY = "preview-state";
+
+function loadCached() {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
 export default function Preview() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [passage, setPassage] = useState((location.state as any)?.passage || "");
+  const cached = loadCached();
+  const incomingPassage = (location.state as any)?.passage;
+  const pdfTitle = (location.state as any)?.pdfTitle || cached?.pdfTitle || "Preview";
 
-  const [vocab, setVocab] = useState<VocabItem[]>([]);
-  const [vocabStatus, setVocabStatus] = useState<SectionStatus>("idle");
-  const [synonyms, setSynonyms] = useState<SynAntItem[]>([]);
-  const [synonymsStatus, setSynonymsStatus] = useState<SectionStatus>("idle");
-  const [summary, setSummary] = useState("");
-  const [examBlock, setExamBlock] = useState<ExamBlock | null>(null);
-  const [previewStatus, setPreviewStatus] = useState<SectionStatus>("idle");
+  // If navigated with a new passage, use it; otherwise restore cache
+  const isNewPassage = !!incomingPassage && incomingPassage !== cached?.passage;
+
+  const [passage, setPassage] = useState(isNewPassage ? incomingPassage : (cached?.passage || incomingPassage || ""));
+  const [vocab, setVocab] = useState<VocabItem[]>(isNewPassage ? [] : (cached?.vocab || []));
+  const [vocabStatus, setVocabStatus] = useState<SectionStatus>(isNewPassage ? "idle" : (cached?.vocab?.length ? "done" : "idle"));
+  const [synonyms, setSynonyms] = useState<SynAntItem[]>(isNewPassage ? [] : (cached?.synonyms || []));
+  const [synonymsStatus, setSynonymsStatus] = useState<SectionStatus>(isNewPassage ? "idle" : (cached?.synonyms?.length ? "done" : "idle"));
+  const [summary, setSummary] = useState(isNewPassage ? "" : (cached?.summary || ""));
+  const [examBlock, setExamBlock] = useState<ExamBlock | null>(isNewPassage ? null : (cached?.examBlock || null));
+  const [previewStatus, setPreviewStatus] = useState<SectionStatus>(isNewPassage ? "idle" : (cached?.summary || cached?.examBlock ? "done" : "idle"));
   const [addingWord, setAddingWord] = useState<string | null>(null);
-  const pdfTitle = (location.state as any)?.pdfTitle || "Preview";
+
+  // Persist state to sessionStorage
+  useEffect(() => {
+    const state = { passage, vocab, synonyms, summary, examBlock, pdfTitle };
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }, [passage, vocab, synonyms, summary, examBlock, pdfTitle]);
 
   const isGenerating = vocabStatus === "loading" || synonymsStatus === "loading" || previewStatus === "loading";
 
