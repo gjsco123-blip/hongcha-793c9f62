@@ -134,7 +134,7 @@ export default function Index() {
 
   // Auto-save with debounce
   const autoSave = useCallback(() => {
-    if (!categories.selectedPassageId) return;
+    if (!categories.selectedPassageId || !dataLoadedRef.current) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
       categories.updatePassage(categories.selectedPassageId!, {
