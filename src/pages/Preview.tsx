@@ -114,6 +114,20 @@ export default function Preview() {
     setVocab((prev) => prev.map((v, i) => i === index ? { ...v, [field]: value } : v));
   }, []);
 
+  const handleVocabRegenItem = useCallback(async (index: number) => {
+    const item = vocab[index];
+    if (!item) return;
+    try {
+      const data = await invokeRetry("analyze-single-vocab", { word: item.word, passage });
+      if (data.vocab) {
+        setVocab((prev) => prev.map((v, i) => i === index ? data.vocab : v));
+        toast.success(`"${item.word}" 재생성 완료`);
+      }
+    } catch (e: any) {
+      toast.error(`재생성 실패: ${e.message}`);
+    }
+  }, [vocab, passage]);
+
   const regenSummary = useCallback(async (): Promise<string> => {
     const data = await invokeRetry("analyze-preview", { passage });
     return data.summary || "";
