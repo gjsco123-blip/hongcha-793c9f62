@@ -125,6 +125,11 @@ ONLY finite verbs — verbs that serve as the predicate of a clause with a subje
 2. **Gerunds (-ing as noun)**: "Swimming is fun" → "Swimming" is a noun, not a verb.
 3. **Participles as adjectives**: "the broken window", "an interesting book" → adjectives, not verbs.
 4. **Prepositions/conjunctions that look like verbs**: such as, as well as, rather than, according to, due to, because of, in order to, as opposed to, in addition to, regardless of, in terms of, based on, depending on.
+5. **Adjectives/complements after linking verbs**: In "X is effective", "is" is the verb → <v>is</v>. "effective" is an adjective complement → NO <v> tag. Same for: important, necessary, possible, difficult, useful, essential, significant, available, responsible, aware, capable, likely, etc.
+   - CORRECT: control <v>is</v> sometimes effective → only "is" gets <v>
+   - WRONG: control <v>is</v> sometimes <v>effective</v> → "effective" is NOT a verb
+   - CORRECT: it <v>is</v> important to note → only "is" gets <v>
+   - WRONG: it <v>is</v> <v>important</v> to note
 
 ### Examples:
 - CORRECT: <c1>The ability to cause harm</c1> → "to cause" has NO <v> tag
