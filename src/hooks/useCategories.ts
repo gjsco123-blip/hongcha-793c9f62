@@ -74,6 +74,8 @@ export function useCategories() {
     setLoadingPassages(false);
   }, [user]);
 
+  const prevSchoolIdRef = useRef<string | null>(selectedSchoolId);
+
   useEffect(() => {
     fetchSchools();
   }, [fetchSchools]);
@@ -81,10 +83,14 @@ export function useCategories() {
   useEffect(() => {
     if (selectedSchoolId) {
       fetchPassages(selectedSchoolId);
-      setSelectedPassageId(null);
+      // Only clear passage selection when school actually changes, not on remount
+      if (prevSchoolIdRef.current !== null && prevSchoolIdRef.current !== selectedSchoolId) {
+        setSelectedPassageId(null);
+      }
     } else {
       setPassages([]);
     }
+    prevSchoolIdRef.current = selectedSchoolId;
   }, [selectedSchoolId, fetchPassages]);
 
   // CRUD
