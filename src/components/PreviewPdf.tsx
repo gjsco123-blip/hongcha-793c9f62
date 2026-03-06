@@ -5,9 +5,18 @@ import { PdfHeader } from "@/components/pdf/PdfHeader";
 Font.register({
   family: "Pretendard",
   fonts: [
-    { src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-Regular.otf", fontWeight: 400 },
-    { src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-SemiBold.otf", fontWeight: 600 },
-    { src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-Bold.otf", fontWeight: 700 },
+    {
+      src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-Regular.otf",
+      fontWeight: 400,
+    },
+    {
+      src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-SemiBold.otf",
+      fontWeight: 600,
+    },
+    {
+      src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-Bold.otf",
+      fontWeight: 700,
+    },
   ],
 });
 
@@ -28,12 +37,24 @@ Font.register({
 Font.registerHyphenationCallback((word) => [word]);
 
 // ── Types ──
-interface VocabItem { word: string; pos: string; meaning_ko: string; in_context: string; }
-interface SynAntItem { word: string; synonym: string; antonym: string; }
+interface VocabItem {
+  word: string;
+  pos: string;
+  meaning_ko: string;
+  in_context: string;
+}
+interface SynAntItem {
+  word: string;
+  synonym: string;
+  antonym: string;
+}
 interface ExamBlock {
-  topic: string; topic_ko?: string;
-  title: string; title_ko?: string;
-  one_sentence_summary: string; one_sentence_summary_ko?: string;
+  topic: string;
+  topic_ko?: string;
+  title: string;
+  title_ko?: string;
+  one_sentence_summary: string;
+  one_sentence_summary_ko?: string;
 }
 interface Props {
   vocab: VocabItem[];
@@ -45,21 +66,67 @@ interface Props {
 
 // ── Design tokens ──
 const T = {
-  ko: "Pretendard", en: "Pretendard",
-  black: "#1a1a1a", g70: "#555", g50: "#666", g30: "#bbb", g30text: "#666", g10: "#f0f0f0", g05: "#f8f8f8", rule: "#d0d0d0",
-  mH: 40, mT: 40, mB: 36,
+  ko: "Pretendard",
+  en: "Pretendard",
+  black: "#1a1a1a",
+  g70: "#555",
+  g50: "#666",
+  g30: "#bbb",
+  g30text: "#666",
+  g10: "#f0f0f0",
+  g05: "#f8f8f8",
+  rule: "#d0d0d0",
+  mH: 40,
+  mT: 40,
+  mB: 36,
 };
 
 const s = StyleSheet.create({
-  page: { paddingTop: 42, paddingBottom: T.mB, paddingLeft: T.mH, paddingRight: T.mH, fontFamily: T.ko, fontSize: 8.5, color: T.black },
-  secTitle: { fontSize: 7.5, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase" as const, color: T.g50, marginBottom: 6 },
+  page: {
+    paddingTop: 42,
+    paddingBottom: T.mB,
+    paddingLeft: T.mH,
+    paddingRight: T.mH,
+    fontFamily: T.ko,
+    fontSize: 8.5,
+    color: T.black,
+  },
+  secTitle: {
+    fontSize: 7.5,
+    fontWeight: 700,
+    letterSpacing: 0.6,
+    textTransform: "uppercase" as const,
+    color: T.g50,
+    marginBottom: 6,
+  },
   thinRule: { height: 0.5, backgroundColor: T.rule, marginVertical: 8 },
-  vocabEmptyRow: { flexDirection: "row" as const, alignItems: "center" as const, paddingVertical: 5, paddingHorizontal: 4, borderBottomWidth: 0.3, borderBottomColor: "#e4e4e4", minHeight: 14 },
+  vocabEmptyRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    paddingVertical: 5,
+    paddingHorizontal: 4,
+    borderBottomWidth: 0.3,
+    borderBottomColor: "#e4e4e4",
+    minHeight: 14,
+  },
   vocabRow2Col: { flexDirection: "row" as const, gap: 12 },
   vocabCol: { flex: 1 },
   vocabTable: { borderWidth: 0.5, borderColor: T.rule },
-  vocabHdr: { flexDirection: "row" as const, paddingVertical: 4, paddingHorizontal: 4, borderBottomWidth: 0.5, borderBottomColor: T.rule },
-  vocabRow: { flexDirection: "row" as const, alignItems: "center" as const, paddingVertical: 5, paddingHorizontal: 4, borderBottomWidth: 0.3, borderBottomColor: "#e4e4e4" },
+  vocabHdr: {
+    flexDirection: "row" as const,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+    borderBottomWidth: 0.5,
+    borderBottomColor: T.rule,
+  },
+  vocabRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    paddingVertical: 5,
+    paddingHorizontal: 4,
+    borderBottomWidth: 0.3,
+    borderBottomColor: "#e4e4e4",
+  },
   vNum: { width: 14, marginRight: 4, fontSize: 6.5, color: T.g30text, textAlign: "center" as const, lineHeight: 1 },
   vWord: { width: 56, fontSize: 7, fontWeight: 600, lineHeight: 1 },
   vPos: { width: 18, fontSize: 6, color: T.g50, textAlign: "center" as const, lineHeight: 1, marginRight: 4 },
@@ -69,18 +136,48 @@ const s = StyleSheet.create({
   summaryText: { fontSize: 7, lineHeight: 1.7 },
   // Synonyms & Antonyms table
   synTable: { borderWidth: 0.5, borderColor: T.rule },
-  synHdr: { flexDirection: "row" as const, paddingVertical: 4, paddingHorizontal: 4, borderBottomWidth: 0.5, borderBottomColor: T.rule, backgroundColor: T.g05 },
-  synRow: { flexDirection: "row" as const, alignItems: "center" as const, paddingVertical: 4, paddingHorizontal: 4, borderBottomWidth: 0.3, borderBottomColor: "#e4e4e4" },
+  synHdr: {
+    flexDirection: "row" as const,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+    borderBottomWidth: 0.5,
+    borderBottomColor: T.rule,
+    backgroundColor: T.g05,
+  },
+  synRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+    borderBottomWidth: 0.3,
+    borderBottomColor: "#e4e4e4",
+  },
   synWord: { width: "25%" as any, fontSize: 7, fontWeight: 600, color: T.g50, lineHeight: 1.3 },
   synSyn: { width: "40%" as any, fontSize: 7, color: T.black, lineHeight: 1.3 },
   synAnt: { width: "35%" as any, fontSize: 7, color: T.black, lineHeight: 1.3 },
   synHdrText: { fontSize: 6, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.4 },
-  fieldLabel: { fontSize: 7.5, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase" as const, color: T.g50, marginBottom: 3, marginTop: 12 },
+  fieldLabel: {
+    fontSize: 7.5,
+    fontWeight: 700,
+    letterSpacing: 0.6,
+    textTransform: "uppercase" as const,
+    color: T.g50,
+    marginBottom: 3,
+    marginTop: 12,
+  },
   fieldEn: { fontFamily: T.en, fontSize: 8, color: T.black, lineHeight: 1.6 },
-  fieldKo: { fontSize: 6, color: T.g70, lineHeight: 1.5, marginTop: 1.5 },
+  fieldKo: { fontSize: 7, color: T.g70, lineHeight: 1.5, marginTop: 1.5 },
 });
 
-function VocabColumn({ items, startNum, totalSlots = 10 }: { items: VocabItem[]; startNum: number; totalSlots?: number }) {
+function VocabColumn({
+  items,
+  startNum,
+  totalSlots = 10,
+}: {
+  items: VocabItem[];
+  startNum: number;
+  totalSlots?: number;
+}) {
   const rows = Array.from({ length: totalSlots }, (_, i) => items[i] || null);
   return (
     <View style={s.vocabCol}>
@@ -131,7 +228,12 @@ export function PreviewPdf({ vocab, synonyms, summary, examBlock, title: titlePr
             <Text style={s.secTitle}>Vocabulary</Text>
             <View style={s.vocabRow2Col}>
               {[0, 1, 2].map((colIdx) => (
-                <VocabColumn key={colIdx} items={vocab.slice(colIdx * 10, colIdx * 10 + 10)} startNum={colIdx * 10 + 1} totalSlots={10} />
+                <VocabColumn
+                  key={colIdx}
+                  items={vocab.slice(colIdx * 10, colIdx * 10 + 10)}
+                  startNum={colIdx * 10 + 1}
+                  totalSlots={10}
+                />
               ))}
             </View>
           </View>
