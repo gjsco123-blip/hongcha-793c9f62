@@ -6,11 +6,30 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const SEED_VOCABULARY = new Set([
+  "derive","interpret","indicate","assume","maintain","imply","demonstrate",
+  "reveal","perceive","emphasize","recognize","justify","evaluate","conclude",
+  "hypothesis","evidence","framework","mechanism","dimension","perspective",
+  "factor","implication","context","structure","interaction","principle",
+  "analysis","significance","accountability","responsibility","distinction",
+  "restrict","influence","essential","valid","objective","plausible",
+  "intuition","compassion","empathy","activate","adapt","recover","protocol",
+  "dissemination","democratization","engagement","accountable","construct",
+  "process","perception","shift"
+]);
+
+const STOP_VOCABULARY = new Set([
+  "thing","people","way","kind","good","many","make","use","house","person",
+  "someone","something","anything","everything"
+]);
+
+function extractEnglishHeadword(raw: string): string {
+  return raw.replace(/\s*\(.*$/, "").trim().toLowerCase();
+}
+
 function parseMarkdownTable(raw: string): { word: string; synonym: string; antonym: string }[] {
   const lines = raw.split("\n").map((l) => l.trim()).filter((l) => l.startsWith("|"));
-  // Skip header and separator rows
   const dataLines = lines.filter((l) => !l.match(/^\|[\s\-:|]+\|$/));
-  // Remove header row (first non-separator line that contains 단어/동의어/반의어)
   const filtered = dataLines.filter((l) => !/단어|동의어|반의어|word|synonym|antonym/i.test(l));
 
   return filtered.map((line) => {
@@ -29,6 +48,8 @@ serve(async (req) => {
   try {
     const { passage } = await req.json();
     if (!passage) throw new Error("Missing passage");
+
+    const trimmedPassage = String(passage || "").slice(0, 5000);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
@@ -167,7 +188,7 @@ Before producing the final table, remove vocabulary that would be unrealistic fo
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: passage },
+          { role: "user", content: trimmedPassage },
         ],
       }),
     });
@@ -192,7 +213,25 @@ Before producing the final table, remove vocabulary that would be unrealistic fo
     const content = data.choices?.[0]?.message?.content;
     if (!content) throw new Error("No content in response");
 
-    const synonyms = parseMarkdownTable(content);
+    // Parse and post-process
+    let synonyms = parseMarkdownTable(content);
+
+    // Filter out STOP_VOCABULARY
+    synonyms = synonyms.filter((item) => {
+      const hw = extractEnglishHeadword(item.word);
+      return !STOP_VOCABULARY.has(hw);
+    });
+
+    // Sort: SEED_VOCABULARY words first
+    synonyms = synonyms.sort((a, b) => {
+      const aIsSeed = SEED_VOCABULARY.has(extractEnglishHeadword(a.word)) ? 0 : 1;
+      const bIsSeed = SEED_VOCABULARY.has(extractEnglishHeadword(b.word)) ? 0 : 1;
+      return aIsSeed - bIsSeed;
+    });
+
+    // Limit to 10
+    synonyms = synonyms.slice(0, 10);
+
     if (synonyms.length === 0) {
       console.error("Failed to parse markdown table from:", content);
       throw new Error("Failed to parse synonyms table");
