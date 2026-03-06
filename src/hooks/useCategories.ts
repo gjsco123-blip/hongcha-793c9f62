@@ -25,11 +25,19 @@ export function useCategories() {
   const { user } = useAuth();
   const [schools, setSchools] = useState<School[]>([]);
   const [passages, setPassages] = useState<Passage[]>([]);
-  const [selectedSchoolId, _setSelectedSchoolId] = useState<string | null>(null);
-  const [selectedPassageId, _setSelectedPassageId] = useState<string | null>(null);
+  const [selectedSchoolId, _setSelectedSchoolId] = useState<string | null>(() => sessionStorage.getItem("selected-school-id"));
+  const [selectedPassageId, _setSelectedPassageId] = useState<string | null>(() => sessionStorage.getItem("selected-passage-id"));
   
-  const setSelectedSchoolId = (id: string | null) => _setSelectedSchoolId(id || null);
-  const setSelectedPassageId = (id: string | null) => _setSelectedPassageId(id || null);
+  const setSelectedSchoolId = (id: string | null) => {
+    _setSelectedSchoolId(id || null);
+    if (id) sessionStorage.setItem("selected-school-id", id);
+    else sessionStorage.removeItem("selected-school-id");
+  };
+  const setSelectedPassageId = (id: string | null) => {
+    _setSelectedPassageId(id || null);
+    if (id) sessionStorage.setItem("selected-passage-id", id);
+    else sessionStorage.removeItem("selected-passage-id");
+  };
   const [loadingSchools, setLoadingSchools] = useState(false);
   const [loadingPassages, setLoadingPassages] = useState(false);
 
