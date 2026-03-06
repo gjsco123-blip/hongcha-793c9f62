@@ -139,7 +139,7 @@ const s = StyleSheet.create({
   vMeaning: { flex: 1, fontSize: 6.5, lineHeight: 1.3 },
   vHdrText: { fontSize: 6, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.4 },
 
-  // Key Summary — left bar accent
+  // Passage Logic — left bar accent
   summaryBox: { borderLeftWidth: 2, borderLeftColor: T.g30, paddingLeft: 10, paddingVertical: 3 },
   summaryText: { fontSize: 7, lineHeight: 1.7 },
 
@@ -237,11 +237,11 @@ export function PreviewPdf({ vocab, structure, summary, examBlock, title: titleP
           </View>
         )}
 
-        {/* ═══ 2. Key Summary ═══ */}
+        {/* ═══ 2. Passage Logic ═══ */}
         {hasSummary && (
           <View>
             {hasVocab && <View style={s.thinRule} />}
-            <Text style={s.secTitle}>Key Summary</Text>
+            <Text style={s.secTitle}>Passage Logic</Text>
             <View style={s.summaryBox}>
               <Text style={s.summaryText}>{summaryLines.join("\n")}</Text>
             </View>
