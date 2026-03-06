@@ -1,4 +1,5 @@
-import { Loader2, Trash2, AlertTriangle } from "lucide-react";
+import { useState } from "react";
+import { Loader2, Trash2, AlertTriangle, RefreshCw } from "lucide-react";
 import type { VocabItem, SectionStatus } from "./types";
 
 // PDF meaning column: ~59pt available at 6.5pt font → ~9 Korean chars per line
@@ -10,12 +11,25 @@ interface Props {
   status: SectionStatus;
   onDelete: (index: number) => void;
   onEdit: (index: number, field: keyof VocabItem, value: string) => void;
+  onRegenItem?: (index: number) => Promise<void>;
 }
 
-export function PreviewVocabSection({ vocab, status, onDelete, onEdit }: Props) {
+export function PreviewVocabSection({ vocab, status, onDelete, onEdit, onRegenItem }: Props) {
+  const [regenIdx, setRegenIdx] = useState<number | null>(null);
+
   if (status === "idle") return null;
 
   const LoadingDot = () => <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground inline-block" />;
+
+  const handleRegen = async (globalIdx: number) => {
+    if (!onRegenItem || regenIdx !== null) return;
+    setRegenIdx(globalIdx);
+    try {
+      await onRegenItem(globalIdx);
+    } finally {
+      setRegenIdx(null);
+    }
+  };
 
   // Always render 3 columns of 10 rows
   const columns = [0, 1, 2].map((colIdx) => {
@@ -39,7 +53,7 @@ export function PreviewVocabSection({ vocab, status, onDelete, onEdit }: Props) 
               <span className="min-w-[55px]">Word</span>
               <span className="w-7 text-center">POS</span>
               <span className="flex-1">Meaning</span>
-              <span className="w-5" />
+              <span className="w-10" />
             </div>
             {col.rows.map((v, i) => {
               const globalIdx = colIdx * 10 + i;
@@ -52,6 +66,7 @@ export function PreviewVocabSection({ vocab, status, onDelete, onEdit }: Props) 
                 );
               }
               const isOverflow = v.meaning_ko.length > PDF_MEANING_MAX_CHARS;
+              const isRegening = regenIdx === globalIdx;
               return (
                 <div key={num} className="group flex items-center gap-2 px-2 py-1.5 text-xs">
                   <span className="w-4 text-center text-muted-foreground/50 text-[10px]">{num}</span>
@@ -73,12 +88,22 @@ export function PreviewVocabSection({ vocab, status, onDelete, onEdit }: Props) 
                       </span>
                     )}
                   </div>
-                  <button
-                    onClick={() => onDelete(globalIdx)}
-                    className="w-5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
+                  <div className="flex items-center gap-0.5 w-10 justify-end">
+                    <button
+                      onClick={() => handleRegen(globalIdx)}
+                      disabled={isRegening}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary disabled:opacity-50"
+                      title="품사/뜻 재생성"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${isRegening ? "animate-spin" : ""}`} />
+                    </button>
+                    <button
+                      onClick={() => onDelete(globalIdx)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
               );
             })}
