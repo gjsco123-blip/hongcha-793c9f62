@@ -5,10 +5,10 @@ export interface VocabItem {
   in_context: string;
 }
 
-export interface StructureStep {
-  step: number;
-  one_line: string;
-  evidence: string;
+export interface SynAntItem {
+  word: string;
+  synonym: string;
+  antonym: string;
 }
 
 export interface ExamBlock {

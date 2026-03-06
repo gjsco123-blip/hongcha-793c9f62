@@ -8,9 +8,9 @@ import { PreviewPdf } from "@/components/PreviewPdf";
 import { PreviewPassageInput } from "@/components/preview/PreviewPassageInput";
 import { PreviewVocabSection } from "@/components/preview/PreviewVocabSection";
 import { PreviewSummarySection } from "@/components/preview/PreviewSummarySection";
-import { PreviewStructureSection } from "@/components/preview/PreviewStructureSection";
+import { PreviewSynonymsSection } from "@/components/preview/PreviewSynonymsSection";
 import { PreviewExamSection } from "@/components/preview/PreviewExamSection";
-import type { VocabItem, StructureStep, ExamBlock, SectionStatus } from "@/components/preview/types";
+import type { VocabItem, SynAntItem, ExamBlock, SectionStatus } from "@/components/preview/types";
 
 async function invokeRetry(fn: string, body: any, maxRetries = 3) {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -35,38 +35,37 @@ export default function Preview() {
 
   const [vocab, setVocab] = useState<VocabItem[]>([]);
   const [vocabStatus, setVocabStatus] = useState<SectionStatus>("idle");
-  const [structure, setStructure] = useState<StructureStep[]>([]);
-  const [structureStatus, setStructureStatus] = useState<SectionStatus>("idle");
+  const [synonyms, setSynonyms] = useState<SynAntItem[]>([]);
+  const [synonymsStatus, setSynonymsStatus] = useState<SectionStatus>("idle");
   const [summary, setSummary] = useState("");
   const [examBlock, setExamBlock] = useState<ExamBlock | null>(null);
   const [previewStatus, setPreviewStatus] = useState<SectionStatus>("idle");
   const [addingWord, setAddingWord] = useState<string | null>(null);
   const pdfTitle = (location.state as any)?.pdfTitle || "Preview";
 
-  const isGenerating = vocabStatus === "loading" || structureStatus === "loading" || previewStatus === "loading";
+  const isGenerating = vocabStatus === "loading" || synonymsStatus === "loading" || previewStatus === "loading";
 
   const handleGenerate = async () => {
     if (!passage.trim() || isGenerating) return;
     setVocabStatus("loading");
-    setStructureStatus("loading");
+    setSynonymsStatus("loading");
     setPreviewStatus("loading");
 
     const vocabPromise = invokeRetry("analyze-vocab", { passage, count: 30 })
       .then((d) => { setVocab(d.vocab || []); setVocabStatus("done"); })
       .catch((e) => { toast.error(`어휘 생성 실패: ${e.message}`); setVocabStatus("error"); });
 
-    const structPromise = invokeRetry("analyze-structure", { passage, step_count: 5 })
-      .then((d) => { setStructure((d.structure_steps || []).slice(0, 5)); setStructureStatus("done"); })
-      .catch((e) => { toast.error(`구조 흐름 생성 실패: ${e.message}`); setStructureStatus("error"); });
+    const synPromise = invokeRetry("analyze-synonyms", { passage })
+      .then((d) => { setSynonyms(d.synonyms || []); setSynonymsStatus("done"); })
+      .catch((e) => { toast.error(`동/반의어 생성 실패: ${e.message}`); setSynonymsStatus("error"); });
 
     const previewPromise = invokeRetry("analyze-preview", { passage })
       .then((d) => { setSummary(d.summary || ""); setExamBlock(d.exam_block || null); setPreviewStatus("done"); })
       .catch((e) => { toast.error(`요약 생성 실패: ${e.message}`); setPreviewStatus("error"); });
 
-    await Promise.allSettled([vocabPromise, structPromise, previewPromise]);
+    await Promise.allSettled([vocabPromise, synPromise, previewPromise]);
   };
 
-  // ── Vocab: add word from passage click ──
   const handleWordClick = useCallback(async (word: string) => {
     const lower = word.toLowerCase();
     if (vocab.some((v) => v.word.toLowerCase() === lower)) {
@@ -95,15 +94,14 @@ export default function Preview() {
     setVocab((prev) => prev.map((v, i) => i === index ? { ...v, [field]: value } : v));
   }, []);
 
-  // ── Regenerate handlers (return new data for compare) ──
   const regenSummary = useCallback(async (): Promise<string> => {
     const data = await invokeRetry("analyze-preview", { passage });
     return data.summary || "";
   }, [passage]);
 
-  const regenStructure = useCallback(async (): Promise<StructureStep[]> => {
-    const data = await invokeRetry("analyze-structure", { passage, step_count: 5 });
-    return (data.structure_steps || []).slice(0, 5);
+  const regenSynonyms = useCallback(async (): Promise<SynAntItem[]> => {
+    const data = await invokeRetry("analyze-synonyms", { passage });
+    return data.synonyms || [];
   }, [passage]);
 
   const regenExamTopic = useCallback(async () => {
@@ -121,10 +119,9 @@ export default function Preview() {
     return { en: data.exam_block?.one_sentence_summary || "", ko: data.exam_block?.one_sentence_summary_ko };
   }, [passage]);
 
-  // ── PDF export ──
   const handleExportPdf = async () => {
     try {
-      const doc = createElement(PreviewPdf, { vocab, structure, summary, examBlock, title: pdfTitle }) as any;
+      const doc = createElement(PreviewPdf, { vocab, synonyms, summary, examBlock, title: pdfTitle }) as any;
       const blob = await pdf(doc).toBlob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -140,7 +137,7 @@ export default function Preview() {
     }
   };
 
-  const canExport = vocab.length > 0 || structure.length > 0 || summary;
+  const canExport = vocab.length > 0 || synonyms.length > 0 || summary;
 
   return (
     <div className="min-h-screen bg-background">
@@ -186,11 +183,11 @@ export default function Preview() {
           onRegenerate={regenSummary}
         />
 
-        <PreviewStructureSection
-          structure={structure}
-          status={structureStatus}
-          onStructureChange={setStructure}
-          onRegenerate={regenStructure}
+        <PreviewSynonymsSection
+          synonyms={synonyms}
+          status={synonymsStatus}
+          onSynonymsChange={setSynonyms}
+          onRegenerate={regenSynonyms}
         />
 
         <PreviewExamSection
