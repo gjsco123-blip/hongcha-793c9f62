@@ -1,22 +1,22 @@
 
 
-## 모델 전환: `google/gemini-3-flash-preview`
+## 문제 원인
 
-4개 edge function의 모델을 `google/gemini-2.5-flash` → `google/gemini-3-flash-preview`로 변경합니다.
+Preview에서 뒤로가기 시 Index 페이지가 리마운트됨. `selectedPassageId`는 sessionStorage에서 즉시 복원되지만, `passages` 배열은 DB에서 비동기로 불러오므로 처음에는 빈 배열임.
 
-### 변경 대상
+Index.tsx의 `useEffect`(113번 줄)가 `selectedPassageId`로 트리거되지만, 이 시점에 `selectedPassage`가 `null`이라 아무 상태도 설정하지 않음. 이후 passages가 로드되어도 `selectedPassageId`가 변하지 않았으므로 effect가 다시 실행되지 않음 → 빈 화면.
 
-| 파일 | 현재 모델 | 변경 후 |
-|------|-----------|---------|
-| `supabase/functions/engine/index.ts` (line 210) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/hongt/index.ts` (line 117) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/grammar/index.ts` (line 289) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/grammar/index.ts` (line 382) | `google/gemini-2.5-flash` (freestyle 모드) | `google/gemini-3-flash-preview` |
+## 해결 방법
 
-### 변경하지 않는 것
-- `spellcheck` (gemini-2.5-flash-lite 유지)
-- `regenerate` (이미 gemini-3-flash-preview)
-- `analyze-vocab`, `analyze-single-vocab`, `analyze-preview`, `analyze-structure` (별도 요청 없음)
+**`src/pages/Index.tsx`** — useEffect 의존성에 `categories.selectedPassage`를 추가
 
-각 파일에서 model 문자열 1줄씩만 수정, 총 4곳.
+```typescript
+// 기존 (line 131)
+}, [categories.selectedPassageId]);
+
+// 변경
+}, [categories.selectedPassageId, categories.selectedPassage]);
+```
+
+이렇게 하면 passages가 비동기 로드 완료되어 `selectedPassage`가 `null` → 실제 객체로 바뀔 때 effect가 다시 실행되어 passage_text, results_json 등이 정상 복원됨.
 
