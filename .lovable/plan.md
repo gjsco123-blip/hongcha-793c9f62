@@ -1,22 +1,43 @@
 
 
-## 모델 전환: `google/gemini-3-flash-preview`
+## Structure → Synonyms & Antonyms 교체
 
-4개 edge function의 모델을 `google/gemini-2.5-flash` → `google/gemini-3-flash-preview`로 변경합니다.
+기존 Structure 섹션을 완전히 제거하고 동/반의어(Synonyms & Antonyms) 섹션으로 대체합니다.
 
-### 변경 대상
+### 새 데이터 타입
 
-| 파일 | 현재 모델 | 변경 후 |
-|------|-----------|---------|
-| `supabase/functions/engine/index.ts` (line 210) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/hongt/index.ts` (line 117) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/grammar/index.ts` (line 289) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/grammar/index.ts` (line 382) | `google/gemini-2.5-flash` (freestyle 모드) | `google/gemini-3-flash-preview` |
+```text
+SynAntItem {
+  word: string;          // 지문에 나온 단어
+  synonym: string;       // 동의어
+  antonym: string;       // 반의어
+}
+```
 
-### 변경하지 않는 것
-- `spellcheck` (gemini-2.5-flash-lite 유지)
-- `regenerate` (이미 gemini-3-flash-preview)
-- `analyze-vocab`, `analyze-single-vocab`, `analyze-preview`, `analyze-structure` (별도 요청 없음)
+### 변경 목록
 
-각 파일에서 model 문자열 1줄씩만 수정, 총 4곳.
+**1. 새 Edge Function 생성**: `supabase/functions/analyze-synonyms/index.ts`
+- 지문에서 핵심 단어 10~15개를 추출하고 각각의 동의어/반의어를 생성
+- 기존 vocab 목록의 단어를 우선 활용하되, 추가 단어도 포함
+- 모델: `google/gemini-3-flash-preview`
+
+**2. 타입 수정**: `src/components/preview/types.ts`
+- `StructureStep` 제거 → `SynAntItem` 추가
+
+**3. 웹 UI 교체**: `PreviewStructureSection.tsx` → `PreviewSynonymsSection.tsx`
+- 테이블 형태로 Word / Synonym / Antonym 표시
+- 편집 가능, 재생성 + 비교 오버레이 유지
+
+**4. Preview 페이지 수정**: `src/pages/Preview.tsx`
+- Structure 관련 state/로직 전부 제거
+- Synonyms & Antonyms state/로직으로 교체
+- `analyze-structure` 호출 → `analyze-synonyms` 호출로 변경
+
+**5. PDF 수정**: `src/components/PreviewPdf.tsx`
+- Structure 섹션 제거
+- Synonyms & Antonyms 테이블 섹션 추가 (Word | Synonym | Antonym)
+
+**6. 삭제 대상**
+- `supabase/functions/analyze-structure/index.ts` (Edge Function 삭제)
+- `PreviewStructureSection.tsx` (새 파일로 교체)
 
