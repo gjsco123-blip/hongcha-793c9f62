@@ -43,9 +43,9 @@ export function PreviewSynonymsSection({ synonyms, status, onSynonymsChange, onR
         <tbody>
           {items.map((item, idx) => (
             <tr key={idx} className="border-t border-border/50">
-              <td className="px-3 py-2 text-muted-foreground font-medium border-r border-border">{item.word}</td>
-              <td className="px-3 py-2 font-medium">{item.synonym}</td>
-              <td className="px-3 py-2 font-medium">{item.antonym}</td>
+              <td className="px-3 py-2 text-foreground font-normal border-r border-border">{item.word}</td>
+              <td className="px-3 py-2 font-semibold">{item.synonym}</td>
+              <td className="px-3 py-2 font-semibold">{item.antonym}</td>
             </tr>
           ))}
         </tbody>
@@ -69,19 +69,19 @@ export function PreviewSynonymsSection({ synonyms, status, onSynonymsChange, onR
             <tbody>
               {synonyms.map((item, idx) => (
                 <tr key={idx} className="border-t border-border/50">
-                  <td className="px-3 py-2 text-muted-foreground font-medium border-r border-border">{item.word}</td>
+                  <td className="px-3 py-2 text-foreground font-normal border-r border-border">{item.word}</td>
                   <td className="px-3 py-2">
                     <input
                       value={item.synonym}
                       onChange={(e) => handleEdit(idx, "synonym", e.target.value)}
-                      className="w-full bg-transparent border-none outline-none text-[12px] font-medium focus:bg-muted/20 rounded px-1"
+                      className="w-full bg-transparent border-none outline-none text-[12px] font-semibold focus:bg-muted/20 rounded px-1"
                     />
                   </td>
                   <td className="px-3 py-2">
                     <input
                       value={item.antonym}
                       onChange={(e) => handleEdit(idx, "antonym", e.target.value)}
-                      className="w-full bg-transparent border-none outline-none text-[12px] font-medium focus:bg-muted/20 rounded px-1"
+                      className="w-full bg-transparent border-none outline-none text-[12px] font-semibold focus:bg-muted/20 rounded px-1"
                     />
                   </td>
                 </tr>
