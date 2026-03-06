@@ -252,7 +252,7 @@ export function PreviewPdf({ vocab, synonyms, summary, examBlock, title: titlePr
         {hasSynonyms && (
           <View>
             {(hasVocab || hasSummary) && <View style={s.thinRule} />}
-            <Text style={s.secTitle}>Synonyms & Antonyms</Text>
+            
             <View style={s.synTable}>
               <View style={s.synHdr}>
                 <Text style={{ ...s.synWord, ...s.synHdrText }}>Word</Text>

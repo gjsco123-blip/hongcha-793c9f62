@@ -56,7 +56,6 @@ export function PreviewSynonymsSection({ synonyms, status, onSynonymsChange, onR
 
   return (
     <section className="border-t border-border pt-5">
-      <SectionHeader title="Synonyms & Antonyms" status={status} onRegenerate={handleRegen} isRegenerating={isRegen} />
       {status === "error" && <p className="text-xs text-destructive">동/반의어 생성에 실패했습니다.</p>}
       {synonyms.length > 0 && (
     <div className="border border-border rounded overflow-hidden">
