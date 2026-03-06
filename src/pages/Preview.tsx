@@ -208,6 +208,7 @@ export default function Preview() {
           status={vocabStatus}
           onDelete={handleVocabDelete}
           onEdit={handleVocabEdit}
+          onRegenItem={handleVocabRegenItem}
         />
 
         <PreviewSummarySection
