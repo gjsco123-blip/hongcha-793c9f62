@@ -35,18 +35,18 @@ export function PreviewSynonymsSection({ synonyms, status, onSynonymsChange, onR
     <div className="border border-border rounded overflow-hidden">
       <table className="w-full text-[12px]">
         <thead>
-          <tr className="bg-muted/30">
-            <th className="text-left px-3 py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[30%]">Word</th>
-            <th className="text-left px-3 py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[35%]">Synonym</th>
-            <th className="text-left px-3 py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[35%]">Antonym</th>
+          <tr className="bg-muted/30 border-b-2 border-foreground/80">
+            <th className="text-left px-3 py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[30%] border-r border-border">Word</th>
+            <th className="text-left px-3 py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[35%]">Synonym</th>
+            <th className="text-left px-3 py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[35%]">Antonym</th>
           </tr>
         </thead>
         <tbody>
           {items.map((item, idx) => (
             <tr key={idx} className="border-t border-border/50">
-              <td className="px-3 py-1.5 text-muted-foreground font-medium">{item.word}</td>
-              <td className="px-3 py-1.5 font-medium">{item.synonym}</td>
-              <td className="px-3 py-1.5 font-medium">{item.antonym}</td>
+              <td className="px-3 py-2 text-muted-foreground font-medium border-r border-border">{item.word}</td>
+              <td className="px-3 py-2 font-medium">{item.synonym}</td>
+              <td className="px-3 py-2 font-medium">{item.antonym}</td>
             </tr>
           ))}
         </tbody>
