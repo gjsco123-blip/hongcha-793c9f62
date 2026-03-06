@@ -52,8 +52,8 @@ const T = {
 
 const s = StyleSheet.create({
   page: { paddingTop: 42, paddingBottom: T.mB, paddingLeft: T.mH, paddingRight: T.mH, fontFamily: T.ko, fontSize: 8.5, color: T.black },
-  secTitle: { fontSize: 7.5, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase" as const, color: T.g50, marginBottom: 10 },
-  thinRule: { height: 0.5, backgroundColor: T.rule, marginVertical: 16 },
+  secTitle: { fontSize: 7.5, fontWeight: 700, letterSpacing: 0.6, textTransform: "uppercase" as const, color: T.g50, marginBottom: 6 },
+  thinRule: { height: 0.5, backgroundColor: T.rule, marginVertical: 8 },
   vocabEmptyRow: { flexDirection: "row" as const, alignItems: "center" as const, paddingVertical: 5, paddingHorizontal: 4, borderBottomWidth: 0.3, borderBottomColor: "#e4e4e4", minHeight: 14 },
   vocabRow2Col: { flexDirection: "row" as const, gap: 12 },
   vocabCol: { flex: 1 },
