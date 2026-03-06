@@ -36,7 +36,7 @@ export function PreviewSummarySection({ summary, status, onSummaryChange, onRege
 
   return (
     <section className="border-t border-border pt-5">
-      <SectionHeader title="Key Summary" status={status} onRegenerate={handleRegen} isRegenerating={isRegen} />
+      <SectionHeader title="Passage Logic" status={status} onRegenerate={handleRegen} isRegenerating={isRegen} />
       {status === "error" && <p className="text-xs text-destructive">요약 생성에 실패했습니다.</p>}
       {summary && (
         <div className="border-l-[2px] border-muted-foreground/25 pl-5 py-1 space-y-1">
