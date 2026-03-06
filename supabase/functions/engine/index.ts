@@ -119,6 +119,7 @@ ONLY finite verbs — verbs that serve as the predicate of a clause with a subje
   - CORRECT: they<v>'ve discovered</v> → 've = have = finite verb
   - CORRECT: it<v>'ll change</v> → 'll = will = finite verb
   - WRONG: there's no reason → missing <v> tag on 's
+  - **EXCEPTION**: "let's" = "let us" → 's is NOT a verb here. Tag "let" instead: <v>let</v>'s follow.
 
 ### NEVER tag these — they are NOT verbs:
 1. **To-infinitives**: "to cause", "to achieve", "to engage", "to switch off" → NO <v> tag. The word "to" before a verb = infinitive = NOT a finite verb.
