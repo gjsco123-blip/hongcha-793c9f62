@@ -139,7 +139,7 @@ const s = StyleSheet.create({
   vMeaning: { flex: 1, fontSize: 6.5, lineHeight: 1.3 },
   vHdrText: { fontSize: 6, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.4 },
 
-  // Key Summary — left bar accent
+  // Passage Logic — left bar accent
   summaryBox: { borderLeftWidth: 2, borderLeftColor: T.g30, paddingLeft: 10, paddingVertical: 3 },
   summaryText: { fontSize: 7, lineHeight: 1.7 },
 
