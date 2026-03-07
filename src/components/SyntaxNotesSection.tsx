@@ -12,8 +12,9 @@ interface SyntaxNotesSectionProps {
   fullPassage?: string;
 }
 
-export function SyntaxNotesSection({ notes, onChange, onGenerate, generating }: SyntaxNotesSectionProps) {
+export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, sentence, fullPassage }: SyntaxNotesSectionProps) {
   const [editing, setEditing] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   const handleDeleteNote = (id: number) => {
     const filtered = notes.filter((n) => n.id !== id);
