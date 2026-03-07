@@ -222,7 +222,14 @@ function buildAutoSystemPrompt() {
 - cause + O + to V(5형식) 구조 / it이 the museum을 가리킴
 - what이 이끄는 명사절이 emphasise의 목적어 역할
 - 분사(과거/현재)가 명사를 뒤에서 수식하는 후치수식 구조임
-- 조동사 + be p.p. 형태로 수동을 나타냄`;
+- 조동사 + be p.p. 형태로 수동을 나타냄
+
+[targetText 규칙]
+- 각 포인트마다, 원문에서 해당 문법이 적용되는 핵심 구문(2~5단어)을 targetText로 반환하라.
+- targetText는 반드시 원문에 존재하는 연속된 단어여야 한다.
+- 예: 관계대명사 who가 이끄는 절 → targetText: "who attended the"
+- 예: 수동태 be p.p. → targetText: "was discovered by"
+- 예: to부정사 → targetText: "to understand the"`;
 }
 
 const tools = [
@@ -237,6 +244,34 @@ const tools = [
           points: {
             type: "array",
             items: { type: "string" },
+          },
+        },
+        required: ["points"],
+        additionalProperties: false,
+      },
+    },
+  },
+];
+
+const autoTools = [
+  {
+    type: "function",
+    function: {
+      name: "syntax_result",
+      description: "Return concise CSAT-style syntax points with target phrases",
+      parameters: {
+        type: "object",
+        properties: {
+          points: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                text: { type: "string", description: "구문분석 설명" },
+                targetText: { type: "string", description: "원문에서 해당 포인트가 적용되는 핵심 구문(2~5단어)" },
+              },
+              required: ["text", "targetText"],
+            },
           },
         },
         required: ["points"],
@@ -277,7 +312,7 @@ serve(async (req) => {
       const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
       if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-      const userMessage = `문장: ${full}\n이 문장에서 수능에 출제될 수 있는 핵심 문법 포인트를 찾아서 points로 작성하라.`;
+      const userMessage = `문장: ${full}\n이 문장에서 수능에 출제될 수 있는 핵심 문법 포인트를 찾아서 points로 작성하라. 각 포인트마다 원문에서 해당 문법이 적용되는 핵심 구문(2~5단어)을 targetText로 함께 반환하라.`;
 
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -288,12 +323,12 @@ serve(async (req) => {
         body: JSON.stringify({
           model: "google/gemini-3-flash-preview",
           temperature: 0.2,
-          max_tokens: 600,
+          max_tokens: 800,
           messages: [
             { role: "system", content: buildAutoSystemPrompt() },
             { role: "user", content: userMessage },
           ],
-          tools,
+          tools: autoTools,
           tool_choice: { type: "function", function: { name: "syntax_result" } },
         }),
       });
@@ -317,34 +352,57 @@ serve(async (req) => {
       }
 
       const data = await response.json();
-      console.log("AI response (auto):", JSON.stringify(data.choices?.[0]?.message).slice(0, 500));
+      console.log("AI response (auto):", JSON.stringify(data.choices?.[0]?.message).slice(0, 800));
       const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
 
-      let points: string[] = [];
+      type AutoPoint = { text: string; targetText: string };
+      let autoPoints: AutoPoint[] = [];
+
       if (toolCall?.function?.arguments) {
         const parsed = safeJsonParse(toolCall.function.arguments);
-        points = Array.isArray(parsed?.points) ? parsed.points : [];
+        const rawPoints = Array.isArray(parsed?.points) ? parsed.points : [];
+        // Handle both object[] and string[] formats
+        autoPoints = rawPoints.map((p: any) =>
+          typeof p === "string"
+            ? { text: p, targetText: "" }
+            : { text: String(p?.text ?? ""), targetText: String(p?.targetText ?? "") }
+        );
       } else {
         const content = data.choices?.[0]?.message?.content ?? "";
         console.log("No tool_call (auto), trying content fallback:", content.slice(0, 300));
         try {
           const parsed = safeJsonParse(content);
-          points = Array.isArray(parsed?.points) ? parsed.points : [];
+          const rawPoints = Array.isArray(parsed?.points) ? parsed.points : [];
+          autoPoints = rawPoints.map((p: any) =>
+            typeof p === "string"
+              ? { text: p, targetText: "" }
+              : { text: String(p?.text ?? ""), targetText: String(p?.targetText ?? "") }
+          );
         } catch {
           const fallback = oneLine(content);
-          points = fallback ? [fallback] : [];
+          autoPoints = fallback ? [{ text: fallback, targetText: "" }] : [];
         }
       }
 
-      points = points.map(oneLine).filter(Boolean).map(stripLeadingBullets);
-      points = points.slice(0, 5).map((p) => (p.length > 170 ? p.slice(0, 168).trim() + "…" : p));
+      autoPoints = autoPoints
+        .map((p) => ({ text: oneLine(stripLeadingBullets(p.text)), targetText: oneLine(p.targetText) }))
+        .filter((p) => p.text);
+      autoPoints = autoPoints.slice(0, 5).map((p) => ({
+        text: p.text.length > 170 ? p.text.slice(0, 168).trim() + "…" : p.text,
+        targetText: p.targetText,
+      }));
 
-      if (points.length === 0) {
-        points = ["(이 문장에서 주요 문법 포인트를 찾지 못했습니다)"];
+      if (autoPoints.length === 0) {
+        autoPoints = [{ text: "(이 문장에서 주요 문법 포인트를 찾지 못했습니다)", targetText: "" }];
       }
 
-      const syntaxNotes = formatAsLines(points, 5);
-      const res: GrammarResponse = { syntaxNotes, detectedTags: [], normalizedHint: "" };
+      const syntaxNotes = autoPoints.map((p) => p.text).join("\n");
+      const res: GrammarResponse & { autoPoints?: AutoPoint[] } = {
+        syntaxNotes,
+        detectedTags: [],
+        normalizedHint: "",
+        autoPoints,
+      };
       return new Response(JSON.stringify(res), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
