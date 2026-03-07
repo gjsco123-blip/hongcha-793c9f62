@@ -1,18 +1,20 @@
 import { useState } from "react";
-import { Sparkles, X } from "lucide-react";
+import { Sparkles, X, MessageSquare } from "lucide-react";
 import type { SyntaxNote } from "@/pages/Index";
-
-
+import { SyntaxChat } from "./SyntaxChat";
 
 interface SyntaxNotesSectionProps {
   notes: SyntaxNote[];
   onChange: (notes: SyntaxNote[]) => void;
   onGenerate?: () => void;
   generating?: boolean;
+  sentence?: string;
+  fullPassage?: string;
 }
 
-export function SyntaxNotesSection({ notes, onChange, onGenerate, generating }: SyntaxNotesSectionProps) {
+export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, sentence, fullPassage }: SyntaxNotesSectionProps) {
   const [editing, setEditing] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   const handleDeleteNote = (id: number) => {
     const filtered = notes.filter((n) => n.id !== id);
@@ -49,6 +51,15 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating }: 
               >
                 <Sparkles className="w-3 h-3" />
                 자동 생성
+              </button>
+            )}
+            {notes.length > 0 && sentence && (
+              <button
+                onClick={() => setChatOpen(true)}
+                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"
+              >
+                <MessageSquare className="w-3 h-3" />
+                AI 수정
               </button>
             )}
             {notes.length > 0 && (
@@ -96,6 +107,17 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating }: 
           )}
         </div>
       </div>
+
+      {sentence && (
+        <SyntaxChat
+          open={chatOpen}
+          onOpenChange={setChatOpen}
+          sentence={sentence}
+          currentNotes={notes}
+          fullPassage={fullPassage}
+          onApplySuggestion={(newNotes) => onChange(newNotes)}
+        />
+      )}
     </div>
   );
 }
