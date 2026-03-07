@@ -1,14 +1,15 @@
 import { useState } from "react";
-import { Sparkles, X } from "lucide-react";
+import { Sparkles, X, MessageSquare } from "lucide-react";
 import type { SyntaxNote } from "@/pages/Index";
-
-
+import { SyntaxChat } from "./SyntaxChat";
 
 interface SyntaxNotesSectionProps {
   notes: SyntaxNote[];
   onChange: (notes: SyntaxNote[]) => void;
   onGenerate?: () => void;
   generating?: boolean;
+  sentence?: string;
+  fullPassage?: string;
 }
 
 export function SyntaxNotesSection({ notes, onChange, onGenerate, generating }: SyntaxNotesSectionProps) {
