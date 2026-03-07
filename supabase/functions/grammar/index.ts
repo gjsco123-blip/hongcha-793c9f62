@@ -222,7 +222,14 @@ function buildAutoSystemPrompt() {
 - cause + O + to V(5형식) 구조 / it이 the museum을 가리킴
 - what이 이끄는 명사절이 emphasise의 목적어 역할
 - 분사(과거/현재)가 명사를 뒤에서 수식하는 후치수식 구조임
-- 조동사 + be p.p. 형태로 수동을 나타냄`;
+- 조동사 + be p.p. 형태로 수동을 나타냄
+
+[targetText 규칙]
+- 각 포인트마다, 원문에서 해당 문법이 적용되는 핵심 구문(2~5단어)을 targetText로 반환하라.
+- targetText는 반드시 원문에 존재하는 연속된 단어여야 한다.
+- 예: 관계대명사 who가 이끄는 절 → targetText: "who attended the"
+- 예: 수동태 be p.p. → targetText: "was discovered by"
+- 예: to부정사 → targetText: "to understand the"`;
 }
 
 const tools = [
