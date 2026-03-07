@@ -458,12 +458,20 @@ export default function Index() {
               newNotes.sort((a, b) => a.id - b.id);
             }
           } else {
-            // 자동 생성: 전체 교체
-            const lines = (data.syntaxNotes as string).split("\n").filter((l: string) => l.trim());
-            newNotes = lines.map((line: string, idx: number) => ({
-              id: idx + 1,
-              content: line.replace(/^[•·\-]\s*/, ""),
-            }));
+            // 자동 생성: 전체 교체 (autoPoints가 있으면 targetText 포함)
+            if (Array.isArray(data.autoPoints) && data.autoPoints.length > 0) {
+              newNotes = data.autoPoints.map((p: any, idx: number) => ({
+                id: idx + 1,
+                content: String(p.text || "").replace(/^[•·\-]\s*/, ""),
+                targetText: String(p.targetText || "") || undefined,
+              }));
+            } else {
+              const lines = (data.syntaxNotes as string).split("\n").filter((l: string) => l.trim());
+              newNotes = lines.map((line: string, idx: number) => ({
+                id: idx + 1,
+                content: line.replace(/^[•·\-]\s*/, ""),
+              }));
+            }
           }
 
           return { ...r, syntaxNotes: newNotes, generatingSyntax: false };
