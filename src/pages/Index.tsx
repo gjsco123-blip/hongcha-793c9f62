@@ -767,6 +767,8 @@ export default function Index() {
                       }
                       generating={result.generatingSyntax}
                       onGenerate={() => handleGenerateSyntax(result.id, result.original)}
+                      sentence={result.original}
+                      fullPassage={passageText}
                     />
                   </div>
                 ) : (
