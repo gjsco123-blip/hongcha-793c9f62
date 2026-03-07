@@ -107,6 +107,17 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
           )}
         </div>
       </div>
+
+      {sentence && (
+        <SyntaxChat
+          open={chatOpen}
+          onOpenChange={setChatOpen}
+          sentence={sentence}
+          currentNotes={notes}
+          fullPassage={fullPassage}
+          onApplySuggestion={(newNotes) => onChange(newNotes)}
+        />
+      )}
     </div>
   );
 }
