@@ -246,6 +246,34 @@ const tools = [
   },
 ];
 
+const autoTools = [
+  {
+    type: "function",
+    function: {
+      name: "syntax_result",
+      description: "Return concise CSAT-style syntax points with target phrases",
+      parameters: {
+        type: "object",
+        properties: {
+          points: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                text: { type: "string", description: "구문분석 설명" },
+                targetText: { type: "string", description: "원문에서 해당 포인트가 적용되는 핵심 구문(2~5단어)" },
+              },
+              required: ["text", "targetText"],
+            },
+          },
+        },
+        required: ["points"],
+        additionalProperties: false,
+      },
+    },
+  },
+];
+
 // -----------------------------
 // Server
 // -----------------------------
