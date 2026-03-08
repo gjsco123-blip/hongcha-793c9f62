@@ -77,8 +77,7 @@ function validateOutput(text: string): { valid: boolean; reason?: string } {
     .filter((s) => s.length > 0);
 
   // More reliable: count by period-like endings
-  const sentenceCount = (text.match(/[다야어지요]\./g) || []).length ||
-    (text.match(/[다야어지요]/g) || []).length;
+  const sentenceCount = (text.match(/[다야어지요]\./g) || []).length || (text.match(/[다야어지요]/g) || []).length;
 
   // Check bullet/number format
   if (/^[\s]*[-•·*]\s/m.test(text) || /^[\s]*\d+[.)]\s/m.test(text)) {
@@ -151,10 +150,7 @@ serve(async (req) => {
     const fullPassage = sentences.join(" ");
     const targetSentence = sentences[index];
 
-    const contextInfo = [
-      `[전체 지문 맥락 참고용] ${fullPassage}`,
-      `[현재 문장] ${targetSentence}`,
-    ].join("\n");
+    const contextInfo = [`[전체 지문 맥락 참고용] ${fullPassage}`, `[현재 문장] ${targetSentence}`].join("\n");
 
     const userMessage = `다음 문장을 학생이 이해할 수 있도록 쉽게 설명해줘:\n\n${contextInfo}`;
 
@@ -182,10 +178,9 @@ serve(async (req) => {
       content = await callAI(retryMessages, LOVABLE_API_KEY);
     }
 
-    return new Response(
-      JSON.stringify({ explanation: content }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ explanation: content }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (e: any) {
     console.error("hongt error:", e);
     const status = e.status || 500;
