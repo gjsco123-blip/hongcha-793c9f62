@@ -1,46 +1,22 @@
 
 
-## 홍T 엣지 함수 개선
+## 모델 전환: `google/gemini-3-flash-preview`
 
-`supabase/functions/hongt/index.ts` 1개 파일만 수정합니다.
+4개 edge function의 모델을 `google/gemini-2.5-flash` → `google/gemini-3-flash-preview`로 변경합니다.
 
-### 변경 요약
+### 변경 대상
 
-| 영역 | 현재 | 변경 |
-|------|------|------|
-| 시스템 프롬프트 | 반말 강제, 기본 규칙만 | 15개 스펙 전체 반영 (번역 금지, 의미 설명 중심, 문장 중요도 감지, 비유 처리, 논리 힌트 허용) |
-| 말투 | `~거야`, `~뜻이야` 고정 | 자연스러운 설명체 혼합 (`~라는 뜻이다`, `~라는 의미다`, `즉 ~라는 말이다` 등) |
-| 맥락 입력 | 전체 지문 + 현재 문장 | 이전 1문장 + 현재 문장 + 다음 1문장 (3문장 윈도우) |
-| few-shot 예시 | 반말 3개 | 새 설명체 스타일로 교체 |
-| 후처리 | 없음 | `postProcess()` 함수 추가 (줄바꿈/불릿/공백 제거, 단일 문단 보장) |
-| 검증 | 기본 + 1회 재시도 후 그대로 반환 | 마침표 기준 문장 수 카운트, 재시도 후에도 실패 시 후처리 적용 후 반환 |
-| 입력 검증 | 배열/index 존재만 확인 | index 정수 확인, 배열 범위 확인, 요소 문자열 확인 추가 |
+| 파일 | 현재 모델 | 변경 후 |
+|------|-----------|---------|
+| `supabase/functions/engine/index.ts` (line 210) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/hongt/index.ts` (line 117) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/grammar/index.ts` (line 289) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/grammar/index.ts` (line 382) | `google/gemini-2.5-flash` (freestyle 모드) | `google/gemini-3-flash-preview` |
 
-### 핵심 변경 상세
+### 변경하지 않는 것
+- `spellcheck` (gemini-2.5-flash-lite 유지)
+- `regenerate` (이미 gemini-3-flash-preview)
+- `analyze-vocab`, `analyze-single-vocab`, `analyze-preview`, `analyze-structure` (별도 요청 없음)
 
-**1. 시스템 프롬프트** -- 스펙 문서의 15개 항목을 구조적으로 반영:
-- 번역 금지 규칙 (영어→한국어 직역 금지, 의미 설명으로 재구성)
-- 맥락 사용 규칙 (앞뒤 문장은 연결어/지시어 이해용 참고만)
-- 문장 중요도 감지 (일반 문장 2문장, 핵심 문장 3문장 허용)
-- 비유 표현 처리
-- 제한적 논리 힌트 허용
-- 품질 규칙 (간결, 반복 최소화, 균일한 밀도)
-
-**2. 맥락 입력 변경**
-```text
-현재: [전체 지문] + [현재 문장]
-변경: [이전 문장](있으면) + [현재 문장] + [다음 문장](있으면)
-```
-
-**3. 후처리 함수 추가**
-```text
-줄바꿈 → 공백 치환
-불릿/번호 문자 제거
-다중 공백 정리
-앞뒤 공백 제거
-```
-
-**4. 검증 로직 개선**
-- 마침표(`.`) 기준으로 한국어 문장 수 카운트
-- 재시도 후에도 실패 시 후처리 적용 후 반환 (크레딧 절약)
+각 파일에서 model 문자열 1줄씩만 수정, 총 4곳.
 

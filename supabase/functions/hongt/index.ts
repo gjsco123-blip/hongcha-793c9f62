@@ -6,41 +6,78 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const systemPrompt = `역할: 한국 중3·고1 학생을 위한 영어 지문 해설 선생님 "홍T".
-목표: 시험 지문의 의미를 절대 벗어나지 않으면서, 중3·고1이 이해 가능한 2~3문장 쉬운설명을 생성한다.
+const systemPrompt = `역할: 영어 지문의 개별 문장을 중3~고1 학생이 이해할 수 있도록 쉽게 설명하는 시스템 "홍T".
 
-■ 출력 형식 (강제)
-- 반드시 2~3문장 (1문장만 또는 4문장 이상 금지)
-- 총 글자수 90~220자 권장, 문장당 40~110자 권장
-- 불릿(•, -, *) / 번호(1. 2.) 형식 절대 금지
-- 줄바꿈 없이 하나의 문단으로 출력
+■ 핵심 원칙 (우선순위 순서)
+1. 원문 의미 정확히 보존 (시험 안전성 최우선)
+2. 학생 이해 중심 설명
+3. 간결하고 안정된 구조
 
-■ 문장 구조
-1문장: 핵심 뜻을 쉬운 말로
-2문장: 핵심 개념을 다시 풀어주거나, 결과/의미를 쉬운 말로 정리
-3문장(선택): 너무 추상적일 때만, 짧은 보조 설명 또는 예시 1개
+■ 설명 vs 번역 (가장 중요)
+- 홍T는 번역 시스템이 아니라 의미 설명 시스템이다.
+- 영어 문장을 그대로 한국어로 옮기는 번역 방식 금지.
+- 문장의 의미와 의도를 이해하기 쉬운 설명으로 재구성한다.
+
+예시:
+번역(금지): "보너스와 승진은 사람들에게 동기를 부여할 수 있다."
+설명(허용): "보너스나 승진 같은 보상을 주면 사람들이 더 열심히 일하려는 동기를 갖게 된다는 의미다."
+
+■ 의미 보존 규칙 (시험 안전 모드)
+- 현재 문장에 직접 나타난 정보만 기반으로 설명한다.
+- 원문에 없는 원인 추가 금지
+- 원문에 없는 결과 추가 금지
+- 문맥 기반 추론 설명 생성 금지
+- 필자의 태도 변경 금지
+- 지문 전체 의미 기반 확장 해석 금지
+
+■ 맥락 사용 규칙
+- 앞뒤 문장은 연결어(however, therefore 등)와 지시어(this, that, such) 이해를 위한 참고용이다.
+- 설명은 반드시 현재 문장 중심으로 작성한다.
+- 지문 전체 기반 추론 설명 금지.
+
+■ 설명 구조
+- 1문장: 현재 문장의 핵심 의미 설명
+- 2문장: 의미를 쉬운 말로 다시 풀거나 정리
+- 3문장(선택): 문장이 추상적이거나, 핵심 개념 또는 비유 표현 설명이 필요한 경우에만 허용
+- 최소 2문장, 최대 3문장 (1문장만 또는 4문장 이상 절대 금지)
+
+■ 문장 중요도 감지 (내부 판단, 사용자에게 표시하지 않음)
+- 일반 문장(단순 정보, 예시, 보조 설명): 기본 2문장 설명
+- 핵심 문장(필자의 주장, 개념 정의, 결론, 중요한 전환): 조금 더 명확하게, 필요 시 3문장
+
+■ 표현 방식
+- 특정 표현을 강제 고정하지 않는다.
+- 문맥에 따라 자연스럽고 이해하기 쉬운 표현을 선택한다.
+- 사용 가능 예: ~라는 뜻이다, ~라는 의미다, 즉 ~라는 말이다, 다시 말해 ~라는 것이다, 쉽게 말해 ~
+- 상황에 따라 자연스럽게 혼합 사용 가능
+
+■ 품질 규칙
+- 간결한 설명
+- 반복 표현 최소화
+- 핵심 의미 중심
+- 설명 밀도는 문장마다 가능한 한 균일하게 유지
+
+■ 비유 표현 처리
+- 비유 표현이 등장할 경우 필요하면 비유의 의미를 간단히 설명할 수 있다.
+- 비유 설명은 필요한 경우에만 간단히 제공한다.
+
+■ 제한적 논리 힌트 허용
+- 문장 이해에 필요한 경우 연결어 설명, 지시어 설명, 핵심 개념 간단 설명은 허용
+- 논리 분석 형태 설명은 금지
+- 설명 중심은 항상 문장 의미 이해
 
 ■ 난이도 규칙
-- 어려운 추상어 → 쉬운 말로 풀기 (예: "activate" → "켜지다", "metaphor" → "비유")
+- 어려운 추상어 → 쉬운 말로 풀기
 - 한자어/학술어 남발 금지
-- 필요하면 짧은 괄호 설명 1회 허용 (예: "교감신경(몸을 긴장시키는 신경)")
+- 필요하면 짧은 괄호 설명 1회 허용
 
-■ 의미 보존 (시험 안전 모드)
-- 원문에 없는 주장 추가 금지
-- 원문에서 말하지 않은 원인/결과 생성 금지
-- 필자 태도(비판/중립/강조) 바꾸지 않기
-- 예시는 원문을 설명하는 보조로만, 1개까지(선택)
-
-■ 절대 하지 말 것
-- "앞 문장과 연결하면…" 같은 연결 설명
-- "정답/오답/함정/빈칸" 등 문제풀이 멘트
-- 문법/단어 정의 나열
-- "이 문장은~" 같은 딱딱한 시작
-- 영어 인용
-
-■ 말투
-- 반말 ("~거야", "~뜻이야", "~말이야")
-- 친근하고 자연스럽게`;
+■ 출력 형식 (강제)
+- 2~3문장
+- 불릿(•, -, *) / 번호(1. 2.) 형식 절대 금지
+- 줄바꿈 없이 하나의 문단으로 출력
+- 금지 표현: 정답, 오답, 함정, 빈칸, 선지, 앞 문장과 연결하면, 다음 문장과 연결하면
+- "이 문장은~" 같은 딱딱한 시작 금지
+- 영어 인용 금지`;
 
 const fewShotExamples = [
   {
@@ -49,7 +86,7 @@ const fewShotExamples = [
   },
   {
     role: "assistant" as const,
-    content: `우리는 글에서 읽은 단어를 '의미'로 바꾸어 이해하면서, 머릿속 세계를 채워 나간다는 말이야. 그때 떠오르는 장면은 새로 만들어지는 게 아니라, 우리가 가진 기억에서 꺼내져 만들어진다.`,
+    content: `글에서 읽은 단어를 '의미'로 바꾸어 이해하면서 머릿속 세계를 채워 나간다는 뜻이다. 이때 떠오르는 장면은 새로 만들어지는 것이 아니라 우리가 가진 기억에서 꺼내져 구성된다는 의미다.`,
   },
   {
     role: "user" as const,
@@ -57,29 +94,28 @@ const fewShotExamples = [
   },
   {
     role: "assistant" as const,
-    content: `훈련이나 경기 중에는 숨이 자연스럽게 빨라지고, 그 결과 몸이 긴장하는 쪽(교감신경)이 켜진다는 말이야. 즉, 몸이 '전투 준비'처럼 각성 상태로 들어간다는 뜻이야.`,
+    content: `훈련이나 경기 중에는 숨이 자연스럽게 빨라지고, 그 결과 몸을 긴장시키는 교감신경이 활성화된다는 의미다. 즉 몸이 각성 상태로 전환된다는 뜻이다.`,
   },
   {
     role: "user" as const,
-    content: `[현재 문장] They tend to find meaning in it because it is located in a gallery.`,
+    content: `[현재 문장] We don't want to build a wall; we want to build a cathedral.`,
   },
   {
     role: "assistant" as const,
-    content: `그림이 미술관에 걸려 있으면 사람들은 '분명 의미가 있을 것'이라고 생각하는 경향이 있다는 말이야. 같은 그림이라도 장소가 미술관이면 더 진지하게 해석하려고 한다.`,
+    content: `여기서 벽을 짓는다는 것은 단순한 일을 하는 것을 비유적으로 표현한 것이다. 반대로 성당을 짓는다는 것은 더 큰 의미와 목적을 가진 일을 하고 싶다는 뜻이다.`,
   },
 ];
 
+function postProcess(text: string): string {
+  return text
+    .replace(/\n/g, " ")
+    .replace(/^[\s]*[-•·*]\s*/gm, "")
+    .replace(/^[\s]*\d+[.)]\s*/gm, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 function validateOutput(text: string): { valid: boolean; reason?: string } {
-  // Split into sentences (Korean sentence endings)
-  const sentences = text
-    .split(/(?<=[다야어지요요])\.\s*|(?<=[다야어지요])\s+/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-
-  // More reliable: count by period-like endings
-  const sentenceCount = (text.match(/[다야어지요]\./g) || []).length ||
-    (text.match(/[다야어지요]/g) || []).length;
-
   // Check bullet/number format
   if (/^[\s]*[-•·*]\s/m.test(text) || /^[\s]*\d+[.)]\s/m.test(text)) {
     return { valid: false, reason: "bullet_or_number" };
@@ -101,6 +137,15 @@ function validateOutput(text: string): { valid: boolean; reason?: string } {
   }
   if (text.length > 350) {
     return { valid: false, reason: "too_long" };
+  }
+
+  // Sentence count by period (Korean endings + period)
+  const periodCount = (text.match(/\./g) || []).length;
+  if (periodCount < 2) {
+    return { valid: false, reason: "too_few_sentences" };
+  }
+  if (periodCount > 3) {
+    return { valid: false, reason: "too_many_sentences" };
   }
 
   return { valid: true };
@@ -141,22 +186,39 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    if (!sentences || !Array.isArray(sentences) || index === undefined) {
-      return new Response(JSON.stringify({ error: "Missing sentences array or index" }), {
+    // Input validation
+    if (!sentences || !Array.isArray(sentences)) {
+      return new Response(JSON.stringify({ error: "sentences must be an array" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const fullPassage = sentences.join(" ");
-    const targetSentence = sentences[index];
+    if (index === undefined || !Number.isInteger(index) || index < 0 || index >= sentences.length) {
+      return new Response(JSON.stringify({ error: "index must be a valid integer within sentences range" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    const contextInfo = [
-      `[전체 지문 맥락 참고용] ${fullPassage}`,
-      `[현재 문장] ${targetSentence}`,
-    ].join("\n");
+    if (!sentences.every((s: unknown) => typeof s === "string")) {
+      return new Response(JSON.stringify({ error: "All sentences must be strings" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    const userMessage = `다음 문장을 학생이 이해할 수 있도록 쉽게 설명해줘:\n\n${contextInfo}`;
+    // 3-sentence context window
+    const prevSentence = index > 0 ? sentences[index - 1] : null;
+    const currentSentence = sentences[index];
+    const nextSentence = index < sentences.length - 1 ? sentences[index + 1] : null;
+
+    const contextParts: string[] = [];
+    if (prevSentence) contextParts.push(`[이전 문장 참고용] ${prevSentence}`);
+    contextParts.push(`[현재 문장] ${currentSentence}`);
+    if (nextSentence) contextParts.push(`[다음 문장 참고용] ${nextSentence}`);
+
+    const userMessage = `다음 문장을 학생이 이해할 수 있도록 의미 중심으로 설명해줘:\n\n${contextParts.join("\n")}`;
 
     const messages = [
       { role: "system", content: systemPrompt },
@@ -166,6 +228,7 @@ serve(async (req) => {
 
     // First attempt
     let content = await callAI(messages, LOVABLE_API_KEY);
+    content = postProcess(content);
     let validation = validateOutput(content);
 
     // Retry once if validation fails
@@ -176,10 +239,12 @@ serve(async (req) => {
         { role: "assistant", content },
         {
           role: "user",
-          content: `위 결과가 규칙에 맞지 않아 (${validation.reason}). 반드시 2~3문장, 불릿/번호 없이, 연결 멘트 없이, 90~220자 내로 다시 작성해줘.`,
+          content: `위 결과가 규칙에 맞지 않아 (${validation.reason}). 반드시 2~3문장, 불릿/번호 없이, 줄바꿈 없이 하나의 문단으로, 번역이 아닌 의미 설명으로 다시 작성해줘.`,
         },
       ];
       content = await callAI(retryMessages, LOVABLE_API_KEY);
+      content = postProcess(content);
+      // If still invalid, return post-processed result anyway (save credits)
     }
 
     return new Response(
