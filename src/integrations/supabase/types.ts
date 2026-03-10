@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      learning_examples: {
+        Row: {
+          ai_draft: string
+          created_at: string
+          final_version: string
+          id: string
+          preset: string | null
+          sentence: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          ai_draft: string
+          created_at?: string
+          final_version: string
+          id?: string
+          preset?: string | null
+          sentence: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          ai_draft?: string
+          created_at?: string
+          final_version?: string
+          id?: string
+          preset?: string | null
+          sentence?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       passages: {
         Row: {
           created_at: string
