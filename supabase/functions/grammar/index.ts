@@ -337,7 +337,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { sentence, selectedText, userHint, hintTags, mode } = await req.json();
+    const { sentence, selectedText, userHint, hintTags, mode, userId } = await req.json();
 
     const full = oneLine(sentence || "");
     const selected = oneLine(selectedText || "")
