@@ -522,7 +522,7 @@ serve(async (req) => {
         : ["(힌트 태그에 해당하는 포인트를 문장에서 찾기 어려움) / 드래그 범위를 조금 넓히거나 힌트를 구체화"];
     }
 
-    const maxPts = useFreestyle ? 5 : 3;
+    const maxPts = useFreestyle ? 5 : 1;
     points = points.slice(0, maxPts).map((p) => (p.length > 170 ? p.slice(0, 168).trim() + "…" : p));
 
     const syntaxNotes = formatAsLines(points, maxPts);
