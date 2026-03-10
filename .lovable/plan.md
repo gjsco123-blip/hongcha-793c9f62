@@ -1,22 +1,28 @@
 
 
-## 모델 전환: `google/gemini-3-flash-preview`
+# 홍T 명사형 마무리 톤 변경
 
-4개 edge function의 모델을 `google/gemini-2.5-flash` → `google/gemini-3-flash-preview`로 변경합니다.
+맞아, 명사형 마무리는 제시한 예시(`~경향이 강함`, `~라는 전제`, `~라는 의미`, `~라는 관점`, `~로 이어짐`) 외에도 자연스럽게 확장 가능해. 예를 들어:
 
-### 변경 대상
+- `~하는 구조`, `~하는 흐름`, `~하는 방식`
+- `~라는 점`, `~라는 차이`, `~라는 결과`
+- `~에 해당`, `~과 같은 맥락`, `~으로의 전환`
 
-| 파일 | 현재 모델 | 변경 후 |
-|------|-----------|---------|
-| `supabase/functions/engine/index.ts` (line 210) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/hongt/index.ts` (line 117) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/grammar/index.ts` (line 289) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/grammar/index.ts` (line 382) | `google/gemini-2.5-flash` (freestyle 모드) | `google/gemini-3-flash-preview` |
+프롬프트에 "명사형으로 마무리하라"는 원칙을 세우고 몇 가지 예시만 제시하면, 모델이 문맥에 맞게 다양한 명사형 종결을 자연스럽게 생성함.
 
-### 변경하지 않는 것
-- `spellcheck` (gemini-2.5-flash-lite 유지)
-- `regenerate` (이미 gemini-3-flash-preview)
-- `analyze-vocab`, `analyze-single-vocab`, `analyze-preview`, `analyze-structure` (별도 요청 없음)
+## 변경 내용 (`supabase/functions/hongt/index.ts`)
 
-각 파일에서 model 문자열 1줄씩만 수정, 총 4곳.
+### 1. systemPrompt 말투 규칙 교체
+- 현재 반말 종결(`~거야, ~뜻이야`) → 명사형 마무리 원칙으로 전환
+- 허용 패턴: `~경향이 강함`, `~라는 의미`, `~하는 구조` 등 (예시로 제시하되 "이에 준하는 명사형 마무리도 가능"이라고 명시)
+- 금지 패턴: `~이다`, `~한다`, `~라고 말한다`
+
+### 2. fewShotExamples 전체 톤 재작성
+- 기존 assistant 응답 4개를 명사형 마무리 톤으로 수정
+- 잘못된→올바른 교정 예시도 명사형 기준으로 업데이트
+
+### 3. 프롬프트 내 ❌/✅ 예시 교체
+- ❌ `"~활성화시킨다는 것을 의미한다."` → ✅ `"~교감신경이 활성화되는 구조."` 스타일로 변경
+
+로직/검증/모델 변경 없음. systemPrompt + fewShotExamples 문자열만 수정.
 
