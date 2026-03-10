@@ -12,6 +12,7 @@ interface HongTSectionProps {
   onDelete?: () => void;
   sentence?: string;
   fullPassage?: string;
+  preset?: string;
 }
 
 export function HongTSection({ value, onChange, onGenerate, generating, onDelete, sentence, fullPassage }: HongTSectionProps) {
