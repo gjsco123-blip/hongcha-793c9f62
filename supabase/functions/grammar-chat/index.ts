@@ -54,7 +54,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, sentence, currentNotes, fullPassage } = await req.json();
+    const { messages, sentence, currentNotes, fullPassage, targetNoteIndex } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
@@ -70,16 +70,38 @@ serve(async (req) => {
       ? currentNotes.map((n: any, i: number) => `${i + 1}. ${n.content}`).join("\n")
       : "없음";
 
-    const contextBlock = [
-      fullPassage ? `[전체 지문]\n${fullPassage}` : "",
-      `[현재 문장]\n${sentence}`,
-      `[현재 구문분석 노트]\n${notesText}`,
-    ]
-      .filter(Boolean)
-      .join("\n\n");
+    const isTargeted = typeof targetNoteIndex === "number" && Array.isArray(currentNotes) && currentNotes[targetNoteIndex];
+    const targetNote = isTargeted ? currentNotes[targetNoteIndex] : null;
+
+    let contextBlock: string;
+    if (isTargeted && targetNote) {
+      contextBlock = [
+        fullPassage ? `[전체 지문]\n${fullPassage}` : "",
+        `[현재 문장]\n${sentence}`,
+        `[전체 구문분석 노트]\n${notesText}`,
+        `[수정 대상: ${targetNoteIndex + 1}번 포인트]\n${targetNote.content}`,
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+    } else {
+      contextBlock = [
+        fullPassage ? `[전체 지문]\n${fullPassage}` : "",
+        `[현재 문장]\n${sentence}`,
+        `[현재 구문분석 노트]\n${notesText}`,
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+    }
+
+    const targetedSystemAddendum = isTargeted
+      ? `\n\n■ 개별 포인트 수정 모드
+- 현재 ${targetNoteIndex! + 1}번 포인트만 수정 대상이다.
+- 수정안은 해당 포인트 1개에 대한 수정 내용만 반환하라 (한 줄).
+- 다른 포인트는 건드리지 않는다.`
+      : "";
 
     const aiMessages = [
-      { role: "system", content: systemPrompt },
+      { role: "system", content: systemPrompt + targetedSystemAddendum },
       {
         role: "system",
         content: `아래는 현재 작업 중인 문장과 구문분석 노트입니다:\n\n${contextBlock}`,
