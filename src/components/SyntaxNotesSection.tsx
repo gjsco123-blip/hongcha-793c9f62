@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Sparkles, X, MessageSquare } from "lucide-react";
 import type { SyntaxNote } from "@/pages/Index";
 import { SyntaxChat } from "./SyntaxChat";
+import { reorderNotesByPosition } from "@/lib/syntax-superscript";
 
 interface SyntaxNotesSectionProps {
   notes: SyntaxNote[];
