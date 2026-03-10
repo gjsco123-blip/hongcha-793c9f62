@@ -10,6 +10,7 @@ interface SyntaxNotesSectionProps {
   generating?: boolean;
   sentence?: string;
   fullPassage?: string;
+  preset?: string;
 }
 
 export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, sentence, fullPassage }: SyntaxNotesSectionProps) {
