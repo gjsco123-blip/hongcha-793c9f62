@@ -70,8 +70,8 @@ export function PreviewSynonymsSection({
     onSynonymsChange(newSynonyms);
   };
 
-  const getChipCount = (item: SynAntItem) => {
-    return splitChips(item.synonym).length + splitChips(item.antonym).length;
+  const canEnrich = (item: SynAntItem) => {
+    return splitChips(item.synonym).length < 4 || splitChips(item.antonym).length < 4;
   };
 
   const renderTable = (items: SynAntItem[]) => (
