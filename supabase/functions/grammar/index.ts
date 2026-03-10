@@ -452,7 +452,7 @@ serve(async (req) => {
         `태그 의미:\n${tagsToPromptBlock(tags)}\n` +
         `주의: 위 태그에 해당하는 포인트만 points로 작성하라.`;
 
-    const systemPrompt = useFreestyle ? buildAutoSystemPrompt() : buildHintSystemPrompt();
+    const systemPrompt = useFreestyle ? buildFreestyleSystemPrompt() : buildHintSystemPrompt();
 
     const hintModel = useFreestyle ? "google/gemini-3-flash-preview" : "google/gemini-2.5-pro";
     const useToolCall = hintModel.includes("flash");
