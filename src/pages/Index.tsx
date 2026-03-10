@@ -749,7 +749,7 @@ export default function Index() {
 
                     {/* 홍T */}
                     {!result.hideHongT && (
-                      <HongTSection
+                    <HongTSection
                         value={result.hongTNotes ?? ""}
                         onChange={(val) =>
                           setResults((prev) =>
@@ -766,6 +766,7 @@ export default function Index() {
                         onDelete={() => setResults(prev => prev.map(r => r.id === result.id ? { ...r, hideHongT: true } : r))}
                         sentence={result.original}
                         fullPassage={results.map((r) => r.original).join(" ")}
+                        preset={preset}
                       />
                     )}
 
