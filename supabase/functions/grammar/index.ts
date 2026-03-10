@@ -214,15 +214,24 @@ function buildAutoSystemPrompt() {
 
 [우선 추출 대상]
 관계대명사(주격/목적격/생략), 관계부사, 명사절(that/wh-), 가주어/진주어, 가목적어/진목적어,
-5형식(O.C), to부정사 용법, 분사 후치수식, 분사구문, 수동태, 조동사+수동, 병렬구조,
-전치사+동명사, There is/are, 비교구문, 생략, 수일치
+5형식(O.C), to부정사 용법, 분사 후치수식, 분사구문, 수동태, 조동사+수동(can/may/must/will + be p.p.), 병렬구조,
+전치사+동명사, There is/are, 비교구문, 생략, 수일치,
+숙어/구동사(count as, serve as, result in, lead to, contribute to 등), 주요 표현 용법
+
+[조동사+수동태 필수 추출 규칙]
+- 문장에 can/could/may/might/must/should/will/would + be p.p. 형태가 있으면 반드시 포인트로 포함할 것.
+
+[빈 결과 방지 규칙]
+- 구조적 문법 포인트(관계사, 분사, 수동태 등)가 없는 경우에도 빈 배열을 반환하지 말 것.
+- 이 경우 해당 문장의 핵심 숙어/구동사/주요 표현의 용법을 설명하라.
 
 [문체 예시(이 톤 유지)]
 - 주격 관계대명사 that이 선행사 pressures를 수식하는 관계절을 이끔
 - cause + O + to V(5형식) 구조 / it이 the museum을 가리킴
 - what이 이끄는 명사절이 emphasise의 목적어 역할
 - 분사(과거/현재)가 명사를 뒤에서 수식하는 후치수식 구조임
-- 조동사 + be p.p. 형태로 수동을 나타냄
+- can/may/must + be p.p. 형태의 조동사 수동태 구조
+- count as: ~로 간주되다 / 'A count as B' 구조로 A가 B에 해당함을 나타냄
 
 [targetText 규칙 — 반드시 지킬 것]
 - 각 포인트마다, 원문에서 해당 문법 요소 자체가 위치한 핵심 구문(2~5단어)을 targetText로 반환하라.
