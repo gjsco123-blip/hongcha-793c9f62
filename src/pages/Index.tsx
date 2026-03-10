@@ -267,7 +267,7 @@ export default function Index() {
 
     try {
       const { data, error } = await supabase.functions.invoke("hongt", {
-        body: { sentences: allSentences, index: sentenceId },
+        body: { sentences: allSentences, index: sentenceId, userId: user?.id },
       });
 
       if (error) throw error;
