@@ -251,6 +251,8 @@ export default function Preview() {
           status={synonymsStatus}
           onSynonymsChange={setSynonyms}
           onRegenerate={regenSynonyms}
+          onEnrichRow={handleEnrichRow}
+          enrichingIdx={enrichingIdx}
         />
 
         <PreviewExamSection
