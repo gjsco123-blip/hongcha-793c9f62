@@ -1,22 +1,31 @@
 
 
-## 모델 전환: `google/gemini-3-flash-preview`
+# 홍T 프롬프트 재작성
 
-4개 edge function의 모델을 `google/gemini-2.5-flash` → `google/gemini-3-flash-preview`로 변경합니다.
+## 문제 분석
+현재 프롬프트가 규칙을 나열하는 방식이라 모델이 전체적으로 잘 안 따름 (말투, 형식, 길이 등). few-shot 예시도 3개뿐이고, 부정 예시(이렇게 하면 안 됨)가 없어서 모델이 경계를 모름.
 
-### 변경 대상
+## 변경 방향: systemPrompt 전면 재작성
 
-| 파일 | 현재 모델 | 변경 후 |
-|------|-----------|---------|
-| `supabase/functions/engine/index.ts` (line 210) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/hongt/index.ts` (line 117) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/grammar/index.ts` (line 289) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/grammar/index.ts` (line 382) | `google/gemini-2.5-flash` (freestyle 모드) | `google/gemini-3-flash-preview` |
+현재 프롬프트의 문제점:
+- 규칙이 너무 많은 섹션으로 분산되어 우선순위가 불명확
+- "■ 말투" 섹션이 맨 마지막에 2줄로만 존재
+- 금지 표현의 구체적 예시 부족
 
-### 변경하지 않는 것
-- `spellcheck` (gemini-2.5-flash-lite 유지)
-- `regenerate` (이미 gemini-3-flash-preview)
-- `analyze-vocab`, `analyze-single-vocab`, `analyze-preview`, `analyze-structure` (별도 요청 없음)
+재작성 핵심:
+1. **말투 규칙을 최상단 + 가장 강하게** 배치 — 반말 필수, 격식체 금지 패턴을 구체적으로 나열
+2. **출력 형식을 간결하게 통합** — 현재 6개 섹션을 3개로 압축
+3. **금지사항에 구체적 ❌ 예시 포함** — "이렇게 쓰면 안 됨" 예시를 프롬프트에 직접 삽입
+4. **few-shot 예시에 잘못된 예시→올바른 예시 1쌍 추가** — 격식체로 쓴 것을 반말로 고치는 패턴 학습
 
-각 파일에서 model 문자열 1줄씩만 수정, 총 4곳.
+## 변경 파일
+
+**`supabase/functions/hongt/index.ts`** — systemPrompt 문자열 + fewShotExamples 배열만 수정
+
+| 항목 | 변경 내용 |
+|------|----------|
+| systemPrompt | 전면 재작성: 말투 최우선 배치, 금지 패턴 구체화, 섹션 통합 |
+| fewShotExamples | 기존 3쌍 유지 + ❌→✅ 대비 예시 1쌍 추가 |
+| validateOutput | 변경 없음 |
+| callAI / serve | 변경 없음 |
 
