@@ -193,8 +193,12 @@ serve(async (req) => {
 
     const userMessage = `다음 문장을 학생이 이해할 수 있도록 쉽게 설명해줘:\n\n${contextInfo}`;
 
+    // Fetch learning examples for few-shot style adaptation
+    const learningExamples = userId ? await fetchLearningExamples(userId, "hongt") : [];
+    const learningBlock = buildLearningBlock(learningExamples);
+
     const messages = [
-      { role: "system", content: systemPrompt },
+      { role: "system", content: systemPrompt + learningBlock },
       ...fewShotExamples,
       { role: "user", content: userMessage },
     ];
