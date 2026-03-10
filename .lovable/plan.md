@@ -1,22 +1,26 @@
 
 
-## 모델 전환: `google/gemini-3-flash-preview`
+# PDF 저장 방식 변경: `window.open`으로 전환
 
-4개 edge function의 모델을 `google/gemini-2.5-flash` → `google/gemini-3-flash-preview`로 변경합니다.
+## 변경 내용
 
-### 변경 대상
+`link.click()` 대신 `window.open(url, "_blank")`을 사용하여 iframe 샌드박스 제한을 우회.
 
-| 파일 | 현재 모델 | 변경 후 |
-|------|-----------|---------|
-| `supabase/functions/engine/index.ts` (line 210) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/hongt/index.ts` (line 117) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/grammar/index.ts` (line 289) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/grammar/index.ts` (line 382) | `google/gemini-2.5-flash` (freestyle 모드) | `google/gemini-3-flash-preview` |
+## 변경 파일 (2개)
 
-### 변경하지 않는 것
-- `spellcheck` (gemini-2.5-flash-lite 유지)
-- `regenerate` (이미 gemini-3-flash-preview)
-- `analyze-vocab`, `analyze-single-vocab`, `analyze-preview`, `analyze-structure` (별도 요청 없음)
+### 1. `src/pages/Preview.tsx` (handleExportPdf)
+```typescript
+const blob = await pdf(doc).toBlob();
+const url = URL.createObjectURL(blob);
+window.open(url, "_blank");
+// revokeObjectURL은 약간 지연 후 정리
+setTimeout(() => URL.revokeObjectURL(url), 30000);
+```
 
-각 파일에서 model 문자열 1줄씩만 수정, 총 4곳.
+### 2. `src/hooks/usePdfExport.ts` (exportToPdf)
+동일하게 `window.open` 방식으로 변경.
+
+## 동작
+- PDF가 새 탭에서 열리고, 브라우저 내장 PDF 뷰어에서 직접 저장 가능
+- iframe 환경에서도 정상 작동
 
