@@ -145,6 +145,7 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
           currentNotes={notes}
           fullPassage={fullPassage}
           targetNoteIndex={selectedNoteIndex}
+          preset={preset}
           onApplySuggestion={handleApplySuggestion}
         />
       )}

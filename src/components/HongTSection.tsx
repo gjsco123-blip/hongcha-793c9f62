@@ -130,6 +130,7 @@ export function HongTSection({ value, onChange, onGenerate, generating, onDelete
           sentence={sentence}
           currentExplanation={value}
           fullPassage={fullPassage}
+          preset={preset}
           onApplySuggestion={(suggestion) => onChange(suggestion)}
         />
       )}

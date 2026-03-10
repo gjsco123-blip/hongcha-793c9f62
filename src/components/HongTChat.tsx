@@ -99,9 +99,26 @@ export function HongTChat({
     }
   };
 
-  const handleApply = (suggestion: string) => {
+  const handleApply = async (suggestion: string) => {
     onApplySuggestion(suggestion);
     toast.success("수정안이 적용되었습니다.");
+    
+    // Save learning example
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) {
+        await supabase.from("learning_examples" as any).insert({
+          user_id: session.user.id,
+          type: "hongt",
+          preset: preset || null,
+          sentence,
+          ai_draft: currentExplanation,
+          final_version: suggestion,
+        });
+      }
+    } catch (e) {
+      console.error("Failed to save learning example:", e);
+    }
   };
 
   return (
