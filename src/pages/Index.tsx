@@ -436,7 +436,7 @@ export default function Index() {
     try {
       const isAuto = !selectedText && !userHint;
       const { data, error } = await supabase.functions.invoke("grammar", {
-        body: { sentence: original, selectedText, userHint, mode: isAuto ? "auto" : undefined },
+        body: { sentence: original, selectedText, userHint, mode: isAuto ? "auto" : undefined, userId: user?.id },
       });
 
       if (error) throw error;
