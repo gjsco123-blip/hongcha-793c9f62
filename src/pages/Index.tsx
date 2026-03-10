@@ -460,10 +460,24 @@ export default function Index() {
           } else {
             // 자동 생성: 전체 교체 (autoPoints가 있으면 targetText 포함)
             if (Array.isArray(data.autoPoints) && data.autoPoints.length > 0) {
-              newNotes = data.autoPoints.map((p: any, idx: number) => ({
-                id: idx + 1,
-                content: String(p.text || "").replace(/^[•·\-]\s*/, ""),
+              // 같은 targetText를 가진 연속 포인트를 하나의 번호로 병합
+              const rawPoints = data.autoPoints.map((p: any) => ({
+                text: String(p.text || "").replace(/^[•·\-]\s*/, ""),
                 targetText: String(p.targetText || "") || undefined,
+              }));
+              const merged: { content: string; targetText?: string }[] = [];
+              for (const pt of rawPoints) {
+                const prev = merged.length > 0 ? merged[merged.length - 1] : null;
+                if (prev && prev.targetText && pt.targetText && prev.targetText === pt.targetText) {
+                  prev.content += "\n" + pt.text;
+                } else {
+                  merged.push({ content: pt.text, targetText: pt.targetText });
+                }
+              }
+              newNotes = merged.map((m, idx) => ({
+                id: idx + 1,
+                content: m.content,
+                targetText: m.targetText,
               }));
             } else {
               const lines = (data.syntaxNotes as string).split("\n").filter((l: string) => l.trim());

@@ -469,33 +469,36 @@ function SentenceBlock({ result, index, isLast }: { result: SentenceResult; inde
             </View>
           ) : null}
           {result.syntaxNotes && result.syntaxNotes.length > 0
-            ? result.syntaxNotes.map((n) => (
-                <View key={n.id} style={styles.translationRow}>
-                  {n.id === 1 ? (
-                    <View style={styles.translationBar} />
-                  ) : (
-                    <View style={{ width: 2, marginRight: 2, flexShrink: 0 }} />
-                  )}
-                  <Text style={styles.translationLabel}>{n.id === 1 ? "구문" : ""}</Text>
-                  <Text
-                    style={{
-                      fontFamily: "Pretendard",
-                      fontSize: 6.5,
-                      fontWeight: 600,
-                      width: 10,
-                      flexShrink: 0,
-                      color: "#222",
-                      lineHeight: 1.6,
-                      textAlign: "left" as const,
-                    }}
-                  >
-                    {n.id}.
-                  </Text>
-                  <Text style={{ ...styles.translationContent, fontWeight: 600 }}>
-                    {n.content.replace(/^\s*[•·\-\*]\s*/, "")}
-                  </Text>
-                </View>
-              ))
+            ? result.syntaxNotes.flatMap((n) => {
+                const lines = n.content.split("\n").filter((l) => l.trim());
+                return lines.map((line, li) => (
+                  <View key={`${n.id}-${li}`} style={styles.translationRow}>
+                    {n.id === 1 && li === 0 ? (
+                      <View style={styles.translationBar} />
+                    ) : (
+                      <View style={{ width: 2, marginRight: 2, flexShrink: 0 }} />
+                    )}
+                    <Text style={styles.translationLabel}>{n.id === 1 && li === 0 ? "구문" : ""}</Text>
+                    <Text
+                      style={{
+                        fontFamily: "Pretendard",
+                        fontSize: 6.5,
+                        fontWeight: 600,
+                        width: 10,
+                        flexShrink: 0,
+                        color: "#222",
+                        lineHeight: 1.6,
+                        textAlign: "left" as const,
+                      }}
+                    >
+                      {li === 0 ? `${n.id}.` : ""}
+                    </Text>
+                    <Text style={{ ...styles.translationContent, fontWeight: 600 }}>
+                      {line.replace(/^\s*[•·\-\*]\s*/, "")}
+                    </Text>
+                  </View>
+                ));
+              })
             : null}
         </View>
       )}
