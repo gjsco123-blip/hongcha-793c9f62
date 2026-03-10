@@ -64,6 +64,25 @@ export function renderWithSuperscripts(
 }
 
 /**
+ * Reorder syntax notes by their targetText position in the original sentence.
+ * Notes without targetText go to the end. IDs are reassigned sequentially.
+ */
+export function reorderNotesByPosition<T extends { id: number; content: string; targetText?: string }>(
+  notes: T[],
+  originalText: string
+): T[] {
+  if (notes.length <= 1) return notes.map((n, i) => ({ ...n, id: i + 1 }));
+
+  const lowerText = originalText.toLowerCase();
+  const withPos = notes.map((n) => {
+    const pos = n.targetText ? lowerText.indexOf(n.targetText.toLowerCase()) : -1;
+    return { note: n, pos: pos === -1 ? Infinity : pos };
+  });
+  withPos.sort((a, b) => a.pos - b.pos);
+  return withPos.map((item, i) => ({ ...item.note, id: i + 1 }));
+}
+
+/**
  * Check if a word range in chunks matches any targetText and return the note id.
  */
 export function findSuperscriptForWord(

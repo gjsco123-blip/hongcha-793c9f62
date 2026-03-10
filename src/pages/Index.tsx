@@ -9,7 +9,7 @@ import { CategoryHeaderBar, CategoryFullScreen } from "@/components/CategorySele
 import { Chunk, parseTagged, chunksToTagged } from "@/lib/chunk-utils";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { useCategories } from "@/hooks/useCategories";
-import { renderWithSuperscripts } from "@/lib/syntax-superscript";
+import { renderWithSuperscripts, reorderNotesByPosition } from "@/lib/syntax-superscript";
 import { toast } from "sonner";
 import { FileDown, RotateCw, X, Scissors, RefreshCw, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -456,8 +456,9 @@ export default function Index() {
               newNotes[existingIdx] = noteEntry;
             } else {
               newNotes.push(noteEntry);
-              newNotes.sort((a, b) => a.id - b.id);
             }
+            // 문장 내 등장 순서로 자동 정렬
+            newNotes = reorderNotesByPosition(newNotes, original);
           } else {
             // 자동 생성: 전체 교체 (autoPoints가 있으면 targetText 포함)
             if (Array.isArray(data.autoPoints) && data.autoPoints.length > 0) {
@@ -487,6 +488,8 @@ export default function Index() {
                 content: line.replace(/^[•·\-]\s*/, ""),
               }));
             }
+            // 자동 생성도 안전하게 정렬
+            newNotes = reorderNotesByPosition(newNotes, original);
           }
 
           return { ...r, syntaxNotes: newNotes, generatingSyntax: false };
