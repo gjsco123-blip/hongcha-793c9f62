@@ -66,7 +66,49 @@ export function renderWithSuperscripts(
 /**
  * Check if a word range in chunks matches any targetText and return the note id.
  */
+/**
+ * Reorder syntax notes by their targetText position in the original sentence.
+ * Notes without targetText go to the end. IDs are reassigned sequentially.
+ */
+export function reorderNotesByPosition<T extends { id: number; content: string; targetText?: string }>(
+  notes: T[],
+  originalText: string
+): T[] {
+  if (notes.length <= 1) return notes.map((n, i) => ({ ...n, id: i + 1 }));
+
+  const lowerText = originalText.toLowerCase();
+  const withPos = notes.map((n) => {
+    const pos = n.targetText ? lowerText.indexOf(n.targetText.toLowerCase()) : -1;
+    return { note: n, pos: pos === -1 ? Infinity : pos };
+  });
+  withPos.sort((a, b) => a.pos - b.pos);
+  return withPos.map((item, i) => ({ ...item.note, id: i + 1 }));
+}
+
+/**
+ * Check if a word range in chunks matches any targetText and return the note id.
+ */
 export function findSuperscriptForWord(
+  fullText: string,
+  wordStart: number,
+  wordEnd: number,
+  syntaxNotes: SyntaxNoteWithTarget[]
+): number | null {
+  const lowerText = fullText.toLowerCase();
+
+  for (const note of syntaxNotes) {
+    if (!note.targetText) continue;
+    const targetLower = note.targetText.toLowerCase();
+    const matchIdx = lowerText.indexOf(targetLower);
+    if (matchIdx === -1) continue;
+    const matchEnd = matchIdx + targetLower.length;
+    // Show superscript on the last word of the match
+    if (wordEnd <= matchEnd && wordEnd > matchEnd - 3 && wordStart >= matchIdx) {
+      return note.id;
+    }
+  }
+  return null;
+}
   fullText: string,
   wordStart: number,
   wordEnd: number,

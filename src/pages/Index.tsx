@@ -9,7 +9,7 @@ import { CategoryHeaderBar, CategoryFullScreen } from "@/components/CategorySele
 import { Chunk, parseTagged, chunksToTagged } from "@/lib/chunk-utils";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { useCategories } from "@/hooks/useCategories";
-import { renderWithSuperscripts } from "@/lib/syntax-superscript";
+import { renderWithSuperscripts, reorderNotesByPosition } from "@/lib/syntax-superscript";
 import { toast } from "sonner";
 import { FileDown, RotateCw, X, Scissors, RefreshCw, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
