@@ -109,8 +109,6 @@ export function findSuperscriptForWord(
   }
   return null;
 }
-  fullText: string,
-  wordStart: number,
   wordEnd: number,
   syntaxNotes: SyntaxNoteWithTarget[]
 ): number | null {
