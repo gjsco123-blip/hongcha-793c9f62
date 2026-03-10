@@ -32,16 +32,9 @@ export function usePdfExport() {
     ) => {
       const pdfDocument = createElement(PdfDocument, { results, title, subtitle });
       const blob = await pdf(pdfDocument).toBlob();
-
-      // 다운로드
       const url = URL.createObjectURL(blob);
-      const link = window.document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      window.document.body.appendChild(link);
-      link.click();
-      window.document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
     },
     []
   );
