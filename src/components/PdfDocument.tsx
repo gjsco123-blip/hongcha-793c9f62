@@ -216,7 +216,12 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
   const elements: React.ReactNode[] = [];
   const annotations = (syntaxNotes || []).filter((n) => n.targetText);
 
-  const superscriptMap = new Map<string, { id: number; offset: number }>();
+  const superscriptMap = new Map<string, { id: number; offset: number }[]>();
+  const addSup = (key: string, entry: { id: number; offset: number }) => {
+    const arr = superscriptMap.get(key) || [];
+    arr.push(entry);
+    superscriptMap.set(key, arr);
+  };
   for (const ann of annotations) {
     const targetLower = ann.targetText!.toLowerCase().trim();
     let found = false;
@@ -229,14 +234,14 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
         const segEnd = segCursor + chunks[ci].segments[si].text.length;
         if (idx >= segCursor && idx < segEnd) {
           const offsetInSeg = idx - segCursor;
-          superscriptMap.set(`${ci}-${si}`, { id: ann.id, offset: offsetInSeg });
+          addSup(`${ci}-${si}`, { id: ann.id, offset: offsetInSeg });
           found = true;
           break;
         }
         segCursor = segEnd;
       }
       if (!found) {
-        superscriptMap.set(`${ci}-0`, { id: ann.id, offset: 0 });
+        addSup(`${ci}-0`, { id: ann.id, offset: 0 });
         found = true;
       }
     }
@@ -252,19 +257,30 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
 
   chunks.forEach((chunk, ci) => {
     chunk.segments.forEach((seg, si) => {
-      const sup = superscriptMap.get(`${ci}-${si}`);
+      const sups = superscriptMap.get(`${ci}-${si}`) || [];
+      // Sort by offset so earlier superscripts render first
+      const sortedSups = [...sups].sort((a, b) => a.offset - b.offset);
+
+      const renderAllSups = (keyPrefix: string) => {
+        for (const s of sortedSups) {
+          elements.push(renderSup(`${keyPrefix}-sup${s.id}`, s.id));
+        }
+      };
+
+      // For simplicity, use the first sup's offset for text splitting (if any)
+      const firstSup = sortedSups.length > 0 ? sortedSups[0] : null;
+      const hasOffsetSup = firstSup && firstSup.offset > 0;
 
       if (seg.isVerb) {
-        if (sup && sup.offset > 0) {
-          const before = seg.text.slice(0, sup.offset);
-          const after = seg.text.slice(sup.offset);
+        if (hasOffsetSup) {
+          const before = seg.text.slice(0, firstSup.offset);
+          const after = seg.text.slice(firstSup.offset);
           elements.push(
             <Text key={`${ci}-${si}-pre`} style={styles.verbUnderline}>
               {before}
             </Text>,
           );
-          elements.push(renderSup(`${ci}-${si}-sup`, sup.id));
-          // Strip trailing punctuation/spaces from underlined portion
+          renderAllSups(`${ci}-${si}`);
           const matchAfter = after.match(/^(.*\S)([\s,.:;!?]+)$/);
           if (matchAfter) {
             elements.push(
@@ -282,7 +298,7 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
           }
         } else {
           const match = seg.text.match(/^(.*\S)([\s,.:;!?]+)$/);
-          if (sup) elements.push(renderSup(`${ci}-${si}-sup`, sup.id));
+          if (sortedSups.length > 0) renderAllSups(`${ci}-${si}`);
           if (match) {
             elements.push(
               <Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>
@@ -299,12 +315,12 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
           }
         }
       } else {
-        if (sup && sup.offset > 0) {
-          elements.push(<Text key={`${ci}-${si}-pre`}>{seg.text.slice(0, sup.offset)}</Text>);
-          elements.push(renderSup(`${ci}-${si}-sup`, sup.id));
-          elements.push(<Text key={`${ci}-${si}-post`}>{seg.text.slice(sup.offset)}</Text>);
+        if (hasOffsetSup) {
+          elements.push(<Text key={`${ci}-${si}-pre`}>{seg.text.slice(0, firstSup.offset)}</Text>);
+          renderAllSups(`${ci}-${si}`);
+          elements.push(<Text key={`${ci}-${si}-post`}>{seg.text.slice(firstSup.offset)}</Text>);
         } else {
-          if (sup) elements.push(renderSup(`${ci}-${si}-sup`, sup.id));
+          if (sortedSups.length > 0) renderAllSups(`${ci}-${si}`);
           elements.push(<Text key={`${ci}-${si}`}>{seg.text}</Text>);
         }
       }
