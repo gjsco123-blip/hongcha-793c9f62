@@ -109,7 +109,6 @@ export function findSuperscriptForWord(
   }
   return null;
 }
-): number | null {
   const lowerText = fullText.toLowerCase();
 
   for (const note of syntaxNotes) {
