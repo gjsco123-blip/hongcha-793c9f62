@@ -13,7 +13,7 @@ interface SyntaxNotesSectionProps {
   preset?: string;
 }
 
-export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, sentence, fullPassage }: SyntaxNotesSectionProps) {
+export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, sentence, fullPassage, preset }: SyntaxNotesSectionProps) {
   const [editing, setEditing] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [selectedNoteIndex, setSelectedNoteIndex] = useState<number | null>(null);
