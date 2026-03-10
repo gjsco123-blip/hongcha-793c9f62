@@ -163,6 +163,38 @@ function tagsToPromptBlock(tags: TagId[]) {
 // -----------------------------
 // Prompts
 // -----------------------------
+function buildFreestyleSystemPrompt() {
+  return `너는 한국 고등학교 수능 대비 영어 '구문분석' 교재를 제작하는 전문 강사다.
+
+[역할]
+사용자가 드래그로 선택한 구문에 대해, 해당 구문과 직접 관련된 문법/용법 포인트를 정확히 1개만 설명하라.
+
+[절대 규칙]
+- 출력은 반드시 JSON 함수 호출로만 한다.
+- points는 반드시 1개만.
+- 각 항목은 한 줄(줄바꿈 금지).
+- 하나의 항목에 하나의 포인트만 / 부가설명은 슬래시(/)로 이어서 한 줄 유지.
+- 정의/해석/배경설명 금지. 기능 중심으로만.
+- 3단어 이상 영어 인용은 who~school처럼 축약.
+- 큰따옴표(") 사용 금지.
+- 불릿(•)을 절대 붙이지 말 것.
+- 선택 구문 밖에 있는 문법 요소(다른 절, 다른 구문)는 절대 분석하지 말 것.
+
+[분석 범위]
+- 선택된 구문이 구조적 문법(관계사, 분사, 수동태 등)에 해당하면 해당 문법을 설명하라.
+- 선택된 구문이 숙어/구동사/주요 표현(count as, serve as, result in 등)에 해당하면 그 용법을 설명하라.
+- 어떤 경우든 선택 구문에 대한 포인트 1개만 작성하라.
+
+[관계절(관계사절) 표기 규칙 — 반드시 지킬 것]
+- 관계대명사/관계부사가 나오면, "관계사 ___부터 ___까지(예: who~object)가 선행사 ___를 수식함"을 반드시 포함할 것.
+
+[문체 예시(이 톤 유지)]
+- 주격 관계대명사 who/which/that이 선행사 ___를 수식하는 관계절을 이끔
+- count as: ~로 간주되다 / 'A count as B' 구조로 A가 B에 해당함을 나타냄
+- 조동사 + be p.p. 형태로 수동을 나타냄
+- 분사(과거/현재)가 명사를 뒤에서 수식하는 후치수식 구조임`;
+}
+
 function buildHintSystemPrompt() {
   return `너는 한국 고등학교 수능 대비 영어 '구문분석' 교재를 제작하는 전문 강사다.
 
@@ -214,15 +246,24 @@ function buildAutoSystemPrompt() {
 
 [우선 추출 대상]
 관계대명사(주격/목적격/생략), 관계부사, 명사절(that/wh-), 가주어/진주어, 가목적어/진목적어,
-5형식(O.C), to부정사 용법, 분사 후치수식, 분사구문, 수동태, 조동사+수동, 병렬구조,
-전치사+동명사, There is/are, 비교구문, 생략, 수일치
+5형식(O.C), to부정사 용법, 분사 후치수식, 분사구문, 수동태, 조동사+수동(can/may/must/will + be p.p.), 병렬구조,
+전치사+동명사, There is/are, 비교구문, 생략, 수일치,
+숙어/구동사(count as, serve as, result in, lead to, contribute to 등), 주요 표현 용법
+
+[조동사+수동태 필수 추출 규칙]
+- 문장에 can/could/may/might/must/should/will/would + be p.p. 형태가 있으면 반드시 포인트로 포함할 것.
+
+[빈 결과 방지 규칙]
+- 구조적 문법 포인트(관계사, 분사, 수동태 등)가 없는 경우에도 빈 배열을 반환하지 말 것.
+- 이 경우 해당 문장의 핵심 숙어/구동사/주요 표현의 용법을 설명하라.
 
 [문체 예시(이 톤 유지)]
 - 주격 관계대명사 that이 선행사 pressures를 수식하는 관계절을 이끔
 - cause + O + to V(5형식) 구조 / it이 the museum을 가리킴
 - what이 이끄는 명사절이 emphasise의 목적어 역할
 - 분사(과거/현재)가 명사를 뒤에서 수식하는 후치수식 구조임
-- 조동사 + be p.p. 형태로 수동을 나타냄
+- can/may/must + be p.p. 형태의 조동사 수동태 구조
+- count as: ~로 간주되다 / 'A count as B' 구조로 A가 B에 해당함을 나타냄
 
 [targetText 규칙 — 반드시 지킬 것]
 - 각 포인트마다, 원문에서 해당 문법 요소 자체가 위치한 핵심 구문(2~5단어)을 targetText로 반환하라.
@@ -435,7 +476,7 @@ serve(async (req) => {
         `선택 구문: ${selected || "(없음/전체문장기준)"}\n` +
         `분석 대상: ${textToAnalyze}\n` +
         `사용자 힌트: ${rawHint || "(없음)"}\n` +
-        `이 문장에서 힌트와 관련된 핵심 문법 포인트를 찾아서 points로 작성하라.`
+        `위 선택 구문에 해당하는 문법/용법 포인트를 정확히 1개만 작성하라. 선택 구문 외의 다른 문법 요소는 분석하지 말 것.`
       : `전체 문장: ${full}\n` +
         `선택 구문: ${selected || "(없음/전체문장기준)"}\n` +
         `분석 대상: ${textToAnalyze}\n` +
@@ -443,7 +484,7 @@ serve(async (req) => {
         `태그 의미:\n${tagsToPromptBlock(tags)}\n` +
         `주의: 위 태그에 해당하는 포인트만 points로 작성하라.`;
 
-    const systemPrompt = useFreestyle ? buildAutoSystemPrompt() : buildHintSystemPrompt();
+    const systemPrompt = useFreestyle ? buildFreestyleSystemPrompt() : buildHintSystemPrompt();
 
     const hintModel = useFreestyle ? "google/gemini-3-flash-preview" : "google/gemini-2.5-pro";
     const useToolCall = hintModel.includes("flash");
@@ -522,7 +563,7 @@ serve(async (req) => {
         : ["(힌트 태그에 해당하는 포인트를 문장에서 찾기 어려움) / 드래그 범위를 조금 넓히거나 힌트를 구체화"];
     }
 
-    const maxPts = useFreestyle ? 5 : 1;
+    const maxPts = 1;
     points = points.slice(0, maxPts).map((p) => (p.length > 170 ? p.slice(0, 168).trim() + "…" : p));
 
     const syntaxNotes = formatAsLines(points, maxPts);
