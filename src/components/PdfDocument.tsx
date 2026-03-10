@@ -216,7 +216,12 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
   const elements: React.ReactNode[] = [];
   const annotations = (syntaxNotes || []).filter((n) => n.targetText);
 
-  const superscriptMap = new Map<string, { id: number; offset: number }>();
+  const superscriptMap = new Map<string, { id: number; offset: number }[]>();
+  const addSup = (key: string, entry: { id: number; offset: number }) => {
+    const arr = superscriptMap.get(key) || [];
+    arr.push(entry);
+    superscriptMap.set(key, arr);
+  };
   for (const ann of annotations) {
     const targetLower = ann.targetText!.toLowerCase().trim();
     let found = false;
@@ -229,14 +234,14 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
         const segEnd = segCursor + chunks[ci].segments[si].text.length;
         if (idx >= segCursor && idx < segEnd) {
           const offsetInSeg = idx - segCursor;
-          superscriptMap.set(`${ci}-${si}`, { id: ann.id, offset: offsetInSeg });
+          addSup(`${ci}-${si}`, { id: ann.id, offset: offsetInSeg });
           found = true;
           break;
         }
         segCursor = segEnd;
       }
       if (!found) {
-        superscriptMap.set(`${ci}-0`, { id: ann.id, offset: 0 });
+        addSup(`${ci}-0`, { id: ann.id, offset: 0 });
         found = true;
       }
     }

@@ -43,6 +43,7 @@ export function renderWithSuperscripts(
   let cursor = 0;
 
   for (const m of matches) {
+    if (m.start < cursor) continue; // 겹치는 매치 건너뛰기
     if (m.start > cursor) {
       elements.push(text.slice(cursor, m.start));
     }
