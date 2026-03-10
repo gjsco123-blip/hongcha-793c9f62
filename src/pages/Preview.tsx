@@ -56,6 +56,7 @@ export default function Preview() {
   const [examBlock, setExamBlock] = useState<ExamBlock | null>(isNewPassage ? null : (cached?.examBlock || null));
   const [previewStatus, setPreviewStatus] = useState<SectionStatus>(isNewPassage ? "idle" : (cached?.summary || cached?.examBlock ? "done" : "idle"));
   const [addingWord, setAddingWord] = useState<string | null>(null);
+  const [enrichingIdx, setEnrichingIdx] = useState<number | null>(null);
 
   // Persist state to sessionStorage
   useEffect(() => {
@@ -137,6 +138,33 @@ export default function Preview() {
     const data = await invokeRetry("analyze-synonyms", { passage });
     return data.synonyms || [];
   }, [passage]);
+
+  const handleEnrichRow = useCallback(async (idx: number) => {
+    const item = synonyms[idx];
+    if (!item) return;
+    setEnrichingIdx(idx);
+    try {
+      const data = await invokeRetry("enrich-synonym", {
+        word: item.word,
+        existingSynonyms: item.synonym,
+        existingAntonyms: item.antonym,
+        passage,
+      });
+      setSynonyms((prev) =>
+        prev.map((s, i) => {
+          if (i !== idx) return s;
+          const newSyn = data.synonyms ? `${s.synonym}, ${data.synonyms}` : s.synonym;
+          const newAnt = data.antonyms ? `${s.antonym}, ${data.antonyms}` : s.antonym;
+          return { ...s, synonym: newSyn, antonym: newAnt };
+        })
+      );
+      toast.success(`"${item.word}" 동/반의어 추가 완료`);
+    } catch (e: any) {
+      toast.error(`추가 실패: ${e.message}`);
+    } finally {
+      setEnrichingIdx(null);
+    }
+  }, [synonyms, passage]);
 
   const regenExamTopic = useCallback(async () => {
     const data = await invokeRetry("analyze-preview", { passage });
@@ -223,6 +251,8 @@ export default function Preview() {
           status={synonymsStatus}
           onSynonymsChange={setSynonyms}
           onRegenerate={regenSynonyms}
+          onEnrichRow={handleEnrichRow}
+          enrichingIdx={enrichingIdx}
         />
 
         <PreviewExamSection
