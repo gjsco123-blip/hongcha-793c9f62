@@ -80,6 +80,34 @@ const fewShotExamples = [
   },
 ];
 
+async function fetchLearningExamples(userId: string, type: string, preset?: string): Promise<Array<{sentence: string; ai_draft: string; final_version: string}>> {
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !serviceRoleKey) return [];
+    
+    let url = `${supabaseUrl}/rest/v1/learning_examples?user_id=eq.${userId}&type=eq.${type}&order=created_at.desc&limit=3&select=sentence,ai_draft,final_version`;
+    if (preset) url += `&preset=eq.${preset}`;
+    
+    const res = await fetch(url, {
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+      },
+    });
+    if (!res.ok) return [];
+    return await res.json();
+  } catch { return []; }
+}
+
+function buildLearningBlock(examples: Array<{sentence: string; ai_draft: string; final_version: string}>): string {
+  if (examples.length === 0) return "";
+  const lines = examples.map(e => 
+    `원문: ${e.sentence}\nAI초안: ${e.ai_draft}\n최종: ${e.final_version}`
+  ).join("\n---\n");
+  return `\n\n[사용자 선호 스타일 예시 — 아래 최종 버전의 톤·길이·표현 방식을 참고하여 작성하라]\n${lines}`;
+}
+
 function validateOutput(text: string): { valid: boolean; reason?: string } {
   // Split into sentences (Korean sentence endings)
   const sentences = text
