@@ -20,6 +20,7 @@ interface SyntaxChatProps {
   currentNotes: SyntaxNote[];
   fullPassage?: string;
   targetNoteIndex?: number | null;
+  preset?: string;
   onApplySuggestion: (notes: SyntaxNote[]) => void;
 }
 
