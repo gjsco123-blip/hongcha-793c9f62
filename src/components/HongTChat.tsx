@@ -67,12 +67,14 @@ export function HongTChat({
     setLoading(true);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const { data, error } = await supabase.functions.invoke("hongt-chat", {
         body: {
           messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
           sentence,
           currentExplanation,
           fullPassage,
+          userId: session?.user?.id,
         },
       });
 
