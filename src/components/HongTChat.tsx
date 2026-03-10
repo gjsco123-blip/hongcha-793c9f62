@@ -27,6 +27,7 @@ export function HongTChat({
   sentence,
   currentExplanation,
   fullPassage,
+  preset,
   onApplySuggestion,
 }: HongTChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
