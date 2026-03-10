@@ -21,7 +21,8 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
 
   const handleDeleteNote = (id: number) => {
     const filtered = notes.filter((n) => n.id !== id);
-    onChange(filtered.map((n, i) => ({ ...n, id: i + 1 })));
+    // 문장 내 등장 순서로 자동 정렬
+    onChange(sentence ? reorderNotesByPosition(filtered, sentence) : filtered.map((n, i) => ({ ...n, id: i + 1 })));
   };
 
   const handleEditNote = (id: number, content: string) => {
