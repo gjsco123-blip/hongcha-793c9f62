@@ -17,6 +17,7 @@ interface HongTChatProps {
   sentence: string;
   currentExplanation: string;
   fullPassage?: string;
+  preset?: string;
   onApplySuggestion: (suggestion: string) => void;
 }
 
