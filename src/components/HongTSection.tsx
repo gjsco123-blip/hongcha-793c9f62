@@ -15,7 +15,7 @@ interface HongTSectionProps {
   preset?: string;
 }
 
-export function HongTSection({ value, onChange, onGenerate, generating, onDelete, sentence, fullPassage }: HongTSectionProps) {
+export function HongTSection({ value, onChange, onGenerate, generating, onDelete, sentence, fullPassage, preset }: HongTSectionProps) {
   const [editing, setEditing] = useState(false);
   const [checking, setChecking] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
