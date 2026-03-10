@@ -31,6 +31,7 @@ export function SyntaxChat({
   currentNotes,
   fullPassage,
   targetNoteIndex,
+  preset,
   onApplySuggestion,
 }: SyntaxChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
