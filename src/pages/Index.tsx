@@ -13,7 +13,7 @@ import { renderWithSuperscripts } from "@/lib/syntax-superscript";
 import { toast } from "sonner";
 import { FileDown, RotateCw, X, Scissors, RefreshCw, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
+import { useAuth } from "@/contexts/AuthContext";
 type Preset = "고1" | "고2" | "수능";
 
 async function invokeWithRetry(
