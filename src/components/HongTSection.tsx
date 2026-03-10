@@ -12,9 +12,10 @@ interface HongTSectionProps {
   onDelete?: () => void;
   sentence?: string;
   fullPassage?: string;
+  preset?: string;
 }
 
-export function HongTSection({ value, onChange, onGenerate, generating, onDelete, sentence, fullPassage }: HongTSectionProps) {
+export function HongTSection({ value, onChange, onGenerate, generating, onDelete, sentence, fullPassage, preset }: HongTSectionProps) {
   const [editing, setEditing] = useState(false);
   const [checking, setChecking] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
@@ -129,6 +130,7 @@ export function HongTSection({ value, onChange, onGenerate, generating, onDelete
           sentence={sentence}
           currentExplanation={value}
           fullPassage={fullPassage}
+          preset={preset}
           onApplySuggestion={(suggestion) => onChange(suggestion)}
         />
       )}

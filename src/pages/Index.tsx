@@ -13,7 +13,7 @@ import { renderWithSuperscripts } from "@/lib/syntax-superscript";
 import { toast } from "sonner";
 import { FileDown, RotateCw, X, Scissors, RefreshCw, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
+import { useAuth } from "@/contexts/AuthContext";
 type Preset = "고1" | "고2" | "수능";
 
 async function invokeWithRetry(
@@ -97,6 +97,7 @@ function splitIntoSentences(text: string): string[] {
 
 export default function Index() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [passage, setPassage] = useState("");
   const [preset, setPreset] = useState<Preset>("수능");
   const [results, setResults] = useState<SentenceResult[]>([]);
@@ -266,7 +267,7 @@ export default function Index() {
 
     try {
       const { data, error } = await supabase.functions.invoke("hongt", {
-        body: { sentences: allSentences, index: sentenceId },
+        body: { sentences: allSentences, index: sentenceId, userId: user?.id },
       });
 
       if (error) throw error;
@@ -435,7 +436,7 @@ export default function Index() {
     try {
       const isAuto = !selectedText && !userHint;
       const { data, error } = await supabase.functions.invoke("grammar", {
-        body: { sentence: original, selectedText, userHint, mode: isAuto ? "auto" : undefined },
+        body: { sentence: original, selectedText, userHint, mode: isAuto ? "auto" : undefined, userId: user?.id },
       });
 
       if (error) throw error;
@@ -749,7 +750,7 @@ export default function Index() {
 
                     {/* 홍T */}
                     {!result.hideHongT && (
-                      <HongTSection
+                    <HongTSection
                         value={result.hongTNotes ?? ""}
                         onChange={(val) =>
                           setResults((prev) =>
@@ -766,6 +767,7 @@ export default function Index() {
                         onDelete={() => setResults(prev => prev.map(r => r.id === result.id ? { ...r, hideHongT: true } : r))}
                         sentence={result.original}
                         fullPassage={results.map((r) => r.original).join(" ")}
+                        preset={preset}
                       />
                     )}
 
@@ -783,6 +785,7 @@ export default function Index() {
                       onGenerate={() => handleGenerateSyntax(result.id, result.original)}
                       sentence={result.original}
                       fullPassage={results.map((r) => r.original).join(" ")}
+                      preset={preset}
                     />
                   </div>
                 ) : (

@@ -20,6 +20,7 @@ interface SyntaxChatProps {
   currentNotes: SyntaxNote[];
   fullPassage?: string;
   targetNoteIndex?: number | null;
+  preset?: string;
   onApplySuggestion: (notes: SyntaxNote[]) => void;
 }
 
@@ -30,6 +31,7 @@ export function SyntaxChat({
   currentNotes,
   fullPassage,
   targetNoteIndex,
+  preset,
   onApplySuggestion,
 }: SyntaxChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -72,6 +74,7 @@ export function SyntaxChat({
     setLoading(true);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const { data, error } = await supabase.functions.invoke("grammar-chat", {
         body: {
           messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
@@ -79,6 +82,7 @@ export function SyntaxChat({
           currentNotes,
           fullPassage,
           targetNoteIndex: targetNoteIndex !== null ? targetNoteIndex : undefined,
+          userId: session?.user?.id,
         },
       });
 
@@ -106,13 +110,14 @@ export function SyntaxChat({
     }
   };
 
-  const handleApply = (suggestionNotes: string[]) => {
+  const handleApply = async (suggestionNotes: string[]) => {
+    const aiDraft = currentNotes.map(n => n.content).join("\n");
+    const finalVersion = suggestionNotes.join("\n");
+    
     if (targetNote && suggestionNotes.length >= 1) {
-      // Single note replacement
       const newNote: SyntaxNote = { id: targetNote.id, content: suggestionNotes.join("\n") };
       onApplySuggestion([newNote]);
     } else {
-      // Full replacement
       const newNotes: SyntaxNote[] = suggestionNotes.map((content, i) => ({
         id: i + 1,
         content,
@@ -120,6 +125,23 @@ export function SyntaxChat({
       onApplySuggestion(newNotes);
     }
     toast.success("수정안이 적용되었습니다.");
+    
+    // Save learning example
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) {
+        await supabase.from("learning_examples" as any).insert({
+          user_id: session.user.id,
+          type: "syntax",
+          preset: preset || null,
+          sentence,
+          ai_draft: aiDraft,
+          final_version: finalVersion,
+        });
+      }
+    } catch (e) {
+      console.error("Failed to save learning example:", e);
+    }
   };
 
   const headerTitle = targetNote

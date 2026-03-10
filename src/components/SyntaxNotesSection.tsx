@@ -10,9 +10,10 @@ interface SyntaxNotesSectionProps {
   generating?: boolean;
   sentence?: string;
   fullPassage?: string;
+  preset?: string;
 }
 
-export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, sentence, fullPassage }: SyntaxNotesSectionProps) {
+export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, sentence, fullPassage, preset }: SyntaxNotesSectionProps) {
   const [editing, setEditing] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [selectedNoteIndex, setSelectedNoteIndex] = useState<number | null>(null);
@@ -144,6 +145,7 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
           currentNotes={notes}
           fullPassage={fullPassage}
           targetNoteIndex={selectedNoteIndex}
+          preset={preset}
           onApplySuggestion={handleApplySuggestion}
         />
       )}

@@ -44,7 +44,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, sentence, currentExplanation, fullPassage } = await req.json();
+    const { messages, sentence, currentExplanation, fullPassage, userId } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
@@ -64,8 +64,28 @@ serve(async (req) => {
       .filter(Boolean)
       .join("\n\n");
 
+    // Fetch learning examples
+    let learningBlock = "";
+    if (userId) {
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL");
+        const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+        if (supabaseUrl && serviceRoleKey) {
+          const url = `${supabaseUrl}/rest/v1/learning_examples?user_id=eq.${userId}&type=eq.hongt&order=created_at.desc&limit=3&select=sentence,ai_draft,final_version`;
+          const res = await fetch(url, { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } });
+          if (res.ok) {
+            const examples = await res.json();
+            if (examples.length > 0) {
+              const lines = examples.map((e: any) => `원문: ${e.sentence}\nAI초안: ${e.ai_draft}\n최종: ${e.final_version}`).join("\n---\n");
+              learningBlock = `\n\n[사용자 선호 스타일 예시]\n${lines}`;
+            }
+          }
+        }
+      } catch {}
+    }
+
     const aiMessages = [
-      { role: "system", content: systemPrompt },
+      { role: "system", content: systemPrompt + learningBlock },
       {
         role: "system",
         content: `아래는 현재 작업 중인 문장과 설명입니다:\n\n${contextBlock}`,
