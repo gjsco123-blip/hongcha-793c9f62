@@ -200,7 +200,7 @@ function buildAutoSystemPrompt() {
 
 [절대 규칙]
 - 출력은 반드시 JSON 함수 호출로만 한다.
-- points는 1~5개(최대 5). 문장의 핵심 구문부터 우선순위로.
+- points는 1~5개(최대 5). 문장에서 왼쪽부터 등장하는 순서대로 정렬하라.
 - 각 항목은 한 줄(줄바꿈 금지).
 - 하나의 항목에 하나의 포인트만 / 부가설명은 슬래시(/)로 이어서 한 줄 유지.
 - 정의/해석/배경설명 금지. 기능 중심으로만.
@@ -209,8 +209,8 @@ function buildAutoSystemPrompt() {
 - 불릿(•)을 절대 붙이지 말 것. (UI가 번호를 붙인다)
 
 [관계절(관계사절) 표기 규칙 — 반드시 지킬 것]
-- 관계대명사/관계부사가 나오면, “관계사 ___부터 ___까지(예: who~object)가 선행사 ___를 수식함”을 반드시 포함할 것.
-- 범위는 항상 ‘관계사 첫단어~관계절 마지막단어’로 표시할 것. (예: who~object, that~movement, where~live)
+- 관계대명사/관계부사가 나오면, "관계사 ___부터 ___까지(예: who~object)가 선행사 ___를 수식함"을 반드시 포함할 것.
+- 범위는 항상 '관계사 첫단어~관계절 마지막단어'로 표시할 것. (예: who~object, that~movement, where~live)
 
 [우선 추출 대상]
 관계대명사(주격/목적격/생략), 관계부사, 명사절(that/wh-), 가주어/진주어, 가목적어/진목적어,
@@ -224,12 +224,20 @@ function buildAutoSystemPrompt() {
 - 분사(과거/현재)가 명사를 뒤에서 수식하는 후치수식 구조임
 - 조동사 + be p.p. 형태로 수동을 나타냄
 
-[targetText 규칙]
-- 각 포인트마다, 원문에서 해당 문법이 적용되는 핵심 구문(2~5단어)을 targetText로 반환하라.
+[targetText 규칙 — 반드시 지킬 것]
+- 각 포인트마다, 원문에서 해당 문법 요소 자체가 위치한 핵심 구문(2~5단어)을 targetText로 반환하라.
 - targetText는 반드시 원문에 존재하는 연속된 단어여야 한다.
-- 예: 관계대명사 who가 이끄는 절 → targetText: "who attended the"
-- 예: 수동태 be p.p. → targetText: "was discovered by"
-- 예: to부정사 → targetText: "to understand the"`;
+- targetText는 해당 문법 요소 자체가 시작되는 곳을 가리켜야 한다. 수식 대상(피수식어)이 아님.
+  ✅ to부정사 형용사적 용법 → targetText: "to maintain" (to부정사 자체)
+  ❌ targetText: "a hard balance" (수식 대상은 안 됨)
+  ✅ restrict A to B 구조 → targetText: "to restrict the"
+  ✅ 지시대명사 that → targetText: "that is a"
+  ✅ 수동태 be p.p. → targetText: "was discovered by"
+  ✅ 관계대명사 who가 이끄는 절 → targetText: "who attended the"
+
+[동일 대상 병합 규칙]
+- 같은 단어/구문에 대해 여러 포인트가 있으면(예: to부정사의 명사적 용법 + restrict A to B가 동일한 "to restrict"에 해당), 동일한 targetText를 공유하고 points 배열에서 연속 배치하라.
+- 프론트엔드가 같은 targetText를 가진 연속 포인트를 하나의 번호로 묶어 표시한다.`;
 }
 
 const tools = [
