@@ -74,6 +74,7 @@ export function SyntaxChat({
     setLoading(true);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const { data, error } = await supabase.functions.invoke("grammar-chat", {
         body: {
           messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
@@ -81,6 +82,7 @@ export function SyntaxChat({
           currentNotes,
           fullPassage,
           targetNoteIndex: targetNoteIndex !== null ? targetNoteIndex : undefined,
+          userId: session?.user?.id,
         },
       });
 
