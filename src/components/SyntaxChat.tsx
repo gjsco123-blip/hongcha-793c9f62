@@ -19,6 +19,7 @@ interface SyntaxChatProps {
   sentence: string;
   currentNotes: SyntaxNote[];
   fullPassage?: string;
+  targetNoteIndex?: number | null;
   onApplySuggestion: (notes: SyntaxNote[]) => void;
 }
 
@@ -28,6 +29,7 @@ export function SyntaxChat({
   sentence,
   currentNotes,
   fullPassage,
+  targetNoteIndex,
   onApplySuggestion,
 }: SyntaxChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -35,6 +37,10 @@ export function SyntaxChat({
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const targetNote = targetNoteIndex !== null && targetNoteIndex !== undefined
+    ? currentNotes[targetNoteIndex]
+    : null;
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -53,7 +59,7 @@ export function SyntaxChat({
       setMessages([]);
       setInput("");
     }
-  }, [open, sentence]);
+  }, [open, sentence, targetNoteIndex]);
 
   const handleSend = async () => {
     const text = input.trim();
@@ -72,6 +78,7 @@ export function SyntaxChat({
           sentence,
           currentNotes,
           fullPassage,
+          targetNoteIndex: targetNoteIndex !== null ? targetNoteIndex : undefined,
         },
       });
 
@@ -100,30 +107,46 @@ export function SyntaxChat({
   };
 
   const handleApply = (suggestionNotes: string[]) => {
-    const newNotes: SyntaxNote[] = suggestionNotes.map((content, i) => ({
-      id: i + 1,
-      content,
-    }));
-    onApplySuggestion(newNotes);
+    if (targetNote && suggestionNotes.length >= 1) {
+      // Single note replacement
+      const newNote: SyntaxNote = { id: targetNote.id, content: suggestionNotes.join("\n") };
+      onApplySuggestion([newNote]);
+    } else {
+      // Full replacement
+      const newNotes: SyntaxNote[] = suggestionNotes.map((content, i) => ({
+        id: i + 1,
+        content,
+      }));
+      onApplySuggestion(newNotes);
+    }
     toast.success("수정안이 적용되었습니다.");
   };
+
+  const headerTitle = targetNote
+    ? `${(targetNoteIndex ?? 0) + 1}번 구문분석 수정`
+    : "구문분석 AI 수정";
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md flex flex-col p-0 gap-0">
         <SheetHeader className="px-4 py-3 border-b border-border shrink-0">
-          <SheetTitle className="text-sm font-bold">구문분석 AI 수정</SheetTitle>
+          <SheetTitle className="text-sm font-bold">{headerTitle}</SheetTitle>
           <p className="text-[10px] text-muted-foreground leading-snug line-clamp-2 mt-1">
             {sentence}
           </p>
         </SheetHeader>
 
-        {/* Current notes */}
+        {/* Target note or all notes */}
         <div className="px-4 py-2.5 bg-muted/40 border-b border-border shrink-0 max-h-[150px] overflow-y-auto">
           <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-bold mb-1">
-            현재 구문분석
+            {targetNote ? `수정 대상 (${(targetNoteIndex ?? 0) + 1}번)` : "현재 구문분석"}
           </p>
-          {currentNotes.length === 0 ? (
+          {targetNote ? (
+            <p className="text-xs leading-relaxed text-foreground">
+              <span className="font-bold mr-1">{(targetNoteIndex ?? 0) + 1}.</span>
+              {targetNote.content}
+            </p>
+          ) : currentNotes.length === 0 ? (
             <p className="text-xs text-muted-foreground/50">구문분석 내용이 없습니다.</p>
           ) : (
             <div className="space-y-0.5">
@@ -142,10 +165,15 @@ export function SyntaxChat({
           {messages.length === 0 && (
             <div className="text-center py-8">
               <p className="text-xs text-muted-foreground">
-                구문분석 수정 요청이나 문법 질문을 입력하세요.
+                {targetNote
+                  ? `${(targetNoteIndex ?? 0) + 1}번 포인트에 대한 수정 요청이나 질문을 입력하세요.`
+                  : "구문분석 수정 요청이나 문법 질문을 입력하세요."}
               </p>
               <div className="mt-3 flex flex-wrap gap-1.5 justify-center">
-                {["더 짧게 줄여줘", "문법 용어 추가해줘", "내신 출제 포인트 강조해줘"].map((q) => (
+                {(targetNote
+                  ? ["더 짧게 줄여줘", "문법 용어 추가해줘", "다른 포인트로 바꿔줘"]
+                  : ["더 짧게 줄여줘", "문법 용어 추가해줘", "내신 출제 포인트 강조해줘"]
+                ).map((q) => (
                   <button
                     key={q}
                     onClick={() => setInput(q)}
@@ -184,7 +212,7 @@ export function SyntaxChat({
                         <div className="space-y-0.5">
                           {msg.suggestionNotes.map((note, idx) => (
                             <p key={idx} className="text-xs leading-relaxed">
-                              <span className="font-bold mr-1">{idx + 1}.</span>
+                              {!targetNote && <span className="font-bold mr-1">{idx + 1}.</span>}
                               {note}
                             </p>
                           ))}
@@ -223,7 +251,7 @@ export function SyntaxChat({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="수정 요청 또는 문법 질문..."
+              placeholder={targetNote ? `${(targetNoteIndex ?? 0) + 1}번 수정 요청...` : "수정 요청 또는 문법 질문..."}
               rows={1}
               className="flex-1 bg-muted border border-border px-3 py-2 text-sm outline-none focus:border-foreground transition-colors resize-none min-h-[36px] max-h-[100px]"
               style={{ height: "auto" }}

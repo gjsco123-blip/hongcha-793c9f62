@@ -15,6 +15,7 @@ interface SyntaxNotesSectionProps {
 export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, sentence, fullPassage }: SyntaxNotesSectionProps) {
   const [editing, setEditing] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [selectedNoteIndex, setSelectedNoteIndex] = useState<number | null>(null);
 
   const handleDeleteNote = (id: number) => {
     const filtered = notes.filter((n) => n.id !== id);
@@ -23,6 +24,23 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
 
   const handleEditNote = (id: number, content: string) => {
     onChange(notes.map((n) => (n.id === id ? { ...n, content } : n)));
+  };
+
+  const handleNoteClick = (index: number) => {
+    setSelectedNoteIndex(index);
+    setChatOpen(true);
+  };
+
+  const handleApplySuggestion = (newNotes: SyntaxNote[]) => {
+    if (selectedNoteIndex !== null && newNotes.length === 1) {
+      // Replace only the selected note
+      const updated = notes.map((n, i) =>
+        i === selectedNoteIndex ? { ...n, content: newNotes[0].content } : n
+      );
+      onChange(updated);
+    } else {
+      onChange(newNotes);
+    }
   };
 
   return (
@@ -54,13 +72,10 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
               </button>
             )}
             {notes.length > 0 && sentence && (
-              <button
-                onClick={() => setChatOpen(true)}
-                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"
-              >
+              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 text-muted-foreground">
                 <MessageSquare className="w-3 h-3" />
-                AI 수정
-              </button>
+                번호 클릭 → AI 수정
+              </span>
             )}
             {notes.length > 0 && (
               <button
@@ -80,9 +95,19 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
           ) : (
             notes.map((note, index) => (
               <div key={note.id} className="flex items-start gap-2 group/note">
-                <span className="text-xs font-bold text-foreground shrink-0 mt-0.5 w-4">
-                  {index + 1}.
-                </span>
+                {sentence ? (
+                  <button
+                    onClick={() => handleNoteClick(index)}
+                    className="text-xs font-bold text-foreground shrink-0 mt-0.5 w-4 hover:text-primary underline-offset-2 hover:underline cursor-pointer transition-colors"
+                    title="클릭하여 AI 수정"
+                  >
+                    {index + 1}.
+                  </button>
+                ) : (
+                  <span className="text-xs font-bold text-foreground shrink-0 mt-0.5 w-4">
+                    {index + 1}.
+                  </span>
+                )}
                 {editing ? (
                   <textarea
                     value={note.content}
@@ -111,11 +136,15 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
       {sentence && (
         <SyntaxChat
           open={chatOpen}
-          onOpenChange={setChatOpen}
+          onOpenChange={(open) => {
+            setChatOpen(open);
+            if (!open) setSelectedNoteIndex(null);
+          }}
           sentence={sentence}
           currentNotes={notes}
           fullPassage={fullPassage}
-          onApplySuggestion={(newNotes) => onChange(newNotes)}
+          targetNoteIndex={selectedNoteIndex}
+          onApplySuggestion={handleApplySuggestion}
         />
       )}
     </div>
