@@ -104,7 +104,7 @@ export function PreviewSynonymsSection({
               <td className="px-2 py-2 text-center">
                 {enrichingIdx === idx ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground mx-auto" />
-                ) : getChipCount(item) < 4 ? (
+                ) : canEnrich(item) ? (
                   <button
                     onClick={() => onEnrichRow(idx)}
                     className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
