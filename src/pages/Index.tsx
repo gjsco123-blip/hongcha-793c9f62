@@ -97,6 +97,7 @@ function splitIntoSentences(text: string): string[] {
 
 export default function Index() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [passage, setPassage] = useState("");
   const [preset, setPreset] = useState<Preset>("수능");
   const [results, setResults] = useState<SentenceResult[]>([]);
