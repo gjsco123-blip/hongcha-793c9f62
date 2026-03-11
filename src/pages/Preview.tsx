@@ -182,27 +182,21 @@ export default function Preview() {
     return { en: data.exam_block?.one_sentence_summary || "", ko: data.exam_block?.one_sentence_summary_ko };
   }, [passage]);
 
+  const blobToDataUrl = (blob: Blob): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+
   const handleExportPdf = async () => {
     try {
       const doc = createElement(PreviewPdf, { vocab, synonyms, summary, examBlock, title: pdfTitle }) as any;
       const blob = await pdf(doc).toBlob();
-
-      // Try direct download
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${pdfTitle || "preview"}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      // Fallback: data URL in new tab
-      const reader = new FileReader();
-      reader.onloadend = () => window.open(reader.result as string, "_blank");
-      reader.readAsDataURL(blob);
-
-      setTimeout(() => URL.revokeObjectURL(url), 30000);
-      toast.success("PDF가 저장되었습니다.");
+      const dataUrl = await blobToDataUrl(blob);
+      window.open(dataUrl, "_blank");
+      toast.success("PDF가 새 탭에서 열렸습니다.");
     } catch (err: any) {
       toast.error(`PDF 저장 실패: ${err.message}`);
     }
@@ -214,18 +208,13 @@ export default function Preview() {
     try {
       const doc = createElement(PreviewPdf, { vocab, synonyms, summary, examBlock, title: pdfTitle }) as any;
       const blob = await pdf(doc).toBlob();
-      const reader = new FileReader();
-      reader.onloadend = () => setPdfPreviewUrl(reader.result as string);
-      reader.readAsDataURL(blob);
+      const dataUrl = await blobToDataUrl(blob);
+      window.open(dataUrl, "_blank");
     } catch (err: any) {
       toast.error(`PDF 미리보기 실패: ${err.message}`);
     } finally {
       setPdfGenerating(false);
     }
-  };
-
-  const closePdfPreview = () => {
-    setPdfPreviewUrl(null);
   };
 
   const canExport = vocab.length > 0 || synonyms.length > 0 || summary;
