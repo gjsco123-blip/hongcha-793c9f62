@@ -166,7 +166,6 @@ export default function Index() {
   }
 
   const { exportToPdf, previewPdf } = usePdfExport();
-  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [pdfGenerating, setPdfGenerating] = useState(false);
 
   // PDF 페이지 구분선 계산 (2컬럼 레이아웃 — 좌측 본문 기준)
