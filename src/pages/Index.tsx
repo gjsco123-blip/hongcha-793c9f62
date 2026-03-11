@@ -619,13 +619,23 @@ export default function Index() {
             </div>
             <div className="flex gap-2 items-center">
               {results.length > 0 && (
-                <button
-                  onClick={handleExportPdf}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors"
-                >
-                  <FileDown className="w-3.5 h-3.5" />
-                  PDF 저장
-                </button>
+                <>
+                  <button
+                    onClick={handlePreviewPdf}
+                    disabled={pdfGenerating}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors disabled:opacity-50"
+                  >
+                    {pdfGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
+                    PDF 미리보기
+                  </button>
+                  <button
+                    onClick={handleExportPdf}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors"
+                  >
+                    <FileDown className="w-3.5 h-3.5" />
+                    PDF 저장
+                  </button>
+                </>
               )}
               {failedResults.length > 0 && !loading && (
                 <button
