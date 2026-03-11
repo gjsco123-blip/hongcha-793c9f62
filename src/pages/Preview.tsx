@@ -59,6 +59,7 @@ export default function Preview() {
   const [addingWord, setAddingWord] = useState<string | null>(null);
   const [enrichingIdx, setEnrichingIdx] = useState<number | null>(null);
   const [pdfGenerating, setPdfGenerating] = useState(false);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
 
   // Persist state to sessionStorage
   useEffect(() => {
