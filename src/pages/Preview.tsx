@@ -3,8 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate, useLocation } from "react-router-dom";
 import { pdf } from "@react-pdf/renderer";
-import { ArrowLeft, FileDown, Eye, Loader2 } from "lucide-react";
+import { ArrowLeft, FileDown, Eye, Loader2, X } from "lucide-react";
 import { PreviewPdf } from "@/components/PreviewPdf";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { PreviewPassageInput } from "@/components/preview/PreviewPassageInput";
 import { PreviewVocabSection } from "@/components/preview/PreviewVocabSection";
 import { PreviewSummarySection } from "@/components/preview/PreviewSummarySection";
@@ -58,6 +59,7 @@ export default function Preview() {
   const [addingWord, setAddingWord] = useState<string | null>(null);
   const [enrichingIdx, setEnrichingIdx] = useState<number | null>(null);
   const [pdfGenerating, setPdfGenerating] = useState(false);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
 
   // Persist state to sessionStorage
   useEffect(() => {
@@ -182,24 +184,20 @@ export default function Preview() {
     return { en: data.exam_block?.one_sentence_summary || "", ko: data.exam_block?.one_sentence_summary_ko };
   }, [passage]);
 
-  const blobToDataUrl = (blob: Blob): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-
   const handleExportPdf = async () => {
-    const win = window.open("", "_blank");
     try {
       const doc = createElement(PreviewPdf, { vocab, synonyms, summary, examBlock, title: pdfTitle }) as any;
       const blob = await pdf(doc).toBlob();
-      const dataUrl = await blobToDataUrl(blob);
-      if (win) win.location.href = dataUrl;
-      toast.success("PDF가 새 탭에서 열렸습니다.");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${pdfTitle || "preview"}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast.success("PDF 다운로드가 시작되었습니다.");
     } catch (err: any) {
-      win?.close();
       toast.error(`PDF 저장 실패: ${err.message}`);
     }
   };
@@ -207,17 +205,22 @@ export default function Preview() {
   const handlePreviewPdf = async () => {
     if (pdfGenerating) return;
     setPdfGenerating(true);
-    const win = window.open("", "_blank");
     try {
       const doc = createElement(PreviewPdf, { vocab, synonyms, summary, examBlock, title: pdfTitle }) as any;
       const blob = await pdf(doc).toBlob();
-      const dataUrl = await blobToDataUrl(blob);
-      if (win) win.location.href = dataUrl;
+      const url = URL.createObjectURL(blob);
+      setPdfBlobUrl(url);
     } catch (err: any) {
-      win?.close();
       toast.error(`PDF 미리보기 실패: ${err.message}`);
     } finally {
       setPdfGenerating(false);
+    }
+  };
+
+  const closePdfPreview = () => {
+    if (pdfBlobUrl) {
+      URL.revokeObjectURL(pdfBlobUrl);
+      setPdfBlobUrl(null);
     }
   };
 
@@ -292,6 +295,28 @@ export default function Preview() {
           onRegenerateSummary={regenExamSummary}
         />
       </main>
+
+      <Dialog open={!!pdfBlobUrl} onOpenChange={(open) => { if (!open) closePdfPreview(); }}>
+        <DialogContent className="max-w-[95vw] w-[95vw] h-[90vh] p-0 gap-0">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card">
+            <span className="text-sm font-medium">PDF 미리보기</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleExportPdf}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-foreground text-foreground hover:bg-foreground hover:text-background transition-colors"
+              >
+                <FileDown className="w-3.5 h-3.5" /> 다운로드
+              </button>
+              <button onClick={closePdfPreview} className="text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          {pdfBlobUrl && (
+            <iframe src={pdfBlobUrl} className="w-full flex-1" style={{ height: "calc(90vh - 48px)" }} />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

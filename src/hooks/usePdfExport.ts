@@ -22,13 +22,15 @@ interface SentenceResult {
   hideHongT?: boolean;
 }
 
-function blobToDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
+function triggerDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export function usePdfExport() {
@@ -39,18 +41,9 @@ export function usePdfExport() {
       subtitle: string,
       filename: string = "worksheet.pdf"
     ) => {
-      const win = window.open("", "_blank");
-      try {
-        const pdfDocument = createElement(PdfDocument, { results, title, subtitle });
-        const blob = await pdf(pdfDocument).toBlob();
-        const dataUrl = await blobToDataUrl(blob);
-        if (win) {
-          win.location.href = dataUrl;
-        }
-      } catch (err) {
-        win?.close();
-        throw err;
-      }
+      const pdfDocument = createElement(PdfDocument, { results, title, subtitle });
+      const blob = await pdf(pdfDocument).toBlob();
+      triggerDownload(blob, filename);
     },
     []
   );
@@ -60,19 +53,10 @@ export function usePdfExport() {
       results: SentenceResult[],
       title: string,
       subtitle: string
-    ) => {
-      const win = window.open("", "_blank");
-      try {
-        const pdfDocument = createElement(PdfDocument, { results, title, subtitle });
-        const blob = await pdf(pdfDocument).toBlob();
-        const dataUrl = await blobToDataUrl(blob);
-        if (win) {
-          win.location.href = dataUrl;
-        }
-      } catch (err) {
-        win?.close();
-        throw err;
-      }
+    ): Promise<string> => {
+      const pdfDocument = createElement(PdfDocument, { results, title, subtitle });
+      const blob = await pdf(pdfDocument).toBlob();
+      return URL.createObjectURL(blob);
     },
     []
   );
