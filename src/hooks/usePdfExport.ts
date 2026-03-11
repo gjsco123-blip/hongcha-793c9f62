@@ -22,6 +22,15 @@ interface SentenceResult {
   hideHongT?: boolean;
 }
 
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
 export function usePdfExport() {
   const exportToPdf = useCallback(
     async (
@@ -32,6 +41,8 @@ export function usePdfExport() {
     ) => {
       const pdfDocument = createElement(PdfDocument, { results, title, subtitle });
       const blob = await pdf(pdfDocument).toBlob();
+
+      // Try direct download first
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -39,10 +50,28 @@ export function usePdfExport() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+
+      // Fallback: open data URL in new tab (for iframe sandbox environments)
+      const dataUrl = await blobToDataUrl(blob);
+      window.open(dataUrl, "_blank");
+
       setTimeout(() => URL.revokeObjectURL(url), 30000);
     },
     []
   );
 
-  return { exportToPdf };
+  const previewPdf = useCallback(
+    async (
+      results: SentenceResult[],
+      title: string,
+      subtitle: string
+    ): Promise<string> => {
+      const pdfDocument = createElement(PdfDocument, { results, title, subtitle });
+      const blob = await pdf(pdfDocument).toBlob();
+      return blobToDataUrl(blob);
+    },
+    []
+  );
+
+  return { exportToPdf, previewPdf };
 }

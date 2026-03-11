@@ -226,10 +226,7 @@ export default function Preview() {
   };
 
   const closePdfPreview = () => {
-    if (pdfPreviewUrl) {
-      URL.revokeObjectURL(pdfPreviewUrl);
-      setPdfPreviewUrl(null);
-    }
+    setPdfPreviewUrl(null);
   };
 
   const canExport = vocab.length > 0 || synonyms.length > 0 || summary;
