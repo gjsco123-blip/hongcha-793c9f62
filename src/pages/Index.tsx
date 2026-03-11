@@ -11,7 +11,7 @@ import { usePdfExport } from "@/hooks/usePdfExport";
 import { useCategories } from "@/hooks/useCategories";
 import { renderWithSuperscripts, reorderNotesByPosition } from "@/lib/syntax-superscript";
 import { toast } from "sonner";
-import { FileDown, RotateCw, X, Scissors, RefreshCw, Eye } from "lucide-react";
+import { FileDown, RotateCw, X, Scissors, RefreshCw, Eye, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 type Preset = "고1" | "고2" | "수능";
@@ -165,7 +165,9 @@ export default function Index() {
     setEditedSentences(autoSentences);
   }
 
-  const { exportToPdf } = usePdfExport();
+  const { exportToPdf, previewPdf } = usePdfExport();
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [pdfGenerating, setPdfGenerating] = useState(false);
 
   // PDF 페이지 구분선 계산 (2컬럼 레이아웃 — 좌측 본문 기준)
   const pageBreakInfo = useMemo(() => {
@@ -548,6 +550,19 @@ export default function Index() {
     toast.success("PDF가 저장되었습니다.");
   };
 
+  const handlePreviewPdf = async () => {
+    if (pdfGenerating) return;
+    setPdfGenerating(true);
+    try {
+      const url = await previewPdf(results, pdfTitle, "");
+      setPdfPreviewUrl(url);
+    } catch (err: any) {
+      toast.error(`PDF 미리보기 실패: ${err.message}`);
+    } finally {
+      setPdfGenerating(false);
+    }
+  };
+
   const categoryProps = {
     schools: categories.schools,
     passages: categories.passages,
@@ -585,6 +600,24 @@ export default function Index() {
         </div>
       </header>
 
+      {/* PDF Preview Modal */}
+      {pdfPreviewUrl && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex flex-col">
+          <div className="flex items-center justify-between px-6 py-3 bg-card border-b border-border">
+            <span className="text-sm font-medium">PDF 미리보기</span>
+            <div className="flex items-center gap-2">
+              <button onClick={handleExportPdf} className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors">
+                <FileDown className="w-3.5 h-3.5" /> 저장
+              </button>
+              <button onClick={() => setPdfPreviewUrl(null)} className="text-muted-foreground hover:text-foreground transition-colors p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+          <iframe src={pdfPreviewUrl} className="flex-1 w-full bg-muted" title="PDF Preview" />
+        </div>
+      )}
+
       {/* Main */}
       <main className="max-w-4xl mx-auto px-6 py-6 no-print">
         {/* Input Section */}
@@ -604,13 +637,23 @@ export default function Index() {
             </div>
             <div className="flex gap-2 items-center">
               {results.length > 0 && (
-                <button
-                  onClick={handleExportPdf}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors"
-                >
-                  <FileDown className="w-3.5 h-3.5" />
-                  PDF 저장
-                </button>
+                <>
+                  <button
+                    onClick={handlePreviewPdf}
+                    disabled={pdfGenerating}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors disabled:opacity-50"
+                  >
+                    {pdfGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
+                    PDF 미리보기
+                  </button>
+                  <button
+                    onClick={handleExportPdf}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors"
+                  >
+                    <FileDown className="w-3.5 h-3.5" />
+                    PDF 저장
+                  </button>
+                </>
               )}
               {failedResults.length > 0 && !loading && (
                 <button

@@ -187,6 +187,8 @@ export default function Preview() {
     try {
       const doc = createElement(PreviewPdf, { vocab, synonyms, summary, examBlock, title: pdfTitle }) as any;
       const blob = await pdf(doc).toBlob();
+
+      // Try direct download
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -194,6 +196,12 @@ export default function Preview() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+
+      // Fallback: data URL in new tab
+      const reader = new FileReader();
+      reader.onloadend = () => window.open(reader.result as string, "_blank");
+      reader.readAsDataURL(blob);
+
       setTimeout(() => URL.revokeObjectURL(url), 30000);
       toast.success("PDF가 저장되었습니다.");
     } catch (err: any) {
@@ -207,8 +215,9 @@ export default function Preview() {
     try {
       const doc = createElement(PreviewPdf, { vocab, synonyms, summary, examBlock, title: pdfTitle }) as any;
       const blob = await pdf(doc).toBlob();
-      const url = URL.createObjectURL(blob);
-      setPdfPreviewUrl(url);
+      const reader = new FileReader();
+      reader.onloadend = () => setPdfPreviewUrl(reader.result as string);
+      reader.readAsDataURL(blob);
     } catch (err: any) {
       toast.error(`PDF 미리보기 실패: ${err.message}`);
     } finally {
@@ -217,10 +226,7 @@ export default function Preview() {
   };
 
   const closePdfPreview = () => {
-    if (pdfPreviewUrl) {
-      URL.revokeObjectURL(pdfPreviewUrl);
-      setPdfPreviewUrl(null);
-    }
+    setPdfPreviewUrl(null);
   };
 
   const canExport = vocab.length > 0 || synonyms.length > 0 || summary;
