@@ -1,22 +1,29 @@
 
 
-## 모델 전환: `google/gemini-3-flash-preview`
+# 구문분석(Index) 페이지에 PDF 미리보기 + 저장 수정
 
-4개 edge function의 모델을 `google/gemini-2.5-flash` → `google/gemini-3-flash-preview`로 변경합니다.
+## 현재 상태
+- 구문분석 페이지(`Index.tsx`)에는 "PDF 저장" 버튼만 있고, 미리보기 기능 없음
+- 저장도 `blob:` URL 방식이라 iframe 환경에서 차단됨
+- Preview 페이지에는 이미 미리보기 모달이 구현되어 있음
 
-### 변경 대상
+## 변경 내용
 
-| 파일 | 현재 모델 | 변경 후 |
-|------|-----------|---------|
-| `supabase/functions/engine/index.ts` (line 210) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/hongt/index.ts` (line 117) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/grammar/index.ts` (line 289) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/grammar/index.ts` (line 382) | `google/gemini-2.5-flash` (freestyle 모드) | `google/gemini-3-flash-preview` |
+### 1. `src/hooks/usePdfExport.ts` — data URL fallback 추가
+- 기존 `<a download>` 시도 후, `FileReader`로 data URL 변환 → `window.open`으로 새 탭 열기
+- 새 함수 `previewPdf` 추가: blob → data URL 변환 후 URL 반환 (미리보기용)
 
-### 변경하지 않는 것
-- `spellcheck` (gemini-2.5-flash-lite 유지)
-- `regenerate` (이미 gemini-3-flash-preview)
-- `analyze-vocab`, `analyze-single-vocab`, `analyze-preview`, `analyze-structure` (별도 요청 없음)
+### 2. `src/pages/Index.tsx` — PDF 미리보기 버튼 + 모달 추가
+- "PDF 저장" 버튼 옆에 "PDF 미리보기" 버튼 추가 (Eye 아이콘)
+- Preview 페이지와 동일한 전체화면 모달 (`<iframe>` + data URL)
+- 상태: `pdfPreviewUrl`, `pdfGenerating`
 
-각 파일에서 model 문자열 1줄씩만 수정, 총 4곳.
+### 3. `src/pages/Preview.tsx` — blob URL → data URL로 변경
+- `handlePreviewPdf`: blob을 data URL로 변환하여 iframe에 표시
+- `handleExportPdf`: 기존 방식 + data URL fallback 추가
+- `closePdfPreview`: `revokeObjectURL` 호출 제거 (data URL이므로 불필요)
+
+## 동작
+- 미리보기 클릭 → PDF를 data URL로 생성 → 모달에서 바로 확인
+- 저장 클릭 → 직접 다운로드 시도 + 새 탭 fallback
 
