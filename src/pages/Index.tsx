@@ -550,6 +550,19 @@ export default function Index() {
     toast.success("PDF가 저장되었습니다.");
   };
 
+  const handlePreviewPdf = async () => {
+    if (pdfGenerating) return;
+    setPdfGenerating(true);
+    try {
+      const url = await previewPdf(results, pdfTitle, "");
+      setPdfPreviewUrl(url);
+    } catch (err: any) {
+      toast.error(`PDF 미리보기 실패: ${err.message}`);
+    } finally {
+      setPdfGenerating(false);
+    }
+  };
+
   const categoryProps = {
     schools: categories.schools,
     passages: categories.passages,
