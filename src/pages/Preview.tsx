@@ -243,23 +243,6 @@ export default function Preview() {
         </div>
       </header>
 
-      {/* PDF Preview Modal */}
-      {pdfPreviewUrl && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex flex-col">
-          <div className="flex items-center justify-between px-6 py-3 bg-card border-b border-border">
-            <span className="text-sm font-medium">PDF 미리보기</span>
-            <div className="flex items-center gap-2">
-              <button onClick={handleExportPdf} className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors">
-                <FileDown className="w-3.5 h-3.5" /> 저장
-              </button>
-              <button onClick={closePdfPreview} className="text-muted-foreground hover:text-foreground transition-colors p-1">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-          <iframe src={pdfPreviewUrl} className="flex-1 w-full bg-muted" title="PDF Preview" />
-        </div>
-      )}
 
       <main className="max-w-4xl mx-auto px-6 py-6 space-y-8">
         <PreviewPassageInput

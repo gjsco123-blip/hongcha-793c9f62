@@ -65,10 +65,11 @@ export function usePdfExport() {
       results: SentenceResult[],
       title: string,
       subtitle: string
-    ): Promise<string> => {
+    ) => {
       const pdfDocument = createElement(PdfDocument, { results, title, subtitle });
       const blob = await pdf(pdfDocument).toBlob();
-      return blobToDataUrl(blob);
+      const dataUrl = await blobToDataUrl(blob);
+      window.open(dataUrl, "_blank");
     },
     []
   );
