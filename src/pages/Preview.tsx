@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate, useLocation } from "react-router-dom";
 import { pdf } from "@react-pdf/renderer";
-import { ArrowLeft, FileDown, Eye } from "lucide-react";
+import { ArrowLeft, FileDown, Eye, X, Loader2 } from "lucide-react";
 import { PreviewPdf } from "@/components/PreviewPdf";
 import { PreviewPassageInput } from "@/components/preview/PreviewPassageInput";
 import { PreviewVocabSection } from "@/components/preview/PreviewVocabSection";
