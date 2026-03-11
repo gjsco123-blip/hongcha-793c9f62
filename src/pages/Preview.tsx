@@ -191,13 +191,15 @@ export default function Preview() {
     });
 
   const handleExportPdf = async () => {
+    const win = window.open("", "_blank");
     try {
       const doc = createElement(PreviewPdf, { vocab, synonyms, summary, examBlock, title: pdfTitle }) as any;
       const blob = await pdf(doc).toBlob();
       const dataUrl = await blobToDataUrl(blob);
-      window.open(dataUrl, "_blank");
+      if (win) win.location.href = dataUrl;
       toast.success("PDF가 새 탭에서 열렸습니다.");
     } catch (err: any) {
+      win?.close();
       toast.error(`PDF 저장 실패: ${err.message}`);
     }
   };
@@ -205,12 +207,14 @@ export default function Preview() {
   const handlePreviewPdf = async () => {
     if (pdfGenerating) return;
     setPdfGenerating(true);
+    const win = window.open("", "_blank");
     try {
       const doc = createElement(PreviewPdf, { vocab, synonyms, summary, examBlock, title: pdfTitle }) as any;
       const blob = await pdf(doc).toBlob();
       const dataUrl = await blobToDataUrl(blob);
-      window.open(dataUrl, "_blank");
+      if (win) win.location.href = dataUrl;
     } catch (err: any) {
+      win?.close();
       toast.error(`PDF 미리보기 실패: ${err.message}`);
     } finally {
       setPdfGenerating(false);

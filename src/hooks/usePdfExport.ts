@@ -39,23 +39,18 @@ export function usePdfExport() {
       subtitle: string,
       filename: string = "worksheet.pdf"
     ) => {
-      const pdfDocument = createElement(PdfDocument, { results, title, subtitle });
-      const blob = await pdf(pdfDocument).toBlob();
-
-      // Try direct download first
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      // Fallback: open data URL in new tab (for iframe sandbox environments)
-      const dataUrl = await blobToDataUrl(blob);
-      window.open(dataUrl, "_blank");
-
-      setTimeout(() => URL.revokeObjectURL(url), 30000);
+      const win = window.open("", "_blank");
+      try {
+        const pdfDocument = createElement(PdfDocument, { results, title, subtitle });
+        const blob = await pdf(pdfDocument).toBlob();
+        const dataUrl = await blobToDataUrl(blob);
+        if (win) {
+          win.location.href = dataUrl;
+        }
+      } catch (err) {
+        win?.close();
+        throw err;
+      }
     },
     []
   );
@@ -66,10 +61,18 @@ export function usePdfExport() {
       title: string,
       subtitle: string
     ) => {
-      const pdfDocument = createElement(PdfDocument, { results, title, subtitle });
-      const blob = await pdf(pdfDocument).toBlob();
-      const dataUrl = await blobToDataUrl(blob);
-      window.open(dataUrl, "_blank");
+      const win = window.open("", "_blank");
+      try {
+        const pdfDocument = createElement(PdfDocument, { results, title, subtitle });
+        const blob = await pdf(pdfDocument).toBlob();
+        const dataUrl = await blobToDataUrl(blob);
+        if (win) {
+          win.location.href = dataUrl;
+        }
+      } catch (err) {
+        win?.close();
+        throw err;
+      }
     },
     []
   );
