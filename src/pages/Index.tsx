@@ -545,16 +545,19 @@ export default function Index() {
   };
 
   const handleExportPdf = async () => {
-    await exportToPdf(results, pdfTitle, "", "syntax-worksheet.pdf");
-    toast.success("PDF가 저장되었습니다.");
+    try {
+      await exportToPdf(results, pdfTitle, "", "syntax-worksheet.pdf");
+      toast.success("PDF가 새 탭에서 열렸습니다.");
+    } catch (err: any) {
+      toast.error(`PDF 저장 실패: ${err.message}`);
+    }
   };
 
   const handlePreviewPdf = async () => {
     if (pdfGenerating) return;
     setPdfGenerating(true);
     try {
-      const url = await previewPdf(results, pdfTitle, "");
-      setPdfPreviewUrl(url);
+      await previewPdf(results, pdfTitle, "");
     } catch (err: any) {
       toast.error(`PDF 미리보기 실패: ${err.message}`);
     } finally {
