@@ -549,7 +549,7 @@ export default function Index() {
   const handleExportPdf = async () => {
     try {
       await exportToPdf(results, pdfTitle, "", "syntax-worksheet.pdf");
-      toast.success("PDF가 새 탭에서 열렸습니다.");
+      toast.success("PDF 다운로드가 시작되었습니다.");
     } catch (err: any) {
       toast.error(`PDF 저장 실패: ${err.message}`);
     }
@@ -559,11 +559,19 @@ export default function Index() {
     if (pdfGenerating) return;
     setPdfGenerating(true);
     try {
-      await previewPdf(results, pdfTitle, "");
+      const url = await previewPdf(results, pdfTitle, "");
+      setPdfBlobUrl(url);
     } catch (err: any) {
       toast.error(`PDF 미리보기 실패: ${err.message}`);
     } finally {
       setPdfGenerating(false);
+    }
+  };
+
+  const closePdfPreview = () => {
+    if (pdfBlobUrl) {
+      URL.revokeObjectURL(pdfBlobUrl);
+      setPdfBlobUrl(null);
     }
   };
 
