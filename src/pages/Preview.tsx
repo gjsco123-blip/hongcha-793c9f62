@@ -215,8 +215,9 @@ export default function Preview() {
     try {
       const doc = createElement(PreviewPdf, { vocab, synonyms, summary, examBlock, title: pdfTitle }) as any;
       const blob = await pdf(doc).toBlob();
-      const url = URL.createObjectURL(blob);
-      setPdfPreviewUrl(url);
+      const reader = new FileReader();
+      reader.onloadend = () => setPdfPreviewUrl(reader.result as string);
+      reader.readAsDataURL(blob);
     } catch (err: any) {
       toast.error(`PDF 미리보기 실패: ${err.message}`);
     } finally {
