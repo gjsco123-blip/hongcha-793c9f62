@@ -12,6 +12,7 @@ import { useCategories } from "@/hooks/useCategories";
 import { renderWithSuperscripts, reorderNotesByPosition } from "@/lib/syntax-superscript";
 import { toast } from "sonner";
 import { FileDown, RotateCw, X, Scissors, RefreshCw, Eye, Loader2 } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 type Preset = "고1" | "고2" | "수능";
