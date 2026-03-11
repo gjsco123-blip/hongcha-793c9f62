@@ -166,7 +166,6 @@ export default function Index() {
   }
 
   const { exportToPdf, previewPdf } = usePdfExport();
-  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [pdfGenerating, setPdfGenerating] = useState(false);
 
   // PDF 페이지 구분선 계산 (2컬럼 레이아웃 — 좌측 본문 기준)
@@ -546,16 +545,19 @@ export default function Index() {
   };
 
   const handleExportPdf = async () => {
-    await exportToPdf(results, pdfTitle, "", "syntax-worksheet.pdf");
-    toast.success("PDF가 저장되었습니다.");
+    try {
+      await exportToPdf(results, pdfTitle, "", "syntax-worksheet.pdf");
+      toast.success("PDF가 새 탭에서 열렸습니다.");
+    } catch (err: any) {
+      toast.error(`PDF 저장 실패: ${err.message}`);
+    }
   };
 
   const handlePreviewPdf = async () => {
     if (pdfGenerating) return;
     setPdfGenerating(true);
     try {
-      const url = await previewPdf(results, pdfTitle, "");
-      setPdfPreviewUrl(url);
+      await previewPdf(results, pdfTitle, "");
     } catch (err: any) {
       toast.error(`PDF 미리보기 실패: ${err.message}`);
     } finally {
@@ -600,23 +602,6 @@ export default function Index() {
         </div>
       </header>
 
-      {/* PDF Preview Modal */}
-      {pdfPreviewUrl && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex flex-col">
-          <div className="flex items-center justify-between px-6 py-3 bg-card border-b border-border">
-            <span className="text-sm font-medium">PDF 미리보기</span>
-            <div className="flex items-center gap-2">
-              <button onClick={handleExportPdf} className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors">
-                <FileDown className="w-3.5 h-3.5" /> 저장
-              </button>
-              <button onClick={() => setPdfPreviewUrl(null)} className="text-muted-foreground hover:text-foreground transition-colors p-1">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-          <iframe src={pdfPreviewUrl} className="flex-1 w-full bg-muted" title="PDF Preview" />
-        </div>
-      )}
 
       {/* Main */}
       <main className="max-w-4xl mx-auto px-6 py-6 no-print">
