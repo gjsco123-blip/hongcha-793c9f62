@@ -560,7 +560,13 @@ export default function Index() {
     setPdfGenerating(true);
     try {
       const url = await previewPdf(results, pdfTitle, "");
-      setPdfBlobUrl(url);
+      // Convert blob URL to data URL for sandbox compatibility
+      const resp = await fetch(url);
+      const blob = await resp.blob();
+      URL.revokeObjectURL(url);
+      const reader = new FileReader();
+      reader.onloadend = () => setPdfBlobUrl(reader.result as string);
+      reader.readAsDataURL(blob);
     } catch (err: any) {
       toast.error(`PDF 미리보기 실패: ${err.message}`);
     } finally {
