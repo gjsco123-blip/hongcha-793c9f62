@@ -575,10 +575,7 @@ export default function Index() {
   };
 
   const closePdfPreview = () => {
-    if (pdfBlobUrl) {
-      URL.revokeObjectURL(pdfBlobUrl);
-      setPdfBlobUrl(null);
-    }
+    setPdfBlobUrl(null);
   };
 
   const categoryProps = {
