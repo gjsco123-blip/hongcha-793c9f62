@@ -201,6 +201,28 @@ export default function Preview() {
     }
   };
 
+  const handlePreviewPdf = async () => {
+    if (pdfGenerating) return;
+    setPdfGenerating(true);
+    try {
+      const doc = createElement(PreviewPdf, { vocab, synonyms, summary, examBlock, title: pdfTitle }) as any;
+      const blob = await pdf(doc).toBlob();
+      const url = URL.createObjectURL(blob);
+      setPdfPreviewUrl(url);
+    } catch (err: any) {
+      toast.error(`PDF 미리보기 실패: ${err.message}`);
+    } finally {
+      setPdfGenerating(false);
+    }
+  };
+
+  const closePdfPreview = () => {
+    if (pdfPreviewUrl) {
+      URL.revokeObjectURL(pdfPreviewUrl);
+      setPdfPreviewUrl(null);
+    }
+  };
+
   const canExport = vocab.length > 0 || synonyms.length > 0 || summary;
 
   return (
