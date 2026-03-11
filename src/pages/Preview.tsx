@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate, useLocation } from "react-router-dom";
 import { pdf } from "@react-pdf/renderer";
-import { ArrowLeft, FileDown, Eye } from "lucide-react";
+import { ArrowLeft, FileDown, Eye, X, Loader2 } from "lucide-react";
 import { PreviewPdf } from "@/components/PreviewPdf";
 import { PreviewPassageInput } from "@/components/preview/PreviewPassageInput";
 import { PreviewVocabSection } from "@/components/preview/PreviewVocabSection";
@@ -57,6 +57,8 @@ export default function Preview() {
   const [previewStatus, setPreviewStatus] = useState<SectionStatus>(isNewPassage ? "idle" : (cached?.summary || cached?.examBlock ? "done" : "idle"));
   const [addingWord, setAddingWord] = useState<string | null>(null);
   const [enrichingIdx, setEnrichingIdx] = useState<number | null>(null);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [pdfGenerating, setPdfGenerating] = useState(false);
 
   // Persist state to sessionStorage
   useEffect(() => {
@@ -199,6 +201,28 @@ export default function Preview() {
     }
   };
 
+  const handlePreviewPdf = async () => {
+    if (pdfGenerating) return;
+    setPdfGenerating(true);
+    try {
+      const doc = createElement(PreviewPdf, { vocab, synonyms, summary, examBlock, title: pdfTitle }) as any;
+      const blob = await pdf(doc).toBlob();
+      const url = URL.createObjectURL(blob);
+      setPdfPreviewUrl(url);
+    } catch (err: any) {
+      toast.error(`PDF 미리보기 실패: ${err.message}`);
+    } finally {
+      setPdfGenerating(false);
+    }
+  };
+
+  const closePdfPreview = () => {
+    if (pdfPreviewUrl) {
+      URL.revokeObjectURL(pdfPreviewUrl);
+      setPdfPreviewUrl(null);
+    }
+  };
+
   const canExport = vocab.length > 0 || synonyms.length > 0 || summary;
 
   return (
@@ -213,12 +237,35 @@ export default function Preview() {
             <h1 className="text-xl font-bold tracking-wide">{pdfTitle}</h1>
           </div>
           {canExport && (
-            <button onClick={handleExportPdf} className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors">
-              <FileDown className="w-3.5 h-3.5" /> PDF 저장
-            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={handlePreviewPdf} disabled={pdfGenerating} className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors disabled:opacity-50">
+                {pdfGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />} PDF 미리보기
+              </button>
+              <button onClick={handleExportPdf} className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors">
+                <FileDown className="w-3.5 h-3.5" /> PDF 저장
+              </button>
+            </div>
           )}
         </div>
       </header>
+
+      {/* PDF Preview Modal */}
+      {pdfPreviewUrl && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex flex-col">
+          <div className="flex items-center justify-between px-6 py-3 bg-card border-b border-border">
+            <span className="text-sm font-medium">PDF 미리보기</span>
+            <div className="flex items-center gap-2">
+              <button onClick={handleExportPdf} className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors">
+                <FileDown className="w-3.5 h-3.5" /> 저장
+              </button>
+              <button onClick={closePdfPreview} className="text-muted-foreground hover:text-foreground transition-colors p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+          <iframe src={pdfPreviewUrl} className="flex-1 w-full bg-muted" title="PDF Preview" />
+        </div>
+      )}
 
       <main className="max-w-4xl mx-auto px-6 py-6 space-y-8">
         <PreviewPassageInput

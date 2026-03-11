@@ -1,24 +1,22 @@
 
 
-# PDF 미리보기 기능 추가
+## 모델 전환: `google/gemini-3-flash-preview`
 
-## 문제
-미리보기 환경(iframe)에서 PDF 다운로드가 차단되어, 페이지 구성을 확인할 수 없음.
+4개 edge function의 모델을 `google/gemini-2.5-flash` → `google/gemini-3-flash-preview`로 변경합니다.
 
-## 해결
-PDF를 다운로드하지 않고 **화면에서 바로 볼 수 있는 미리보기 모달**을 추가. `@react-pdf/renderer`의 `BlobProvider`를 사용해 PDF를 blob URL로 만들고, `<iframe>`으로 브라우저 내장 PDF 뷰어에 표시.
+### 변경 대상
 
-## 변경 내용
+| 파일 | 현재 모델 | 변경 후 |
+|------|-----------|---------|
+| `supabase/functions/engine/index.ts` (line 210) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/hongt/index.ts` (line 117) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/grammar/index.ts` (line 289) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/grammar/index.ts` (line 382) | `google/gemini-2.5-flash` (freestyle 모드) | `google/gemini-3-flash-preview` |
 
-### `src/pages/Preview.tsx`
-- "PDF 저장" 버튼 옆에 **"PDF 미리보기"** 버튼 추가 (Eye 아이콘 활용)
-- 버튼 클릭 시 PDF blob을 생성하고, 전체화면 모달에 `<iframe src={blobUrl}>` 형태로 PDF를 표시
-- 모달 상단에 닫기 버튼과 다운로드 버튼 배치
-- 이렇게 하면 다운로드 없이 페이지 구분, 레이아웃을 바로 확인 가능
+### 변경하지 않는 것
+- `spellcheck` (gemini-2.5-flash-lite 유지)
+- `regenerate` (이미 gemini-3-flash-preview)
+- `analyze-vocab`, `analyze-single-vocab`, `analyze-preview`, `analyze-structure` (별도 요청 없음)
 
-### 동작 흐름
-1. "PDF 미리보기" 클릭 → PDF blob 생성 → 모달 열림
-2. 모달 안에서 PDF 각 페이지를 스크롤하며 확인
-3. 필요하면 모달의 "다운로드" 버튼으로 파일 저장
-4. "닫기"로 모달 종료
+각 파일에서 model 문자열 1줄씩만 수정, 총 4곳.
 
