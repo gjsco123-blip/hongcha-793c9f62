@@ -1,30 +1,22 @@
 
 
-# PDF 미리보기 빈 화면 수정 — Blob URL → Data URL 변환
+## 모델 전환: `google/gemini-3-flash-preview`
 
-## 원인
-Lovable 미리보기 환경의 sandboxed iframe 내부에서 `URL.createObjectURL(blob)`로 만든 Blob URL을 **중첩 iframe의 src**에 넣으면, 보안 정책상 로드가 차단되어 빈 화면이 됨.
+4개 edge function의 모델을 `google/gemini-2.5-flash` → `google/gemini-3-flash-preview`로 변경합니다.
 
-## 해결
-Blob을 **Base64 Data URL**로 변환하여 iframe src에 사용. Data URL은 별도 네트워크 요청이 아니므로 sandbox 제한을 받지 않음.
+### 변경 대상
 
-## 변경
+| 파일 | 현재 모델 | 변경 후 |
+|------|-----------|---------|
+| `supabase/functions/engine/index.ts` (line 210) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/hongt/index.ts` (line 117) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/grammar/index.ts` (line 289) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/grammar/index.ts` (line 382) | `google/gemini-2.5-flash` (freestyle 모드) | `google/gemini-3-flash-preview` |
 
-### `src/pages/Preview.tsx`
-- `handlePreviewPdf`: blob → `FileReader.readAsDataURL()` → data URL을 state에 저장
-- iframe src에 data URL 사용
-- `closePdfPreview`에서 `URL.revokeObjectURL` 제거 (data URL은 revoke 불필요)
+### 변경하지 않는 것
+- `spellcheck` (gemini-2.5-flash-lite 유지)
+- `regenerate` (이미 gemini-3-flash-preview)
+- `analyze-vocab`, `analyze-single-vocab`, `analyze-preview`, `analyze-structure` (별도 요청 없음)
 
-### `src/pages/Index.tsx`
-- 동일 패턴 적용 (미리보기 모달이 있는 경우)
-
-### 핵심 코드
-```typescript
-const handlePreviewPdf = async () => {
-  const blob = await pdf(doc).toBlob();
-  const reader = new FileReader();
-  reader.onloadend = () => setPdfBlobUrl(reader.result as string);
-  reader.readAsDataURL(blob);
-};
-```
+각 파일에서 model 문자열 1줄씩만 수정, 총 4곳.
 
