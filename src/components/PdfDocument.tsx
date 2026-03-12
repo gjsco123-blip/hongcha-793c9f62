@@ -92,15 +92,19 @@ const styles = StyleSheet.create({
   // Two-column row
   contentRow: {
     flexDirection: "row",
-    alignItems: "stretch",
+    position: "relative",
     flexGrow: 0,
     flexShrink: 0,
   },
   leftColumn: {
     flex: 1,
-    paddingRight: GAP,
+    paddingRight: GAP + MEMO_WIDTH,
   },
   memoColumn: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    right: 0,
     width: MEMO_WIDTH,
     backgroundColor: "#f9f9f7",
     borderRadius: 3,

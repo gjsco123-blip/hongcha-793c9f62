@@ -1,22 +1,22 @@
 
 
-# PDF 레이아웃 2건 수정
+## 모델 전환: `google/gemini-3-flash-preview`
 
-## 수정 1: MEMO 컬럼 absolute 포지셔닝
+4개 edge function의 모델을 `google/gemini-2.5-flash` → `google/gemini-3-flash-preview`로 변경합니다.
 
-**파일**: `src/components/PdfDocument.tsx`
+### 변경 대상
 
-- `contentRow` 스타일에 `position: "relative"` 추가
-- `memoColumn` 스타일을 `position: "absolute", top: 0, bottom: 0, right: 0`으로 변경
-- `leftColumn`에 `paddingRight: GAP + MEMO_WIDTH`로 오른쪽 여백 확보 (MEMO 영역과 겹치지 않도록)
+| 파일 | 현재 모델 | 변경 후 |
+|------|-----------|---------|
+| `supabase/functions/engine/index.ts` (line 210) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/hongt/index.ts` (line 117) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/grammar/index.ts` (line 289) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/grammar/index.ts` (line 382) | `google/gemini-2.5-flash` (freestyle 모드) | `google/gemini-3-flash-preview` |
 
-## 수정 2: 페이지네이션 상수 재보정
+### 변경하지 않는 것
+- `spellcheck` (gemini-2.5-flash-lite 유지)
+- `regenerate` (이미 gemini-3-flash-preview)
+- `analyze-vocab`, `analyze-single-vocab`, `analyze-preview`, `analyze-structure` (별도 요청 없음)
 
-**파일**: `src/lib/pdf-pagination.ts`
-
-| 상수 | 현재값 | 변경값 | 이유 |
-|------|--------|--------|------|
-| `TRANS_CHARS_PER_LINE` | 68 | **75** | 6.5pt 한글 실측 반영, 높이 과다 추정 해소 |
-
-이 두 수정으로 (1) MEMO가 항상 마지막 문장 하단에 정렬되고, (2) 문장 05+06이 2페이지에 함께 수용됩니다.
+각 파일에서 model 문자열 1줄씩만 수정, 총 4곳.
 
