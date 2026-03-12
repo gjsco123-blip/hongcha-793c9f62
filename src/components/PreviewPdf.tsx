@@ -298,7 +298,7 @@ export function PreviewPdf({ vocab, synonyms, summary, examBlock, title: titlePr
         {hasExam && (
           <View>
             {(hasVocab || hasSummary || hasSynonyms) && <View style={s.thinRule} />}
-            <Text style={s.fieldLabel}>Topic</Text>
+            <Text style={[s.fieldLabel, { marginTop: 4 }]}>Topic</Text>
             <Text style={s.fieldEn}>{examBlock.topic}</Text>
             {examBlock.topic_ko && <Text style={s.fieldKo}>{examBlock.topic_ko}</Text>}
             <Text style={s.fieldLabel}>Title</Text>
