@@ -57,7 +57,7 @@ export const PDF = {
   SAFETY: 0,
 
   // Packing factor — intentionally underestimate to maximise page fill
-  PACKING: 0.85,
+  PACKING: 0.80,
 } as const;
 
 const PAGE_USABLE = PDF.PAGE_HEIGHT - PDF.PADDING_TOP - PDF.PADDING_BOTTOM;
