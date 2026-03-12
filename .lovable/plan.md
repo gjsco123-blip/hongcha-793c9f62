@@ -1,12 +1,22 @@
 
 
-# 구문분석 자동 생성 시 `},{targetText:` 노출 버그 수정
+## 모델 전환: `google/gemini-3-flash-preview`
 
-## 원인
-`supabase/functions/grammar/index.ts`에서 자동 생성 모드의 `max_tokens`가 **800**으로 설정되어 있어, 포인트가 3~5개이고 targetText까지 포함되면 JSON이 중간에 잘림. `safeJsonParse`가 잘린 JSON을 억지로 복구하면서 `},{targetText:` 같은 raw JSON 조각이 마지막 포인트의 `text`에 섞여 들어감.
+4개 edge function의 모델을 `google/gemini-2.5-flash` → `google/gemini-3-flash-preview`로 변경합니다.
 
-## 수정 사항 (`supabase/functions/grammar/index.ts`)
+### 변경 대상
 
-1. **`max_tokens` 증가**: 800 → 1500 (auto 모드는 최대 5개 포인트 + targetText라 넉넉히)
-2. **텍스트 정리 로직 추가**: `autoPoints` 후처리에서 JSON 잔여물(`},{`, `targetText:`, `"text":` 등) 패턴을 strip하는 안전장치 추가
+| 파일 | 현재 모델 | 변경 후 |
+|------|-----------|---------|
+| `supabase/functions/engine/index.ts` (line 210) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/hongt/index.ts` (line 117) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/grammar/index.ts` (line 289) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/grammar/index.ts` (line 382) | `google/gemini-2.5-flash` (freestyle 모드) | `google/gemini-3-flash-preview` |
+
+### 변경하지 않는 것
+- `spellcheck` (gemini-2.5-flash-lite 유지)
+- `regenerate` (이미 gemini-3-flash-preview)
+- `analyze-vocab`, `analyze-single-vocab`, `analyze-preview`, `analyze-structure` (별도 요청 없음)
+
+각 파일에서 model 문자열 1줄씩만 수정, 총 4곳.
 
