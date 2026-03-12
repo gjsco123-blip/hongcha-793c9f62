@@ -392,7 +392,7 @@ serve(async (req) => {
         body: JSON.stringify({
           model: "google/gemini-3-flash-preview",
           temperature: 0.2,
-          max_tokens: 800,
+          max_tokens: 1500,
           messages: [
             { role: "system", content: buildAutoSystemPrompt() + learningBlock },
             { role: "user", content: userMessage },
