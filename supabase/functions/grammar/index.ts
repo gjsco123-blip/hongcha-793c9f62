@@ -453,8 +453,18 @@ serve(async (req) => {
         }
       }
 
+      // Strip JSON artifacts that leak when response is truncated
+      const stripJsonArtifacts = (s: string) =>
+        s.replace(/[{}\[\]]/g, "")
+         .replace(/"?(text|targetText)"?\s*:/gi, "")
+         .replace(/,\s*$/g, "")
+         .trim();
+
       autoPoints = autoPoints
-        .map((p) => ({ text: oneLine(stripLeadingBullets(p.text)), targetText: oneLine(p.targetText) }))
+        .map((p) => ({
+          text: oneLine(stripLeadingBullets(stripJsonArtifacts(p.text))),
+          targetText: oneLine(p.targetText),
+        }))
         .filter((p) => p.text);
       autoPoints = autoPoints.slice(0, 5).map((p) => ({
         text: p.text.length > 170 ? p.text.slice(0, 168).trim() + "…" : p.text,
