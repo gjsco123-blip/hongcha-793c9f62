@@ -112,7 +112,8 @@ export function estimateSentenceHeight(result: PaginationSentence, isLast: boole
     h += PDF.BLOCK_MARGIN + PDF.BLOCK_PADDING + PDF.BLOCK_BORDER;
   }
 
-  return h;
+  // Apply packing factor to favour filling the current page
+  return h * PDF.PACKING;
 }
 
 // ── Pagination ──────────────────────────────────────────────
