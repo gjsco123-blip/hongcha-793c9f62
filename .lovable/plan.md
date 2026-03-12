@@ -1,22 +1,23 @@
 
 
-## 모델 전환: `google/gemini-3-flash-preview`
+# PDF 페이지네이션 — 공격적 패킹 전략
 
-4개 edge function의 모델을 `google/gemini-2.5-flash` → `google/gemini-3-flash-preview`로 변경합니다.
+## 문제 원인
+문자수 기반 줄 수 추정(68자/줄, 62자/줄)이 **실제 렌더링보다 높이를 과대추정**하여, 실제로는 들어갈 공간이 있는데 추정 단계에서 "초과"로 판단해 문장을 다음 페이지로 밀어버림 (이번 케이스: ~10pt 초과 판정).
 
-### 변경 대상
+## 해결 전략: "일단 넣고, 안 되면 react-pdf가 처리"
 
-| 파일 | 현재 모델 | 변경 후 |
-|------|-----------|---------|
-| `supabase/functions/engine/index.ts` (line 210) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/hongt/index.ts` (line 117) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/grammar/index.ts` (line 289) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/grammar/index.ts` (line 382) | `google/gemini-2.5-flash` (freestyle 모드) | `google/gemini-3-flash-preview` |
+현재는 추정이 "안 들어간다" → 아예 시도도 안 함.
+개선: 추정을 **의도적으로 공격적(낮게)** 잡아서 최대한 넣고, 실제로 안 들어가면 react-pdf의 `wrap={false}`가 자동으로 다음 페이지로 밀어줌.
 
-### 변경하지 않는 것
-- `spellcheck` (gemini-2.5-flash-lite 유지)
-- `regenerate` (이미 gemini-3-flash-preview)
-- `analyze-vocab`, `analyze-single-vocab`, `analyze-preview`, `analyze-structure` (별도 요청 없음)
+## 변경 사항 (`src/lib/pdf-pagination.ts`)
 
-각 파일에서 model 문자열 1줄씩만 수정, 총 4곳.
+1. **SAFETY 마진 제거**: 3pt → 0pt (react-pdf가 실제 overflow를 처리하므로 불필요)
+2. **높이 추정에 패킹 팩터 적용**: 추정된 높이에 0.92를 곱하여 ~8% 공격적으로 패킹
+3. **PASSAGE_H 축소**: 70pt → 55pt (실제 TEXT ANALYSIS 헤더+간격은 ~55pt면 충분)
+
+이렇게 하면:
+- S1+S2+S3+S4 추정 = (490+254) × 0.92 ≈ **684pt** < 733.89pt → **1페이지에 들어감**
+- 실제로 안 들어가는 경우에만 react-pdf가 자동 처리
+- UI 프리뷰 경계선도 동일 로직 사용하므로 자동 동기화
 
