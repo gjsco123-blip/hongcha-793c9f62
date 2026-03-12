@@ -1,6 +1,7 @@
 import { Document, Page, View, Text, StyleSheet, Font } from "@react-pdf/renderer";
 import { PdfHeader } from "@/components/pdf/PdfHeader";
 import { Chunk, segmentsToWords } from "@/lib/chunk-utils";
+import { paginateResults, type PaginationSentence } from "@/lib/pdf-pagination";
 
 Font.register({
   family: "Pretendard",
@@ -23,15 +24,15 @@ Font.register({
 Font.register({
   family: "SourceSerif4",
   fonts: [
-    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@latest/latin-400-normal.ttf", fontWeight: 400 },
-    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@latest/latin-600-normal.ttf", fontWeight: 600 },
-    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@latest/latin-700-normal.ttf", fontWeight: 700 },
+    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@4.0/latin-400-normal.ttf", fontWeight: 400 },
+    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@4.0/latin-600-normal.ttf", fontWeight: 600 },
+    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@4.0/latin-700-normal.ttf", fontWeight: 700 },
   ],
 });
 
 Font.register({
   family: "Jua",
-  src: "https://cdn.jsdelivr.net/fontsource/fonts/jua@latest/korean-400-normal.ttf",
+  src: "https://cdn.jsdelivr.net/fontsource/fonts/jua@5.1/korean-400-normal.ttf",
 });
 
 Font.register({
@@ -337,93 +338,7 @@ function renderChunksSlashPlain(chunks: Chunk[]): string {
   return chunks.map((c) => c.text).join(" / ");
 }
 
-/** Estimate the height of a single sentence block in points */
-function estimateSentenceHeight(result: SentenceResult, isLast: boolean): number {
-  let h = 0;
-  const engText =
-    result.englishChunks.length > 0 ? result.englishChunks.map((c) => c.text).join(" / ") : result.original;
-  const engLines = Math.ceil(engText.length / 70);
-  h += engLines * 21;
-  h += 6;
-
-  if (result.englishChunks.length > 0) {
-    const TRANS_CHARS = 65;
-    const TRANS_LINE_H = 6.5 * 1.65;
-    const TRANS_ROW_GAP = 2;
-
-    const estimateRowH = (text: string) => {
-      const lines = Math.max(1, Math.ceil(text.length / TRANS_CHARS));
-      return lines * TRANS_LINE_H + TRANS_ROW_GAP;
-    };
-
-    if (!result.hideLiteral) {
-      const litText = result.koreanLiteralChunks.map((c) => c.text).join(" / ");
-      h += estimateRowH(litText);
-    }
-    if (!result.hideNatural) {
-      h += estimateRowH(result.koreanNatural);
-    }
-    if (result.hongTNotes && !result.hideHongT) {
-      h += estimateRowH(result.hongTNotes);
-    }
-    if (result.syntaxNotes) {
-      for (const n of result.syntaxNotes) {
-        h += estimateRowH(n.content);
-      }
-    }
-  }
-
-  if (!isLast) {
-    h += 14 + 8;
-  }
-
-  return h;
-}
-
-/** Split results into pages based on estimated heights */
-function paginateResults(results: SentenceResult[]): SentenceResult[][] {
-  const PAGE_HEIGHT = 841.89; // A4
-  const PADDING_V = 42 + 30; // top + bottom (paddingBottom is 30)
-  const HEADER_H = 33; // header height on page 1 (PdfHeader actual ~32.5pt)
-  const PASSAGE_H = 70; // reserve for 스스로 분석 section
-
-  const pages: SentenceResult[][] = [];
-  let currentPage: SentenceResult[] = [];
-  let usedHeight = 0;
-  let isFirstPage = true;
-
-  for (let i = 0; i < results.length; i++) {
-    const isLastResult = i === results.length - 1;
-    const hFull = estimateSentenceHeight(results[i], false); // with separator
-    const hLast = estimateSentenceHeight(results[i], true);  // without separator (22pt less)
-
-    const pageCapacity = PAGE_HEIGHT - PADDING_V - (isFirstPage ? HEADER_H : 0);
-
-    // Reserve passage space only for the very last sentence
-    const passageReserve = isLastResult ? PASSAGE_H : 0;
-
-    // Use hLast for overflow check — if this ends up being the last sentence on the page,
-    // the separator is removed, saving 22pt
-    if (usedHeight + hLast > pageCapacity - passageReserve) {
-      // Current page is full, start new page
-      if (currentPage.length > 0) {
-        pages.push(currentPage);
-        currentPage = [];
-        usedHeight = 0;
-        isFirstPage = false;
-      }
-    }
-
-    currentPage.push(results[i]);
-    usedHeight += hFull; // use full height for subsequent calculations
-  }
-
-  if (currentPage.length > 0) {
-    pages.push(currentPage);
-  }
-
-  return pages;
-}
+// Height estimation & pagination now live in src/lib/pdf-pagination.ts
 
 function SentenceBlock({ result, index, isLast }: { result: SentenceResult; index: number; isLast: boolean }) {
   return (
@@ -507,7 +422,7 @@ function SentenceBlock({ result, index, isLast }: { result: SentenceResult; inde
 }
 
 export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
-  const pages = paginateResults(results);
+  const { pages } = paginateResults(results);
 
   // Track global sentence index across pages
   let globalIndex = 0;

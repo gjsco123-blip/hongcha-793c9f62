@@ -10,6 +10,7 @@ import { Chunk, parseTagged, chunksToTagged } from "@/lib/chunk-utils";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { useCategories } from "@/hooks/useCategories";
 import { renderWithSuperscripts, reorderNotesByPosition } from "@/lib/syntax-superscript";
+import { paginateResults } from "@/lib/pdf-pagination";
 import { toast } from "sonner";
 import { FileDown, RotateCw, X, Scissors, RefreshCw, Eye, Loader2 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -170,96 +171,13 @@ export default function Index() {
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
 
-  // PDF 페이지 구분선 계산 (2컬럼 레이아웃 — 좌측 본문 기준)
+  // PDF 페이지 구분선 계산 — 공용 페이지네이션 로직 사용 (PDF와 100% 동일)
   const pageBreakInfo = useMemo(() => {
-    if (results.length === 0) return { page1EndIndex: -1, totalPages: 0 };
-
-    const PAGE_USABLE = 841.89 - 42 - 30; // 769.89
-    const headerHeight = 16 + 9 + 12 + 24 + 14; // ~75
-    // Left column width is narrower now (flex:1 minus MEMO+gap)
-    const LEFT_COL_CHARS = 70; // narrower column → fewer chars per line
-    const TRANS_CHARS_PER_LINE = 65;
-    const TRANS_LINE_H = 6.5 * 1.65;
-    const TRANS_ROW_GAP = 2;
-
-    const blockHeights: number[] = [];
-    for (const r of results) {
-      const engText = r.englishChunks.length > 0
-        ? r.englishChunks.map(c => c.text).join(" / ")
-        : r.original;
-      const engLines = Math.max(1, Math.ceil(engText.length / LEFT_COL_CHARS));
-      const engHeight = engLines * (9 * 2.3) + 6;
-
-      let transHeight = 0;
-      if (r.englishChunks.length > 0) {
-        const estimateRowH = (text: string) => {
-          const lines = Math.max(1, Math.ceil(text.length / TRANS_CHARS_PER_LINE));
-          return lines * TRANS_LINE_H + TRANS_ROW_GAP;
-        };
-        if (!r.hideLiteral) {
-          const litText = r.koreanLiteralChunks.map(c => c.text).join(" / ");
-          transHeight += estimateRowH(litText);
-        }
-        if (!r.hideNatural) {
-          transHeight += estimateRowH(r.koreanNatural);
-        }
-        if (r.hongTNotes && !r.hideHongT) {
-          transHeight += estimateRowH(r.hongTNotes);
-        }
-        if (r.syntaxNotes) {
-          for (const n of r.syntaxNotes) {
-            transHeight += estimateRowH(n.content);
-          }
-        }
-      }
-      blockHeights.push(engHeight + transHeight + 14 + 8);
-    }
-    // Heights without separator (last item on page saves 22pt)
-    const blockHeightsLast = blockHeights.map(h => h - 22);
-
-    // Page-break simulation
-    let cursor = headerHeight;
-    let page1EndIndex = -1;
-
-    const fitBlock = (blockH: number) => {
-      const currentPageStart = Math.floor(cursor / PAGE_USABLE) * PAGE_USABLE;
-      const currentPageEnd = currentPageStart + PAGE_USABLE;
-      if (cursor + blockH > currentPageEnd) {
-        cursor = currentPageEnd + blockH;
-      } else {
-        cursor += blockH;
-      }
+    const result = paginateResults(results);
+    return {
+      page1EndIndex: result.page1EndIndex,
+      totalPages: result.totalPages,
     };
-
-    for (let i = 0; i < blockHeights.length; i++) {
-      const prevPage = Math.floor(cursor / PAGE_USABLE);
-      // Check with last-item height (no separator) for overflow
-      const currentPageStart = Math.floor(cursor / PAGE_USABLE) * PAGE_USABLE;
-      const currentPageEnd = currentPageStart + PAGE_USABLE;
-      if (cursor + blockHeightsLast[i] > currentPageEnd) {
-        // Overflow — push to next page with full height
-        cursor = currentPageEnd + blockHeights[i];
-      } else {
-        // Fits — use full height for next calculation
-        cursor += blockHeights[i];
-      }
-      const newPage = Math.floor((cursor - 0.01) / PAGE_USABLE);
-      if (prevPage === 0 && newPage >= 1 && page1EndIndex === -1) {
-        page1EndIndex = i - 1;
-      }
-    }
-
-    if (page1EndIndex === -1) page1EndIndex = results.length - 1;
-
-    // Passage section height (below the two-column area)
-    const passageText = results.map(r => r.original).join(" ");
-    const passageLines = Math.max(1, Math.ceil(passageText.length / 72));
-    const passageBlockHeight = 3 + 7 + 6 + 12 + (passageLines * 9 * 2) + 12;
-    fitBlock(passageBlockHeight);
-
-    const totalPages = Math.floor((cursor - 0.01) / PAGE_USABLE) + 1;
-
-    return { page1EndIndex, totalPages: Math.min(totalPages, 4) };
   }, [results]);
 
 

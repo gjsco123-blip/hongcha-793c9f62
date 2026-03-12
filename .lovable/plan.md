@@ -1,31 +1,22 @@
 
-목표: 같은 입력이면 항상 같은 페이지 분할이 나오고, 1페이지는 “실제 못 들어가는 문장” 직전까지 최대한 채우도록 고정합니다.
 
-1) 원인 정리(현재 불안정 포인트)
-- `PdfDocument.tsx`의 페이지네이션이 문자수 기반 추정(70/65자)이라 실제 줄바꿈과 오차가 큼.
-- 문장 블록이 `wrap={false}`라서, 추정은 “들어간다”여도 실제 렌더에서 1~2줄만 넘치면 통째로 다음 페이지로 이동.
-- 폰트를 CDN/`latest`로 로드하고 있어 렌더 시점/fallback 차이로 줄바꿈이 미세하게 달라질 수 있음(“어쩔 땐 꽉 차고 어쩔 땐 넘어감”의 핵심).
+## 모델 전환: `google/gemini-3-flash-preview`
 
-2) 구현 방향(일관성 + 최대 채움)
-- `src/lib/pdf-pagination.ts` 신규 생성:
-  - 페이지 상수/헤더/패시지 예약 높이를 단일 소스로 관리.
-  - `estimateSentenceHeight()`를 “렌더 구조 기준”으로 재작성(영문, 직역/의역/홍T, 구문 라인 분리 방식까지 반영).
-  - `paginateResults()`를 공용화해 PDF 생성과 화면 예측이 동일 로직을 쓰게 통합.
-- `src/components/PdfDocument.tsx`:
-  - 내부 `estimate/paginate` 제거 후 공용 함수 사용.
-  - “마지막 문장일 때 구분선 22pt 절감” + “전체 마지막 문장일 때만 passage reserve” 규칙 유지.
-  - 경계값에서만 작은 안전 마진(예: 2~4pt) 적용해 랜덤 넘김 방지.
-- `src/pages/Index.tsx`:
-  - 현재 별도 `pageBreakInfo` 추정 제거, 공용 페이지네이션 결과 사용(미리보기 경계선/실제 PDF 경계선 완전 일치).
-- `src/components/PdfDocument.tsx` 폰트:
-  - CDN `latest` 의존 제거(버전 고정 또는 프로젝트 내 정적 폰트 사용)로 줄바꿈 변동 최소화.
+4개 edge function의 모델을 `google/gemini-2.5-flash` → `google/gemini-3-flash-preview`로 변경합니다.
 
-3) 검증 계획
-- 동일 데이터로 PDF 연속 생성 5회 → `page1EndIndex` 동일해야 함.
-- “1페이지 하단 여백이 있는데 문장이 넘어가는 케이스” 회귀 샘플(지금 업로드한 PDF 유형)로 재검증.
-- 화면의 점선 페이지 경계와 실제 내보낸 PDF 경계가 항상 일치하는지 확인.
+### 변경 대상
 
-4) 완료 기준
-- 같은 입력에서 페이지 분할 결과가 매번 동일.
-- 1페이지는 하단 예약 영역을 제외하고 최대한 채워짐.
-- 문장이 넘어갈 때는 “실제로 전체 블록이 안 들어갈 때만” 넘어감.
+| 파일 | 현재 모델 | 변경 후 |
+|------|-----------|---------|
+| `supabase/functions/engine/index.ts` (line 210) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/hongt/index.ts` (line 117) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/grammar/index.ts` (line 289) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/grammar/index.ts` (line 382) | `google/gemini-2.5-flash` (freestyle 모드) | `google/gemini-3-flash-preview` |
+
+### 변경하지 않는 것
+- `spellcheck` (gemini-2.5-flash-lite 유지)
+- `regenerate` (이미 gemini-3-flash-preview)
+- `analyze-vocab`, `analyze-single-vocab`, `analyze-preview`, `analyze-structure` (별도 요청 없음)
+
+각 파일에서 model 문자열 1줄씩만 수정, 총 4곳.
+
