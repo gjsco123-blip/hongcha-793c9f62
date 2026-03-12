@@ -508,7 +508,7 @@ function SentenceBlock({ result, index, isLast }: { result: SentenceResult; inde
 }
 
 export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
-  const pages = paginateResults(results);
+  const { pages } = paginateResults(results);
 
   // Track global sentence index across pages
   let globalIndex = 0;
