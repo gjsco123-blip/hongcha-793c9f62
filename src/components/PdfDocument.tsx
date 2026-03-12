@@ -445,7 +445,7 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
             {isFirstPage && <PdfHeader title={title} titleColor="#666" ruleColor="#666" />}
 
             {/* Two-column layout: Left (sentences) + Right (MEMO) — per page */}
-            <View style={styles.contentRow}>
+            <View style={styles.contentRow} wrap={false}>
               <View style={styles.leftColumn}>
                 {pageResults.map((result, idx) => {
                   const isLastInPage = idx === pageResults.length - 1;

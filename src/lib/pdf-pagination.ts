@@ -2,6 +2,10 @@
  * Shared PDF pagination constants & logic.
  * Used by both PdfDocument.tsx (actual PDF) and Index.tsx (preview page-break indicator).
  * Single source of truth — keeps UI preview and PDF output in perfect sync.
+ *
+ * KEY DESIGN: No packing/underestimation. Heights are estimated at 1:1 scale
+ * with a small SAFETY margin to absorb rendering variance. This prevents
+ * the manual pagination from disagreeing with react-pdf's actual layout.
  */
 
 import type { Chunk } from "@/lib/chunk-utils";
@@ -32,7 +36,6 @@ export const PDF = {
   PADDING_TOP: 42,
   PADDING_BOTTOM: 30,
   HEADER_H: 33,               // PdfHeader rendered height (~32.5pt)
-  PASSAGE_H: 55,              // TEXT ANALYSIS section reserve (tightened)
 
   // English line
   ENG_FONT: 9.5,
@@ -44,21 +47,30 @@ export const PDF = {
   TRANS_LINE_H: 6.5 * 1.8,   // 11.7pt — matches actual lineHeight: 1.8
   TRANS_ROW_GAP: 3,           // marginBottom: 3
 
-  // Sentence block
+  // Sentence block separator (between blocks, NOT after last)
   BLOCK_MARGIN: 14,           // marginBottom of sentenceContainer
   BLOCK_PADDING: 8,           // paddingBottom of sentenceContainer
   BLOCK_BORDER: 0.5,          // borderBottomWidth
+  // Total separator height = BLOCK_MARGIN + BLOCK_PADDING + BLOCK_BORDER = 22.5
 
   // Text width estimation (characters per line in the left column)
   ENG_CHARS_PER_LINE: 88,
   TRANS_CHARS_PER_LINE: 90,
 
-  // Safety margin removed — react-pdf wrap={false} handles real overflow
-  SAFETY: 0,
+  // TEXT ANALYSIS section
+  PASSAGE_SECTION_MARGIN_TOP: 18,
+  PASSAGE_TITLE_H: 10,        // title line + marginBottom
+  PASSAGE_BOX_PADDING: 26,    // paddingTop(12) + paddingBottom(12) + border
+  PASSAGE_LINE_H: 9 * 2,      // fontSize 9 * lineHeight 2
+  PASSAGE_CHARS_PER_LINE: 85,  // chars per line inside the passage box
 
-  // Packing factor — intentionally underestimate to maximise page fill
-  PACKING: 0.80,
+  // Safety margin — absorbs small rendering variances
+  // Positive value = we leave this much unused space as buffer
+  SAFETY: 15,
 } as const;
+
+// Separator height between sentence blocks
+const SEPARATOR_H = PDF.BLOCK_MARGIN + PDF.BLOCK_PADDING + PDF.BLOCK_BORDER;
 
 const PAGE_USABLE = PDF.PAGE_HEIGHT - PDF.PADDING_TOP - PDF.PADDING_BOTTOM;
 
@@ -70,10 +82,10 @@ function estimateTransRowHeight(text: string): number {
 }
 
 /**
- * Estimate the rendered height of a sentence block in points.
- * @param isLast  If true, omits separator (saves BLOCK_MARGIN + BLOCK_PADDING ≈ 22pt)
+ * Estimate the "content-only" height of a sentence block (no separator).
+ * Separator is handled separately in pagination logic.
  */
-export function estimateSentenceHeight(result: PaginationSentence, isLast: boolean): number {
+export function estimateSentenceContentHeight(result: PaginationSentence): number {
   let h = 0;
 
   // English text line(s)
@@ -107,13 +119,38 @@ export function estimateSentenceHeight(result: PaginationSentence, isLast: boole
     }
   }
 
-  // Separator (margin + padding + border) — omitted for last item
-  if (!isLast) {
-    h += PDF.BLOCK_MARGIN + PDF.BLOCK_PADDING + PDF.BLOCK_BORDER;
-  }
+  return h;
+}
 
-  // Apply packing factor to favour filling the current page
-  return h * PDF.PACKING;
+/**
+ * Legacy API — returns height including separator when !isLast.
+ * No packing factor applied (1:1 estimation).
+ */
+export function estimateSentenceHeight(result: PaginationSentence, isLast: boolean): number {
+  let h = estimateSentenceContentHeight(result);
+  if (!isLast) {
+    h += SEPARATOR_H;
+  }
+  return h;
+}
+
+// ── TEXT ANALYSIS section dynamic height ────────────────────
+
+/**
+ * Estimate the height of the TEXT ANALYSIS (스스로 분석) section
+ * based on actual passage text length.
+ */
+export function estimatePassageHeight(results: PaginationSentence[]): number {
+  // Build the full passage text: "1 sentence1 2 sentence2 ..."
+  const fullText = results.map((r, i) => `${i + 1} ${r.original}`).join(" ");
+  const lines = Math.max(1, Math.ceil(fullText.length / PDF.PASSAGE_CHARS_PER_LINE));
+
+  return (
+    PDF.PASSAGE_SECTION_MARGIN_TOP +
+    PDF.PASSAGE_TITLE_H +
+    PDF.PASSAGE_BOX_PADDING +
+    lines * PDF.PASSAGE_LINE_H
+  );
 }
 
 // ── Pagination ──────────────────────────────────────────────
@@ -126,61 +163,77 @@ export interface PaginationResult<T extends PaginationSentence> {
 
 /**
  * Split sentences into pages.
- * Deterministic: same input → same output every time.
+ * Strategy: "fill current page first, overflow to next only when necessary."
+ * No packing factor — heights are 1:1 with SAFETY buffer.
  */
 export function paginateResults<T extends PaginationSentence>(results: T[]): PaginationResult<T> {
   if (results.length === 0) {
     return { pages: [], page1EndIndex: -1, totalPages: 0 };
   }
 
+  const passageH = estimatePassageHeight(results);
   const pages: T[][] = [];
   let currentPage: T[] = [];
   let usedHeight = 0;
   let isFirstPage = true;
-  let page1EndIndex = -1;
 
   for (let i = 0; i < results.length; i++) {
     const isLastResult = i === results.length - 1;
-    const hFull = estimateSentenceHeight(results[i], false);
-    const hLast = estimateSentenceHeight(results[i], true);
+    const contentH = estimateSentenceContentHeight(results[i]);
 
+    // Available space on this page
     const pageCapacity =
-      PAGE_USABLE - (isFirstPage ? PDF.HEADER_H : 0) - PDF.SAFETY;
+      PAGE_USABLE -
+      (isFirstPage ? PDF.HEADER_H : 0) -
+      PDF.SAFETY;
 
-    // Reserve passage space only for the very last sentence
-    const passageReserve = isLastResult ? PDF.PASSAGE_H : 0;
+    // If this is the last sentence, we also need room for TEXT ANALYSIS
+    const passageReserve = isLastResult ? passageH : 0;
 
-    // Use hLast for the overflow check — if this is the last item on a page,
-    // the separator won't render, saving ~22pt
-    if (usedHeight + hLast > pageCapacity - passageReserve) {
+    // Height this item would add:
+    // - If page already has items, we need a separator before this item
+    // - Plus the content itself
+    const separatorBefore = currentPage.length > 0 ? SEPARATOR_H : 0;
+    const neededH = separatorBefore + contentH;
+
+    // Check: does it fit?
+    if (usedHeight + neededH + passageReserve > pageCapacity) {
+      // Doesn't fit — push current page (if non-empty) and start new page
       if (currentPage.length > 0) {
-        if (isFirstPage) {
-          page1EndIndex = pages.length === 0
-            ? currentPage.length - 1
-            : page1EndIndex;
-        }
         pages.push(currentPage);
         currentPage = [];
         usedHeight = 0;
         isFirstPage = false;
-      }
-    }
 
-    currentPage.push(results[i]);
-    usedHeight += hFull;
+        // Recalculate for the new page (no separator needed for first item)
+        const newPageCapacity = PAGE_USABLE - PDF.SAFETY;
+        // On new page, this is the first item — no separator
+        if (contentH + passageReserve > newPageCapacity) {
+          // Single item doesn't fit on a whole page — force it anyway
+          currentPage.push(results[i]);
+          usedHeight = contentH;
+        } else {
+          currentPage.push(results[i]);
+          usedHeight = contentH;
+        }
+      } else {
+        // Page is empty but item still doesn't fit — force it (avoid infinite loop)
+        currentPage.push(results[i]);
+        usedHeight = contentH;
+      }
+    } else {
+      // Fits — add to current page
+      usedHeight += neededH;
+      currentPage.push(results[i]);
+    }
   }
 
   if (currentPage.length > 0) {
-    if (isFirstPage) {
-      page1EndIndex = (pages.length === 0 ? 0 : pages[pages.length - 1].length) + currentPage.length - 1;
-    }
     pages.push(currentPage);
   }
 
-  // Compute page1EndIndex as global index
-  if (pages.length > 0) {
-    page1EndIndex = pages[0].length - 1;
-  }
+  // Compute page1EndIndex
+  const page1EndIndex = pages.length > 0 ? pages[0].length - 1 : -1;
 
   return {
     pages,
