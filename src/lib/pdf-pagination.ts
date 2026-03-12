@@ -51,7 +51,7 @@ export const PDF = {
 
   // Text width estimation (characters per line in the left column)
   ENG_CHARS_PER_LINE: 88,
-  TRANS_CHARS_PER_LINE: 75,
+  TRANS_CHARS_PER_LINE: 90,
 
   // Safety margin removed — react-pdf wrap={false} handles real overflow
   SAFETY: 0,
