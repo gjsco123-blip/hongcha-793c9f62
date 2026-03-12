@@ -13,26 +13,23 @@ interface Props {
 }
 
 function splitChips(str: string): string[] {
-  return str.split(",").map((s) => s.trim()).filter(Boolean);
+  return str
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 function joinChips(chips: string[]): string {
   return chips.join(", ");
 }
 
-function ChipList({
-  chips,
-  onDelete,
-}: {
-  chips: string[];
-  onDelete: (chipIdx: number) => void;
-}) {
+function ChipList({ chips, onDelete }: { chips: string[]; onDelete: (chipIdx: number) => void }) {
   return (
     <div className="flex flex-wrap gap-1">
       {chips.map((chip, i) => (
         <span
           key={i}
-          className="group inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-muted/50 text-[11px] font-medium text-foreground"
+          className="group inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-medium text-foreground"
         >
           {chip}
           <button
@@ -64,9 +61,7 @@ export function PreviewSynonymsSection({
   const handleDeleteChip = (rowIdx: number, field: "synonym" | "antonym", chipIdx: number) => {
     const chips = splitChips(synonyms[rowIdx][field]);
     const updated = chips.filter((_, i) => i !== chipIdx);
-    const newSynonyms = synonyms.map((s, i) =>
-      i === rowIdx ? { ...s, [field]: joinChips(updated) } : s
-    );
+    const newSynonyms = synonyms.map((s, i) => (i === rowIdx ? { ...s, [field]: joinChips(updated) } : s));
     onSynonymsChange(newSynonyms);
   };
 
@@ -79,9 +74,15 @@ export function PreviewSynonymsSection({
       <table className="w-full text-[12px]">
         <thead>
           <tr className="bg-muted/30 border-b-2 border-foreground/80">
-            <th className="text-left px-3 py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[25%] border-r border-border">Word</th>
-            <th className="text-left px-3 py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[35%]">Synonym</th>
-            <th className="text-left px-3 py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[35%]">Antonym</th>
+            <th className="text-left px-3 py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[25%] border-r border-border">
+              Word
+            </th>
+            <th className="text-left px-3 py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[35%]">
+              Synonym
+            </th>
+            <th className="text-left px-3 py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[35%]">
+              Antonym
+            </th>
             <th className="w-[5%]"></th>
           </tr>
         </thead>
@@ -130,7 +131,10 @@ export function PreviewSynonymsSection({
           title="Synonyms & Antonyms"
           oldContent={renderTable(synonyms)}
           newContent={renderTable(candidate)}
-          onAccept={() => { onSynonymsChange(candidate); setCandidate(null); }}
+          onAccept={() => {
+            onSynonymsChange(candidate);
+            setCandidate(null);
+          }}
           onReject={() => setCandidate(null)}
         />
       )}
