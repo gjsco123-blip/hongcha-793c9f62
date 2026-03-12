@@ -32,7 +32,7 @@ export const PDF = {
   PADDING_TOP: 42,
   PADDING_BOTTOM: 30,
   HEADER_H: 33,               // PdfHeader rendered height (~32.5pt)
-  PASSAGE_H: 70,              // TEXT ANALYSIS section reserve
+  PASSAGE_H: 55,              // TEXT ANALYSIS section reserve (tightened)
 
   // English line
   ENG_FONT: 9.5,
@@ -53,8 +53,11 @@ export const PDF = {
   ENG_CHARS_PER_LINE: 68,
   TRANS_CHARS_PER_LINE: 62,
 
-  // Safety margin — small buffer to prevent borderline overflows
-  SAFETY: 3,
+  // Safety margin removed — react-pdf wrap={false} handles real overflow
+  SAFETY: 0,
+
+  // Packing factor — intentionally underestimate to maximise page fill
+  PACKING: 0.92,
 } as const;
 
 const PAGE_USABLE = PDF.PAGE_HEIGHT - PDF.PADDING_TOP - PDF.PADDING_BOTTOM;
@@ -109,7 +112,8 @@ export function estimateSentenceHeight(result: PaginationSentence, isLast: boole
     h += PDF.BLOCK_MARGIN + PDF.BLOCK_PADDING + PDF.BLOCK_BORDER;
   }
 
-  return h;
+  // Apply packing factor to favour filling the current page
+  return h * PDF.PACKING;
 }
 
 // ── Pagination ──────────────────────────────────────────────
