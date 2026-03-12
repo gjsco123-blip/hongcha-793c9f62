@@ -1,6 +1,7 @@
 import { Document, Page, View, Text, StyleSheet, Font } from "@react-pdf/renderer";
 import { PdfHeader } from "@/components/pdf/PdfHeader";
 import { Chunk, segmentsToWords } from "@/lib/chunk-utils";
+import { paginateResults, type PaginationSentence } from "@/lib/pdf-pagination";
 
 Font.register({
   family: "Pretendard",
@@ -23,15 +24,15 @@ Font.register({
 Font.register({
   family: "SourceSerif4",
   fonts: [
-    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@latest/latin-400-normal.ttf", fontWeight: 400 },
-    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@latest/latin-600-normal.ttf", fontWeight: 600 },
-    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@latest/latin-700-normal.ttf", fontWeight: 700 },
+    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@4.0/latin-400-normal.ttf", fontWeight: 400 },
+    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@4.0/latin-600-normal.ttf", fontWeight: 600 },
+    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@4.0/latin-700-normal.ttf", fontWeight: 700 },
   ],
 });
 
 Font.register({
   family: "Jua",
-  src: "https://cdn.jsdelivr.net/fontsource/fonts/jua@latest/korean-400-normal.ttf",
+  src: "https://cdn.jsdelivr.net/fontsource/fonts/jua@5.1/korean-400-normal.ttf",
 });
 
 Font.register({
