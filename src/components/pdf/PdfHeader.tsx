@@ -11,7 +11,7 @@ const TITLE_BOX_HEIGHT = 22; // fixed box that contains the title text
 const RULE_TOP_OFFSET = 7; // gap between title box bottom → rule top
 const RULE_THICKNESS = 1.5;
 const HEADER_MARGIN_TOP = -14;
-const HEADER_MARGIN_BOTTOM = 6;
+const HEADER_MARGIN_BOTTOM = 16;
 
 const styles = StyleSheet.create({
   wrapper: {
