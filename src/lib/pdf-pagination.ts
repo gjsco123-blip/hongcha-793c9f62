@@ -50,14 +50,14 @@ export const PDF = {
   BLOCK_BORDER: 0.5,          // borderBottomWidth
 
   // Text width estimation (characters per line in the left column)
-  ENG_CHARS_PER_LINE: 68,
-  TRANS_CHARS_PER_LINE: 62,
+  ENG_CHARS_PER_LINE: 88,
+  TRANS_CHARS_PER_LINE: 68,
 
   // Safety margin removed — react-pdf wrap={false} handles real overflow
   SAFETY: 0,
 
   // Packing factor — intentionally underestimate to maximise page fill
-  PACKING: 0.92,
+  PACKING: 0.85,
 } as const;
 
 const PAGE_USABLE = PDF.PAGE_HEIGHT - PDF.PADDING_TOP - PDF.PADDING_BOTTOM;
