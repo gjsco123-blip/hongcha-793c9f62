@@ -1,22 +1,23 @@
 
 
-## 모델 전환: `google/gemini-3-flash-preview`
+# PDF 페이지네이션 상수 재보정
 
-4개 edge function의 모델을 `google/gemini-2.5-flash` → `google/gemini-3-flash-preview`로 변경합니다.
+## 현재 상태
 
-### 변경 대상
+현재 `paginateResults` 함수는 이미 "여백이 있으면 일단 넣고, 안 되면 다음 페이지로" 로직을 구현하고 있습니다 (155행의 overflow 체크 → 넘치면 페이지 분리, 아니면 push). 이 로직 자체는 정상입니다.
 
-| 파일 | 현재 모델 | 변경 후 |
-|------|-----------|---------|
-| `supabase/functions/engine/index.ts` (line 210) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/hongt/index.ts` (line 117) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/grammar/index.ts` (line 289) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/grammar/index.ts` (line 382) | `google/gemini-2.5-flash` (freestyle 모드) | `google/gemini-3-flash-preview` |
+문제는 **높이 추정 상수가 너무 보수적**이라 실제로는 공간이 있는데도 "넘친다"고 판단해서 조기 페이지 분리가 발생하는 것입니다.
 
-### 변경하지 않는 것
-- `spellcheck` (gemini-2.5-flash-lite 유지)
-- `regenerate` (이미 gemini-3-flash-preview)
-- `analyze-vocab`, `analyze-single-vocab`, `analyze-preview`, `analyze-structure` (별도 요청 없음)
+## 수정 내용
 
-각 파일에서 model 문자열 1줄씩만 수정, 총 4곳.
+**파일: `src/lib/pdf-pagination.ts`** — 상수 2개만 변경
+
+| 상수 | 현재 | 변경 | 이유 |
+|------|------|------|------|
+| `TRANS_CHARS_PER_LINE` | 75 | **90** | 6.5pt 한글 실제 렌더링 폭 기반 역산 |
+| `PACKING` | 0.85 | **0.80** | 누적 오차 보정 강화 |
+
+"여백이 있으면 넣기" 로직은 그대로 유지됩니다. 상수만 실측치에 맞추면 추정 높이가 줄어들어 → 같은 overflow 체크에서 "아직 들어간다"로 판단 → 페이지를 더 꽉 채우게 됩니다.
+
+두 가지가 충돌 없이 동시에 작동합니다.
 
