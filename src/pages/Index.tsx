@@ -574,7 +574,7 @@ export default function Index() {
               {failedResults.length > 0 && !loading && (
                 <button
                   onClick={handleRetryFailed}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 border border-destructive text-destructive text-xs font-medium hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-destructive text-destructive text-xs font-medium hover:bg-destructive hover:text-destructive-foreground transition-colors"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   실패 {failedResults.length}건 재시도
