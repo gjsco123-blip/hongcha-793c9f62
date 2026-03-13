@@ -669,7 +669,7 @@ export default function Index() {
 
                     {/* Korean literal */}
                     {!result.hideLiteral && (
-                      <div className="bg-muted/50 border border-border p-3 relative group/literal">
+                      <div className="bg-muted/50 border border-border rounded-xl p-3 relative group/literal">
                         {result.regenerating && (
                           <div className="absolute inset-0 bg-muted/80 flex items-center justify-center z-10">
                             <span className="text-xs text-muted-foreground animate-pulse">
