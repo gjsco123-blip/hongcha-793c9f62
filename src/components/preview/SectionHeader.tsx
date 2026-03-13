@@ -22,7 +22,7 @@ export function SectionHeader({ title, status, onRegenerate, isRegenerating, chi
         <button
           onClick={onRegenerate}
           disabled={isRegenerating}
-          className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+          className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors disabled:opacity-40"
         >
           <RefreshCw className={`w-3 h-3 ${isRegenerating ? "animate-spin" : ""}`} />
           재생성

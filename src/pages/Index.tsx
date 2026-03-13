@@ -518,7 +518,7 @@ export default function Index() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-card border-b-2 border-foreground no-print">
+      <header className="bg-card border-b border-border no-print">
         <div className="max-w-4xl mx-auto px-6 py-4">
           <CategoryHeaderBar {...categoryProps} />
           <div className="mt-3">
@@ -543,7 +543,7 @@ export default function Index() {
             onChange={(e) => setPassage(e.target.value)}
             placeholder="영어 지문을 입력하세요..."
             rows={5}
-            className="w-full bg-card border border-border px-4 py-3 text-sm font-english leading-relaxed text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-foreground transition-colors resize-y"
+            className="w-full bg-card border border-border rounded-xl px-4 py-3 text-sm font-english leading-relaxed text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-foreground transition-colors resize-y"
           />
           <div className="flex flex-wrap items-center justify-between mt-3 gap-2">
             <div className="flex items-center gap-2">
@@ -557,14 +557,14 @@ export default function Index() {
                   <button
                     onClick={handlePreviewPdf}
                     disabled={pdfGenerating}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors disabled:opacity-50"
                   >
                     {pdfGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
                     PDF 미리보기
                   </button>
                   <button
                     onClick={handleExportPdf}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors"
                   >
                     <FileDown className="w-3.5 h-3.5" />
                     PDF 저장
@@ -574,7 +574,7 @@ export default function Index() {
               {failedResults.length > 0 && !loading && (
                 <button
                   onClick={handleRetryFailed}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 border border-destructive text-destructive text-xs font-medium hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-destructive text-destructive text-xs font-medium hover:bg-destructive hover:text-destructive-foreground transition-colors"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   실패 {failedResults.length}건 재시도
@@ -583,7 +583,7 @@ export default function Index() {
               <button
                 onClick={() => navigate("/preview", { state: { passage, pdfTitle } })}
                 disabled={!passage.trim()}
-                className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors disabled:opacity-40"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors disabled:opacity-40"
               >
                 <Eye className="w-3.5 h-3.5" />
                 Preview
@@ -591,7 +591,7 @@ export default function Index() {
               <button
                 onClick={handleAnalyze}
                 disabled={loading || editedSentences.length === 0}
-                className="px-5 py-2 bg-foreground text-background text-xs font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+                className="px-5 py-2 rounded-full bg-foreground text-background text-xs font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
               >
                 {loading
                   ? `분석 중... (${progress.current}/${progress.total})`
@@ -613,7 +613,7 @@ export default function Index() {
 
         {/* Results */}
         {results.length > 0 && (
-          <div className="space-y-0 border-t-2 border-foreground">
+          <div className="space-y-0 border-t border-border">
             {results.map((result, index) => (
               <div key={result.id}>
                 {/* 페이지 구분선 */}
@@ -621,7 +621,7 @@ export default function Index() {
                   <div className="flex items-center gap-2 py-2 my-1">
                     <div className="flex-1 border-t-2 border-dashed border-destructive/50" />
                     <span className="text-[10px] font-medium text-destructive/70 shrink-0">
-                      ✂️ PDF 페이지 1 끝 — 여기서 페이지 넘어감
+                      PDF 페이지 1 끝 — 여기서 페이지 넘어감
                     </span>
                     <div className="flex-1 border-t-2 border-dashed border-destructive/50" />
                   </div>
@@ -648,13 +648,13 @@ export default function Index() {
                 {result.englishChunks.length > 0 ? (
                   <div className="ml-9 space-y-4">
                     {/* English chunks */}
-                    <div className="bg-muted/50 border border-border p-3">
+                    <div className="bg-muted/50 border border-border rounded-xl p-3">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
                           Chunking
                         </span>
                         <span className="text-[9px] text-muted-foreground">
-                          ✏️ 편집 · 클릭: 분할/병합 · 더블클릭: 동사 표시
+                          편집 · 클릭: 분할/병합 · 더블클릭: 동사 표시
                         </span>
                       </div>
                       <ChunkEditor
@@ -669,7 +669,7 @@ export default function Index() {
 
                     {/* Korean literal */}
                     {!result.hideLiteral && (
-                      <div className="bg-muted/50 border border-border p-3 relative group/literal">
+                      <div className="bg-muted/50 border border-border rounded-xl p-3 relative group/literal">
                         {result.regenerating && (
                           <div className="absolute inset-0 bg-muted/80 flex items-center justify-center z-10">
                             <span className="text-xs text-muted-foreground animate-pulse">
@@ -694,7 +694,7 @@ export default function Index() {
 
                     {/* Korean natural */}
                     {!result.hideNatural && (
-                      <div className="bg-muted/50 border border-border p-3 relative group/natural">
+                      <div className="bg-muted/50 border border-border rounded-xl p-3 relative group/natural">
                         <button
                           onClick={() => setResults(prev => prev.map(r => r.id === result.id ? { ...r, hideNatural: true } : r))}
                           className="absolute top-1.5 right-1.5 p-0.5 text-muted-foreground/50 hover:text-destructive opacity-0 group-hover/natural:opacity-100 transition-opacity"
@@ -758,9 +758,9 @@ export default function Index() {
             ))}
             {/* 페이지 상태 표시 */}
             {pageBreakInfo.totalPages > 0 && (
-              <div className={`flex items-center gap-2 py-3 px-2 mt-2 border border-dashed ${pageBreakInfo.totalPages <= 2 ? 'border-green-500/50 bg-green-50/50 dark:bg-green-950/20' : 'border-destructive/50 bg-destructive/5'}`}>
+              <div className={`flex items-center gap-2 py-3 px-2 mt-2 rounded-xl border border-dashed ${pageBreakInfo.totalPages <= 2 ? 'border-green-500/50 bg-green-50/50 dark:bg-green-950/20' : 'border-destructive/50 bg-destructive/5'}`}>
                 <span className={`text-xs font-medium ${pageBreakInfo.totalPages <= 2 ? 'text-green-700 dark:text-green-400' : 'text-destructive'}`}>
-                  📄 예상 PDF: {pageBreakInfo.totalPages}페이지 {pageBreakInfo.totalPages <= 2 ? '✅' : '⚠️ 2페이지 초과'}
+                  예상 PDF: {pageBreakInfo.totalPages}페이지 {pageBreakInfo.totalPages <= 2 ? '' : '— 2페이지 초과'}
                 </span>
               </div>
             )}
@@ -775,7 +775,7 @@ export default function Index() {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleExportPdf}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-foreground text-foreground hover:bg-foreground hover:text-background transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-foreground text-foreground hover:bg-foreground hover:text-background transition-colors"
               >
                 <FileDown className="w-3.5 h-3.5" /> 다운로드
               </button>

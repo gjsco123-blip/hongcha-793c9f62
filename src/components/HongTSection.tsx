@@ -43,7 +43,7 @@ export function HongTSection({ value, onChange, onGenerate, generating, onDelete
   };
 
   return (
-    <div className="bg-muted/50 border border-border p-3 relative group/hongt">
+    <div className="bg-muted/50 border border-border rounded-xl p-3 relative group/hongt">
       {generating && (
         <div className="absolute inset-0 bg-muted/80 flex items-center justify-center z-10">
           <span className="text-xs text-muted-foreground animate-pulse">
@@ -73,7 +73,7 @@ export function HongTSection({ value, onChange, onGenerate, generating, onDelete
               <button
                 onClick={onGenerate}
                 disabled={generating}
-                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors disabled:opacity-40"
+                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors disabled:opacity-40"
               >
                 <Sparkles className="w-3 h-3" />
                 자동 생성
@@ -82,7 +82,7 @@ export function HongTSection({ value, onChange, onGenerate, generating, onDelete
             {value.trim() && sentence && (
               <button
                 onClick={() => setChatOpen(true)}
-                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"
+                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"
               >
                 <MessageSquare className="w-3 h-3" />
                 AI 수정
@@ -92,7 +92,7 @@ export function HongTSection({ value, onChange, onGenerate, generating, onDelete
               <button
                 onClick={handleSpellCheck}
                 disabled={checking}
-                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors disabled:opacity-40"
+                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors disabled:opacity-40"
               >
                 <SpellCheck className="w-3 h-3" />
                 {checking ? "검사 중..." : "맞춤법"}
@@ -100,7 +100,7 @@ export function HongTSection({ value, onChange, onGenerate, generating, onDelete
             )}
             <button
               onClick={() => setEditing((prev) => !prev)}
-              className="text-[10px] px-2 py-0.5 border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"
+              className="text-[10px] px-2 py-0.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"
             >
               {editing ? "완료" : "수정"}
             </button>

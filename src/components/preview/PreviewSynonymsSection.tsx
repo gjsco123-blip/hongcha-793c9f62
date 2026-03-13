@@ -70,7 +70,7 @@ export function PreviewSynonymsSection({
   };
 
   const renderTable = (items: SynAntItem[]) => (
-    <div className="border border-border rounded overflow-hidden">
+    <div className="border border-border rounded-xl overflow-hidden">
       <table className="w-full text-[12px]">
         <thead>
           <tr className="bg-muted/30 border-b-2 border-foreground/80">

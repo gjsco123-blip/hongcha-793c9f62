@@ -47,7 +47,7 @@ export function PreviewVocabSection({ vocab, status, onDelete, onEdit, onRegenIt
       {status === "error" && <p className="text-xs text-destructive">어휘 생성에 실패했습니다.</p>}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4">
         {columns.map((col, colIdx) => (
-          <div key={colIdx} className="border border-border/60 divide-y divide-border/40">
+          <div key={colIdx} className="border border-border/60 rounded-xl divide-y divide-border/40 overflow-hidden">
             <div className="flex items-center gap-2 px-2 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
               <span className="w-4 text-center">#</span>
               <span className="min-w-[55px]">Word</span>

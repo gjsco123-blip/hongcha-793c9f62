@@ -20,7 +20,7 @@ export function ResultDisplay({ label, chunks, text, isKorean }: ResultDisplayPr
             {chunks.map((chunk, i) => (
               <div key={`${chunk.tag}-${i}`} className="flex items-center gap-1 max-w-full">
                 <span
-                  className={`inline-block px-2 py-1 text-xs border border-border bg-background break-words max-w-full ${
+                 className={`inline-block px-2 py-1 text-xs border border-border rounded-md bg-background break-words max-w-full ${
                     isKorean ? "font-sans" : "font-english"
                   }`}
                 >

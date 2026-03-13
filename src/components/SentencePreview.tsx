@@ -87,7 +87,7 @@ export function SentencePreview({ sentences, onChange }: SentencePreviewProps) {
   if (sentences.length === 0) return null;
 
   return (
-    <div className="border border-border bg-card">
+    <div className="border border-border bg-card rounded-xl overflow-hidden">
       <div className="px-3 py-2 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">

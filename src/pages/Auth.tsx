@@ -49,7 +49,7 @@ export default function Auth() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="w-full max-w-xs">
-        <h1 className="text-lg font-semibold text-foreground tracking-[0.2em] uppercase text-center mb-10">
+        <h1 className="text-2xl font-bold text-foreground tracking-[0.15em] uppercase text-center mb-12">
           Syntax
         </h1>
 
@@ -84,7 +84,7 @@ export default function Auth() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full h-11 mt-2 bg-foreground text-background text-xs font-medium uppercase tracking-widest hover:opacity-85 disabled:opacity-40 transition-opacity"
+            className="w-full h-11 mt-2 rounded-full bg-foreground text-background text-xs font-medium uppercase tracking-widest hover:opacity-85 disabled:opacity-40 transition-opacity"
           >
             {submitting ? "처리 중..." : isLogin ? "로그인" : "회원가입"}
           </button>
