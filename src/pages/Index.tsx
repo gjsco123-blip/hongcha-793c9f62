@@ -621,7 +621,7 @@ export default function Index() {
                   <div className="flex items-center gap-2 py-2 my-1">
                     <div className="flex-1 border-t-2 border-dashed border-destructive/50" />
                     <span className="text-[10px] font-medium text-destructive/70 shrink-0">
-                      ✂️ PDF 페이지 1 끝 — 여기서 페이지 넘어감
+                      PDF 페이지 1 끝 — 여기서 페이지 넘어감
                     </span>
                     <div className="flex-1 border-t-2 border-dashed border-destructive/50" />
                   </div>
