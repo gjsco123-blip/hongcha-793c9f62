@@ -82,7 +82,7 @@ export function HongTSection({ value, onChange, onGenerate, generating, onDelete
             {value.trim() && sentence && (
               <button
                 onClick={() => setChatOpen(true)}
-                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"
+                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"
               >
                 <MessageSquare className="w-3 h-3" />
                 AI 수정
