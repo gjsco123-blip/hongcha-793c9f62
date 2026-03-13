@@ -1,22 +1,34 @@
 
 
-## 모델 전환: `google/gemini-3-flash-preview`
+# 구문분석 패턴 자동 저장 강화
 
-4개 edge function의 모델을 `google/gemini-2.5-flash` → `google/gemini-3-flash-preview`로 변경합니다.
+## 현재 문제
+- 자동 생성 또는 수동 편집 후 확정된 구문분석이 `learning_examples`에 저장되지 않음
+- AI 채팅 수정 → 적용 경로에서만 저장됨
+- 따라서 자동 생성만 반복하는 사용자는 학습 데이터가 쌓이지 않음
 
-### 변경 대상
+## 해결 방안
 
-| 파일 | 현재 모델 | 변경 후 |
-|------|-----------|---------|
-| `supabase/functions/engine/index.ts` (line 210) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/hongt/index.ts` (line 117) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/grammar/index.ts` (line 289) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/grammar/index.ts` (line 382) | `google/gemini-2.5-flash` (freestyle 모드) | `google/gemini-3-flash-preview` |
+구문분석이 "확정"되는 시점(= 다음 문장으로 넘어가거나 페이지 전환 시)에 자동으로 `learning_examples`에 저장합니다.
 
-### 변경하지 않는 것
-- `spellcheck` (gemini-2.5-flash-lite 유지)
-- `regenerate` (이미 gemini-3-flash-preview)
-- `analyze-vocab`, `analyze-single-vocab`, `analyze-preview`, `analyze-structure` (별도 요청 없음)
+### 저장 트리거
+`Index.tsx`에서 문장(chunk)이 변경될 때, **이전 문장의 구문분석 노트가 존재하면** 자동 저장:
+- `ai_draft`: AI가 최초 자동 생성한 원본 (없으면 빈 문자열)
+- `final_version`: 사용자가 최종 확정한 버전 (현재 노트 상태)
+- 두 값이 동일하면 저장 skip (수정 없이 그대로 사용한 경우에도 패턴 학습에 유용하므로 저장)
 
-각 파일에서 model 문자열 1줄씩만 수정, 총 4곳.
+### 수정 파일
+1. **`src/pages/Index.tsx`** — 문장 전환 시 이전 구문분석 자동 저장 로직 추가
+2. **`supabase/functions/grammar/index.ts`** — 학습 데이터 fetch 수를 3→5로 늘려 더 풍부한 패턴 반영
+
+### 저장 데이터 구조
+기존 `learning_examples` 테이블 그대로 사용:
+- `type`: `"syntax"`
+- `sentence`: 원문 영어 문장
+- `ai_draft`: AI 자동 생성 원본 (노트 전체를 줄바꿈 join)
+- `final_version`: 최종 확정본 (노트 전체를 줄바꿈 join)
+- `preset`: 현재 프리셋 (수능/고1 등)
+
+### 중복 방지
+같은 문장(`sentence`)에 대해 이미 최근 저장이 있으면 skip (24시간 이내 동일 문장)
 
