@@ -2,6 +2,7 @@ import { Document, Page, View, Text, StyleSheet, Font } from "@react-pdf/rendere
 import { PdfHeader } from "@/components/pdf/PdfHeader";
 import { Chunk, segmentsToWords } from "@/lib/chunk-utils";
 import { paginateResults, type PaginationSentence } from "@/lib/pdf-pagination";
+import { computeSuperscriptPositions, type SyntaxNoteWithTarget } from "@/lib/syntax-superscript";
 
 Font.register({
   family: "Pretendard",
