@@ -220,8 +220,13 @@ const styles = StyleSheet.create({
 /** Render chunks with slash, applying underline to verbs and superscript for syntax notes */
 function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote[], original?: string) {
   const elements: React.ReactNode[] = [];
-  const annotations = (syntaxNotes || []).filter((n) => n.targetText);
 
+  // Use shared matching logic: compute positions on original text
+  const fullText = original || chunks.map((c) => c.text).join(" ");
+  const positions = computeSuperscriptPositions(fullText, (syntaxNotes || []) as SyntaxNoteWithTarget[]);
+
+  // Build chunk offset ranges relative to original text
+  const fullTextLower = fullText.toLowerCase();
   const superscriptMap = new Map<string, { id: number; offset: number }[]>();
   const addSup = (key: string, entry: { id: number; offset: number }) => {
     const arr = superscriptMap.get(key) || [];
@@ -229,22 +234,14 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
     superscriptMap.set(key, arr);
   };
 
-  // Build full text from original or chunks, and a position map from fullText offset → chunk/segment
-  const fullText = original || chunks.map((c) => c.text).join(" ");
-  const fullTextLower = fullText.toLowerCase();
-
-  // Build chunk offset ranges: for each chunk, its start position in fullText
-  // We match against fullText (original), then map back to chunk/segment coordinates
   const chunkOffsets: { ci: number; start: number; end: number; segOffsets: { si: number; start: number; end: number }[] }[] = [];
   {
     let cursor = 0;
     for (let ci = 0; ci < chunks.length; ci++) {
       const chunkTextLower = chunks[ci].text.toLowerCase();
-      // Find this chunk's text in fullText starting from cursor
       const chunkStart = fullTextLower.indexOf(chunkTextLower, cursor);
       const start = chunkStart !== -1 ? chunkStart : cursor;
       const end = start + chunks[ci].text.length;
-      // Build segment offsets within this chunk
       const segOffsets: { si: number; start: number; end: number }[] = [];
       let segCursor = start;
       for (let si = 0; si < chunks[ci].segments.length; si++) {
@@ -257,33 +254,34 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
     }
   }
 
-  for (const ann of annotations) {
-    const targetLower = ann.targetText!.toLowerCase().trim();
-    const matchIdx = fullTextLower.indexOf(targetLower);
-    if (matchIdx === -1) continue;
-
-    // Find the chunk/segment that contains the match start
+  // Map shared positions to chunk/segment coordinates
+  for (const [matchStart, noteIds] of positions) {
     let placed = false;
     for (const co of chunkOffsets) {
-      if (matchIdx >= co.start && matchIdx < co.end) {
+      if (matchStart >= co.start && matchStart < co.end) {
         for (const so of co.segOffsets) {
-          if (matchIdx >= so.start && matchIdx < so.end) {
-            const offsetInSeg = matchIdx - so.start;
-            addSup(`${co.ci}-${so.si}`, { id: ann.id, offset: offsetInSeg });
+          if (matchStart >= so.start && matchStart < so.end) {
+            const offsetInSeg = matchStart - so.start;
+            for (const id of noteIds) {
+              addSup(`${co.ci}-${so.si}`, { id, offset: offsetInSeg });
+            }
             placed = true;
             break;
           }
         }
         if (!placed) {
-          addSup(`${co.ci}-0`, { id: ann.id, offset: 0 });
+          for (const id of noteIds) {
+            addSup(`${co.ci}-0`, { id, offset: 0 });
+          }
           placed = true;
         }
         break;
       }
     }
     if (!placed) {
-      // Fallback: place at first chunk
-      addSup(`0-0`, { id: ann.id, offset: 0 });
+      for (const id of noteIds) {
+        addSup(`0-0`, { id, offset: 0 });
+      }
     }
   }
 
