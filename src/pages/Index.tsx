@@ -464,6 +464,8 @@ export default function Index() {
             }
             // 자동 생성도 안전하게 정렬
             newNotes = reorderNotesByPosition(newNotes, original);
+            // Track AI draft for learning_examples
+            aiDraftMapRef.current[sentenceId] = newNotes.map(n => n.content).join("\n");
           }
 
           return { ...r, syntaxNotes: newNotes, generatingSyntax: false };
