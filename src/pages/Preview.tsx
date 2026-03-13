@@ -83,8 +83,15 @@ export default function Preview() {
       .then((d) => { setSynonyms(d.synonyms || []); setSynonymsStatus("done"); })
       .catch((e) => { toast.error(`동/반의어 생성 실패: ${e.message}`); setSynonymsStatus("error"); });
 
+    const capitalizeFirst = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
     const previewPromise = invokeRetry("analyze-preview", { passage })
-      .then((d) => { setSummary(d.summary || ""); setExamBlock(d.exam_block || null); setPreviewStatus("done"); })
+      .then((d) => {
+        setSummary(d.summary || "");
+        const eb = d.exam_block;
+        if (eb) eb.topic = capitalizeFirst(eb.topic);
+        setExamBlock(eb || null);
+        setPreviewStatus("done");
+      })
       .catch((e) => { toast.error(`요약 생성 실패: ${e.message}`); setPreviewStatus("error"); });
 
     await Promise.allSettled([vocabPromise, synPromise, previewPromise]);
@@ -171,7 +178,8 @@ export default function Preview() {
 
   const regenExamTopic = useCallback(async () => {
     const data = await invokeRetry("analyze-preview", { passage });
-    return { en: data.exam_block?.topic || "", ko: data.exam_block?.topic_ko };
+    const t = data.exam_block?.topic || "";
+    return { en: t ? t.charAt(0).toUpperCase() + t.slice(1) : t, ko: data.exam_block?.topic_ko };
   }, [passage]);
 
   const regenExamTitle = useCallback(async () => {
