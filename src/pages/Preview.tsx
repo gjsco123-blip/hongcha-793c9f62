@@ -178,7 +178,8 @@ export default function Preview() {
 
   const regenExamTopic = useCallback(async () => {
     const data = await invokeRetry("analyze-preview", { passage });
-    return { en: data.exam_block?.topic || "", ko: data.exam_block?.topic_ko };
+    const t = data.exam_block?.topic || "";
+    return { en: t ? t.charAt(0).toUpperCase() + t.slice(1) : t, ko: data.exam_block?.topic_ko };
   }, [passage]);
 
   const regenExamTitle = useCallback(async () => {
