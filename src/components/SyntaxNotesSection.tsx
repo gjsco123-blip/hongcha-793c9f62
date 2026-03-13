@@ -47,7 +47,7 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
   };
 
   return (
-    <div className="bg-muted/50 border border-border p-3 relative">
+    <div className="bg-muted/50 border border-border rounded-xl p-3 relative">
       {generating && (
         <div className="absolute inset-0 bg-muted/80 flex items-center justify-center z-10">
           <span className="text-xs text-muted-foreground animate-pulse">
