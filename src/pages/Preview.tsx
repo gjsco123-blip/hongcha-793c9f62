@@ -83,8 +83,15 @@ export default function Preview() {
       .then((d) => { setSynonyms(d.synonyms || []); setSynonymsStatus("done"); })
       .catch((e) => { toast.error(`동/반의어 생성 실패: ${e.message}`); setSynonymsStatus("error"); });
 
+    const capitalizeFirst = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
     const previewPromise = invokeRetry("analyze-preview", { passage })
-      .then((d) => { setSummary(d.summary || ""); setExamBlock(d.exam_block || null); setPreviewStatus("done"); })
+      .then((d) => {
+        setSummary(d.summary || "");
+        const eb = d.exam_block;
+        if (eb) eb.topic = capitalizeFirst(eb.topic);
+        setExamBlock(eb || null);
+        setPreviewStatus("done");
+      })
       .catch((e) => { toast.error(`요약 생성 실패: ${e.message}`); setPreviewStatus("error"); });
 
     await Promise.allSettled([vocabPromise, synPromise, previewPromise]);
