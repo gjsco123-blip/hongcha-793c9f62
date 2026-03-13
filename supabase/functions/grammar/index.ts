@@ -503,6 +503,9 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
+    // Fetch learning examples for hint mode too
+    const learningBlock = await fetchLearningBlock(userId);
+
     const userMessage = useFreestyle
       ? `전체 문장: ${full}\n` +
         `선택 구문: ${selected || "(없음/전체문장기준)"}\n` +
@@ -529,7 +532,7 @@ serve(async (req) => {
         {
           role: "system",
           content:
-            systemPrompt +
+            systemPrompt + learningBlock +
             (useToolCall ? "" : '\n\n출력 형식: 반드시 {"points":[...]} JSON만 출력하라. 다른 텍스트 없이 JSON만.'),
         },
         { role: "user", content: userMessage },
