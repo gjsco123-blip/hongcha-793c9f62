@@ -518,7 +518,7 @@ export default function Index() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-card border-b-2 border-foreground no-print">
+      <header className="bg-card border-b border-border no-print">
         <div className="max-w-4xl mx-auto px-6 py-4">
           <CategoryHeaderBar {...categoryProps} />
           <div className="mt-3">
