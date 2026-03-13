@@ -583,7 +583,7 @@ export default function Index() {
               <button
                 onClick={() => navigate("/preview", { state: { passage, pdfTitle } })}
                 disabled={!passage.trim()}
-                className="inline-flex items-center gap-1.5 px-4 py-2 border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors disabled:opacity-40"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors disabled:opacity-40"
               >
                 <Eye className="w-3.5 h-3.5" />
                 Preview
@@ -591,7 +591,7 @@ export default function Index() {
               <button
                 onClick={handleAnalyze}
                 disabled={loading || editedSentences.length === 0}
-                className="px-5 py-2 bg-foreground text-background text-xs font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+                className="px-5 py-2 rounded-full bg-foreground text-background text-xs font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
               >
                 {loading
                   ? `분석 중... (${progress.current}/${progress.total})`
