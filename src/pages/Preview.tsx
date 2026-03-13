@@ -191,7 +191,7 @@ export default function Preview() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${pdfTitle || "preview"}.pdf`;
+      a.download = `${pdfTitle}+preview.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
