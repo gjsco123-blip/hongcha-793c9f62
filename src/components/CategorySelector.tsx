@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { ChevronDown, Plus, Trash2, LogOut, ChevronRight, BookOpen, School as SchoolIcon } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Plus, Trash2, LogOut, ChevronRight, BookOpen, School as SchoolIcon, GripVertical } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { School, Passage } from "@/hooks/useCategories";
 
@@ -14,6 +14,7 @@ interface CategorySelectorProps {
   onAddPassage: (schoolId: string, name: string) => Promise<any>;
   onDeleteSchool: (id: string) => Promise<void>;
   onDeletePassage: (id: string) => Promise<void>;
+  onReorderPassages?: (ids: string[]) => Promise<void>;
   onClearPassage?: () => void;
 }
 
@@ -23,12 +24,6 @@ export function CategoryHeaderBar({
   passages,
   selectedSchoolId,
   selectedPassageId,
-  onSelectSchool,
-  onSelectPassage,
-  onAddSchool,
-  onAddPassage,
-  onDeleteSchool,
-  onDeletePassage,
   onClearPassage,
 }: CategorySelectorProps) {
   const { signOut, user } = useAuth();
@@ -58,6 +53,44 @@ export function CategoryHeaderBar({
   );
 }
 
+/* ── Autocomplete dropdown for passage name input ── */
+function PassageNameAutocomplete({
+  value,
+  suggestions,
+  onSelect,
+  visible,
+}: {
+  value: string;
+  suggestions: string[];
+  onSelect: (name: string) => void;
+  visible: boolean;
+}) {
+  const [highlightIdx, setHighlightIdx] = useState(-1);
+  const filtered = value.trim()
+    ? suggestions.filter((s) => s.toLowerCase().includes(value.toLowerCase()))
+    : suggestions;
+
+  useEffect(() => {
+    setHighlightIdx(-1);
+  }, [value]);
+
+  if (!visible || filtered.length === 0) return null;
+
+  return (
+    <div className="absolute left-0 right-0 top-full mt-1 bg-popover border border-border rounded-md shadow-md z-10 max-h-40 overflow-y-auto">
+      {filtered.map((name, i) => (
+        <button
+          key={name}
+          onMouseDown={(e) => { e.preventDefault(); onSelect(name); }}
+          className={`w-full text-left px-3 py-2 text-sm hover:bg-muted/60 transition-colors ${i === highlightIdx ? "bg-muted/60" : ""}`}
+        >
+          {name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /* ── Full-page selection screen (shown when no passage selected) ── */
 export function CategoryFullScreen({
   schools,
@@ -70,13 +103,20 @@ export function CategoryFullScreen({
   onAddPassage,
   onDeleteSchool,
   onDeletePassage,
+  onReorderPassages,
 }: CategorySelectorProps) {
   const { signOut, user } = useAuth();
   const [addingSchool, setAddingSchool] = useState(false);
   const [addingPassage, setAddingPassage] = useState(false);
   const [newName, setNewName] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Drag state
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [overIdx, setOverIdx] = useState<number | null>(null);
 
   const selectedSchool = schools.find((s) => s.id === selectedSchoolId);
+  const passageSuggestions = passages.map((p) => p.name);
 
   const handleAddSchool = async () => {
     if (!newName.trim()) return;
@@ -92,6 +132,17 @@ export function CategoryFullScreen({
     if (passage) onSelectPassage(passage.id);
     setNewName("");
     setAddingPassage(false);
+    setShowSuggestions(false);
+  };
+
+  const handleDrop = (dropIdx: number) => {
+    if (dragIdx === null || dragIdx === dropIdx || !onReorderPassages) return;
+    const ids = passages.map((p) => p.id);
+    const [moved] = ids.splice(dragIdx, 1);
+    ids.splice(dropIdx, 0, moved);
+    onReorderPassages(ids);
+    setDragIdx(null);
+    setOverIdx(null);
   };
 
   return (
@@ -188,11 +239,22 @@ export function CategoryFullScreen({
               <p className="text-sm text-muted-foreground mb-4">지문을 선택하세요</p>
 
               <div className="space-y-1">
-                {passages.map((p) => (
-                  <div key={p.id} className="group flex items-center">
+                {passages.map((p, idx) => (
+                  <div
+                    key={p.id}
+                    className={`group flex items-center ${overIdx === idx && dragIdx !== idx ? "border-t-2 border-primary" : ""}`}
+                    draggable
+                    onDragStart={() => setDragIdx(idx)}
+                    onDragOver={(e) => { e.preventDefault(); setOverIdx(idx); }}
+                    onDragEnd={() => { setDragIdx(null); setOverIdx(null); }}
+                    onDrop={(e) => { e.preventDefault(); handleDrop(idx); }}
+                  >
+                    <span className="p-1.5 cursor-grab text-muted-foreground/30 hover:text-muted-foreground transition-colors">
+                      <GripVertical className="w-3.5 h-3.5" />
+                    </span>
                     <button
                       onClick={() => onSelectPassage(p.id)}
-                      className="flex-1 flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/60 transition-colors border-b border-border/50"
+                      className="flex-1 flex items-center gap-3 px-2 py-3 text-left hover:bg-muted/60 transition-colors border-b border-border/50"
                     >
                       <BookOpen className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm font-medium text-foreground">{p.name}</span>
@@ -208,20 +270,30 @@ export function CategoryFullScreen({
                 ))}
               </div>
 
-              {/* Add passage */}
+              {/* Add passage with autocomplete */}
               {addingPassage ? (
-                <div className="flex items-center gap-2 mt-3 px-4">
-                  <input
-                    autoFocus
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleAddPassage();
-                      if (e.key === "Escape") { setAddingPassage(false); setNewName(""); }
-                    }}
-                    placeholder="지문 이름 입력"
-                    className="flex-1 h-10 px-3 border-b border-border bg-transparent text-sm outline-none focus:border-foreground transition-colors"
-                  />
+                <div className="relative flex items-center gap-2 mt-3 px-4">
+                  <div className="relative flex-1">
+                    <input
+                      autoFocus
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      onFocus={() => setShowSuggestions(true)}
+                      onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleAddPassage();
+                        if (e.key === "Escape") { setAddingPassage(false); setNewName(""); setShowSuggestions(false); }
+                      }}
+                      placeholder="지문 이름 입력"
+                      className="w-full h-10 px-3 border-b border-border bg-transparent text-sm outline-none focus:border-foreground transition-colors"
+                    />
+                    <PassageNameAutocomplete
+                      value={newName}
+                      suggestions={passageSuggestions}
+                      onSelect={(name) => { setNewName(name); setShowSuggestions(false); }}
+                      visible={showSuggestions}
+                    />
+                  </div>
                    <button
                     onClick={handleAddPassage}
                     className="h-10 px-4 rounded-full bg-foreground text-background text-xs font-medium hover:opacity-85 transition-opacity"
