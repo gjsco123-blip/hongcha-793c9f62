@@ -613,7 +613,7 @@ export default function Index() {
 
         {/* Results */}
         {results.length > 0 && (
-          <div className="space-y-0 border-t-2 border-foreground">
+          <div className="space-y-0 border-t border-border">
             {results.map((result, index) => (
               <div key={result.id}>
                 {/* 페이지 구분선 */}
