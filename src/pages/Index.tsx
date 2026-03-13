@@ -112,6 +112,9 @@ export default function Index() {
   const categories = useCategories();
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const dataLoadedRef = useRef(false);
+  
+  // Track AI-generated drafts for learning_examples auto-save
+  const aiDraftMapRef = useRef<Record<number, string>>({});
 
   // Load passage data when a passage is selected
   useEffect(() => {

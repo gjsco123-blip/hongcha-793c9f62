@@ -368,7 +368,7 @@ serve(async (req) => {
           const supabaseUrl = Deno.env.get("SUPABASE_URL");
           const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
           if (supabaseUrl && serviceRoleKey) {
-            const url = `${supabaseUrl}/rest/v1/learning_examples?user_id=eq.${userId}&type=eq.syntax&order=created_at.desc&limit=3&select=sentence,ai_draft,final_version`;
+            const url = `${supabaseUrl}/rest/v1/learning_examples?user_id=eq.${userId}&type=eq.syntax&order=created_at.desc&limit=5&select=sentence,ai_draft,final_version`;
             const res = await fetch(url, { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } });
             if (res.ok) {
               const examples = await res.json();
