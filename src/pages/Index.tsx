@@ -694,7 +694,7 @@ export default function Index() {
 
                     {/* Korean natural */}
                     {!result.hideNatural && (
-                      <div className="bg-muted/50 border border-border p-3 relative group/natural">
+                      <div className="bg-muted/50 border border-border rounded-xl p-3 relative group/natural">
                         <button
                           onClick={() => setResults(prev => prev.map(r => r.id === result.id ? { ...r, hideNatural: true } : r))}
                           className="absolute top-1.5 right-1.5 p-0.5 text-muted-foreground/50 hover:text-destructive opacity-0 group-hover/natural:opacity-100 transition-opacity"
