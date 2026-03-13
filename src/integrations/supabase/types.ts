@@ -57,6 +57,7 @@ export type Database = {
           preset: string | null
           results_json: Json | null
           school_id: string
+          sort_order: number
           updated_at: string
           user_id: string
         }
@@ -69,6 +70,7 @@ export type Database = {
           preset?: string | null
           results_json?: Json | null
           school_id: string
+          sort_order?: number
           updated_at?: string
           user_id: string
         }
@@ -81,6 +83,7 @@ export type Database = {
           preset?: string | null
           results_json?: Json | null
           school_id?: string
+          sort_order?: number
           updated_at?: string
           user_id?: string
         }

@@ -17,6 +17,7 @@ export interface Passage {
   pdf_title: string;
   results_json: any;
   preset: string;
+  sort_order: number;
   created_at: string;
   updated_at: string;
 }
@@ -57,7 +58,7 @@ export function useCategories() {
     setLoadingSchools(false);
   }, [user]);
 
-  // Fetch passages for selected school
+  // Fetch passages for selected school — ordered by sort_order
   const fetchPassages = useCallback(async (schoolId: string) => {
     if (!user) return;
     setLoadingPassages(true);
@@ -65,7 +66,7 @@ export function useCategories() {
       .from("passages")
       .select("*")
       .eq("school_id", schoolId)
-      .order("created_at", { ascending: true });
+      .order("sort_order", { ascending: true });
     if (error) {
       toast.error("지문 목록 불러오기 실패");
     } else {
@@ -83,7 +84,6 @@ export function useCategories() {
   useEffect(() => {
     if (selectedSchoolId) {
       fetchPassages(selectedSchoolId);
-      // Only clear passage selection when school actually changes, not on remount
       if (prevSchoolIdRef.current !== null && prevSchoolIdRef.current !== selectedSchoolId) {
         setSelectedPassageId(null);
       }
@@ -124,9 +124,10 @@ export function useCategories() {
 
   const addPassage = async (schoolId: string, name: string) => {
     if (!user) return null;
+    const maxOrder = passages.reduce((max, p) => Math.max(max, p.sort_order || 0), 0);
     const { data, error } = await supabase
       .from("passages")
-      .insert({ school_id: schoolId, name, user_id: user.id, pdf_title: name })
+      .insert({ school_id: schoolId, name, user_id: user.id, pdf_title: name, sort_order: maxOrder + 1 })
       .select("*")
       .single();
     if (error) {
@@ -157,6 +158,19 @@ export function useCategories() {
     }
   };
 
+  const reorderPassages = async (reorderedIds: string[]) => {
+    // Optimistic local update
+    setPassages((prev) => {
+      const map = new Map(prev.map((p) => [p.id, p]));
+      return reorderedIds.map((id, i) => ({ ...map.get(id)!, sort_order: i + 1 }));
+    });
+    // Persist to DB
+    const updates = reorderedIds.map((id, i) =>
+      supabase.from("passages").update({ sort_order: i + 1 }).eq("id", id)
+    );
+    await Promise.all(updates);
+  };
+
   const selectedPassage = passages.find((p) => p.id === selectedPassageId) || null;
 
   return {
@@ -174,6 +188,7 @@ export function useCategories() {
     addPassage,
     deletePassage,
     updatePassage,
+    reorderPassages,
     fetchPassages,
   };
 }

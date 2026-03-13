@@ -507,6 +507,7 @@ export default function Index() {
     onAddPassage: categories.addPassage,
     onDeleteSchool: categories.deleteSchool,
     onDeletePassage: categories.deletePassage,
+    onReorderPassages: categories.reorderPassages,
     onClearPassage: () => categories.setSelectedPassageId(""),
   };
 
