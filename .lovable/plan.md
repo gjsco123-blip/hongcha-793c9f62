@@ -1,22 +1,28 @@
 
 
-## 모델 전환: `google/gemini-3-flash-preview`
+# PDF 파일명 변경
 
-4개 edge function의 모델을 `google/gemini-2.5-flash` → `google/gemini-3-flash-preview`로 변경합니다.
+## 현재 상태
+- **Index (구문분석) 페이지**: `syntax-worksheet.pdf` 고정 파일명
+- **Preview 페이지**: `{pdfTitle}.pdf` (예: `수능특강 UNIT 1-2.pdf`)
 
-### 변경 대상
+## 변경 내용
 
-| 파일 | 현재 모델 | 변경 후 |
-|------|-----------|---------|
-| `supabase/functions/engine/index.ts` (line 210) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/hongt/index.ts` (line 117) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/grammar/index.ts` (line 289) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
-| `supabase/functions/grammar/index.ts` (line 382) | `google/gemini-2.5-flash` (freestyle 모드) | `google/gemini-3-flash-preview` |
+### 1. Index 페이지 (`src/pages/Index.tsx`)
+파일명을 `{pdfTitle}+구문분석.pdf`로 변경:
+```
+// line 524
+"syntax-worksheet.pdf"  →  `${pdfTitle}+구문분석.pdf`
+```
 
-### 변경하지 않는 것
-- `spellcheck` (gemini-2.5-flash-lite 유지)
-- `regenerate` (이미 gemini-3-flash-preview)
-- `analyze-vocab`, `analyze-single-vocab`, `analyze-preview`, `analyze-structure` (별도 요청 없음)
+### 2. Preview 페이지 (`src/pages/Preview.tsx`)
+파일명을 `{pdfTitle}+preview.pdf`로 변경:
+```
+// line 194
+`${pdfTitle || "preview"}.pdf`  →  `${pdfTitle}+preview.pdf`
+```
 
-각 파일에서 model 문자열 1줄씩만 수정, 총 4곳.
+### 수정 파일
+- `src/pages/Index.tsx` — 1줄
+- `src/pages/Preview.tsx` — 1줄
 
