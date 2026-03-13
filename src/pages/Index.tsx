@@ -543,7 +543,7 @@ export default function Index() {
             onChange={(e) => setPassage(e.target.value)}
             placeholder="영어 지문을 입력하세요..."
             rows={5}
-            className="w-full bg-card border border-border px-4 py-3 text-sm font-english leading-relaxed text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-foreground transition-colors resize-y"
+            className="w-full bg-card border border-border rounded-xl px-4 py-3 text-sm font-english leading-relaxed text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-foreground transition-colors resize-y"
           />
           <div className="flex flex-wrap items-center justify-between mt-3 gap-2">
             <div className="flex items-center gap-2">
