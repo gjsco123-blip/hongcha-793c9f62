@@ -42,7 +42,7 @@ export function PreviewPassageInput({ passage, setPassage, isGenerating, onGener
           onChange={(e) => setPassage(e.target.value)}
           placeholder="영어 지문 전체를 붙여넣으세요."
           rows={6}
-          className="w-full bg-card border border-border px-4 py-3 text-sm font-english leading-relaxed text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-foreground transition-colors resize-y"
+          className="w-full bg-card border border-border rounded-xl px-4 py-3 text-sm font-english leading-relaxed text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-foreground transition-colors resize-y"
         />
       ) : (
         <div className="w-full bg-card border border-border px-4 py-3 text-sm font-english leading-relaxed text-foreground min-h-[150px] select-none">
