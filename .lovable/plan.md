@@ -1,33 +1,22 @@
 
 
-# 힌트 모드에도 학습 패턴 반영
+## 모델 전환: `google/gemini-3-flash-preview`
 
-## 현재 상태
-- **자동 생성 모드** (`isAutoMode`): `learning_examples` 5개 fetch → 프롬프트에 주입 ✅
-- **힌트 모드** (freestyle/tag 모두): `learning_examples` fetch 없음 ❌
+4개 edge function의 모델을 `google/gemini-2.5-flash` → `google/gemini-3-flash-preview`로 변경합니다.
 
-## 수정
+### 변경 대상
 
-### 파일: `supabase/functions/grammar/index.ts`
+| 파일 | 현재 모델 | 변경 후 |
+|------|-----------|---------|
+| `supabase/functions/engine/index.ts` (line 210) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/hongt/index.ts` (line 117) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/grammar/index.ts` (line 289) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/grammar/index.ts` (line 382) | `google/gemini-2.5-flash` (freestyle 모드) | `google/gemini-3-flash-preview` |
 
-힌트 모드 경로 (line 490 이후)에서도 `userId`가 있으면 `learning_examples`를 fetch하여 시스템 프롬프트에 추가합니다.
+### 변경하지 않는 것
+- `spellcheck` (gemini-2.5-flash-lite 유지)
+- `regenerate` (이미 gemini-3-flash-preview)
+- `analyze-vocab`, `analyze-single-vocab`, `analyze-preview`, `analyze-structure` (별도 요청 없음)
 
-구체적으로:
-1. line 500 (`LOVABLE_API_KEY` 체크) 앞에 자동 모드와 동일한 `learning_examples` fetch 블록 추가
-2. fetch한 예시를 `learningBlock` 문자열로 구성
-3. line 530의 `systemPrompt`에 `+ learningBlock` 추가
-
-자동 모드와 동일한 패턴이므로, 코드를 공통 함수로 추출하여 중복 제거합니다.
-
-```text
-변경 전 (힌트 모드):
-  systemPrompt만 사용
-
-변경 후:
-  learningBlock = fetchLearningExamples(userId)  // 공통 함수
-  systemPrompt + learningBlock
-```
-
-### 변경량
-- `grammar/index.ts` 1개 파일, ~20줄 추가/수정
+각 파일에서 model 문자열 1줄씩만 수정, 총 4곳.
 

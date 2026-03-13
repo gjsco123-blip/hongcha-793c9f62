@@ -331,6 +331,27 @@ const autoTools = [
 ];
 
 // -----------------------------
+// Shared: fetch learning examples
+// -----------------------------
+async function fetchLearningBlock(userId: string | undefined): Promise<string> {
+  if (!userId) return "";
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !serviceRoleKey) return "";
+    const url = `${supabaseUrl}/rest/v1/learning_examples?user_id=eq.${userId}&type=eq.syntax&order=created_at.desc&limit=5&select=sentence,ai_draft,final_version`;
+    const res = await fetch(url, { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } });
+    if (!res.ok) return "";
+    const examples = await res.json();
+    if (examples.length === 0) return "";
+    const lines = examples.map((e: any) => `원문: ${e.sentence}\nAI초안: ${e.ai_draft}\n최종: ${e.final_version}`).join("\n---\n");
+    return `\n\n[사용자 선호 스타일 예시 — 아래 최종 버전의 톤·길이·표현 방식을 참고하여 작성하라]\n${lines}`;
+  } catch {
+    return "";
+  }
+}
+
+// -----------------------------
 // Server
 // -----------------------------
 serve(async (req) => {
@@ -361,26 +382,7 @@ serve(async (req) => {
       const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
       if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-      // Fetch learning examples for auto mode
-      let learningBlock = "";
-      if (userId) {
-        try {
-          const supabaseUrl = Deno.env.get("SUPABASE_URL");
-          const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-          if (supabaseUrl && serviceRoleKey) {
-            const url = `${supabaseUrl}/rest/v1/learning_examples?user_id=eq.${userId}&type=eq.syntax&order=created_at.desc&limit=5&select=sentence,ai_draft,final_version`;
-            const res = await fetch(url, { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } });
-            if (res.ok) {
-              const examples = await res.json();
-              if (examples.length > 0) {
-                const lines = examples.map((e: any) => `원문: ${e.sentence}\nAI초안: ${e.ai_draft}\n최종: ${e.final_version}`).join("\n---\n");
-                learningBlock = `\n\n[사용자 선호 스타일 예시 — 아래 최종 버전의 톤·길이·표현 방식을 참고하여 작성하라]\n${lines}`;
-              }
-            }
-          }
-        } catch {}
-      }
-
+      const learningBlock = await fetchLearningBlock(userId);
       const userMessage = `문장: ${full}\n이 문장에서 수능에 출제될 수 있는 핵심 문법 포인트를 찾아서 points로 작성하라. 각 포인트마다 원문에서 해당 문법이 적용되는 핵심 구문(2~5단어)을 targetText로 함께 반환하라.`;
 
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -501,6 +503,9 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
+    // Fetch learning examples for hint mode too
+    const learningBlock = await fetchLearningBlock(userId);
+
     const userMessage = useFreestyle
       ? `전체 문장: ${full}\n` +
         `선택 구문: ${selected || "(없음/전체문장기준)"}\n` +
@@ -527,7 +532,7 @@ serve(async (req) => {
         {
           role: "system",
           content:
-            systemPrompt +
+            systemPrompt + learningBlock +
             (useToolCall ? "" : '\n\n출력 형식: 반드시 {"points":[...]} JSON만 출력하라. 다른 텍스트 없이 JSON만.'),
         },
         { role: "user", content: userMessage },
