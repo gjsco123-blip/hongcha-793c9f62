@@ -222,9 +222,9 @@ export function CategoryFullScreen({
                     placeholder="지문 이름 입력"
                     className="flex-1 h-10 px-3 border-b border-border bg-transparent text-sm outline-none focus:border-foreground transition-colors"
                   />
-                  <button
+                   <button
                     onClick={handleAddPassage}
-                    className="h-10 px-4 bg-foreground text-background text-xs font-medium hover:opacity-85 transition-opacity"
+                    className="h-10 px-4 rounded-full bg-foreground text-background text-xs font-medium hover:opacity-85 transition-opacity"
                   >
                     추가
                   </button>

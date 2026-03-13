@@ -100,7 +100,7 @@ export function HongTSection({ value, onChange, onGenerate, generating, onDelete
             )}
             <button
               onClick={() => setEditing((prev) => !prev)}
-              className="text-[10px] px-2 py-0.5 border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"
+              className="text-[10px] px-2 py-0.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"
             >
               {editing ? "완료" : "수정"}
             </button>

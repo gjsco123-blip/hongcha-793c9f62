@@ -23,10 +23,10 @@ export function CompareOverlay({ title, oldContent, newContent, onAccept, onReje
         </div>
       </div>
       <div className="flex gap-2 justify-end">
-        <button onClick={onReject} className="text-[10px] px-3 py-1 border border-border text-muted-foreground hover:text-foreground transition-colors">
+        <button onClick={onReject} className="text-[10px] px-3 py-1 rounded-full border border-border text-muted-foreground hover:text-foreground transition-colors">
           유지
         </button>
-        <button onClick={onAccept} className="text-[10px] px-3 py-1 bg-foreground text-background hover:opacity-90 transition-opacity">
+        <button onClick={onAccept} className="text-[10px] px-3 py-1 rounded-full bg-foreground text-background hover:opacity-90 transition-opacity">
           적용
         </button>
       </div>

@@ -775,7 +775,7 @@ export default function Index() {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleExportPdf}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-foreground text-foreground hover:bg-foreground hover:text-background transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-foreground text-foreground hover:bg-foreground hover:text-background transition-colors"
               >
                 <FileDown className="w-3.5 h-3.5" /> 다운로드
               </button>
