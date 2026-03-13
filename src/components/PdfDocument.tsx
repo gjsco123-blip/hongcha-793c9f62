@@ -227,28 +227,62 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
     arr.push(entry);
     superscriptMap.set(key, arr);
   };
+
+  // Build full text from original or chunks, and a position map from fullText offset → chunk/segment
+  const fullText = original || chunks.map((c) => c.text).join(" ");
+  const fullTextLower = fullText.toLowerCase();
+
+  // Build chunk offset ranges: for each chunk, its start position in fullText
+  // We match against fullText (original), then map back to chunk/segment coordinates
+  const chunkOffsets: { ci: number; start: number; end: number; segOffsets: { si: number; start: number; end: number }[] }[] = [];
+  {
+    let cursor = 0;
+    for (let ci = 0; ci < chunks.length; ci++) {
+      const chunkTextLower = chunks[ci].text.toLowerCase();
+      // Find this chunk's text in fullText starting from cursor
+      const chunkStart = fullTextLower.indexOf(chunkTextLower, cursor);
+      const start = chunkStart !== -1 ? chunkStart : cursor;
+      const end = start + chunks[ci].text.length;
+      // Build segment offsets within this chunk
+      const segOffsets: { si: number; start: number; end: number }[] = [];
+      let segCursor = start;
+      for (let si = 0; si < chunks[ci].segments.length; si++) {
+        const segLen = chunks[ci].segments[si].text.length;
+        segOffsets.push({ si, start: segCursor, end: segCursor + segLen });
+        segCursor += segLen;
+      }
+      chunkOffsets.push({ ci, start, end, segOffsets });
+      cursor = end;
+    }
+  }
+
   for (const ann of annotations) {
     const targetLower = ann.targetText!.toLowerCase().trim();
-    let found = false;
-    for (let ci = 0; ci < chunks.length && !found; ci++) {
-      const chunkText = chunks[ci].text.toLowerCase();
-      const idx = chunkText.indexOf(targetLower);
-      if (idx === -1) continue;
-      let segCursor = 0;
-      for (let si = 0; si < chunks[ci].segments.length; si++) {
-        const segEnd = segCursor + chunks[ci].segments[si].text.length;
-        if (idx >= segCursor && idx < segEnd) {
-          const offsetInSeg = idx - segCursor;
-          addSup(`${ci}-${si}`, { id: ann.id, offset: offsetInSeg });
-          found = true;
-          break;
+    const matchIdx = fullTextLower.indexOf(targetLower);
+    if (matchIdx === -1) continue;
+
+    // Find the chunk/segment that contains the match start
+    let placed = false;
+    for (const co of chunkOffsets) {
+      if (matchIdx >= co.start && matchIdx < co.end) {
+        for (const so of co.segOffsets) {
+          if (matchIdx >= so.start && matchIdx < so.end) {
+            const offsetInSeg = matchIdx - so.start;
+            addSup(`${co.ci}-${so.si}`, { id: ann.id, offset: offsetInSeg });
+            placed = true;
+            break;
+          }
         }
-        segCursor = segEnd;
+        if (!placed) {
+          addSup(`${co.ci}-0`, { id: ann.id, offset: 0 });
+          placed = true;
+        }
+        break;
       }
-      if (!found) {
-        addSup(`${ci}-0`, { id: ann.id, offset: 0 });
-        found = true;
-      }
+    }
+    if (!placed) {
+      // Fallback: place at first chunk
+      addSup(`0-0`, { id: ann.id, offset: 0 });
     }
   }
 
