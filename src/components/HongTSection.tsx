@@ -73,7 +73,7 @@ export function HongTSection({ value, onChange, onGenerate, generating, onDelete
               <button
                 onClick={onGenerate}
                 disabled={generating}
-                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors disabled:opacity-40"
+                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors disabled:opacity-40"
               >
                 <Sparkles className="w-3 h-3" />
                 자동 생성
