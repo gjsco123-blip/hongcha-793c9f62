@@ -521,7 +521,7 @@ export default function Index() {
 
   const handleExportPdf = async () => {
     try {
-      await exportToPdf(results, pdfTitle, "", "syntax-worksheet.pdf");
+      await exportToPdf(results, pdfTitle, "", `${pdfTitle}+구문분석.pdf`);
       toast.success("PDF 다운로드가 시작되었습니다.");
     } catch (err: any) {
       toast.error(`PDF 저장 실패: ${err.message}`);
