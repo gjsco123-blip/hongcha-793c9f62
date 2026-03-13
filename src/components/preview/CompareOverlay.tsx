@@ -8,7 +8,7 @@ interface Props {
 
 export function CompareOverlay({ title, oldContent, newContent, onAccept, onReject }: Props) {
   return (
-    <div className="border border-border bg-card p-4 space-y-3 mt-2">
+    <div className="border border-border bg-card rounded-xl p-4 space-y-3 mt-2">
       <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
         {title} — 새 결과 비교
       </p>
