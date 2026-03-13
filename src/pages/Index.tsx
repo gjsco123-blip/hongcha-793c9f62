@@ -116,8 +116,53 @@ export default function Index() {
   // Track AI-generated drafts for learning_examples auto-save
   const aiDraftMapRef = useRef<Record<number, string>>({});
 
+  // Save syntax learning examples when leaving a passage
+  const saveSyntaxLearningExamples = useCallback(async (resultsToSave: SentenceResult[]) => {
+    if (!user?.id) return;
+    const drafts = aiDraftMapRef.current;
+    for (const r of resultsToSave) {
+      if (!r.syntaxNotes || r.syntaxNotes.length === 0) continue;
+      const finalVersion = r.syntaxNotes.map(n => n.content).join("\n");
+      const aiDraft = drafts[r.id] || "";
+      if (!finalVersion.trim()) continue;
+
+      try {
+        // Dedup: skip if same sentence saved within 24h
+        const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { data: existing } = await supabase
+          .from("learning_examples")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("type", "syntax")
+          .eq("sentence", r.original)
+          .gte("created_at", since)
+          .limit(1);
+        if (existing && existing.length > 0) continue;
+
+        await supabase.from("learning_examples").insert({
+          user_id: user.id,
+          type: "syntax",
+          sentence: r.original,
+          ai_draft: aiDraft,
+          final_version: finalVersion,
+          preset,
+        });
+      } catch {}
+    }
+  }, [user?.id, preset]);
+
   // Load passage data when a passage is selected
+  const prevPassageIdRef = useRef<string | null>(null);
+  const prevResultsRef = useRef<SentenceResult[]>([]);
+
   useEffect(() => {
+    // Save learning examples from previous passage before loading new one
+    if (prevPassageIdRef.current && prevPassageIdRef.current !== categories.selectedPassageId) {
+      saveSyntaxLearningExamples(prevResultsRef.current);
+      aiDraftMapRef.current = {};
+    }
+    prevPassageIdRef.current = categories.selectedPassageId || null;
+
     const p = categories.selectedPassage;
     if (p) {
       setPassage(p.passage_text || "");
@@ -137,6 +182,11 @@ export default function Index() {
       dataLoadedRef.current = true;
     }
   }, [categories.selectedPassageId, categories.selectedPassage]);
+
+  // Keep prevResultsRef in sync
+  useEffect(() => {
+    prevResultsRef.current = results;
+  }, [results]);
 
   // Auto-save with debounce
   const autoSave = useCallback(() => {
