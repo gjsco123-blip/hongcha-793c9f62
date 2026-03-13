@@ -648,13 +648,13 @@ export default function Index() {
                 {result.englishChunks.length > 0 ? (
                   <div className="ml-9 space-y-4">
                     {/* English chunks */}
-                    <div className="bg-muted/50 border border-border p-3">
+                    <div className="bg-muted/50 border border-border rounded-xl p-3">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
                           Chunking
                         </span>
                         <span className="text-[9px] text-muted-foreground">
-                          ✏️ 편집 · 클릭: 분할/병합 · 더블클릭: 동사 표시
+                          편집 · 클릭: 분할/병합 · 더블클릭: 동사 표시
                         </span>
                       </div>
                       <ChunkEditor
