@@ -45,7 +45,7 @@ export function PreviewPassageInput({ passage, setPassage, isGenerating, onGener
           className="w-full bg-card border border-border rounded-xl px-4 py-3 text-sm font-english leading-relaxed text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-foreground transition-colors resize-y"
         />
       ) : (
-        <div className="w-full bg-card border border-border px-4 py-3 text-sm font-english leading-relaxed text-foreground min-h-[150px] select-none">
+        <div className="w-full bg-card border border-border rounded-xl px-4 py-3 text-sm font-english leading-relaxed text-foreground min-h-[150px] select-none">
           {words.map((segment, i) => {
             if (/^\s+$/.test(segment)) return <span key={i}>{segment}</span>;
             const cleanWord = segment.replace(/[^a-zA-Z'-]/g, "");
