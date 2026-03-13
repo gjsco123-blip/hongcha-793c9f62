@@ -1,9 +1,33 @@
 import React from "react";
 
-interface SyntaxNoteWithTarget {
+export interface SyntaxNoteWithTarget {
   id: number;
   content: string;
   targetText?: string;
+}
+
+/**
+ * Compute superscript positions by matching targetText against the original text.
+ * Returns a Map from character start-position (in originalText) to array of note IDs.
+ * This is the single source of truth for both web UI and PDF rendering.
+ */
+export function computeSuperscriptPositions(
+  originalText: string,
+  syntaxNotes: SyntaxNoteWithTarget[]
+): Map<number, number[]> {
+  const result = new Map<number, number[]>();
+  const lowerText = originalText.toLowerCase();
+
+  for (const note of syntaxNotes) {
+    if (!note.targetText) continue;
+    const idx = lowerText.indexOf(note.targetText.toLowerCase());
+    if (idx === -1) continue;
+    const arr = result.get(idx) || [];
+    arr.push(note.id);
+    result.set(idx, arr);
+  }
+
+  return result;
 }
 
 /**
