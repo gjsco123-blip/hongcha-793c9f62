@@ -1,27 +1,22 @@
 
 
-# TEXT ANALYSIS 높이 과다 추정으로 인한 페이지 넘김 문제
+## 모델 전환: `google/gemini-3-flash-preview`
 
-## 원인
+4개 edge function의 모델을 `google/gemini-2.5-flash` → `google/gemini-3-flash-preview`로 변경합니다.
 
-`PASSAGE_CHARS_PER_LINE`이 **85**로 설정되어 있는데, 이 값이 실제보다 너무 작습니다.
+### 변경 대상
 
-- **왼쪽 본문 컬럼** (MEMO 포함): 텍스트 너비 ~403pt → `ENG_CHARS_PER_LINE = 88`
-- **TEXT ANALYSIS 박스** (전체 너비): 텍스트 너비 ~475pt → 실제 ~104자/줄
+| 파일 | 현재 모델 | 변경 후 |
+|------|-----------|---------|
+| `supabase/functions/engine/index.ts` (line 210) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/hongt/index.ts` (line 117) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/grammar/index.ts` (line 289) | `google/gemini-2.5-flash` | `google/gemini-3-flash-preview` |
+| `supabase/functions/grammar/index.ts` (line 382) | `google/gemini-2.5-flash` (freestyle 모드) | `google/gemini-3-flash-preview` |
 
-즉, 더 넓은 TEXT ANALYSIS 영역의 `CHARS_PER_LINE`(85)이 더 좁은 본문 컬럼(88)보다 오히려 작게 설정되어 있어, 줄 수가 과다 추정되고 → 높이가 과다 추정되고 → 실제로는 들어갈 공간이 있는데도 다음 페이지로 넘깁니다.
+### 변경하지 않는 것
+- `spellcheck` (gemini-2.5-flash-lite 유지)
+- `regenerate` (이미 gemini-3-flash-preview)
+- `analyze-vocab`, `analyze-single-vocab`, `analyze-preview`, `analyze-structure` (별도 요청 없음)
 
-## 해결
-
-`src/lib/pdf-pagination.ts`에서 `PASSAGE_CHARS_PER_LINE`을 85 → **103**으로 수정합니다.
-
-```
-계산 근거:
-페이지 너비 595.28 - padding 84 - marginRight 8 - boxPadding 28 = 475pt
-왼쪽 컬럼: 595.28 - 84 - 8.5 - 100 = 402.78pt → 88자
-비율: 88 × (475 / 403) ≈ 103.7 → 103자
-```
-
-### 수정 파일
-- `src/lib/pdf-pagination.ts` — 1줄 (`PASSAGE_CHARS_PER_LINE: 85` → `103`)
+각 파일에서 model 문자열 1줄씩만 수정, 총 4곳.
 

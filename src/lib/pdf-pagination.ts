@@ -62,7 +62,7 @@ export const PDF = {
   PASSAGE_TITLE_H: 10,        // title line + marginBottom
   PASSAGE_BOX_PADDING: 26,    // paddingTop(12) + paddingBottom(12) + border
   PASSAGE_LINE_H: 9 * 2,      // fontSize 9 * lineHeight 2
-  PASSAGE_CHARS_PER_LINE: 85,  // chars per line inside the passage box
+  PASSAGE_CHARS_PER_LINE: 103, // chars per line inside the passage box (full-width)
 
   // Safety margin — absorbs small rendering variances
   // Positive value = we leave this much unused space as buffer
