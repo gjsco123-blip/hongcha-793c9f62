@@ -524,8 +524,8 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    // Fetch learning examples for hint mode too
-    const learningBlock = await fetchLearningBlock(userId);
+    // Fetch learning examples + pinned patterns for hint mode too
+    const [learningBlock, pinnedBlock] = await Promise.all([fetchLearningBlock(userId), fetchPinnedPatterns(userId)]);
 
     const userMessage = useFreestyle
       ? `전체 문장: ${full}\n` +
