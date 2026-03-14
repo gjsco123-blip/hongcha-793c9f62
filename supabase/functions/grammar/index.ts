@@ -331,6 +331,27 @@ const autoTools = [
 ];
 
 // -----------------------------
+// Shared: fetch pinned patterns
+// -----------------------------
+async function fetchPinnedPatterns(userId: string | undefined): Promise<string> {
+  if (!userId) return "";
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !serviceRoleKey) return "";
+    const url = `${supabaseUrl}/rest/v1/syntax_patterns?user_id=eq.${userId}&order=created_at.desc&select=tag,pinned_content`;
+    const res = await fetch(url, { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } });
+    if (!res.ok) return "";
+    const patterns = await res.json();
+    if (patterns.length === 0) return "";
+    const lines = patterns.map((p: any) => `${p.tag}: ${p.pinned_content}`).join("\n");
+    return `\n\n[고정 패턴 — 아래 문법 항목은 반드시 해당 형식으로 작성하라]\n${lines}`;
+  } catch {
+    return "";
+  }
+}
+
+// -----------------------------
 // Shared: fetch learning examples
 // -----------------------------
 async function fetchLearningBlock(userId: string | undefined): Promise<string> {
