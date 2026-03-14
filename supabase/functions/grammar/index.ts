@@ -403,7 +403,7 @@ serve(async (req) => {
       const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
       if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-      const learningBlock = await fetchLearningBlock(userId);
+      const [learningBlock, pinnedBlock] = await Promise.all([fetchLearningBlock(userId), fetchPinnedPatterns(userId)]);
       const userMessage = `문장: ${full}\n이 문장에서 수능에 출제될 수 있는 핵심 문법 포인트를 찾아서 points로 작성하라. 각 포인트마다 원문에서 해당 문법이 적용되는 핵심 구문(2~5단어)을 targetText로 함께 반환하라.`;
 
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
