@@ -417,7 +417,7 @@ serve(async (req) => {
           temperature: 0.2,
           max_tokens: 1500,
           messages: [
-            { role: "system", content: buildAutoSystemPrompt() + learningBlock },
+            { role: "system", content: buildAutoSystemPrompt() + pinnedBlock + learningBlock },
             { role: "user", content: userMessage },
           ],
           tools: autoTools,
