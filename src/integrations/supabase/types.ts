@@ -118,6 +118,33 @@ export type Database = {
         }
         Relationships: []
       }
+      syntax_patterns: {
+        Row: {
+          created_at: string
+          example_sentence: string | null
+          id: string
+          pinned_content: string
+          tag: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          example_sentence?: string | null
+          id?: string
+          pinned_content: string
+          tag: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          example_sentence?: string | null
+          id?: string
+          pinned_content?: string
+          tag?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
