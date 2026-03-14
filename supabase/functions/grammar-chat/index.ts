@@ -135,7 +135,7 @@ serve(async (req) => {
     }
 
     const aiMessages = [
-      { role: "system", content: systemPrompt + targetedSystemAddendum + learningBlock },
+      { role: "system", content: systemPrompt + targetedSystemAddendum + pinnedBlock + learningBlock },
       {
         role: "system",
         content: `아래는 현재 작업 중인 문장과 구문분석 노트입니다:\n\n${contextBlock}`,
