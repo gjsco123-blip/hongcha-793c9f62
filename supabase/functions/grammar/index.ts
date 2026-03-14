@@ -553,7 +553,7 @@ serve(async (req) => {
         {
           role: "system",
           content:
-            systemPrompt + learningBlock +
+            systemPrompt + pinnedBlock + learningBlock +
             (useToolCall ? "" : '\n\n출력 형식: 반드시 {"points":[...]} JSON만 출력하라. 다른 텍스트 없이 JSON만.'),
         },
         { role: "user", content: userMessage },
