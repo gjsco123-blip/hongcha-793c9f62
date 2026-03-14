@@ -100,20 +100,34 @@ serve(async (req) => {
 - 다른 포인트는 건드리지 않는다.`
       : "";
 
-    // Fetch learning examples
+    // Fetch learning examples + pinned patterns
     let learningBlock = "";
+    let pinnedBlock = "";
     if (userId) {
       try {
         const supabaseUrl = Deno.env.get("SUPABASE_URL");
         const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
         if (supabaseUrl && serviceRoleKey) {
-          const url = `${supabaseUrl}/rest/v1/learning_examples?user_id=eq.${userId}&type=eq.syntax&order=created_at.desc&limit=3&select=sentence,ai_draft,final_version`;
-          const res = await fetch(url, { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } });
-          if (res.ok) {
-            const examples = await res.json();
+          const [learningRes, patternsRes] = await Promise.all([
+            fetch(`${supabaseUrl}/rest/v1/learning_examples?user_id=eq.${userId}&type=eq.syntax&order=created_at.desc&limit=3&select=sentence,ai_draft,final_version`, {
+              headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` },
+            }),
+            fetch(`${supabaseUrl}/rest/v1/syntax_patterns?user_id=eq.${userId}&order=created_at.desc&select=tag,pinned_content`, {
+              headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` },
+            }),
+          ]);
+          if (learningRes.ok) {
+            const examples = await learningRes.json();
             if (examples.length > 0) {
               const lines = examples.map((e: any) => `원문: ${e.sentence}\nAI초안: ${e.ai_draft}\n최종: ${e.final_version}`).join("\n---\n");
               learningBlock = `\n\n[사용자 선호 스타일 예시]\n${lines}`;
+            }
+          }
+          if (patternsRes.ok) {
+            const patterns = await patternsRes.json();
+            if (patterns.length > 0) {
+              const lines = patterns.map((p: any) => `${p.tag}: ${p.pinned_content}`).join("\n");
+              pinnedBlock = `\n\n[고정 패턴 — 아래 문법 항목은 반드시 해당 형식으로 작성하라]\n${lines}`;
             }
           }
         }
@@ -121,7 +135,7 @@ serve(async (req) => {
     }
 
     const aiMessages = [
-      { role: "system", content: systemPrompt + targetedSystemAddendum + learningBlock },
+      { role: "system", content: systemPrompt + targetedSystemAddendum + pinnedBlock + learningBlock },
       {
         role: "system",
         content: `아래는 현재 작업 중인 문장과 구문분석 노트입니다:\n\n${contextBlock}`,

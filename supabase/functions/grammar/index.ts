@@ -331,6 +331,27 @@ const autoTools = [
 ];
 
 // -----------------------------
+// Shared: fetch pinned patterns
+// -----------------------------
+async function fetchPinnedPatterns(userId: string | undefined): Promise<string> {
+  if (!userId) return "";
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !serviceRoleKey) return "";
+    const url = `${supabaseUrl}/rest/v1/syntax_patterns?user_id=eq.${userId}&order=created_at.desc&select=tag,pinned_content`;
+    const res = await fetch(url, { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } });
+    if (!res.ok) return "";
+    const patterns = await res.json();
+    if (patterns.length === 0) return "";
+    const lines = patterns.map((p: any) => `${p.tag}: ${p.pinned_content}`).join("\n");
+    return `\n\n[고정 패턴 — 아래 문법 항목은 반드시 해당 형식으로 작성하라]\n${lines}`;
+  } catch {
+    return "";
+  }
+}
+
+// -----------------------------
 // Shared: fetch learning examples
 // -----------------------------
 async function fetchLearningBlock(userId: string | undefined): Promise<string> {
@@ -382,7 +403,7 @@ serve(async (req) => {
       const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
       if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-      const learningBlock = await fetchLearningBlock(userId);
+      const [learningBlock, pinnedBlock] = await Promise.all([fetchLearningBlock(userId), fetchPinnedPatterns(userId)]);
       const userMessage = `문장: ${full}\n이 문장에서 수능에 출제될 수 있는 핵심 문법 포인트를 찾아서 points로 작성하라. 각 포인트마다 원문에서 해당 문법이 적용되는 핵심 구문(2~5단어)을 targetText로 함께 반환하라.`;
 
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -396,7 +417,7 @@ serve(async (req) => {
           temperature: 0.2,
           max_tokens: 1500,
           messages: [
-            { role: "system", content: buildAutoSystemPrompt() + learningBlock },
+            { role: "system", content: buildAutoSystemPrompt() + pinnedBlock + learningBlock },
             { role: "user", content: userMessage },
           ],
           tools: autoTools,
@@ -503,8 +524,8 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    // Fetch learning examples for hint mode too
-    const learningBlock = await fetchLearningBlock(userId);
+    // Fetch learning examples + pinned patterns for hint mode too
+    const [learningBlock, pinnedBlock] = await Promise.all([fetchLearningBlock(userId), fetchPinnedPatterns(userId)]);
 
     const userMessage = useFreestyle
       ? `전체 문장: ${full}\n` +
@@ -532,7 +553,7 @@ serve(async (req) => {
         {
           role: "system",
           content:
-            systemPrompt + learningBlock +
+            systemPrompt + pinnedBlock + learningBlock +
             (useToolCall ? "" : '\n\n출력 형식: 반드시 {"points":[...]} JSON만 출력하라. 다른 텍스트 없이 JSON만.'),
         },
         { role: "user", content: userMessage },
