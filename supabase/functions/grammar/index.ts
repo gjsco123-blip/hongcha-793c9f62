@@ -370,8 +370,8 @@ async function fetchPinnedPatterns(userId: string | undefined): Promise<string> 
     if (!res.ok) return "";
     const patterns = await res.json();
     if (patterns.length === 0) return "";
-    const lines = patterns.map((p: any) => `${p.tag}: ${p.pinned_content}`).join("\n");
-    return `\n\n[고정 패턴 — 아래 문법 항목은 반드시 해당 형식으로 작성하라]\n${lines}`;
+    const lines = patterns.map((p: any) => String(p.pinned_content ?? "").trim()).filter(Boolean).join("\n");
+    return `\n\n[고정 패턴 — 아래 문장을 문체/구조 기준으로 반드시 따를 것]\n${lines}\n- 출력에 태그명 접두어(예: 관계대명사:, 5형식:)를 붙이지 말 것.`;
   } catch {
     return "";
   }
