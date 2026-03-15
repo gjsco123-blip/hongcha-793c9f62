@@ -1,54 +1,11 @@
 
 
-# 고정 패턴이 자동생성 모드에서 적용되지 않는 원인과 수정
+## 구문분석 패턴 고정(Pin) 기능
 
-## 원인 분석
+### 완료된 변경
 
-### 문제 1: `promptBlock`에 태그가 없음
-현재 고정 패턴 프롬프트 블록:
-```
-[고정 패턴 — 아래 문장을 문체/구조 기준으로 반드시 따를 것]
-주격 관계대명사 who/which/that이 선행사 ___를 수식하는 관계절을 이끔
-접속사+주어 생략, ~ing로 시작하는 분사구문
-```
-→ 자동 모드에서 5개 포인트를 동시 생성할 때, AI가 어떤 문법에 어떤 패턴을 적용해야 하는지 모름.
-
-### 문제 2: `applyPinnedPattern` 후처리가 원문 내용을 날림
-현재 코드는 태그가 매칭되면 AI가 생성한 내용을 **통째로** 고정 패턴 템플릿으로 교체함 (line 284: `return pinned`). 그래서 `___` 자리에 실제 단어가 채워지지 않고 템플릿 그대로 나옴.
-
-## 수정 방향: 프롬프트에서 해결 (후처리 교체 방식 폐지)
-
-고정 패턴을 **프롬프트 안에서 태그별로 명시**하여 AI가 직접 그 형식대로 생성하도록 하고, 후처리에서 통째로 교체하는 로직은 제거.
-
-## 수정 파일
-
-### 1. `supabase/functions/grammar/index.ts`
-
-**변경 A: `fetchPinnedPatterns` — promptBlock을 태그별로 구조화**
-
-```
-[고정 패턴 — 해당 태그의 포인트는 반드시 아래 형식을 기반으로 작성하라. ___만 실제 단어로 채울 것]
-- 관계대명사: 주격 관계대명사 who/which/that이 선행사 ___를 수식하는 관계절을 이끔
-- 분사구문: 접속사+주어 생략, ~ing로 시작하는 분사구문
-```
-
-**변경 B: `applyPinnedPattern` — 통째로 교체 → 제거 (또는 no-op)**
-
-더 이상 후처리에서 교체하지 않음. 프롬프트가 이미 형식을 강제하므로 AI 출력을 그대로 사용.
-
-**변경 C: 빌드 에러 수정 — `engine/index.ts` line 96**
-
-`levelGuide` 인덱싱 타입 에러 해결 (`as Record<string, string>` 또는 타입 단언).
-
-### 2. `supabase/functions/grammar-chat/index.ts`
-
-동일하게 고정 패턴 블록을 태그별로 구조화하여 주입 (이미 DB에서 tag 정보를 가져오고 있으므로 형식만 변경).
-
-## 변경 효과
-
-| 모드 | 현재 | 수정 후 |
-|------|------|---------|
-| 힌트 (드래그+태그 입력) | ✅ 작동 | ✅ 유지 |
-| 자동 생성 | ❌ 패턴 무시 | ✅ 태그별 매핑으로 AI가 직접 형식 적용 |
-| AI 채팅 수정 | ❌ 패턴 무시 가능 | ✅ 동일 개선 |
-
+1. **DB: `syntax_patterns` 테이블** — user_id, tag, pinned_content, example_sentence + RLS
+2. **`supabase/functions/grammar/index.ts`** — `fetchPinnedPatterns()` 추가, 자동생성/힌트 모드 모두 시스템 프롬프트에 `[고정 패턴]` 블록 주입
+3. **`supabase/functions/grammar-chat/index.ts`** — 동일하게 고정 패턴 주입
+4. **`src/components/SyntaxNotesSection.tsx`** — 각 노트에 📌 호버 버튼 (자동 태그 감지 + 선택), 고정 패턴 관리 버튼
+5. **`src/components/PinnedPatternsManager.tsx`** (신규) — Sheet 형태 관리 UI (목록/삭제/직접 추가)

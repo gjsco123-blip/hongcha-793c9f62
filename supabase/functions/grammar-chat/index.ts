@@ -130,8 +130,8 @@ serve(async (req) => {
           if (patternsRes.ok) {
             const patterns = await patternsRes.json();
             if (patterns.length > 0) {
-              const lines = patterns.map((p: any) => `${p.tag}: ${p.pinned_content}`).join("\n");
-              pinnedBlock = `\n\n[고정 패턴 — 아래 문법 항목은 반드시 해당 형식으로 작성하라]\n${lines}`;
+              const tagLines = patterns.map((p: any) => `- ${p.tag}: ${p.pinned_content}`).join("\n");
+              pinnedBlock = `\n\n[고정 패턴 — 해당 태그의 포인트는 반드시 아래 형식을 기반으로 작성하라. ___만 실제 단어로 채울 것]\n${tagLines}\n위 태그에 해당하는 문법 포인트를 작성할 때, 반드시 해당 패턴의 문체·구조·표현을 그대로 따르되 ___에는 실제 문장의 단어를 넣어라.`;
             }
           }
         }

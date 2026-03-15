@@ -268,21 +268,12 @@ function normalizeModelTagToUiTag(tag: string): string {
 
 function applyPinnedPattern(
   content: string,
-  hintTags: TagId[],
-  pinnedByTag: Map<string, string>,
-  explicitUiTag?: string,
+  _hintTags: TagId[],
+  _pinnedByTag: Map<string, string>,
+  _explicitUiTag?: string,
 ): string {
-  if (!content || pinnedByTag.size === 0) return content;
-
-  const candidates: string[] = [];
-  if (explicitUiTag) candidates.push(explicitUiTag);
-  for (const t of hintTags) candidates.push(mapTagIdToUiTag(t));
-  candidates.push(detectUiTagFromContent(content));
-
-  for (const candidate of candidates) {
-    const pinned = pinnedByTag.get(normalizeTagKey(candidate));
-    if (pinned) return pinned;
-  }
+  // No-op: pinned patterns are now enforced via prompt, not post-processing replacement.
+  // Keeping the function signature to avoid breaking callers.
   return content;
 }
 
@@ -504,11 +495,18 @@ async function fetchPinnedPatterns(userId: string | undefined, authHeader?: stri
       if (!byTag.has(key)) byTag.set(key, content);
     }
 
-    const lines = patterns.map((p: any) => String(p.pinned_content ?? "").trim()).filter(Boolean).join("\n");
+    const tagLines = patterns
+      .map((p: any) => {
+        const tag = String(p?.tag ?? "").trim();
+        const content = String(p?.pinned_content ?? "").trim();
+        return tag && content ? `- ${tag}: ${content}` : "";
+      })
+      .filter(Boolean)
+      .join("\n");
     const promptBlock =
-      `\n\n[고정 패턴 — 아래 문장을 문체/구조 기준으로 반드시 따를 것]\n${lines}\n` +
-      `- 출력에 태그명 접두어(예: 관계대명사:, 5형식:)를 붙이지 말 것.\n` +
-      `- 해당 문법 태그의 고정 패턴이 있으면 표현을 우선 적용할 것.`;
+      `\n\n[고정 패턴 — 해당 태그의 포인트는 반드시 아래 형식을 기반으로 작성하라. ___만 실제 단어로 채울 것]\n${tagLines}\n` +
+      `위 태그에 해당하는 문법 포인트를 작성할 때, 반드시 해당 패턴의 문체·구조·표현을 그대로 따르되 ___에는 실제 문장의 단어를 넣어라.\n` +
+      `출력에 태그명 접두어(예: 관계대명사:, 5형식:)를 붙이지 말 것.`;
     return { promptBlock, byTag };
   } catch {
     return { promptBlock: "", byTag: new Map() };
