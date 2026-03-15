@@ -479,14 +479,18 @@ const autoTools = [
 // -----------------------------
 // Shared: fetch pinned patterns
 // -----------------------------
-async function fetchPinnedPatterns(userId: string | undefined): Promise<PinnedPatternsData> {
+async function fetchPinnedPatterns(userId: string | undefined, authHeader?: string | null): Promise<PinnedPatternsData> {
   if (!userId) return { promptBlock: "", byTag: new Map() };
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!supabaseUrl || !serviceRoleKey) return { promptBlock: "", byTag: new Map() };
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    if (!supabaseUrl || (!serviceRoleKey && !anonKey)) return { promptBlock: "", byTag: new Map() };
+    const apiKey = serviceRoleKey || anonKey!;
+    const auth = serviceRoleKey ? `Bearer ${serviceRoleKey}` : (authHeader || "");
+    if (!auth) return { promptBlock: "", byTag: new Map() };
     const url = `${supabaseUrl}/rest/v1/syntax_patterns?user_id=eq.${userId}&order=created_at.desc&select=tag,pinned_content`;
-    const res = await fetch(url, { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } });
+    const res = await fetch(url, { headers: { apikey: apiKey, Authorization: auth } });
     if (!res.ok) return { promptBlock: "", byTag: new Map() };
     const patterns = await res.json();
     if (patterns.length === 0) return { promptBlock: "", byTag: new Map() };
@@ -514,14 +518,18 @@ async function fetchPinnedPatterns(userId: string | undefined): Promise<PinnedPa
 // -----------------------------
 // Shared: fetch learning examples
 // -----------------------------
-async function fetchLearningBlock(userId: string | undefined): Promise<string> {
+async function fetchLearningBlock(userId: string | undefined, authHeader?: string | null): Promise<string> {
   if (!userId) return "";
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!supabaseUrl || !serviceRoleKey) return "";
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    if (!supabaseUrl || (!serviceRoleKey && !anonKey)) return "";
+    const apiKey = serviceRoleKey || anonKey!;
+    const auth = serviceRoleKey ? `Bearer ${serviceRoleKey}` : (authHeader || "");
+    if (!auth) return "";
     const url = `${supabaseUrl}/rest/v1/learning_examples?user_id=eq.${userId}&type=eq.syntax&order=created_at.desc&limit=5&select=sentence,ai_draft,final_version`;
-    const res = await fetch(url, { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } });
+    const res = await fetch(url, { headers: { apikey: apiKey, Authorization: auth } });
     if (!res.ok) return "";
     const examples = await res.json();
     if (examples.length === 0) return "";
@@ -539,6 +547,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    const reqAuth = req.headers.get("authorization");
     const { sentence, selectedText, userHint, hintTags, mode, userId } = await req.json();
 
     const full = oneLine(sentence || "");
@@ -563,7 +572,10 @@ serve(async (req) => {
       const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
       if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-      const [learningBlock, pinnedData] = await Promise.all([fetchLearningBlock(userId), fetchPinnedPatterns(userId)]);
+      const [learningBlock, pinnedData] = await Promise.all([
+        fetchLearningBlock(userId, reqAuth),
+        fetchPinnedPatterns(userId, reqAuth),
+      ]);
       const userMessage = `문장: ${full}\n이 문장에서 수능에 출제될 수 있는 핵심 문법 포인트를 찾아서 points로 작성하라. 각 포인트마다 원문에서 해당 문법이 적용되는 핵심 구문(2~5단어)을 targetText로 함께 반환하라.`;
 
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -692,7 +704,10 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     // Fetch learning examples + pinned patterns for hint mode too
-    const [learningBlock, pinnedData] = await Promise.all([fetchLearningBlock(userId), fetchPinnedPatterns(userId)]);
+    const [learningBlock, pinnedData] = await Promise.all([
+      fetchLearningBlock(userId, reqAuth),
+      fetchPinnedPatterns(userId, reqAuth),
+    ]);
 
     const userMessage = useFreestyle
       ? `전체 문장: ${full}\n` +
