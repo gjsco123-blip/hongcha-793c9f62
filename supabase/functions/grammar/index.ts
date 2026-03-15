@@ -637,7 +637,7 @@ serve(async (req) => {
       }
     }
 
-    points = points.map(oneLine).filter(Boolean).map(stripLeadingBullets);
+    points = points.map(oneLine).filter(Boolean).map(stripLeadingBullets).map(sanitizeEndings);
 
     if (points.length === 0) {
       points = useFreestyle

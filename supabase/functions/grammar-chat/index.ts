@@ -185,12 +185,21 @@ serve(async (req) => {
     const suggestionMatch = content.match(/\[수정안\]([\s\S]*?)\[\/수정안\]/);
     const suggestion = suggestionMatch ? suggestionMatch[1].trim() : null;
 
+    // Sanitize forbidden endings
+    function sanitizeEndings(text: string): string {
+      return text.replace(/(임|됨|있음|함)(?=[.\s/,)~]|$)/g, (match, _g, offset, str) => {
+        const prev = str[offset - 1];
+        if (prev && /[가-힣]/.test(prev)) return '';
+        return match;
+      });
+    }
+
     // Parse suggestion into array of note strings
     let suggestionNotes: string[] | null = null;
     if (suggestion) {
       suggestionNotes = suggestion
         .split("\n")
-        .map((line: string) => line.replace(/^\s*\d+\.\s*/, "").trim())
+        .map((line: string) => sanitizeEndings(line.replace(/^\s*\d+\.\s*/, "").trim()))
         .filter((line: string) => line.length > 0);
     }
 
