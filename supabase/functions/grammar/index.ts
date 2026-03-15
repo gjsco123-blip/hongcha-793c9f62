@@ -263,8 +263,9 @@ function buildAutoSystemPrompt() {
 - 주격 관계대명사 that이 선행사 pressures를 수식하는 관계절을 이끔
 - cause + O + to V(5형식) 구조 / it이 the museum을 가리킴
 - what이 이끄는 명사절이 emphasise의 목적어 역할
-- 분사(과거/현재)가 명사를 뒤에서 수식하는 후치수식 구조임
+- 분사(과거/현재)가 명사를 뒤에서 수식하는 후치수식 구조
 - can/may/must + be p.p. 형태의 조동사 수동태 구조
+- "~임/~함" 종결 금지. 명사형 또는 동사 원형으로 끝낼 것 (예: ~역할, ~의미, ~구조, ~이끔, ~나타냄)
 - count as: ~로 간주되다 / 'A count as B' 구조로 A가 B에 해당함을 나타냄
 
 [targetText 규칙 — 반드시 지킬 것]
