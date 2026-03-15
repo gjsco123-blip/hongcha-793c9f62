@@ -207,12 +207,6 @@ function VocabColumn({
   return (
     <View style={s.vocabCol}>
       <View style={s.vocabTable}>
-        <View style={s.vocabHdr}>
-          <Text style={{ ...s.vNum, ...s.vHdrText }}>#</Text>
-          <Text style={{ ...s.vWord, ...s.vHdrText, fontFamily: T.ko }}>Word</Text>
-          <Text style={{ ...s.vPos, ...s.vHdrText }}>POS</Text>
-          <Text style={{ ...s.vMeaning, ...s.vHdrText }}>Meaning</Text>
-        </View>
         {rows.map((v, i) =>
           v ? (
             <View key={i} style={s.vocabRow}>

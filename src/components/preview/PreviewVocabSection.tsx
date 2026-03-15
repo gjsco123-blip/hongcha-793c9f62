@@ -48,13 +48,6 @@ export function PreviewVocabSection({ vocab, status, onDelete, onEdit, onRegenIt
       <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4">
         {columns.map((col, colIdx) => (
           <div key={colIdx} className="border border-border/60 rounded-xl divide-y divide-border/40 overflow-hidden">
-            <div className="flex items-center gap-2 px-2 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-              <span className="w-4 text-center">#</span>
-              <span className="min-w-[55px]">Word</span>
-              <span className="w-7 text-center">POS</span>
-              <span className="flex-1">Meaning</span>
-              <span className="w-10" />
-            </div>
             {col.rows.map((v, i) => {
               const globalIdx = colIdx * 10 + i;
               const num = globalIdx + 1;
