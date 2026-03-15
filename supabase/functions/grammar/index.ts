@@ -511,7 +511,7 @@ serve(async (req) => {
 
       autoPoints = autoPoints
         .map((p) => ({
-          text: oneLine(stripLeadingBullets(stripJsonArtifacts(p.text))),
+          text: sanitizeEndings(oneLine(stripLeadingBullets(stripJsonArtifacts(p.text)))),
           targetText: oneLine(p.targetText),
         }))
         .filter((p) => p.text);
