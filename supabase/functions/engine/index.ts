@@ -93,11 +93,11 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const levelGuide = {
+    const levelGuide = ({
       "고1": "Use simple vocabulary appropriate for Korean high school 1st year English learners.",
       "고2": "Use intermediate vocabulary appropriate for Korean high school 2nd year English learners.",
       "수능": "Use vocabulary and complexity appropriate for Korean CSAT (수능) English exam level.",
-    }[preset] || "";
+    } as Record<string, string>)[preset] || "";
 
     const systemPrompt = `You are a precise English-Korean sentence analysis engine. ${levelGuide}
 

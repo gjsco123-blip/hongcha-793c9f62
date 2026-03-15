@@ -268,21 +268,12 @@ function normalizeModelTagToUiTag(tag: string): string {
 
 function applyPinnedPattern(
   content: string,
-  hintTags: TagId[],
-  pinnedByTag: Map<string, string>,
-  explicitUiTag?: string,
+  _hintTags: TagId[],
+  _pinnedByTag: Map<string, string>,
+  _explicitUiTag?: string,
 ): string {
-  if (!content || pinnedByTag.size === 0) return content;
-
-  const candidates: string[] = [];
-  if (explicitUiTag) candidates.push(explicitUiTag);
-  for (const t of hintTags) candidates.push(mapTagIdToUiTag(t));
-  candidates.push(detectUiTagFromContent(content));
-
-  for (const candidate of candidates) {
-    const pinned = pinnedByTag.get(normalizeTagKey(candidate));
-    if (pinned) return pinned;
-  }
+  // No-op: pinned patterns are now enforced via prompt, not post-processing replacement.
+  // Keeping the function signature to avoid breaking callers.
   return content;
 }
 
