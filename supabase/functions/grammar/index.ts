@@ -220,6 +220,10 @@ function mapTagIdToUiTag(tagId: TagId): string {
 
 function detectUiTagFromContent(content: string): string {
   const c = oneLine(content).toLowerCase();
+  if (c.includes("관계사")) {
+    if (c.includes("where") || c.includes("when") || c.includes("why") || c.includes("how")) return "관계부사";
+    return "관계대명사";
+  }
   if (c.includes("관계대명사") || c.includes("주관대") || c.includes("목관대")) return "관계대명사";
   if (c.includes("관계부사")) return "관계부사";
   if (c.includes("분사구문")) return "분사구문";
