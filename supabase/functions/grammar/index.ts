@@ -243,14 +243,39 @@ function detectUiTagFromContent(content: string): string {
   return "기타";
 }
 
+function normalizeModelTagToUiTag(tag: string): string {
+  const t = oneLine(tag).toLowerCase();
+  if (!t) return "";
+  if (t.includes("rel_subj") || t.includes("rel_obj_omit") || t.includes("관계대명사") || t.includes("주관대") || t.includes("목관대")) return "관계대명사";
+  if (t.includes("rel_adv") || t.includes("관계부사")) return "관계부사";
+  if (t.includes("agreement") || t.includes("수일치")) return "수일치";
+  if (t.includes("noun_clause") || t.includes("명사절")) return "명사절";
+  if (t.includes("it_dummy_subj") || t.includes("가주어") || t.includes("진주어")) return "가주어/진주어";
+  if (t.includes("it_dummy_obj") || t.includes("가목적어") || t.includes("진목적어")) return "가목적어/진목적어";
+  if (t.includes("five_pattern") || t.includes("5형식")) return "5형식";
+  if (t.includes("to_inf") || t.includes("to부정사")) return "to부정사";
+  if (t.includes("participle_post") || t.includes("후치수식")) return "분사 후치수식";
+  if (t.includes("participle_clause") || t.includes("분사구문")) return "분사구문";
+  if (t.includes("modal_passive") || t.includes("조동사+수동")) return "조동사+수동";
+  if (t.includes("passive") || t.includes("수동태")) return "수동태";
+  if (t.includes("parallel") || t.includes("병렬")) return "병렬구조";
+  if (t.includes("prep_gerund") || (t.includes("전치사") && t.includes("동명사"))) return "전치사+동명사";
+  if (t.includes("there_be")) return "기타";
+  if (t.includes("comparison") || t.includes("비교")) return "비교구문";
+  if (t.includes("omission") || t.includes("생략")) return "생략";
+  return "";
+}
+
 function applyPinnedPattern(
   content: string,
   hintTags: TagId[],
   pinnedByTag: Map<string, string>,
+  explicitUiTag?: string,
 ): string {
   if (!content || pinnedByTag.size === 0) return content;
 
   const candidates: string[] = [];
+  if (explicitUiTag) candidates.push(explicitUiTag);
   for (const t of hintTags) candidates.push(mapTagIdToUiTag(t));
   candidates.push(detectUiTagFromContent(content));
 
@@ -386,6 +411,7 @@ function buildAutoSystemPrompt() {
 
 [targetText 규칙 — 반드시 지킬 것]
 - 각 포인트마다, 원문에서 해당 문법 요소 자체가 위치한 핵심 구문(2~5단어)을 targetText로 반환하라.
+- 각 포인트마다, 해당 문법 태그를 tag 필드에 반드시 함께 반환하라. (예: 관계대명사, 분사구문, 수동태, 5형식, 수일치 또는 REL_SUBJ 같은 TagId)
 - targetText는 반드시 원문에 존재하는 연속된 단어여야 한다.
 - targetText는 해당 문법 요소 자체가 시작되는 곳을 가리켜야 한다. 수식 대상(피수식어)이 아님.
   ✅ to부정사 형용사적 용법 → targetText: "to maintain" (to부정사 자체)
@@ -437,8 +463,9 @@ const autoTools = [
               properties: {
                 text: { type: "string", description: "구문분석 설명" },
                 targetText: { type: "string", description: "원문에서 해당 포인트가 적용되는 핵심 구문(2~5단어)" },
+                tag: { type: "string", description: "문법 태그(예: 관계대명사, 분사구문, 수동태, 5형식, 수일치, REL_SUBJ 등)" },
               },
-              required: ["text", "targetText"],
+              required: ["text", "targetText", "tag"],
             },
           },
         },
@@ -580,7 +607,7 @@ serve(async (req) => {
       console.log("AI response (auto):", JSON.stringify(data.choices?.[0]?.message).slice(0, 800));
       const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
 
-      type AutoPoint = { text: string; targetText: string };
+      type AutoPoint = { text: string; targetText: string; tag?: string };
       let autoPoints: AutoPoint[] = [];
 
       if (toolCall?.function?.arguments) {
@@ -589,8 +616,8 @@ serve(async (req) => {
         // Handle both object[] and string[] formats
         autoPoints = rawPoints.map((p: any) =>
           typeof p === "string"
-            ? { text: p, targetText: "" }
-            : { text: String(p?.text ?? ""), targetText: String(p?.targetText ?? "") }
+            ? { text: p, targetText: "", tag: "" }
+            : { text: String(p?.text ?? ""), targetText: String(p?.targetText ?? ""), tag: String(p?.tag ?? "") }
         );
       } else {
         const content = data.choices?.[0]?.message?.content ?? "";
@@ -600,12 +627,12 @@ serve(async (req) => {
           const rawPoints = Array.isArray(parsed?.points) ? parsed.points : [];
           autoPoints = rawPoints.map((p: any) =>
             typeof p === "string"
-              ? { text: p, targetText: "" }
-              : { text: String(p?.text ?? ""), targetText: String(p?.targetText ?? "") }
+              ? { text: p, targetText: "", tag: "" }
+              : { text: String(p?.text ?? ""), targetText: String(p?.targetText ?? ""), tag: String(p?.tag ?? "") }
           );
         } catch {
           const fallback = oneLine(content);
-          autoPoints = fallback ? [{ text: fallback, targetText: "" }] : [];
+          autoPoints = fallback ? [{ text: fallback, targetText: "", tag: "" }] : [];
         }
       }
 
@@ -622,17 +649,20 @@ serve(async (req) => {
             sanitizeEndings(oneLine(stripLeadingBullets(stripJsonArtifacts(p.text)))),
             [],
             pinnedData.byTag,
+            normalizeModelTagToUiTag(String(p.tag ?? "")),
           ),
           targetText: oneLine(p.targetText),
+          tag: oneLine(String(p.tag ?? "")),
         }))
         .filter((p) => p.text);
       autoPoints = autoPoints.slice(0, 5).map((p) => ({
         text: p.text.length > 170 ? p.text.slice(0, 168).trim() + "…" : p.text,
         targetText: p.targetText,
+        tag: p.tag,
       }));
 
       if (autoPoints.length === 0) {
-        autoPoints = [{ text: "(이 문장에서 주요 문법 포인트를 찾지 못했습니다)", targetText: "" }];
+        autoPoints = [{ text: "(이 문장에서 주요 문법 포인트를 찾지 못했습니다)", targetText: "", tag: "" }];
       }
 
       const syntaxNotes = autoPoints.map((p) => p.text).join("\n");
