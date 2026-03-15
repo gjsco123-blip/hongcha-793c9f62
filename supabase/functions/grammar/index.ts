@@ -504,8 +504,11 @@ async function fetchPinnedPatterns(userId: string | undefined, authHeader?: stri
       .filter(Boolean)
       .join("\n");
     const promptBlock =
-      `\n\n[고정 패턴 — 해당 태그의 포인트는 반드시 아래 형식을 기반으로 작성하라. ___만 실제 단어로 채울 것]\n${tagLines}\n` +
-      `위 태그에 해당하는 문법 포인트를 작성할 때, 반드시 해당 패턴의 문체·구조·표현을 그대로 따르되 ___에는 실제 문장의 단어를 넣어라.\n` +
+      `\n\n[고정 패턴 — 최우선 규칙]\n` +
+      `아래 태그에 해당하는 포인트는 반드시 해당 패턴의 문장을 그대로 사용하라.\n` +
+      `___만 실제 단어로 교체하고, 그 외 단어·구조·어순은 절대 바꾸거나 추가하지 말 것.\n` +
+      `패턴에 없는 부가 설명, 슬래시(/) 뒤 추가 분석, 범위 표시 등을 덧붙이지 말 것.\n` +
+      `${tagLines}\n` +
       `출력에 태그명 접두어(예: 관계대명사:, 5형식:)를 붙이지 말 것.`;
     return { promptBlock, byTag };
   } catch {
