@@ -33,6 +33,11 @@ type GrammarResponse = {
   normalizedHint?: string;
 };
 
+type PinnedPatternsData = {
+  promptBlock: string;
+  byTag: Map<string, string>;
+};
+
 function oneLine(s: string) {
   return String(s ?? "")
     .replace(/\s*\n+\s*/g, " ")
@@ -166,6 +171,90 @@ function tagsToPromptBlock(tags: TagId[]) {
   const map = new Map<TagId, string>();
   for (const r of TAG_RULES) map.set(r.id, r.label);
   return tags.map((t) => `${t}: ${map.get(t) ?? t}`).join("\n");
+}
+
+function normalizeTagKey(s: string): string {
+  return oneLine(s).toLowerCase().replace(/\s+/g, "");
+}
+
+function mapTagIdToUiTag(tagId: TagId): string {
+  switch (tagId) {
+    case "REL_SUBJ":
+    case "REL_OBJ_OMIT":
+      return "관계대명사";
+    case "REL_ADV":
+      return "관계부사";
+    case "AGREEMENT":
+      return "수일치";
+    case "NOUN_CLAUSE_THAT":
+    case "NOUN_CLAUSE_WH":
+      return "명사절";
+    case "IT_DUMMY_SUBJ":
+      return "가주어/진주어";
+    case "IT_DUMMY_OBJ":
+      return "가목적어/진목적어";
+    case "FIVE_PATTERN":
+      return "5형식";
+    case "TO_INF":
+      return "to부정사";
+    case "PARTICIPLE_POST":
+      return "분사 후치수식";
+    case "PARTICIPLE_CLAUSE":
+      return "분사구문";
+    case "PASSIVE":
+      return "수동태";
+    case "MODAL_PASSIVE":
+      return "조동사+수동";
+    case "PARALLEL":
+      return "병렬구조";
+    case "PREP_GERUND":
+      return "전치사+동명사";
+    case "COMPARISON":
+      return "비교구문";
+    case "OMISSION":
+      return "생략";
+    default:
+      return "기타";
+  }
+}
+
+function detectUiTagFromContent(content: string): string {
+  const c = oneLine(content).toLowerCase();
+  if (c.includes("관계대명사") || c.includes("주관대") || c.includes("목관대")) return "관계대명사";
+  if (c.includes("관계부사")) return "관계부사";
+  if (c.includes("분사구문")) return "분사구문";
+  if (c.includes("후치수식") || c.includes("후치")) return "분사 후치수식";
+  if (c.includes("조동사") && c.includes("수동")) return "조동사+수동";
+  if (c.includes("수동태") || c.includes("be p.p")) return "수동태";
+  if (c.includes("to부정사") || c.includes("to-v")) return "to부정사";
+  if (c.includes("명사절")) return "명사절";
+  if (c.includes("가주어") || c.includes("진주어")) return "가주어/진주어";
+  if (c.includes("가목적어") || c.includes("진목적어")) return "가목적어/진목적어";
+  if (c.includes("5형식") || c.includes("목적격보어")) return "5형식";
+  if (c.includes("병렬")) return "병렬구조";
+  if (c.includes("전치사") && c.includes("동명사")) return "전치사+동명사";
+  if (c.includes("비교") || c.includes("최상급")) return "비교구문";
+  if (c.includes("수일치")) return "수일치";
+  if (c.includes("생략")) return "생략";
+  return "기타";
+}
+
+function applyPinnedPattern(
+  content: string,
+  hintTags: TagId[],
+  pinnedByTag: Map<string, string>,
+): string {
+  if (!content || pinnedByTag.size === 0) return content;
+
+  const candidates: string[] = [];
+  for (const t of hintTags) candidates.push(mapTagIdToUiTag(t));
+  candidates.push(detectUiTagFromContent(content));
+
+  for (const candidate of candidates) {
+    const pinned = pinnedByTag.get(normalizeTagKey(candidate));
+    if (pinned) return pinned;
+  }
+  return content;
 }
 
 // -----------------------------
@@ -359,21 +448,35 @@ const autoTools = [
 // -----------------------------
 // Shared: fetch pinned patterns
 // -----------------------------
-async function fetchPinnedPatterns(userId: string | undefined): Promise<string> {
-  if (!userId) return "";
+async function fetchPinnedPatterns(userId: string | undefined): Promise<PinnedPatternsData> {
+  if (!userId) return { promptBlock: "", byTag: new Map() };
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!supabaseUrl || !serviceRoleKey) return "";
+    if (!supabaseUrl || !serviceRoleKey) return { promptBlock: "", byTag: new Map() };
     const url = `${supabaseUrl}/rest/v1/syntax_patterns?user_id=eq.${userId}&order=created_at.desc&select=tag,pinned_content`;
     const res = await fetch(url, { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } });
-    if (!res.ok) return "";
+    if (!res.ok) return { promptBlock: "", byTag: new Map() };
     const patterns = await res.json();
-    if (patterns.length === 0) return "";
+    if (patterns.length === 0) return { promptBlock: "", byTag: new Map() };
+
+    const byTag = new Map<string, string>();
+    for (const p of patterns) {
+      const tag = String(p?.tag ?? "").trim();
+      const content = String(p?.pinned_content ?? "").trim();
+      if (!tag || !content) continue;
+      const key = normalizeTagKey(tag);
+      if (!byTag.has(key)) byTag.set(key, content);
+    }
+
     const lines = patterns.map((p: any) => String(p.pinned_content ?? "").trim()).filter(Boolean).join("\n");
-    return `\n\n[고정 패턴 — 아래 문장을 문체/구조 기준으로 반드시 따를 것]\n${lines}\n- 출력에 태그명 접두어(예: 관계대명사:, 5형식:)를 붙이지 말 것.`;
+    const promptBlock =
+      `\n\n[고정 패턴 — 아래 문장을 문체/구조 기준으로 반드시 따를 것]\n${lines}\n` +
+      `- 출력에 태그명 접두어(예: 관계대명사:, 5형식:)를 붙이지 말 것.\n` +
+      `- 해당 문법 태그의 고정 패턴이 있으면 표현을 우선 적용할 것.`;
+    return { promptBlock, byTag };
   } catch {
-    return "";
+    return { promptBlock: "", byTag: new Map() };
   }
 }
 
@@ -429,7 +532,7 @@ serve(async (req) => {
       const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
       if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-      const [learningBlock, pinnedBlock] = await Promise.all([fetchLearningBlock(userId), fetchPinnedPatterns(userId)]);
+      const [learningBlock, pinnedData] = await Promise.all([fetchLearningBlock(userId), fetchPinnedPatterns(userId)]);
       const userMessage = `문장: ${full}\n이 문장에서 수능에 출제될 수 있는 핵심 문법 포인트를 찾아서 points로 작성하라. 각 포인트마다 원문에서 해당 문법이 적용되는 핵심 구문(2~5단어)을 targetText로 함께 반환하라.`;
 
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -443,7 +546,7 @@ serve(async (req) => {
           temperature: 0.2,
           max_tokens: 1500,
           messages: [
-            { role: "system", content: buildAutoSystemPrompt() + pinnedBlock + learningBlock },
+            { role: "system", content: buildAutoSystemPrompt() + pinnedData.promptBlock + learningBlock },
             { role: "user", content: userMessage },
           ],
           tools: autoTools,
@@ -511,7 +614,11 @@ serve(async (req) => {
 
       autoPoints = autoPoints
         .map((p) => ({
-          text: sanitizeEndings(oneLine(stripLeadingBullets(stripJsonArtifacts(p.text)))),
+          text: applyPinnedPattern(
+            sanitizeEndings(oneLine(stripLeadingBullets(stripJsonArtifacts(p.text)))),
+            [],
+            pinnedData.byTag,
+          ),
           targetText: oneLine(p.targetText),
         }))
         .filter((p) => p.text);
@@ -551,7 +658,7 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     // Fetch learning examples + pinned patterns for hint mode too
-    const [learningBlock, pinnedBlock] = await Promise.all([fetchLearningBlock(userId), fetchPinnedPatterns(userId)]);
+    const [learningBlock, pinnedData] = await Promise.all([fetchLearningBlock(userId), fetchPinnedPatterns(userId)]);
 
     const userMessage = useFreestyle
       ? `전체 문장: ${full}\n` +
@@ -579,7 +686,7 @@ serve(async (req) => {
         {
           role: "system",
           content:
-            systemPrompt + pinnedBlock + learningBlock +
+            systemPrompt + pinnedData.promptBlock + learningBlock +
             (useToolCall ? "" : '\n\n출력 형식: 반드시 {"points":[...]} JSON만 출력하라. 다른 텍스트 없이 JSON만.'),
         },
         { role: "user", content: userMessage },
@@ -637,7 +744,12 @@ serve(async (req) => {
       }
     }
 
-    points = points.map(oneLine).filter(Boolean).map(stripLeadingBullets).map(sanitizeEndings);
+    points = points
+      .map(oneLine)
+      .filter(Boolean)
+      .map(stripLeadingBullets)
+      .map(sanitizeEndings)
+      .map((p) => applyPinnedPattern(p, tags, pinnedData.byTag));
 
     if (points.length === 0) {
       points = useFreestyle
