@@ -192,7 +192,8 @@ function buildFreestyleSystemPrompt() {
 - 주격 관계대명사 who/which/that이 선행사 ___를 수식하는 관계절을 이끔
 - count as: ~로 간주되다 / 'A count as B' 구조로 A가 B에 해당함을 나타냄
 - 조동사 + be p.p. 형태로 수동을 나타냄
-- 분사(과거/현재)가 명사를 뒤에서 수식하는 후치수식 구조임`;
+- 분사(과거/현재)가 명사를 뒤에서 수식하는 후치수식 구조
+- "~임/~함" 종결 금지. 명사형 또는 동사 원형으로 끝낼 것 (예: ~역할, ~의미, ~구조, ~이끔, ~나타냄)`;
 }
 
 function buildHintSystemPrompt() {
