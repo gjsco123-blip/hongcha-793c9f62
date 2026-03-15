@@ -261,9 +261,10 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
       if (matchStart >= co.start && matchStart < co.end) {
         for (const so of co.segOffsets) {
           if (matchStart >= so.start && matchStart < so.end) {
-            const offsetInSeg = matchStart - so.start;
             for (const id of noteIds) {
-              addSup(`${co.ci}-${so.si}`, { id, offset: offsetInSeg });
+              // PDF renderer can break superscripts inserted mid-word (e.g., t¹hat).
+              // Anchor superscripts at segment start for stable rendering.
+              addSup(`${co.ci}-${so.si}`, { id, offset: 0 });
             }
             placed = true;
             break;
