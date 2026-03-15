@@ -61,6 +61,14 @@ function safeJsonParse(raw: string): any {
   }
 }
 
+function sanitizeEndings(text: string): string {
+  return text.replace(/(임|됨|있음|함)(?=[.\s/,)~]|$)/g, (match, _g, offset, str) => {
+    const prev = str[offset - 1];
+    if (prev && /[가-힣]/.test(prev)) return '';
+    return match;
+  });
+}
+
 function stripLeadingBullets(line: string) {
   return String(line ?? "")
     .replace(/^(\s*[\u2460-\u2473])\s*[•·\-\*]\s*/u, "$1 ")
@@ -193,7 +201,12 @@ function buildFreestyleSystemPrompt() {
 - count as: ~로 간주되다 / 'A count as B' 구조로 A가 B에 해당함을 나타냄
 - 조동사 + be p.p. 형태로 수동을 나타냄
 - 분사(과거/현재)가 명사를 뒤에서 수식하는 후치수식 구조
-- "~임/~함" 종결 금지. 명사형 또는 동사 원형으로 끝낼 것 (예: ~역할, ~의미, ~구조, ~이끔, ~나타냄)`;
+
+[종결어미 규칙 — 최우선 준수]
+- "~임", "~됨", "~함", "~있음" 등 음슴체 종결 절대 금지. 아래 변환을 반드시 따를 것:
+  ✗ 역할임 → ✓ 역할 / ✗ 구조임 → ✓ 구조 / ✗ 수일치함 → ✓ 수일치
+  ✗ 수동의 의미임 → ✓ 수동의 의미 / ✗ 목적격 보어 역할임 → ✓ 목적격 보어 역할
+- 명사형(~역할, ~의미, ~구조) 또는 동사 원형(~이끔, ~나타냄)으로 끝낼 것.`;
 }
 
 function buildHintSystemPrompt() {
@@ -223,7 +236,12 @@ function buildHintSystemPrompt() {
 - 선행사 ___ 단복수에 따라 관계절 동사 ___가 수일치.
 - 분사(과거/현재)가 명사를 뒤에서 수식하는 후치수식 구조.
 - 조동사 + be p.p. 형태로 수동을 나타냄.
-- "~임/~함" 종결 금지. 명사형 또는 동사 원형으로 끝낼 것 (예: ~역할, ~의미, ~구조, ~이끔, ~나타냄)`;
+
+[종결어미 규칙 — 최우선 준수]
+- "~임", "~됨", "~함", "~있음" 등 음슴체 종결 절대 금지. 아래 변환을 반드시 따를 것:
+  ✗ 역할임 → ✓ 역할 / ✗ 구조임 → ✓ 구조 / ✗ 수일치함 → ✓ 수일치
+  ✗ 수동의 의미임 → ✓ 수동의 의미 / ✗ 목적격 보어 역할임 → ✓ 목적격 보어 역할
+- 명사형(~역할, ~의미, ~구조) 또는 동사 원형(~이끔, ~나타냄)으로 끝낼 것.`;
 }
 
 function buildAutoSystemPrompt() {
@@ -265,8 +283,13 @@ function buildAutoSystemPrompt() {
 - what이 이끄는 명사절이 emphasise의 목적어 역할
 - 분사(과거/현재)가 명사를 뒤에서 수식하는 후치수식 구조
 - can/may/must + be p.p. 형태의 조동사 수동태 구조
-- "~임/~함" 종결 금지. 명사형 또는 동사 원형으로 끝낼 것 (예: ~역할, ~의미, ~구조, ~이끔, ~나타냄)
 - count as: ~로 간주되다 / 'A count as B' 구조로 A가 B에 해당함을 나타냄
+
+[종결어미 규칙 — 최우선 준수]
+- "~임", "~됨", "~함", "~있음" 등 음슴체 종결 절대 금지. 아래 변환을 반드시 따를 것:
+  ✗ 역할임 → ✓ 역할 / ✗ 구조임 → ✓ 구조 / ✗ 수일치함 → ✓ 수일치
+  ✗ 수동의 의미임 → ✓ 수동의 의미 / ✗ 목적격 보어 역할임 → ✓ 목적격 보어 역할
+- 명사형(~역할, ~의미, ~구조) 또는 동사 원형(~이끔, ~나타냄)으로 끝낼 것.
 
 [targetText 규칙 — 반드시 지킬 것]
 - 각 포인트마다, 원문에서 해당 문법 요소 자체가 위치한 핵심 구문(2~5단어)을 targetText로 반환하라.
@@ -488,7 +511,7 @@ serve(async (req) => {
 
       autoPoints = autoPoints
         .map((p) => ({
-          text: oneLine(stripLeadingBullets(stripJsonArtifacts(p.text))),
+          text: sanitizeEndings(oneLine(stripLeadingBullets(stripJsonArtifacts(p.text)))),
           targetText: oneLine(p.targetText),
         }))
         .filter((p) => p.text);
@@ -614,7 +637,7 @@ serve(async (req) => {
       }
     }
 
-    points = points.map(oneLine).filter(Boolean).map(stripLeadingBullets);
+    points = points.map(oneLine).filter(Boolean).map(stripLeadingBullets).map(sanitizeEndings);
 
     if (points.length === 0) {
       points = useFreestyle
