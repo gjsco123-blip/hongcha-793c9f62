@@ -725,7 +725,7 @@ serve(async (req) => {
 
     const systemPrompt = useFreestyle ? buildFreestyleSystemPrompt() : buildHintSystemPrompt();
 
-    const hintModel = useFreestyle ? "google/gemini-3-flash-preview" : "google/gemini-2.5-pro";
+    const hintModel = "google/gemini-3-flash-preview";
     const useToolCall = hintModel.includes("flash");
 
     const reqBody: any = {
