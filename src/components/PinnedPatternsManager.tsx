@@ -122,15 +122,32 @@ export function PinnedPatternsManager({ open, onOpenChange }: Props) {
                   <X className="w-3 h-3" />
                 </button>
               </div>
-              <select
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                className="w-full bg-muted border border-border px-2 py-1.5 text-xs outline-none focus:border-foreground"
-              >
-                {TAG_OPTIONS.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
+              <div className="flex gap-1.5">
+                <select
+                  value={TAG_OPTIONS.includes(newTag) ? newTag : "__custom__"}
+                  onChange={(e) => {
+                    if (e.target.value === "__custom__") {
+                      setNewTag("");
+                    } else {
+                      setNewTag(e.target.value);
+                    }
+                  }}
+                  className="flex-1 bg-muted border border-border px-2 py-1.5 text-xs outline-none focus:border-foreground"
+                >
+                  {TAG_OPTIONS.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                  <option value="__custom__">✏️ 직접 입력</option>
+                </select>
+              </div>
+              {!TAG_OPTIONS.includes(newTag) && (
+                <input
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  placeholder="문법 사항을 직접 입력하세요"
+                  className="w-full bg-muted border border-border px-2 py-1.5 text-xs outline-none focus:border-foreground"
+                />
+              )}
               <textarea
                 value={newContent}
                 onChange={(e) => setNewContent(e.target.value)}

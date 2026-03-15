@@ -1,22 +1,11 @@
 
 
-# 고정 패턴 태그에 직접 입력 기능 추가
+## 구문분석 패턴 고정(Pin) 기능
 
-## 현재 문제
-태그 선택이 `<select>` (드롭다운)만 있어서 미리 정의된 18개 옵션 중에서만 고를 수 있음. 사용자가 원하는 문법 사항을 직접 타이핑할 수 없음.
+### 완료된 변경
 
-## 수정 사항
-
-### 1. `src/components/PinnedPatternsManager.tsx`
-
-태그 입력 UI를 select + 직접 입력 방식으로 변경:
-- 기존 `<select>` 아래에 "직접 입력" 옵션 추가
-- "직접 입력" 선택 시 텍스트 input이 나타남
-- 직접 입력한 태그도 동일하게 저장
-
-### 2. 프롬프트 강화 (이전 플랜 포함)
-
-`grammar/index.ts`와 `grammar-chat/index.ts`의 고정 패턴 프롬프트를 강화하여 AI가 패턴을 **그대로** 사용하고 추가 설명을 덧붙이지 않도록 수정:
-- "기반으로 작성" → "그대로 사용"
-- 부가 설명/슬래시 추가 금지 명시
-
+1. **DB: `syntax_patterns` 테이블** — user_id, tag, pinned_content, example_sentence + RLS
+2. **`supabase/functions/grammar/index.ts`** — `fetchPinnedPatterns()` 추가, 자동생성/힌트 모드 모두 시스템 프롬프트에 `[고정 패턴]` 블록 주입
+3. **`supabase/functions/grammar-chat/index.ts`** — 동일하게 고정 패턴 주입
+4. **`src/components/SyntaxNotesSection.tsx`** — 각 노트에 📌 호버 버튼 (자동 태그 감지 + 선택), 고정 패턴 관리 버튼
+5. **`src/components/PinnedPatternsManager.tsx`** (신규) — Sheet 형태 관리 UI (목록/삭제/직접 추가)
