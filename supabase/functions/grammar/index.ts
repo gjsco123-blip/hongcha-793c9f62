@@ -61,6 +61,14 @@ function safeJsonParse(raw: string): any {
   }
 }
 
+function sanitizeEndings(text: string): string {
+  return text.replace(/(임|됨|있음|함)(?=[.\s/,)~]|$)/g, (match, _g, offset, str) => {
+    const prev = str[offset - 1];
+    if (prev && /[가-힣]/.test(prev)) return '';
+    return match;
+  });
+}
+
 function stripLeadingBullets(line: string) {
   return String(line ?? "")
     .replace(/^(\s*[\u2460-\u2473])\s*[•·\-\*]\s*/u, "$1 ")
