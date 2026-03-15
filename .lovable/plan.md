@@ -1,50 +1,11 @@
 
 
-# 구문분석 말투 변경: 음슴체(~임) → 명사/동사 종결
+## 구문분석 패턴 고정(Pin) 기능
 
-## 변경 요약
+### 완료된 변경
 
-4개 위치에서 `~임`, `~함` 종결을 제거하고 명사형 종결로 통일합니다.
-
-## 구체적 변경
-
-### 1. `supabase/functions/grammar/index.ts`
-
-**buildDragSystemPrompt** (L195)
-```
-Before: 분사(과거/현재)가 명사를 뒤에서 수식하는 후치수식 구조임
-After:  분사(과거/현재)가 명사를 뒤에서 수식하는 후치수식 구조
-```
-
-**buildHintSystemPrompt** (L221-223)
-```
-Before: 목적격 관계대명사 (which/that) 생략 가능 구조임.
-        선행사 ___ 단복수에 따라 관계절 동사 ___가 수일치함.
-        분사(과거/현재)가 명사를 뒤에서 수식하는 후치수식 구조임.
-After:  목적격 관계대명사 (which/that) 생략 가능 구조.
-        선행사 ___ 단복수에 따라 관계절 동사 ___가 수일치.
-        분사(과거/현재)가 명사를 뒤에서 수식하는 후치수식 구조.
-```
-
-**buildAutoSystemPrompt** (L264)
-```
-Before: 분사(과거/현재)가 명사를 뒤에서 수식하는 후치수식 구조임
-After:  분사(과거/현재)가 명사를 뒤에서 수식하는 후치수식 구조
-```
-
-**3개 함수 모두** 문체 예시 아래에 규칙 1줄 추가:
-```
-- "~임/~함" 종결 금지. 명사형 또는 동사 원형으로 끝낼 것 (예: ~역할, ~의미, ~구조, ~이끔, ~나타냄)
-```
-
-### 2. `supabase/functions/grammar-chat/index.ts`
-
-**수정안 규칙** (L39-46) 에 1줄 추가:
-```
-- "~임/~함" 종결 금지. 명사형 또는 동사 원형으로 끝낼 것 (예: ~역할, ~의미, ~구조)
-```
-
-## 추천 사항
-
-현재 계획 외에 추가로 권장하는 변경은 **없습니다**. 프롬프트 예시 4곳 + 규칙 4줄 추가만으로 충분히 말투가 통일됩니다. 변경 후 실제 생성 결과를 확인하고 미세 조정하는 것이 가장 효율적입니다.
-
+1. **DB: `syntax_patterns` 테이블** — user_id, tag, pinned_content, example_sentence + RLS
+2. **`supabase/functions/grammar/index.ts`** — `fetchPinnedPatterns()` 추가, 자동생성/힌트 모드 모두 시스템 프롬프트에 `[고정 패턴]` 블록 주입
+3. **`supabase/functions/grammar-chat/index.ts`** — 동일하게 고정 패턴 주입
+4. **`src/components/SyntaxNotesSection.tsx`** — 각 노트에 📌 호버 버튼 (자동 태그 감지 + 선택), 고정 패턴 관리 버튼
+5. **`src/components/PinnedPatternsManager.tsx`** (신규) — Sheet 형태 관리 UI (목록/삭제/직접 추가)
