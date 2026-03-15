@@ -180,7 +180,7 @@ const s = StyleSheet.create({
     borderLeftWidth: 0.5,
     borderLeftColor: T.rule,
   },
-  synHdrText: { fontSize: 6, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.4 },
+  synHdrText: { fontSize: 7.5, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.6 },
   fieldLabel: {
     fontSize: 7.5,
     fontWeight: 700,
