@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Pin, Trash2, Plus, X, Pencil, Check } from "lucide-react";
+import { Trash2, Plus, X, Pencil, Check } from "lucide-react";
 
 interface PinnedPattern {
   id: string;
