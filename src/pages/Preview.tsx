@@ -335,7 +335,7 @@ export default function Preview() {
       .update({
         passage_text: passage,
         pdf_title: pdfTitle,
-        results_json: mergedStore,
+        results_json: mergedStore as any,
         updated_at: new Date().toISOString(),
       })
       .eq("id", passageId);
