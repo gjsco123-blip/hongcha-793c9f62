@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Plus, Trash2, LogOut, ChevronRight, BookOpen, School as SchoolIcon, GripVertical } from "lucide-react";
+import { Plus, Trash2, LogOut, ChevronRight, BookOpen, School as SchoolIcon, GripVertical, Pencil, Check, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { School, Passage } from "@/hooks/useCategories";
 
@@ -12,6 +12,7 @@ interface CategorySelectorProps {
   onSelectPassage: (id: string) => void;
   onAddSchool: (name: string) => Promise<any>;
   onAddPassage: (schoolId: string, name: string) => Promise<any>;
+  onRenamePassage: (id: string, name: string) => Promise<boolean>;
   onDeleteSchool: (id: string) => Promise<void>;
   onDeletePassage: (id: string) => Promise<void>;
   onReorderPassages?: (ids: string[]) => Promise<void>;
@@ -103,6 +104,7 @@ export function CategoryFullScreen({
   onAddPassage,
   onDeleteSchool,
   onDeletePassage,
+  onRenamePassage,
   onReorderPassages,
 }: CategorySelectorProps) {
   const { signOut, user } = useAuth();
@@ -110,6 +112,9 @@ export function CategoryFullScreen({
   const [addingPassage, setAddingPassage] = useState(false);
   const [newName, setNewName] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [editingPassageId, setEditingPassageId] = useState<string | null>(null);
+  const [editingPassageName, setEditingPassageName] = useState("");
+  const [savingPassageId, setSavingPassageId] = useState<string | null>(null);
 
   // Drag state
   const [dragIdx, setDragIdx] = useState<number | null>(null);
@@ -143,6 +148,40 @@ export function CategoryFullScreen({
     onReorderPassages(ids);
     setDragIdx(null);
     setOverIdx(null);
+  };
+
+  const handleDeleteSchoolConfirm = async (school: School) => {
+    if (!window.confirm(`'${school.name}' 학교를 삭제할까요?`)) return;
+    await onDeleteSchool(school.id);
+  };
+
+  const handleDeletePassageConfirm = async (passage: Passage) => {
+    if (!window.confirm(`'${passage.name}' 지문을 삭제할까요?`)) return;
+    await onDeletePassage(passage.id);
+  };
+
+  const startPassageRename = (passage: Passage) => {
+    setEditingPassageId(passage.id);
+    setEditingPassageName(passage.name);
+  };
+
+  const cancelPassageRename = () => {
+    setEditingPassageId(null);
+    setEditingPassageName("");
+    setSavingPassageId(null);
+  };
+
+  const submitPassageRename = async (passage: Passage) => {
+    const next = editingPassageName.trim();
+    if (!next) return;
+    if (next === passage.name) {
+      cancelPassageRename();
+      return;
+    }
+    setSavingPassageId(passage.id);
+    const ok = await onRenamePassage(passage.id, next);
+    if (ok) cancelPassageRename();
+    else setSavingPassageId(null);
   };
 
   return (
@@ -181,7 +220,7 @@ export function CategoryFullScreen({
                       <ChevronRight className="w-4 h-4 text-muted-foreground/40 ml-auto" />
                     </button>
                     <button
-                      onClick={() => onDeleteSchool(s.id)}
+                      onClick={() => handleDeleteSchoolConfirm(s)}
                       className="p-2 text-muted-foreground/30 hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -243,7 +282,7 @@ export function CategoryFullScreen({
                   <div
                     key={p.id}
                     className={`group flex items-center ${overIdx === idx && dragIdx !== idx ? "border-t-2 border-primary" : ""}`}
-                    draggable
+                    draggable={!editingPassageId}
                     onDragStart={() => setDragIdx(idx)}
                     onDragOver={(e) => { e.preventDefault(); setOverIdx(idx); }}
                     onDragEnd={() => { setDragIdx(null); setOverIdx(null); }}
@@ -252,20 +291,61 @@ export function CategoryFullScreen({
                     <span className="p-1.5 cursor-grab text-muted-foreground/30 hover:text-muted-foreground transition-colors">
                       <GripVertical className="w-3.5 h-3.5" />
                     </span>
-                    <button
-                      onClick={() => onSelectPassage(p.id)}
-                      className="flex-1 flex items-center gap-3 px-2 py-3 text-left hover:bg-muted/60 transition-colors border-b border-border/50"
-                    >
-                      <BookOpen className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm font-medium text-foreground">{p.name}</span>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground/40 ml-auto" />
-                    </button>
-                    <button
-                      onClick={() => onDeletePassage(p.id)}
-                      className="p-2 text-muted-foreground/30 hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {editingPassageId === p.id ? (
+                      <div className="flex-1 flex items-center gap-2 px-2 py-2 border-b border-border/50">
+                        <BookOpen className="w-4 h-4 text-muted-foreground" />
+                        <input
+                          autoFocus
+                          value={editingPassageName}
+                          onChange={(e) => setEditingPassageName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") submitPassageRename(p);
+                            if (e.key === "Escape") cancelPassageRename();
+                          }}
+                          className="flex-1 h-8 px-2 border border-border rounded bg-background text-sm outline-none focus:border-foreground"
+                        />
+                        <button
+                          onClick={() => submitPassageRename(p)}
+                          disabled={!editingPassageName.trim() || savingPassageId === p.id}
+                          className="p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-40"
+                          title="이름 저장"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={cancelPassageRename}
+                          className="p-1.5 text-muted-foreground hover:text-foreground"
+                          title="취소"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => onSelectPassage(p.id)}
+                          className="flex-1 flex items-center gap-3 px-2 py-3 text-left hover:bg-muted/60 transition-colors border-b border-border/50"
+                        >
+                          <BookOpen className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm font-medium text-foreground">{p.name}</span>
+                          <ChevronRight className="w-4 h-4 text-muted-foreground/40 ml-auto" />
+                        </button>
+                        <button
+                          onClick={() => startPassageRename(p)}
+                          className="p-2 text-muted-foreground/30 hover:text-foreground opacity-0 group-hover:opacity-100 transition-all"
+                          title="이름 변경"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeletePassageConfirm(p)}
+                          className="p-2 text-muted-foreground/30 hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
+                          title="삭제"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>

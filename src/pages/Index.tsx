@@ -560,6 +560,7 @@ export default function Index() {
     onSelectPassage: categories.setSelectedPassageId,
     onAddSchool: categories.addSchool,
     onAddPassage: categories.addPassage,
+    onRenamePassage: categories.renamePassage,
     onDeleteSchool: categories.deleteSchool,
     onDeletePassage: categories.deletePassage,
     onReorderPassages: categories.reorderPassages,

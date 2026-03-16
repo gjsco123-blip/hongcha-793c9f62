@@ -148,6 +148,24 @@ export function useCategories() {
     if (selectedPassageId === id) setSelectedPassageId(null);
   };
 
+  const renamePassage = async (id: string, name: string) => {
+    const nextName = name.trim();
+    if (!nextName) return false;
+    const nowIso = new Date().toISOString();
+    const { error } = await supabase
+      .from("passages")
+      .update({ name: nextName, updated_at: nowIso })
+      .eq("id", id);
+    if (error) {
+      toast.error("지문 이름 변경 실패");
+      return false;
+    }
+    setPassages((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, name: nextName, updated_at: nowIso } : p))
+    );
+    return true;
+  };
+
   const updatePassage = async (id: string, updates: Partial<Pick<Passage, "passage_text" | "pdf_title" | "results_json" | "preset" | "name">>) => {
     const { error } = await supabase
       .from("passages")
@@ -186,6 +204,7 @@ export function useCategories() {
     addSchool,
     deleteSchool,
     addPassage,
+    renamePassage,
     deletePassage,
     updatePassage,
     reorderPassages,
