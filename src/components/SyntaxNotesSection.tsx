@@ -80,16 +80,16 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
     }
   };
 
-  const handlePinNote = async (note: SyntaxNote) => {
-    if (!user) {
+  const handlePinNote = async () => {
+    if (!user || !pinContent.trim()) {
       toast.error("로그인이 필요합니다.");
       return;
     }
-    const tag = pinTag || autoDetectTag(note.content);
+    const tag = pinTag || "기타";
     const { error } = await supabase.from("syntax_patterns" as any).insert({
       user_id: user.id,
       tag,
-      pinned_content: note.content,
+      pinned_content: pinContent.trim(),
       example_sentence: sentence || null,
     });
     if (error) {
@@ -99,6 +99,7 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
     }
     setPinningId(null);
     setPinTag("");
+    setPinContent("");
   };
 
   const startPinning = (note: SyntaxNote) => {
