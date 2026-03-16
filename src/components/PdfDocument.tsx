@@ -241,23 +241,65 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
     superscriptMap.set(key, arr);
   };
 
+  // Tokenize original text into words with their exact positions
+  const origTokens: { word: string; start: number; end: number }[] = [];
+  {
+    const re = /[A-Za-z'\u2019\u0300-\u036f]+|[^\s]/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(fullText)) !== null) {
+      origTokens.push({ word: m[0].toLowerCase(), start: m.index, end: m.index + m[0].length });
+    }
+  }
+
   const chunkOffsets: { ci: number; start: number; end: number; segOffsets: { si: number; start: number; end: number }[] }[] = [];
   {
-    let cursor = 0;
+    let tokenCursor = 0;
     for (let ci = 0; ci < chunks.length; ci++) {
-      const chunkTextLower = chunks[ci].text.toLowerCase();
-      const chunkStart = fullTextLower.indexOf(chunkTextLower, cursor);
-      const start = chunkStart !== -1 ? chunkStart : cursor;
-      const end = start + chunks[ci].text.length;
-      const segOffsets: { si: number; start: number; end: number }[] = [];
-      let segCursor = start;
-      for (let si = 0; si < chunks[ci].segments.length; si++) {
-        const segLen = chunks[ci].segments[si].text.length;
-        segOffsets.push({ si, start: segCursor, end: segCursor + segLen });
-        segCursor += segLen;
+      // Extract words from chunk
+      const chunkWords = chunks[ci].text.match(/[A-Za-z'\u2019\u0300-\u036f]+|[^\s]/g) || [];
+      let chunkStart = -1;
+      let chunkEnd = -1;
+      const wordTokenIndices: number[] = [];
+
+      for (const cw of chunkWords) {
+        const cwLower = cw.toLowerCase();
+        let found = false;
+        for (let ti = tokenCursor; ti < origTokens.length; ti++) {
+          if (origTokens[ti].word === cwLower) {
+            if (chunkStart === -1) chunkStart = origTokens[ti].start;
+            chunkEnd = origTokens[ti].end;
+            wordTokenIndices.push(ti);
+            tokenCursor = ti + 1;
+            found = true;
+            break;
+          }
+        }
+        if (!found && chunkStart === -1) {
+          // Fallback: couldn't find word, use current position
+          chunkStart = tokenCursor < origTokens.length ? origTokens[tokenCursor].start : chunkEnd;
+        }
       }
-      chunkOffsets.push({ ci, start, end, segOffsets });
-      cursor = end;
+
+      if (chunkStart === -1) chunkStart = tokenCursor < origTokens.length ? origTokens[tokenCursor].start : 0;
+      if (chunkEnd === -1) chunkEnd = chunkStart;
+
+      // Map segments using the same token-based approach
+      const segOffsets: { si: number; start: number; end: number }[] = [];
+      let segTokenIdx = 0; // index into wordTokenIndices
+      for (let si = 0; si < chunks[ci].segments.length; si++) {
+        const segWords = chunks[ci].segments[si].text.match(/[A-Za-z'\u2019\u0300-\u036f]+|[^\s]/g) || [];
+        const segWordCount = segWords.length;
+        const segStartTi = segTokenIdx < wordTokenIndices.length ? wordTokenIndices[segTokenIdx] : undefined;
+        const segEndTi = (segTokenIdx + segWordCount - 1) < wordTokenIndices.length
+          ? wordTokenIndices[segTokenIdx + segWordCount - 1]
+          : segStartTi;
+        const segStart = segStartTi !== undefined ? origTokens[segStartTi].start : chunkStart;
+        const segEnd = segEndTi !== undefined ? origTokens[segEndTi].end : segStart;
+        segOffsets.push({ si, start: segStart, end: segEnd });
+        segTokenIdx += segWordCount;
+      }
+
+      chunkOffsets.push({ ci, start: chunkStart, end: chunkEnd, segOffsets });
     }
   }
 
