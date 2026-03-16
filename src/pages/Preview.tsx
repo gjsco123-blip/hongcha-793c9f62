@@ -58,6 +58,8 @@ export default function Preview() {
   const [previewStatus, setPreviewStatus] = useState<SectionStatus>(isNewPassage ? "idle" : (cached?.summary || cached?.examBlock ? "done" : "idle"));
   const [addingWord, setAddingWord] = useState<string | null>(null);
   const [enrichingIdx, setEnrichingIdx] = useState<number | null>(null);
+  const [synonymSelectMode, setSynonymSelectMode] = useState(false);
+  const [addingSynonymWord, setAddingSynonymWord] = useState<string | null>(null);
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
 
@@ -176,6 +178,42 @@ export default function Preview() {
     }
   }, [synonyms, passage]);
 
+  const handleSynonymDeleteRow = useCallback((idx: number) => {
+    setSynonyms((prev) => prev.filter((_, i) => i !== idx));
+  }, []);
+
+  const handleRequestAddFromPassage = useCallback(() => {
+    setSynonymSelectMode((prev) => !prev);
+  }, []);
+
+  const handleSynonymWordClick = useCallback(async (word: string) => {
+    const lower = word.toLowerCase();
+    if (synonyms.some((s) => s.word.toLowerCase() === lower)) {
+      toast.info("이미 추가된 단어입니다.");
+      return;
+    }
+    setAddingSynonymWord(lower);
+    try {
+      const data = await invokeRetry("enrich-synonym", {
+        word,
+        existingSynonyms: "",
+        existingAntonyms: "",
+        passage,
+      });
+      const newItem: SynAntItem = {
+        word,
+        synonym: data.synonyms || "",
+        antonym: data.antonyms || "",
+      };
+      setSynonyms((prev) => [...prev, newItem]);
+      toast.success(`"${word}" 동반의어 추가됨`);
+    } catch (e: any) {
+      toast.error(`동반의어 추가 실패: ${e.message}`);
+    } finally {
+      setAddingSynonymWord(null);
+    }
+  }, [synonyms, passage]);
+
   const regenExamTopic = useCallback(async () => {
     const data = await invokeRetry("analyze-preview", { passage });
     const t = data.exam_block?.topic || "";
@@ -266,6 +304,9 @@ export default function Preview() {
           vocabReady={vocabStatus === "done"}
           onWordClick={handleWordClick}
           addingWord={addingWord}
+          synonymSelectMode={synonymSelectMode}
+          onSynonymWordClick={handleSynonymWordClick}
+          addingSynonymWord={addingSynonymWord}
         />
 
         <PreviewVocabSection
@@ -290,6 +331,9 @@ export default function Preview() {
           onRegenerate={regenSynonyms}
           onEnrichRow={handleEnrichRow}
           enrichingIdx={enrichingIdx}
+          onDeleteRow={handleSynonymDeleteRow}
+          onRequestAddFromPassage={handleRequestAddFromPassage}
+          synonymSelectMode={synonymSelectMode}
         />
 
         <PreviewExamSection
