@@ -149,14 +149,14 @@ export function SyntaxChat({
     : "구문분석 AI 수정";
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-md flex flex-col p-0 gap-0">
-        <SheetHeader className="px-4 py-3 border-b border-border shrink-0">
-          <SheetTitle className="text-sm font-bold">{headerTitle}</SheetTitle>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="w-[90vw] max-w-lg h-[70vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-4 py-3 border-b border-border shrink-0">
+          <DialogTitle className="text-sm font-bold">{headerTitle}</DialogTitle>
           <p className="text-[10px] text-muted-foreground leading-snug line-clamp-2 mt-1">
             {sentence}
           </p>
-        </SheetHeader>
+        </DialogHeader>
 
         {/* Target note or all notes */}
         <div className="px-4 py-2.5 bg-muted/40 border-b border-border shrink-0 max-h-[150px] overflow-y-auto">
