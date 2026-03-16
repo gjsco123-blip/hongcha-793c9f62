@@ -196,7 +196,7 @@ export function PreviewPassageInput({
         <button
           onClick={onGenerate}
           disabled={isGenerating || !passage.trim()}
-          className="px-6 py-2 rounded-full bg-foreground text-background text-xs font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+          className="px-4 py-1.5 rounded-full bg-foreground text-background text-[11px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
         >
           {isGenerating ? "생성 중..." : "Generate"}
         </button>
