@@ -173,7 +173,15 @@ export function useCategories() {
       .eq("id", id);
     if (error) {
       console.error("자동저장 실패:", error.message);
+      return;
     }
+    setPassages((prev) =>
+      prev.map((p) =>
+        p.id === id
+          ? { ...p, ...updates, updated_at: new Date().toISOString() }
+          : p
+      )
+    );
   };
 
   const reorderPassages = async (reorderedIds: string[]) => {

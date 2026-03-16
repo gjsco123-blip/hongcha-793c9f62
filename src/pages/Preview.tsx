@@ -12,6 +12,7 @@ import { PreviewSummarySection } from "@/components/preview/PreviewSummarySectio
 import { PreviewSynonymsSection } from "@/components/preview/PreviewSynonymsSection";
 import { PreviewExamSection } from "@/components/preview/PreviewExamSection";
 import type { VocabItem, SynAntItem, ExamBlock, SectionStatus } from "@/components/preview/types";
+import { mergePassageStore, parsePassageStore } from "@/lib/passage-store";
 
 async function invokeRetry(fn: string, body: any, maxRetries = 3) {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -43,6 +44,7 @@ export default function Preview() {
   const location = useLocation();
   const cached = loadCached();
   const incomingPassage = (location.state as any)?.passage;
+  const passageId = (location.state as any)?.passageId || sessionStorage.getItem("selected-passage-id");
   const pdfTitle = (location.state as any)?.pdfTitle || cached?.pdfTitle || "Preview";
 
   // If navigated with a new passage, use it; otherwise restore cache
@@ -62,12 +64,48 @@ export default function Preview() {
   const [addingSynonymWord, setAddingSynonymWord] = useState<string | null>(null);
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [previewCompleted, setPreviewCompleted] = useState(false);
+  const [loadingSavedState, setLoadingSavedState] = useState(false);
+  const [baseResultsJson, setBaseResultsJson] = useState<unknown>(null);
 
   // Persist state to sessionStorage
   useEffect(() => {
     const state = { passage, vocab, synonyms, summary, examBlock, pdfTitle };
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [passage, vocab, synonyms, summary, examBlock, pdfTitle]);
+
+  useEffect(() => {
+    if (!passageId) return;
+    let cancelled = false;
+    const loadSaved = async () => {
+      setLoadingSavedState(true);
+      const { data, error } = await supabase
+        .from("passages")
+        .select("results_json, passage_text, pdf_title, name")
+        .eq("id", passageId)
+        .single();
+      setLoadingSavedState(false);
+      if (cancelled || error || !data) return;
+
+      setBaseResultsJson(data.results_json);
+      const store = parsePassageStore(data.results_json);
+      setPreviewCompleted(!!store.completion?.previewCompleted);
+
+      if (store.preview) {
+        if (typeof store.preview.passage === "string" && store.preview.passage) setPassage(store.preview.passage);
+        if (Array.isArray(store.preview.vocab)) setVocab(store.preview.vocab as VocabItem[]);
+        if (Array.isArray(store.preview.synonyms)) setSynonyms(store.preview.synonyms as SynAntItem[]);
+        if (typeof store.preview.summary === "string") setSummary(store.preview.summary);
+        if (store.preview.examBlock) setExamBlock(store.preview.examBlock as ExamBlock);
+      } else if (typeof data.passage_text === "string" && data.passage_text) {
+        setPassage(data.passage_text);
+      }
+    };
+    loadSaved();
+    return () => {
+      cancelled = true;
+    };
+  }, [passageId]);
 
   const isGenerating = vocabStatus === "loading" || synonymsStatus === "loading" || previewStatus === "loading";
 
@@ -269,6 +307,38 @@ export default function Preview() {
     setPdfBlobUrl(null);
   };
 
+  const handleTogglePreviewCompleted = async () => {
+    if (!passageId) {
+      toast.info("지문에서 진입한 경우에만 완료 저장이 가능합니다.");
+      return;
+    }
+    const next = !previewCompleted;
+    setPreviewCompleted(next);
+    const mergedStore = mergePassageStore(baseResultsJson, {
+      preview: { passage, pdfTitle, vocab, synonyms, summary, examBlock: examBlock || null },
+      completion: {
+        previewCompleted: next,
+        previewCompletedAt: next ? new Date().toISOString() : null,
+      },
+    });
+    const { error } = await supabase
+      .from("passages")
+      .update({
+        passage_text: passage,
+        pdf_title: pdfTitle,
+        results_json: mergedStore,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", passageId);
+    if (error) {
+      setPreviewCompleted(!next);
+      toast.error("완료 상태 저장 실패");
+      return;
+    }
+    setBaseResultsJson(mergedStore);
+    toast.success(next ? "프리뷰 완료로 표시됨" : "프리뷰 완료 표시 해제");
+  };
+
   const canExport = vocab.length > 0 || synonyms.length > 0 || summary;
 
   return (
@@ -284,6 +354,17 @@ export default function Preview() {
           </div>
           {canExport && (
             <div className="flex items-center gap-2">
+              <button
+                onClick={handleTogglePreviewCompleted}
+                disabled={loadingSavedState}
+                className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full border text-xs font-medium transition-colors disabled:opacity-50 ${
+                  previewCompleted
+                    ? "border-emerald-600 text-emerald-700 hover:bg-emerald-600 hover:text-white"
+                    : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
+                }`}
+              >
+                {previewCompleted ? "완료됨" : "완료 표시"}
+              </button>
               <button onClick={handlePreviewPdf} disabled={pdfGenerating} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors disabled:opacity-50">
                 {pdfGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />} PDF 미리보기
               </button>

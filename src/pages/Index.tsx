@@ -11,6 +11,7 @@ import { usePdfExport } from "@/hooks/usePdfExport";
 import { useCategories } from "@/hooks/useCategories";
 import { renderWithSuperscripts, reorderNotesByPosition } from "@/lib/syntax-superscript";
 import { paginateResults } from "@/lib/pdf-pagination";
+import { mergePassageStore, parsePassageStore } from "@/lib/passage-store";
 import { toast } from "sonner";
 import { FileDown, RotateCw, X, Scissors, RefreshCw, Eye, Loader2 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -103,6 +104,7 @@ export default function Index() {
   const [passage, setPassage] = useState("");
   const [preset, setPreset] = useState<Preset>("수능");
   const [results, setResults] = useState<SentenceResult[]>([]);
+  const [syntaxCompleted, setSyntaxCompleted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [pdfTitle, setPdfTitle] = useState("SYNTAX");
@@ -165,11 +167,13 @@ export default function Index() {
 
     const p = categories.selectedPassage;
     if (p) {
+      const store = parsePassageStore(p.results_json);
       setPassage(p.passage_text || "");
       setPdfTitle(p.pdf_title || p.name || "SYNTAX");
       setPreset((p.preset as Preset) || "수능");
-      if (p.results_json && Array.isArray(p.results_json)) {
-        const loaded = (p.results_json as any[]).map((r: any) => ({
+      setSyntaxCompleted(!!store.completion?.syntaxCompleted);
+      if (store.syntaxResults && Array.isArray(store.syntaxResults)) {
+        const loaded = (store.syntaxResults as any[]).map((r: any) => ({
           ...r,
           englishChunks: r.englishChunks || [],
           koreanLiteralChunks: r.koreanLiteralChunks || [],
@@ -193,14 +197,18 @@ export default function Index() {
     if (!categories.selectedPassageId || !dataLoadedRef.current) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
+      const mergedStore = mergePassageStore(categories.selectedPassage?.results_json, {
+        syntaxResults: results.length > 0 ? results : [],
+        completion: { syntaxCompleted },
+      });
       categories.updatePassage(categories.selectedPassageId!, {
         passage_text: passage,
         pdf_title: pdfTitle,
         preset,
-        results_json: results.length > 0 ? results : null,
+        results_json: mergedStore,
       });
     }, 2000);
-  }, [categories.selectedPassageId, passage, pdfTitle, preset, results]);
+  }, [categories.selectedPassageId, categories.selectedPassage?.results_json, passage, pdfTitle, preset, results, syntaxCompleted]);
 
   useEffect(() => {
     autoSave();
@@ -551,6 +559,26 @@ export default function Index() {
     setPdfBlobUrl(null);
   };
 
+  const handleToggleSyntaxCompleted = async () => {
+    if (!categories.selectedPassageId) return;
+    const next = !syntaxCompleted;
+    setSyntaxCompleted(next);
+    const mergedStore = mergePassageStore(categories.selectedPassage?.results_json, {
+      syntaxResults: results.length > 0 ? results : [],
+      completion: {
+        syntaxCompleted: next,
+        syntaxCompletedAt: next ? new Date().toISOString() : null,
+      },
+    });
+    categories.updatePassage(categories.selectedPassageId, {
+      passage_text: passage,
+      pdf_title: pdfTitle,
+      preset,
+      results_json: mergedStore,
+    });
+    toast.success(next ? "구문분석 완료로 표시됨" : "구문분석 완료 표시 해제");
+  };
+
   const categoryProps = {
     schools: categories.schools,
     passages: categories.passages,
@@ -638,12 +666,23 @@ export default function Index() {
                 </button>
               )}
               <button
-                onClick={() => navigate("/preview", { state: { passage, pdfTitle } })}
+                onClick={() => navigate("/preview", { state: { passage, pdfTitle, passageId: categories.selectedPassageId } })}
                 disabled={!passage.trim()}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors disabled:opacity-40"
               >
                 <Eye className="w-3.5 h-3.5" />
                 Preview
+              </button>
+              <button
+                onClick={handleToggleSyntaxCompleted}
+                disabled={!categories.selectedPassageId}
+                className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full border text-xs font-medium transition-colors disabled:opacity-40 ${
+                  syntaxCompleted
+                    ? "border-emerald-600 text-emerald-700 hover:bg-emerald-600 hover:text-white"
+                    : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
+                }`}
+              >
+                {syntaxCompleted ? "완료됨" : "완료 표시"}
               </button>
               <button
                 onClick={handleAnalyze}
