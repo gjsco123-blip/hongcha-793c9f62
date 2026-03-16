@@ -755,6 +755,15 @@ export default function Index() {
                         />
                       </div>
                     )}
+                    {result.hideLiteral && (
+                      <button
+                        onClick={() => setResults(prev => prev.map(r => r.id === result.id ? { ...r, hideLiteral: false } : r))}
+                        className="flex items-center gap-1 text-[10px] text-muted-foreground/60 hover:text-foreground transition-colors py-1"
+                      >
+                        <Eye className="w-3 h-3" />
+                        <span>직역 보기</span>
+                      </button>
+                    )}
 
                     {/* Korean natural */}
                     {!result.hideNatural && (
