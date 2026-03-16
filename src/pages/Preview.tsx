@@ -442,9 +442,9 @@ export default function Preview() {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleExportPdf}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-foreground text-foreground hover:bg-foreground hover:text-background transition-colors"
+                className="px-3 py-1 rounded-full text-[11px] font-medium border border-foreground text-foreground hover:bg-foreground hover:text-background transition-colors"
               >
-                <FileDown className="w-3.5 h-3.5" /> 다운로드
+                다운로드
               </button>
               <button onClick={closePdfPreview} className="text-muted-foreground hover:text-foreground">
                 <X className="w-4 h-4" />
