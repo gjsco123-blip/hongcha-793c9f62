@@ -840,6 +840,15 @@ export default function Index() {
                         )}
                       </div>
                     )}
+                    {result.hideNatural && (
+                      <button
+                        onClick={() => setResults(prev => prev.map(r => r.id === result.id ? { ...r, hideNatural: false } : r))}
+                        className="flex items-center gap-1 text-[10px] text-muted-foreground/60 hover:text-foreground transition-colors py-1"
+                      >
+                        <Eye className="w-3 h-3" />
+                        <span>의역 보기</span>
+                      </button>
+                    )}
 
                     {/* 홍T */}
                     {!result.hideHongT && (
