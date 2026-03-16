@@ -188,7 +188,7 @@ export default function Preview() {
 
   const handleSynonymWordClick = useCallback(async (word: string) => {
     const lower = word.toLowerCase();
-    if (synonyms.some((s) => s.word.toLowerCase() === lower)) {
+    if (synonyms.some((s) => s.word.toLowerCase().replace(/\s*\(.*?\)\s*$/, "") === lower)) {
       toast.info("이미 추가된 단어입니다.");
       return;
     }
@@ -200,8 +200,9 @@ export default function Preview() {
         existingAntonyms: "",
         passage,
       });
+      const displayWord = data.word_ko ? `${word} (${data.word_ko})` : word;
       const newItem: SynAntItem = {
-        word,
+        word: displayWord,
         synonym: data.synonyms || "",
         antonym: data.antonyms || "",
       };

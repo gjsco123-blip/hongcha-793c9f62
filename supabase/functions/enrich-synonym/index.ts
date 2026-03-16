@@ -17,10 +17,11 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const trimmedPassage = String(passage || "").slice(0, 5000);
+    const isNewWord = !existingSynonyms && !existingAntonyms;
 
     const systemPrompt = `You are a Korean high school English exam vocabulary expert.
 
-Given a word and its existing synonyms/antonyms, generate ADDITIONAL synonyms and antonyms that are NOT already listed.
+Given a word (which may be a single word, phrasal verb, or idiomatic expression) and its existing synonyms/antonyms, generate ADDITIONAL synonyms and antonyms that are NOT already listed.
 
 Rules:
 - Every word must include a Korean meaning in parentheses, e.g. identify(확인하다)
@@ -29,9 +30,12 @@ Rules:
 - Keep the same part of speech as the original word
 - Prefer common academic synonyms used in Korean high school exams
 - Antonyms must represent meaningful conceptual opposites
+- For phrasal verbs or idioms (e.g. "turn down", "take up"), treat them as a single unit
 
 Output ONLY valid JSON (no markdown, no explanation):
-{"synonyms": "word1(뜻1), word2(뜻2)", "antonyms": "word1(뜻1), word2(뜻2)"}`;
+{"word_ko": "한국어 뜻", "synonyms": "word1(뜻1), word2(뜻2)", "antonyms": "word1(뜻1), word2(뜻2)"}
+
+The "word_ko" field must contain the Korean meaning of the given word in the context of the passage.`;
 
     const userMessage = `Word: ${word}
 Existing synonyms: ${existingSynonyms || "(none)"}
@@ -68,13 +72,13 @@ ${trimmedPassage ? `\nPassage context:\n${trimmedPassage}` : ""}`;
     const content = data.choices?.[0]?.message?.content;
     if (!content) throw new Error("No content in response");
 
-    // Parse JSON from response (handle possible markdown wrapping)
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("Failed to parse JSON from response");
 
     const result = JSON.parse(jsonMatch[0]);
 
     return new Response(JSON.stringify({
+      word_ko: result.word_ko || "",
       synonyms: result.synonyms || "",
       antonyms: result.antonyms || "",
     }), {
