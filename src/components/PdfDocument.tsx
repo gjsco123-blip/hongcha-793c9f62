@@ -221,6 +221,13 @@ const styles = StyleSheet.create({
 function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote[], original?: string) {
   const elements: React.ReactNode[] = [];
 
+  const clampToWordStart = (text: string, rawOffset: number) => {
+    let o = Math.max(0, Math.min(rawOffset, text.length));
+    // If annotation points inside a word, snap to the word start to avoid t¹hat-style splits.
+    while (o > 0 && /[A-Za-z]/.test(text[o - 1])) o--;
+    return o;
+  };
+
   // Use shared matching logic: compute positions on original text
   const fullText = original || chunks.map((c) => c.text).join(" ");
   const positions = computeSuperscriptPositions(fullText, (syntaxNotes || []) as SyntaxNoteWithTarget[]);
@@ -261,11 +268,9 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
       if (matchStart >= co.start && matchStart < co.end) {
         for (const so of co.segOffsets) {
           if (matchStart >= so.start && matchStart < so.end) {
-            for (const id of noteIds) {
-              // PDF renderer can break superscripts inserted mid-word (e.g., t¹hat).
-              // Anchor superscripts at segment start for stable rendering.
-              addSup(`${co.ci}-${so.si}`, { id, offset: 0 });
-            }
+            const segText = chunks[co.ci].segments[so.si]?.text ?? "";
+            const offsetInSeg = clampToWordStart(segText, matchStart - so.start);
+            for (const id of noteIds) addSup(`${co.ci}-${so.si}`, { id, offset: offsetInSeg });
             placed = true;
             break;
           }
@@ -297,72 +302,52 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
   chunks.forEach((chunk, ci) => {
     chunk.segments.forEach((seg, si) => {
       const sups = superscriptMap.get(`${ci}-${si}`) || [];
-      // Sort by offset so earlier superscripts render first
-      const sortedSups = [...sups].sort((a, b) => a.offset - b.offset);
+      // Group by exact offset so multiple note ids can be rendered at the same anchor.
+      const groupedByOffset = new Map<number, number[]>();
+      for (const s of sups) {
+        const offset = Math.max(0, Math.min(s.offset, seg.text.length));
+        const ids = groupedByOffset.get(offset) || [];
+        ids.push(s.id);
+        groupedByOffset.set(offset, ids);
+      }
+      const supEvents = [...groupedByOffset.entries()]
+        .sort((a, b) => a[0] - b[0])
+        .map(([offset, ids]) => ({ offset, ids }));
 
-      const renderAllSups = (keyPrefix: string) => {
-        for (const s of sortedSups) {
-          elements.push(renderSup(`${keyPrefix}-sup${s.id}`, s.id));
+      const pushSegmentText = (text: string, keyBase: string) => {
+        if (!text) return;
+        if (!seg.isVerb) {
+          elements.push(<Text key={keyBase}>{text}</Text>);
+          return;
         }
-      };
-
-      // For simplicity, use the first sup's offset for text splitting (if any)
-      const firstSup = sortedSups.length > 0 ? sortedSups[0] : null;
-      const hasOffsetSup = firstSup && firstSup.offset > 0;
-
-      if (seg.isVerb) {
-        if (hasOffsetSup) {
-          const before = seg.text.slice(0, firstSup.offset);
-          const after = seg.text.slice(firstSup.offset);
+        const match = text.match(/^(.*\S)([\s,.:;!?]+)$/);
+        if (match) {
           elements.push(
-            <Text key={`${ci}-${si}-pre`} style={styles.verbUnderline}>
-              {before}
+            <Text key={`${keyBase}-v`} style={styles.verbUnderline}>
+              {match[1]}
             </Text>,
           );
-          renderAllSups(`${ci}-${si}`);
-          const matchAfter = after.match(/^(.*\S)([\s,.:;!?]+)$/);
-          if (matchAfter) {
-            elements.push(
-              <Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>
-                {matchAfter[1]}
-              </Text>,
-            );
-            elements.push(<Text key={`${ci}-${si}-p`}>{matchAfter[2]}</Text>);
-          } else {
-            elements.push(
-              <Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>
-                {after}
-              </Text>,
-            );
-          }
-        } else {
-          const match = seg.text.match(/^(.*\S)([\s,.:;!?]+)$/);
-          if (sortedSups.length > 0) renderAllSups(`${ci}-${si}`);
-          if (match) {
-            elements.push(
-              <Text key={`${ci}-${si}-v`} style={styles.verbUnderline}>
-                {match[1]}
-              </Text>,
-            );
-            elements.push(<Text key={`${ci}-${si}-p`}>{match[2]}</Text>);
-          } else {
-            elements.push(
-              <Text key={`${ci}-${si}`} style={styles.verbUnderline}>
-                {seg.text}
-              </Text>,
-            );
-          }
+          elements.push(<Text key={`${keyBase}-p`}>{match[2]}</Text>);
+          return;
         }
-      } else {
-        if (hasOffsetSup) {
-          elements.push(<Text key={`${ci}-${si}-pre`}>{seg.text.slice(0, firstSup.offset)}</Text>);
-          renderAllSups(`${ci}-${si}`);
-          elements.push(<Text key={`${ci}-${si}-post`}>{seg.text.slice(firstSup.offset)}</Text>);
-        } else {
-          if (sortedSups.length > 0) renderAllSups(`${ci}-${si}`);
-          elements.push(<Text key={`${ci}-${si}`}>{seg.text}</Text>);
+        elements.push(
+          <Text key={keyBase} style={styles.verbUnderline}>
+            {text}
+          </Text>,
+        );
+      };
+
+      let cursor = 0;
+      supEvents.forEach((event, ei) => {
+        if (event.offset > cursor) {
+          pushSegmentText(seg.text.slice(cursor, event.offset), `${ci}-${si}-txt-${ei}`);
         }
-      }
+        event.ids.forEach((id, idi) => {
+          elements.push(renderSup(`${ci}-${si}-sup-${ei}-${idi}-${id}`, id));
+        });
+        cursor = event.offset;
+      });
+      pushSegmentText(seg.text.slice(cursor), `${ci}-${si}-txt-tail`);
     });
     if (ci < chunks.length - 1) {
       elements.push(<Text key={`slash-${ci}`}> / </Text>);
