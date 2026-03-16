@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Sparkles, X, MessageSquare, Pin } from "lucide-react";
 import type { SyntaxNote } from "@/pages/Index";
 import { SyntaxChat } from "./SyntaxChat";
@@ -53,7 +53,18 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
   const [patternsOpen, setPatternsOpen] = useState(false);
   const [pinningId, setPinningId] = useState<number | null>(null);
   const [pinTag, setPinTag] = useState("");
-  const [pinContent, setPinContent] = useState("");
+  const [customTags, setCustomTags] = useState<string[]>([]);
+
+  const fetchCustomTags = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase.from("syntax_patterns").select("tag").eq("user_id", user.id);
+    if (data) {
+      const unique = Array.from(new Set(data.map((d: any) => d.tag)));
+      setCustomTags(unique.filter((t) => !TAG_OPTIONS.includes(t)));
+    }
+  }, [user]);
+
+  useEffect(() => { fetchCustomTags(); }, [fetchCustomTags]);
 
   const handleDeleteNote = (id: number) => {
     const filtered = notes.filter((n) => n.id !== id);
@@ -80,34 +91,35 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
     }
   };
 
-  const handlePinNote = async () => {
-    if (!user || !pinContent.trim()) {
+  const handlePinNote = async (noteContent: string) => {
+    if (!user) {
       toast.error("로그인이 필요합니다.");
       return;
     }
     const tag = pinTag || "기타";
-    const { error } = await supabase.from("syntax_patterns" as any).insert({
+    const { error } = await supabase.from("syntax_patterns").insert({
       user_id: user.id,
       tag,
-      pinned_content: pinContent.trim(),
+      pinned_content: noteContent.trim(),
       example_sentence: sentence || null,
     });
     if (error) {
       toast.error("패턴 고정 실패");
     } else {
       toast.success(`"${tag}" 패턴이 고정되었습니다.`);
+      fetchCustomTags();
     }
     setPinningId(null);
     setPinTag("");
-    setPinContent("");
   };
 
   const startPinning = (note: SyntaxNote) => {
     const detected = autoDetectTag(note.content);
     setPinTag(detected);
-    setPinContent(note.content);
     setPinningId(note.id);
   };
+
+  const allTags = [...TAG_OPTIONS, ...customTags];
 
   return (
     <div className="bg-muted/50 border border-border rounded-xl p-3 relative">
@@ -195,37 +207,28 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
                 )}
                 <div className="flex items-center gap-0.5 shrink-0 mt-0.5">
                 {pinningId === note.id ? (
-                    <div className="flex flex-col gap-1 min-w-[200px]">
-                      <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1">
                         <select
                           value={pinTag}
                           onChange={(e) => setPinTag(e.target.value)}
-                          className="text-[9px] bg-muted border border-border px-1 py-0.5 outline-none flex-1"
+                          className="text-[9px] bg-muted border border-border px-1 py-0.5 outline-none"
                         >
-                          {TAG_OPTIONS.map((t) => (
+                          {allTags.map((t) => (
                             <option key={t} value={t}>{t}</option>
                           ))}
                         </select>
                         <button
-                          onClick={handlePinNote}
+                          onClick={() => handlePinNote(note.content)}
                           className="text-[9px] px-1.5 py-0.5 bg-foreground text-background hover:opacity-90 shrink-0"
                         >
                           확인
                         </button>
                         <button
-                          onClick={() => { setPinningId(null); setPinTag(""); setPinContent(""); }}
+                          onClick={() => { setPinningId(null); setPinTag(""); }}
                           className="p-0.5 text-muted-foreground hover:text-foreground shrink-0"
                         >
                           <X className="w-2.5 h-2.5" />
                         </button>
-                      </div>
-                      <textarea
-                        value={pinContent}
-                        onChange={(e) => setPinContent(e.target.value)}
-                        rows={2}
-                        className="w-full bg-background border border-border px-1.5 py-1 text-[10px] outline-none focus:border-foreground resize-none"
-                        placeholder="고정할 내용을 수정하세요"
-                      />
                     </div>
                   ) : (
                     <button
@@ -266,7 +269,7 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
         />
       )}
 
-      <PinnedPatternsManager open={patternsOpen} onOpenChange={setPatternsOpen} />
+      <PinnedPatternsManager open={patternsOpen} onOpenChange={(open) => { setPatternsOpen(open); if (!open) fetchCustomTags(); }} />
     </div>
   );
 }
