@@ -34,7 +34,7 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
       ?.replace(/\s*\/\s*/g, " ")
       .replace(/\s+/g, " ")
       .trim();
-    if (text && text.length > 2 && containerRef.current?.contains(selection?.anchorNode ?? null)) {
+    if (text && text.length >= 1 && containerRef.current?.contains(selection?.anchorNode ?? null)) {
       const range = selection!.getRangeAt(0);
       const rect = range.getBoundingClientRect();
       const containerRect = containerRef.current!.getBoundingClientRect();

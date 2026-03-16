@@ -1,15 +1,11 @@
 
 
-# "it" 등 짧은 단어 선택 시 구문분석 버튼이 안 뜨는 문제
+## 구문분석 패턴 고정(Pin) 기능
 
-## 원인
+### 완료된 변경
 
-`src/components/ChunkEditor.tsx` line 37에서 선택된 텍스트 길이를 `text.length > 2`로 필터링하고 있음. "it"은 정확히 2글자이므로 조건을 통과하지 못해 툴팁이 표시되지 않음.
-
-## 해결
-
-`text.length > 2` → `text.length >= 1`로 변경하여 단일 단어(it, be, do 등)도 선택 구문분석이 가능하도록 함. 최소 1글자 이상이면 충분.
-
-### 변경 파일
-- `src/components/ChunkEditor.tsx` — line 37의 조건만 수정 (1줄)
-
+1. **DB: `syntax_patterns` 테이블** — user_id, tag, pinned_content, example_sentence + RLS
+2. **`supabase/functions/grammar/index.ts`** — `fetchPinnedPatterns()` 추가, 자동생성/힌트 모드 모두 시스템 프롬프트에 `[고정 패턴]` 블록 주입
+3. **`supabase/functions/grammar-chat/index.ts`** — 동일하게 고정 패턴 주입
+4. **`src/components/SyntaxNotesSection.tsx`** — 각 노트에 📌 호버 버튼 (자동 태그 감지 + 선택), 고정 패턴 관리 버튼
+5. **`src/components/PinnedPatternsManager.tsx`** (신규) — Sheet 형태 관리 UI (목록/삭제/직접 추가)
