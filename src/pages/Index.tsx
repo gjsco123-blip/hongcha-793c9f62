@@ -200,8 +200,12 @@ export default function Index() {
   // Auto-save with debounce
   const autoSave = useCallback(() => {
     if (!categories.selectedPassageId || !dataLoadedRef.current) return;
+    const hasTransientWork = results.some((r) => r.generatingSyntax || r.generatingHongT || r.regenerating);
+    if (hasTransientWork) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
+      const stillHasTransientWork = results.some((r) => r.generatingSyntax || r.generatingHongT || r.regenerating);
+      if (stillHasTransientWork) return;
       // Strip transient UI flags before persisting
       const sanitizedResults = results.map(({ generatingSyntax, generatingHongT, regenerating, ...rest }) => rest);
       const mergedStore = mergePassageStore(categories.selectedPassage?.results_json, {

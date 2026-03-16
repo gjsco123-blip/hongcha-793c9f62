@@ -680,7 +680,7 @@ serve(async (req) => {
         }))
         .filter((p) => p.text);
       autoPoints = autoPoints.slice(0, 5).map((p) => ({
-        text: p.text.length > 170 ? p.text.slice(0, 168).trim() + "…" : p.text,
+        text: p.text,
         targetText: p.targetText,
         tag: p.tag,
       }));
@@ -819,7 +819,7 @@ serve(async (req) => {
     }
 
     const maxPts = 1;
-    points = points.slice(0, maxPts).map((p) => (p.length > 170 ? p.slice(0, 168).trim() + "…" : p));
+    points = points.slice(0, maxPts);
 
     const syntaxNotes = formatAsLines(points, maxPts);
 
