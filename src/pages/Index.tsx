@@ -744,6 +744,14 @@ export default function Index() {
                           label="직역"
                           chunks={result.koreanLiteralChunks}
                           isKorean
+                          onChunkTextChange={(idx, newText) => {
+                            setResults(prev => prev.map(r => {
+                              if (r.id !== result.id) return r;
+                              const updated = [...r.koreanLiteralChunks];
+                              updated[idx] = { ...updated[idx], text: newText };
+                              return { ...r, koreanLiteralChunks: updated };
+                            }));
+                          }}
                         />
                       </div>
                     )}
@@ -758,11 +766,69 @@ export default function Index() {
                         >
                           <X className="w-3 h-3" />
                         </button>
-                        <ResultDisplay
-                          label="의역"
-                          text={result.koreanNatural}
-                          isKorean
-                        />
+                        <button
+                          onClick={async () => {
+                            setResults(prev => prev.map(r => r.id === result.id ? { ...r, regeneratingNatural: true } as any : r));
+                            try {
+                              const { data, error } = await supabase.functions.invoke("engine", {
+                                body: { sentence: result.original, preset },
+                              });
+                              if (error || data?.error) throw new Error(data?.error || error?.message);
+                              const newNatural = data.korean_natural;
+                              if (newNatural === result.koreanNatural) {
+                                toast.info("동일한 결과입니다.");
+                                setResults(prev => prev.map(r => r.id === result.id ? { ...r, regeneratingNatural: false } as any : r));
+                                return;
+                              }
+                              setResults(prev => prev.map(r => r.id === result.id ? { ...r, pendingNatural: newNatural, regeneratingNatural: false } as any : r));
+                            } catch (e: any) {
+                              toast.error(`의역 재생성 실패: ${e.message}`);
+                              setResults(prev => prev.map(r => r.id === result.id ? { ...r, regeneratingNatural: false } as any : r));
+                            }
+                          }}
+                          disabled={(result as any).regeneratingNatural}
+                          className="absolute top-1.5 right-7 p-0.5 text-muted-foreground/50 hover:text-foreground opacity-0 group-hover/natural:opacity-100 transition-opacity disabled:opacity-40"
+                          title="의역 재생성"
+                        >
+                          <RefreshCw className={`w-3 h-3 ${(result as any).regeneratingNatural ? "animate-spin" : ""}`} />
+                        </button>
+                        {(result as any).pendingNatural ? (
+                          <div className="space-y-2">
+                            <div className="flex items-start gap-3">
+                              <div className="w-0.5 h-4 bg-foreground shrink-0 mt-[3px]" />
+                              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider shrink-0 pt-[3px]">의역</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3 ml-6">
+                              <div>
+                                <p className="text-[9px] text-muted-foreground mb-1 uppercase">기존</p>
+                                <p className="text-xs font-sans opacity-60">{result.koreanNatural}</p>
+                              </div>
+                              <div>
+                                <p className="text-[9px] text-muted-foreground mb-1 uppercase">새 결과</p>
+                                <p className="text-xs font-sans">{(result as any).pendingNatural}</p>
+                              </div>
+                            </div>
+                            <div className="flex gap-2 justify-end">
+                              <button
+                                onClick={() => setResults(prev => prev.map(r => r.id === result.id ? { ...r, pendingNatural: undefined } as any : r))}
+                                className="text-[10px] px-3 py-1 rounded-full border border-border text-muted-foreground hover:text-foreground transition-colors"
+                              >유지</button>
+                              <button
+                                onClick={() => setResults(prev => prev.map(r => r.id === result.id ? { ...r, koreanNatural: (r as any).pendingNatural, pendingNatural: undefined } as any : r))}
+                                className="text-[10px] px-3 py-1 rounded-full bg-foreground text-background hover:opacity-90 transition-opacity"
+                              >적용</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <ResultDisplay
+                            label="의역"
+                            text={result.koreanNatural}
+                            isKorean
+                            onTextChange={(newText) => {
+                              setResults(prev => prev.map(r => r.id === result.id ? { ...r, koreanNatural: newText } : r));
+                            }}
+                          />
+                        )}
                       </div>
                     )}
 
