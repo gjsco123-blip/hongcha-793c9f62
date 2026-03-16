@@ -269,7 +269,7 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
         />
       )}
 
-      <PinnedPatternsManager open={patternsOpen} onOpenChange={setPatternsOpen} />
+      <PinnedPatternsManager open={patternsOpen} onOpenChange={(open) => { setPatternsOpen(open); if (!open) fetchCustomTags(); }} />
     </div>
   );
 }
