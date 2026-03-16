@@ -179,6 +179,10 @@ export default function Index() {
           englishChunks: r.englishChunks || [],
           koreanLiteralChunks: r.koreanLiteralChunks || [],
           syntaxNotes: r.syntaxNotes || [],
+          // Force-reset transient UI flags (may have been saved by older versions)
+          generatingSyntax: false,
+          generatingHongT: false,
+          regenerating: false,
         }));
         setResults(loaded);
       } else {
@@ -198,8 +202,10 @@ export default function Index() {
     if (!categories.selectedPassageId || !dataLoadedRef.current) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
+      // Strip transient UI flags before persisting
+      const sanitizedResults = results.map(({ generatingSyntax, generatingHongT, regenerating, ...rest }) => rest);
       const mergedStore = mergePassageStore(categories.selectedPassage?.results_json, {
-        syntaxResults: results.length > 0 ? results : [],
+        syntaxResults: sanitizedResults.length > 0 ? sanitizedResults : [],
         completion: { syntaxCompleted },
       });
       categories.updatePassage(categories.selectedPassageId!, {
