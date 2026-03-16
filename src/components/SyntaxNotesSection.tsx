@@ -53,7 +53,18 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
   const [patternsOpen, setPatternsOpen] = useState(false);
   const [pinningId, setPinningId] = useState<number | null>(null);
   const [pinTag, setPinTag] = useState("");
-  const [pinContent, setPinContent] = useState("");
+  const [customTags, setCustomTags] = useState<string[]>([]);
+
+  const fetchCustomTags = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase.from("syntax_patterns").select("tag").eq("user_id", user.id);
+    if (data) {
+      const unique = Array.from(new Set(data.map((d: any) => d.tag)));
+      setCustomTags(unique.filter((t) => !TAG_OPTIONS.includes(t)));
+    }
+  }, [user]);
+
+  useEffect(() => { fetchCustomTags(); }, [fetchCustomTags]);
 
   const handleDeleteNote = (id: number) => {
     const filtered = notes.filter((n) => n.id !== id);
