@@ -260,7 +260,7 @@ export function PinnedPatternsManager({ open, onOpenChange }: Props) {
             직접 추가
           </button>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
