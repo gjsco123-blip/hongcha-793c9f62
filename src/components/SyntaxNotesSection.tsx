@@ -194,29 +194,38 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
                   </p>
                 )}
                 <div className="flex items-center gap-0.5 shrink-0 mt-0.5">
-                  {pinningId === note.id ? (
-                    <div className="flex items-center gap-1">
-                      <select
-                        value={pinTag}
-                        onChange={(e) => setPinTag(e.target.value)}
-                        className="text-[9px] bg-muted border border-border px-1 py-0.5 outline-none"
-                      >
-                        {TAG_OPTIONS.map((t) => (
-                          <option key={t} value={t}>{t}</option>
-                        ))}
-                      </select>
-                      <button
-                        onClick={() => handlePinNote(note)}
-                        className="text-[9px] px-1.5 py-0.5 bg-foreground text-background hover:opacity-90"
-                      >
-                        확인
-                      </button>
-                      <button
-                        onClick={() => { setPinningId(null); setPinTag(""); }}
-                        className="p-0.5 text-muted-foreground hover:text-foreground"
-                      >
-                        <X className="w-2.5 h-2.5" />
-                      </button>
+                {pinningId === note.id ? (
+                    <div className="flex flex-col gap-1 min-w-[200px]">
+                      <div className="flex items-center gap-1">
+                        <select
+                          value={pinTag}
+                          onChange={(e) => setPinTag(e.target.value)}
+                          className="text-[9px] bg-muted border border-border px-1 py-0.5 outline-none flex-1"
+                        >
+                          {TAG_OPTIONS.map((t) => (
+                            <option key={t} value={t}>{t}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={handlePinNote}
+                          className="text-[9px] px-1.5 py-0.5 bg-foreground text-background hover:opacity-90 shrink-0"
+                        >
+                          확인
+                        </button>
+                        <button
+                          onClick={() => { setPinningId(null); setPinTag(""); setPinContent(""); }}
+                          className="p-0.5 text-muted-foreground hover:text-foreground shrink-0"
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      </div>
+                      <textarea
+                        value={pinContent}
+                        onChange={(e) => setPinContent(e.target.value)}
+                        rows={2}
+                        className="w-full bg-background border border-border px-1.5 py-1 text-[10px] outline-none focus:border-foreground resize-none"
+                        placeholder="고정할 내용을 수정하세요"
+                      />
                     </div>
                   ) : (
                     <button

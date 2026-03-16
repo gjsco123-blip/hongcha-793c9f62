@@ -3,7 +3,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Pin, Trash2, Plus, X } from "lucide-react";
+import { Pin, Trash2, Plus, X, Pencil, Check } from "lucide-react";
 
 interface PinnedPattern {
   id: string;
@@ -30,6 +30,9 @@ export function PinnedPatternsManager({ open, onOpenChange }: Props) {
   const [adding, setAdding] = useState(false);
   const [newTag, setNewTag] = useState(TAG_OPTIONS[0]);
   const [newContent, setNewContent] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTag, setEditTag] = useState("");
+  const [editContent, setEditContent] = useState("");
 
   const fetchPatterns = async () => {
     if (!user) return;
@@ -70,6 +73,31 @@ export function PinnedPatternsManager({ open, onOpenChange }: Props) {
     fetchPatterns();
   };
 
+  const startEditing = (p: PinnedPattern) => {
+    setEditingId(p.id);
+    setEditTag(p.tag);
+    setEditContent(p.pinned_content);
+  };
+
+  const handleUpdate = async () => {
+    if (!editingId || !editContent.trim()) return;
+    const { error } = await supabase
+      .from("syntax_patterns" as any)
+      .update({ tag: editTag, pinned_content: editContent.trim() })
+      .eq("id", editingId);
+    if (error) {
+      toast.error("수정 실패");
+      return;
+    }
+    setPatterns((prev) =>
+      prev.map((p) =>
+        p.id === editingId ? { ...p, tag: editTag, pinned_content: editContent.trim() } : p
+      )
+    );
+    toast.success("패턴이 수정되었습니다.");
+    setEditingId(null);
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md flex flex-col p-0 gap-0">
@@ -96,20 +124,78 @@ export function PinnedPatternsManager({ open, onOpenChange }: Props) {
           ) : (
             patterns.map((p) => (
               <div key={p.id} className="border border-border p-2.5 group/pattern">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground bg-muted px-1.5 py-0.5 inline-block mb-1">
-                      {p.tag}
-                    </span>
-                    <p className="text-xs leading-relaxed text-foreground">{p.pinned_content}</p>
+                {editingId === p.id ? (
+                  <div className="space-y-1.5">
+                    <select
+                      value={TAG_OPTIONS.includes(editTag) ? editTag : "__custom__"}
+                      onChange={(e) => {
+                        if (e.target.value === "__custom__") setEditTag("");
+                        else setEditTag(e.target.value);
+                      }}
+                      className="w-full bg-muted border border-border px-2 py-1 text-xs outline-none focus:border-foreground"
+                    >
+                      {TAG_OPTIONS.map((t) => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                      <option value="__custom__">✏️ 직접 입력</option>
+                    </select>
+                    {!TAG_OPTIONS.includes(editTag) && (
+                      <input
+                        value={editTag}
+                        onChange={(e) => setEditTag(e.target.value)}
+                        placeholder="문법 사항을 직접 입력하세요"
+                        className="w-full bg-muted border border-border px-2 py-1 text-xs outline-none focus:border-foreground"
+                      />
+                    )}
+                    <textarea
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      rows={2}
+                      className="w-full bg-background border border-border px-2 py-1 text-xs outline-none focus:border-foreground resize-none"
+                    />
+                    <div className="flex gap-1">
+                      <button
+                        onClick={handleUpdate}
+                        disabled={!editContent.trim()}
+                        className="text-[10px] px-2 py-0.5 bg-foreground text-background hover:opacity-90 disabled:opacity-30 inline-flex items-center gap-0.5"
+                      >
+                        <Check className="w-2.5 h-2.5" />
+                        저장
+                      </button>
+                      <button
+                        onClick={() => setEditingId(null)}
+                        className="text-[10px] px-2 py-0.5 border border-border text-muted-foreground hover:text-foreground"
+                      >
+                        취소
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => handleDelete(p.id)}
-                    className="shrink-0 p-1 text-muted-foreground/30 hover:text-destructive opacity-0 group-hover/pattern:opacity-100 transition-opacity"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </div>
+                ) : (
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground bg-muted px-1.5 py-0.5 inline-block mb-1">
+                        {p.tag}
+                      </span>
+                      <p className="text-xs leading-relaxed text-foreground">{p.pinned_content}</p>
+                    </div>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <button
+                        onClick={() => startEditing(p)}
+                        className="p-1 text-muted-foreground/30 hover:text-foreground opacity-0 group-hover/pattern:opacity-100 transition-opacity"
+                        title="수정"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(p.id)}
+                        className="p-1 text-muted-foreground/30 hover:text-destructive opacity-0 group-hover/pattern:opacity-100 transition-opacity"
+                        title="삭제"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))
           )}
