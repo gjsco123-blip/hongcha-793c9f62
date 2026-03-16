@@ -304,6 +304,9 @@ export default function Preview() {
           vocabReady={vocabStatus === "done"}
           onWordClick={handleWordClick}
           addingWord={addingWord}
+          synonymSelectMode={synonymSelectMode}
+          onSynonymWordClick={handleSynonymWordClick}
+          addingSynonymWord={addingSynonymWord}
         />
 
         <PreviewVocabSection
