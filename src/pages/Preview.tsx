@@ -178,6 +178,42 @@ export default function Preview() {
     }
   }, [synonyms, passage]);
 
+  const handleSynonymDeleteRow = useCallback((idx: number) => {
+    setSynonyms((prev) => prev.filter((_, i) => i !== idx));
+  }, []);
+
+  const handleRequestAddFromPassage = useCallback(() => {
+    setSynonymSelectMode((prev) => !prev);
+  }, []);
+
+  const handleSynonymWordClick = useCallback(async (word: string) => {
+    const lower = word.toLowerCase();
+    if (synonyms.some((s) => s.word.toLowerCase() === lower)) {
+      toast.info("이미 추가된 단어입니다.");
+      return;
+    }
+    setAddingSynonymWord(lower);
+    try {
+      const data = await invokeRetry("enrich-synonym", {
+        word,
+        existingSynonyms: "",
+        existingAntonyms: "",
+        passage,
+      });
+      const newItem: SynAntItem = {
+        word,
+        synonym: data.synonyms || "",
+        antonym: data.antonyms || "",
+      };
+      setSynonyms((prev) => [...prev, newItem]);
+      toast.success(`"${word}" 동반의어 추가됨`);
+    } catch (e: any) {
+      toast.error(`동반의어 추가 실패: ${e.message}`);
+    } finally {
+      setAddingSynonymWord(null);
+    }
+  }, [synonyms, passage]);
+
   const regenExamTopic = useCallback(async () => {
     const data = await invokeRetry("analyze-preview", { passage });
     const t = data.exam_block?.topic || "";
