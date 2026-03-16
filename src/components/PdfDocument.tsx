@@ -233,7 +233,6 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
   const positions = computeSuperscriptPositions(fullText, (syntaxNotes || []) as SyntaxNoteWithTarget[]);
 
   // Build chunk offset ranges relative to original text
-  const fullTextLower = fullText.toLowerCase();
   const superscriptMap = new Map<string, { id: number; offset: number }[]>();
   const addSup = (key: string, entry: { id: number; offset: number }) => {
     const arr = superscriptMap.get(key) || [];
