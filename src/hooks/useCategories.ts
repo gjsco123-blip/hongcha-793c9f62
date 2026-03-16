@@ -154,14 +154,14 @@ export function useCategories() {
     const nowIso = new Date().toISOString();
     const { error } = await supabase
       .from("passages")
-      .update({ name: nextName, updated_at: nowIso })
+      .update({ name: nextName, pdf_title: nextName, updated_at: nowIso })
       .eq("id", id);
     if (error) {
       toast.error("지문 이름 변경 실패");
       return false;
     }
     setPassages((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, name: nextName, updated_at: nowIso } : p))
+      prev.map((p) => (p.id === id ? { ...p, name: nextName, pdf_title: nextName, updated_at: nowIso } : p))
     );
     return true;
   };
