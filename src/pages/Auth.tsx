@@ -84,7 +84,7 @@ export default function Auth() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full h-11 mt-2 rounded-full bg-foreground text-background text-xs font-medium uppercase tracking-widest hover:opacity-85 disabled:opacity-40 transition-opacity"
+            className="w-full py-2 mt-2 rounded-full bg-foreground text-background text-[11px] font-medium tracking-wider hover:opacity-85 disabled:opacity-40 transition-opacity"
           >
             {submitting ? "처리 중..." : isLogin ? "로그인" : "회원가입"}
           </button>
