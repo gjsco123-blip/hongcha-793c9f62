@@ -292,7 +292,7 @@ export function SyntaxChat({
             </button>
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
