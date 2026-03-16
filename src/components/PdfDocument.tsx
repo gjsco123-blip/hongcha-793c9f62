@@ -223,8 +223,10 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
 
   const clampToWordStart = (text: string, rawOffset: number) => {
     let o = Math.max(0, Math.min(rawOffset, text.length));
-    // If annotation points inside a word, snap to the word start to avoid t¹hat-style splits.
-    while (o > 0 && /[A-Za-z]/.test(text[o - 1])) o--;
+    // If mapped offset lands on whitespace/punctuation, move to the next word start.
+    while (o < text.length && !/[A-Za-z0-9]/.test(text[o])) o++;
+    // If annotation points inside a word, snap to that word start to avoid t¹hat-style splits.
+    while (o > 0 && /[A-Za-z0-9]/.test(text[o - 1])) o--;
     return o;
   };
 
@@ -240,65 +242,46 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
     superscriptMap.set(key, arr);
   };
 
-  // Tokenize original text into words with their exact positions
-  const origTokens: { word: string; start: number; end: number }[] = [];
-  {
-    const re = /[A-Za-z'\u2019\u0300-\u036f]+|[^\s]/g;
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(fullText)) !== null) {
-      origTokens.push({ word: m[0].toLowerCase(), start: m.index, end: m.index + m[0].length });
-    }
-  }
-
   const chunkOffsets: { ci: number; start: number; end: number; segOffsets: { si: number; start: number; end: number }[] }[] = [];
   {
-    let tokenCursor = 0;
+    const fullTextLower = fullText.toLowerCase();
+    let cursor = 0;
     for (let ci = 0; ci < chunks.length; ci++) {
-      // Extract words from chunk
-      const chunkWords = chunks[ci].text.match(/[A-Za-z'\u2019\u0300-\u036f]+|[^\s]/g) || [];
-      let chunkStart = -1;
-      let chunkEnd = -1;
-      const wordTokenIndices: number[] = [];
+      const chunkText = chunks[ci].text || "";
+      const chunkTextLower = chunkText.toLowerCase();
+      let chunkStart = fullTextLower.indexOf(chunkTextLower, cursor);
+      if (chunkStart === -1) chunkStart = cursor;
+      const chunkEnd = chunkStart + chunkText.length;
 
-      for (const cw of chunkWords) {
-        const cwLower = cw.toLowerCase();
-        let found = false;
-        for (let ti = tokenCursor; ti < origTokens.length; ti++) {
-          if (origTokens[ti].word === cwLower) {
-            if (chunkStart === -1) chunkStart = origTokens[ti].start;
-            chunkEnd = origTokens[ti].end;
-            wordTokenIndices.push(ti);
-            tokenCursor = ti + 1;
-            found = true;
-            break;
+      // Map segment offsets by locating each segment inside the located chunk text.
+      const segOffsets: { si: number; start: number; end: number }[] = [];
+      let segLocalCursor = 0;
+      for (let si = 0; si < chunks[ci].segments.length; si++) {
+        const segText = chunks[ci].segments[si].text || "";
+        const segTextLower = segText.toLowerCase();
+
+        let segStart = chunkStart + segLocalCursor;
+        if (segTextLower) {
+          const localIdx = chunkTextLower.indexOf(segTextLower, segLocalCursor);
+          if (localIdx !== -1) {
+            segStart = chunkStart + localIdx;
+            segLocalCursor = localIdx + segText.length;
+          } else {
+            const globalIdx = fullTextLower.indexOf(segTextLower, chunkStart + segLocalCursor);
+            if (globalIdx !== -1) {
+              segStart = globalIdx;
+              segLocalCursor = Math.max(segLocalCursor, globalIdx - chunkStart + segText.length);
+            } else {
+              segLocalCursor += segText.length;
+            }
           }
         }
-        if (!found && chunkStart === -1) {
-          // Fallback: couldn't find word, use current position
-          chunkStart = tokenCursor < origTokens.length ? origTokens[tokenCursor].start : chunkEnd;
-        }
-      }
-
-      if (chunkStart === -1) chunkStart = tokenCursor < origTokens.length ? origTokens[tokenCursor].start : 0;
-      if (chunkEnd === -1) chunkEnd = chunkStart;
-
-      // Map segments using the same token-based approach
-      const segOffsets: { si: number; start: number; end: number }[] = [];
-      let segTokenIdx = 0; // index into wordTokenIndices
-      for (let si = 0; si < chunks[ci].segments.length; si++) {
-        const segWords = chunks[ci].segments[si].text.match(/[A-Za-z'\u2019\u0300-\u036f]+|[^\s]/g) || [];
-        const segWordCount = segWords.length;
-        const segStartTi = segTokenIdx < wordTokenIndices.length ? wordTokenIndices[segTokenIdx] : undefined;
-        const segEndTi = (segTokenIdx + segWordCount - 1) < wordTokenIndices.length
-          ? wordTokenIndices[segTokenIdx + segWordCount - 1]
-          : segStartTi;
-        const segStart = segStartTi !== undefined ? origTokens[segStartTi].start : chunkStart;
-        const segEnd = segEndTi !== undefined ? origTokens[segEndTi].end : segStart;
+        const segEnd = segStart + segText.length;
         segOffsets.push({ si, start: segStart, end: segEnd });
-        segTokenIdx += segWordCount;
       }
 
       chunkOffsets.push({ ci, start: chunkStart, end: chunkEnd, segOffsets });
+      cursor = chunkEnd;
     }
   }
 
@@ -332,11 +315,9 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
     }
   }
 
-  const supStyle = { fontSize: 5, marginRight: 2, verticalAlign: "super" as const };
-
   const renderSup = (key: string, id: number) => (
     <Text key={key} style={{ fontSize: 5, verticalAlign: "super" as const }}>
-      {String(id) + " "}
+      {String(id)}
     </Text>
   );
 
