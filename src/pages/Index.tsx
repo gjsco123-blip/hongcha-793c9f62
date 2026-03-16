@@ -179,6 +179,10 @@ export default function Index() {
           englishChunks: r.englishChunks || [],
           koreanLiteralChunks: r.koreanLiteralChunks || [],
           syntaxNotes: r.syntaxNotes || [],
+          // Force-reset transient UI flags (may have been saved by older versions)
+          generatingSyntax: false,
+          generatingHongT: false,
+          regenerating: false,
         }));
         setResults(loaded);
       } else {
