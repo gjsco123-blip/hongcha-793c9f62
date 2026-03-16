@@ -105,6 +105,7 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
   const startPinning = (note: SyntaxNote) => {
     const detected = autoDetectTag(note.content);
     setPinTag(detected);
+    setPinContent(note.content);
     setPinningId(note.id);
   };
 
