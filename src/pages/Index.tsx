@@ -13,7 +13,8 @@ import { renderWithSuperscripts, reorderNotesByPosition } from "@/lib/syntax-sup
 import { paginateResults } from "@/lib/pdf-pagination";
 import { mergePassageStore, parsePassageStore } from "@/lib/passage-store";
 import { toast } from "sonner";
-import { FileDown, RotateCw, X, Scissors, RefreshCw, Eye, Loader2 } from "lucide-react";
+import { RotateCw, X, Scissors } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
