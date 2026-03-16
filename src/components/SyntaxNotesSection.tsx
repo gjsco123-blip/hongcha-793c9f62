@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Sparkles, X, MessageSquare, Pin } from "lucide-react";
 import type { SyntaxNote } from "@/pages/Index";
 import { SyntaxChat } from "./SyntaxChat";
