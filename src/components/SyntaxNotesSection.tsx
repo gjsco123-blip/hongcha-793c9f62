@@ -91,34 +91,35 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
     }
   };
 
-  const handlePinNote = async () => {
-    if (!user || !pinContent.trim()) {
+  const handlePinNote = async (noteContent: string) => {
+    if (!user) {
       toast.error("로그인이 필요합니다.");
       return;
     }
     const tag = pinTag || "기타";
-    const { error } = await supabase.from("syntax_patterns" as any).insert({
+    const { error } = await supabase.from("syntax_patterns").insert({
       user_id: user.id,
       tag,
-      pinned_content: pinContent.trim(),
+      pinned_content: noteContent.trim(),
       example_sentence: sentence || null,
     });
     if (error) {
       toast.error("패턴 고정 실패");
     } else {
       toast.success(`"${tag}" 패턴이 고정되었습니다.`);
+      fetchCustomTags();
     }
     setPinningId(null);
     setPinTag("");
-    setPinContent("");
   };
 
   const startPinning = (note: SyntaxNote) => {
     const detected = autoDetectTag(note.content);
     setPinTag(detected);
-    setPinContent(note.content);
     setPinningId(note.id);
   };
+
+  const allTags = [...TAG_OPTIONS, ...customTags];
 
   return (
     <div className="bg-muted/50 border border-border rounded-xl p-3 relative">
