@@ -53,6 +53,7 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
   const [patternsOpen, setPatternsOpen] = useState(false);
   const [pinningId, setPinningId] = useState<number | null>(null);
   const [pinTag, setPinTag] = useState("");
+  const [pinContent, setPinContent] = useState("");
 
   const handleDeleteNote = (id: number) => {
     const filtered = notes.filter((n) => n.id !== id);
