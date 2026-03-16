@@ -1,11 +1,29 @@
 
 
-## 구문분석 패턴 고정(Pin) 기능
+# 직역/의역 수동 편집 + 의역 재생성 기능
 
-### 완료된 변경
+## 현재 상태
+- 직역: `ResultDisplay`로 청크 표시만 (편집 불가)
+- 의역: `ResultDisplay`로 텍스트 표시만 (편집 불가, 재생성 불가)
 
-1. **DB: `syntax_patterns` 테이블** — user_id, tag, pinned_content, example_sentence + RLS
-2. **`supabase/functions/grammar/index.ts`** — `fetchPinnedPatterns()` 추가, 자동생성/힌트 모드 모두 시스템 프롬프트에 `[고정 패턴]` 블록 주입
-3. **`supabase/functions/grammar-chat/index.ts`** — 동일하게 고정 패턴 주입
-4. **`src/components/SyntaxNotesSection.tsx`** — 각 노트에 📌 호버 버튼 (자동 태그 감지 + 선택), 고정 패턴 관리 버튼
-5. **`src/components/PinnedPatternsManager.tsx`** (신규) — Sheet 형태 관리 UI (목록/삭제/직접 추가)
+## 수정 사항
+
+### 1. `src/components/ResultDisplay.tsx` — 인라인 편집 지원
+- 의역 (text 모드): 클릭 시 textarea로 전환, blur/Enter 시 저장
+- 직역 (chunks 모드): 각 청크 텍스트 클릭 시 input으로 전환, blur 시 저장
+- `onTextChange?: (text: string) => void` 와 `onChunkTextChange?: (index: number, text: string) => void` props 추가
+
+### 2. `src/pages/Index.tsx` — 의역 재생성 + 편집 핸들러
+- 의역 영역에 재생성 버튼 (RefreshCw) 추가
+- 재생성 시 engine 함수 호출 → `korean_natural`만 추출 → CompareOverlay로 비교 후 적용/유지 선택
+- `koreanNatural` 수동 편집 핸들러 연결
+- `koreanLiteralChunks` 개별 텍스트 수동 편집 핸들러 연결
+
+### 3. UI 구조 (의역 영역)
+```text
+┌─────────────────────────────────┐
+│ 의역  [재생성↻]            [X] │
+│ 클릭하면 편집 가능한 텍스트       │
+└─────────────────────────────────┘
+```
+
