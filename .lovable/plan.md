@@ -1,30 +1,22 @@
 
 
-# 구문분석 채팅창 레이아웃 개선
+## 구문분석 패턴 고정(Pin) 기능
 
-## 문제
-현재 `Sheet` (오른쪽 슬라이드 패널, `sm:max-w-md` = 448px)가 798px 뷰포트에서 메인 콘텐츠 위에 어색하게 겹침. 뒤쪽 콘텐츠가 보이면서 답답한 느낌.
+### 완료된 변경
 
-## 추천 방안 비교
+1. **DB: `syntax_patterns` 테이블** — user_id, tag, pinned_content, example_sentence + RLS
+2. **`supabase/functions/grammar/index.ts`** — `fetchPinnedPatterns()` 추가, 자동생성/힌트 모드 모두 시스템 프롬프트에 `[고정 패턴]` 블록 주입
+3. **`supabase/functions/grammar-chat/index.ts`** — 동일하게 고정 패턴 주입
+4. **`src/components/SyntaxNotesSection.tsx`** — 각 노트에 📌 호버 버튼 (자동 태그 감지 + 선택), 고정 패턴 관리 버튼
+5. **`src/components/PinnedPatternsManager.tsx`** (신규) — Sheet 형태 관리 UI (목록/삭제/직접 추가)
 
-| 방안 | 장점 | 단점 |
-|------|------|------|
-| **A. Sheet → Dialog(모달)로 변경** | 중앙 정렬, 깔끔한 포커스 | 대화가 길어지면 스크롤 필요 |
-| **B. Sheet 전체 너비 사용** | 변경 최소, 모바일 친화적 | 데스크톱에서 너무 넓을 수 있음 |
-| **C. Sheet 폭 줄이기 (max-w-sm)** | 미니멀, 변경 최소 | 여전히 겹침 문제 |
+## 위첨자(Superscript) 안정화 리팩터링
 
-**추천: 방안 A — Dialog(모달)로 전환**
+### 완료된 변경
 
-이유:
-- 현재 뷰포트(798px)에서 Sheet는 화면 절반 이상을 차지하면서 뒤 콘텐츠와 어색하게 겹침
-- Dialog는 중앙에 깔끔하게 포커스되어 대화에 집중 가능
-- 앱의 미니멀 디자인과도 더 잘 어울림
-
-## 변경 내용 (방안 A 기준)
-
-### `src/components/SyntaxChat.tsx`
-- `Sheet` / `SheetContent` / `SheetHeader` / `SheetTitle` → `Dialog` / `DialogContent` / `DialogHeader` / `DialogTitle`로 교체
-- 레이아웃: `max-w-lg w-[90vw] h-[70vh]` — 중앙 모달, 적절한 높이
-- 내부 구조(메시지 목록, 입력창)는 그대로 유지
-- flex 레이아웃으로 메시지 영역 스크롤 + 입력 하단 고정
-
+1. **`src/lib/syntax-superscript.tsx`** — `indexOf` 기반 부분문자열 매칭을 **단어 토큰 시퀀스 매칭(`findTargetSpan`)**으로 완전 교체. "it"이 "point" 안에서 매칭되는 등의 오류 차단.
+2. **`src/components/PdfDocument.tsx`** — 공통 `computeSuperscriptPositions`가 토큰 매칭을 사용하므로 PDF도 자동으로 동일 로직 적용.
+3. **`supabase/functions/grammar/index.ts`** — targetText 규칙 강화:
+   - 표면형 그대로 반환 의무화 (its→it 축약 금지)
+   - 짧은 단어 단독 사용 금지 (최소 2단어 + 주변 문맥 포함)
+   - 구체적 ✅/❌ 예시 추가
