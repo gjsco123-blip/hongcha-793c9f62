@@ -93,10 +93,19 @@ export default function Preview() {
 
       if (store.preview) {
         if (typeof store.preview.passage === "string" && store.preview.passage) setPassage(store.preview.passage);
-        if (Array.isArray(store.preview.vocab)) setVocab(store.preview.vocab as VocabItem[]);
-        if (Array.isArray(store.preview.synonyms)) setSynonyms(store.preview.synonyms as SynAntItem[]);
-        if (typeof store.preview.summary === "string") setSummary(store.preview.summary);
-        if (store.preview.examBlock) setExamBlock(store.preview.examBlock as ExamBlock);
+        const savedVocab = Array.isArray(store.preview.vocab) ? (store.preview.vocab as VocabItem[]) : [];
+        const savedSynonyms = Array.isArray(store.preview.synonyms) ? (store.preview.synonyms as SynAntItem[]) : [];
+        const savedSummary = typeof store.preview.summary === "string" ? store.preview.summary : "";
+        const savedExam = store.preview.examBlock ? (store.preview.examBlock as ExamBlock) : null;
+
+        setVocab(savedVocab);
+        setSynonyms(savedSynonyms);
+        setSummary(savedSummary);
+        setExamBlock(savedExam);
+
+        setVocabStatus(savedVocab.length > 0 ? "done" : "idle");
+        setSynonymsStatus(savedSynonyms.length > 0 ? "done" : "idle");
+        setPreviewStatus(savedSummary || savedExam ? "done" : "idle");
       } else if (typeof data.passage_text === "string" && data.passage_text) {
         setPassage(data.passage_text);
       }
