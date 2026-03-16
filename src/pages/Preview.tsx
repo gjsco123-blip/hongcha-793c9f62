@@ -331,6 +331,9 @@ export default function Preview() {
           onRegenerate={regenSynonyms}
           onEnrichRow={handleEnrichRow}
           enrichingIdx={enrichingIdx}
+          onDeleteRow={handleSynonymDeleteRow}
+          onRequestAddFromPassage={handleRequestAddFromPassage}
+          synonymSelectMode={synonymSelectMode}
         />
 
         <PreviewExamSection
