@@ -99,17 +99,16 @@ export function PinnedPatternsManager({ open, onOpenChange }: Props) {
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-md flex flex-col p-0 gap-0">
-        <SheetHeader className="px-4 py-3 border-b border-border shrink-0">
-          <SheetTitle className="text-sm font-bold flex items-center gap-1.5">
-            <Pin className="w-3.5 h-3.5" />
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="w-[90vw] max-w-lg h-[70vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-4 py-3 border-b border-border shrink-0">
+          <DialogTitle className="text-sm font-bold">
             고정 패턴 관리
-          </SheetTitle>
+          </DialogTitle>
           <p className="text-[10px] text-muted-foreground mt-1">
             고정된 설명 방식은 구문분석 자동생성 및 AI 수정에 항상 반영됩니다.
           </p>
-        </SheetHeader>
+        </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
           {loading ? (
