@@ -7,24 +7,68 @@ export interface SyntaxNoteWithTarget {
 }
 
 /**
- * Compute superscript positions by matching targetText against the original text.
- * Returns a Map from character start-position (in originalText) to array of note IDs.
- * This is the single source of truth for both web UI and PDF rendering.
+ * Tokenize text into words with their character positions.
+ * A "word" is a sequence of word characters (letters, digits, apostrophes, unicode marks).
+ */
+function tokenize(text: string): { word: string; start: number; end: number }[] {
+  const tokens: { word: string; start: number; end: number }[] = [];
+  const re = /[A-Za-z'\u2019\u0300-\u036f0-9]+/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    tokens.push({ word: m[0].toLowerCase(), start: m.index, end: m.index + m[0].length });
+  }
+  return tokens;
+}
+
+/**
+ * Find the token-sequence match of targetText within originalText.
+ * Returns the character range [start, end) in originalText, or null if not found.
+ * Uses word-boundary-aware matching: "it" won't match inside "point".
+ */
+function findTargetSpan(
+  originalText: string,
+  targetText: string
+): { start: number; end: number } | null {
+  const srcTokens = tokenize(originalText);
+  const tgtTokens = tokenize(targetText);
+  if (tgtTokens.length === 0 || srcTokens.length === 0) return null;
+
+  for (let i = 0; i <= srcTokens.length - tgtTokens.length; i++) {
+    let match = true;
+    for (let j = 0; j < tgtTokens.length; j++) {
+      if (srcTokens[i + j].word !== tgtTokens[j].word) {
+        match = false;
+        break;
+      }
+    }
+    if (match) {
+      return {
+        start: srcTokens[i].start,
+        end: srcTokens[i + tgtTokens.length - 1].end,
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * Compute superscript positions by matching targetText against the original text
+ * using word-token-sequence matching (prevents partial-word matches).
+ * Returns a Map from character start-position to array of note IDs.
  */
 export function computeSuperscriptPositions(
   originalText: string,
   syntaxNotes: SyntaxNoteWithTarget[]
 ): Map<number, number[]> {
   const result = new Map<number, number[]>();
-  const lowerText = originalText.toLowerCase();
 
   for (const note of syntaxNotes) {
     if (!note.targetText) continue;
-    const idx = lowerText.indexOf(note.targetText.toLowerCase());
-    if (idx === -1) continue;
-    const arr = result.get(idx) || [];
+    const span = findTargetSpan(originalText, note.targetText);
+    if (!span) continue;
+    const arr = result.get(span.start) || [];
     arr.push(note.id);
-    result.set(idx, arr);
+    result.set(span.start, arr);
   }
 
   return result;
@@ -32,7 +76,7 @@ export function computeSuperscriptPositions(
 
 /**
  * Renders text with superscript numbers where syntaxNotes' targetText matches.
- * Returns an array of React nodes.
+ * Uses token-sequence matching for accuracy.
  */
 export function renderWithSuperscripts(
   text: string,
@@ -47,14 +91,13 @@ export function renderWithSuperscripts(
 
   if (annotations.length === 0) return [text];
 
-  // Find all matches with positions
+  // Find all matches with positions using token matching
   const matches: { start: number; end: number; id: number }[] = [];
-  const lowerText = text.toLowerCase();
 
   for (const ann of annotations) {
-    const idx = lowerText.indexOf(ann.target.toLowerCase());
-    if (idx !== -1) {
-      matches.push({ start: idx, end: idx + ann.target.length, id: ann.id });
+    const span = findTargetSpan(text, ann.target);
+    if (span) {
+      matches.push({ start: span.start, end: span.end, id: ann.id });
     }
   }
 
@@ -67,7 +110,7 @@ export function renderWithSuperscripts(
   let cursor = 0;
 
   for (const m of matches) {
-    if (m.start < cursor) continue; // 겹치는 매치 건너뛰기
+    if (m.start < cursor) continue; // skip overlapping
     if (m.start > cursor) {
       elements.push(text.slice(cursor, m.start));
     }
@@ -89,7 +132,7 @@ export function renderWithSuperscripts(
 
 /**
  * Reorder syntax notes by their targetText position in the original sentence.
- * Notes without targetText go to the end. IDs are reassigned sequentially.
+ * Uses token-sequence matching. Notes without targetText go to the end.
  */
 export function reorderNotesByPosition<T extends { id: number; content: string; targetText?: string }>(
   notes: T[],
@@ -97,10 +140,9 @@ export function reorderNotesByPosition<T extends { id: number; content: string; 
 ): T[] {
   if (notes.length <= 1) return notes.map((n, i) => ({ ...n, id: i + 1 }));
 
-  const lowerText = originalText.toLowerCase();
   const withPos = notes.map((n) => {
-    const pos = n.targetText ? lowerText.indexOf(n.targetText.toLowerCase()) : -1;
-    return { note: n, pos: pos === -1 ? Infinity : pos };
+    const span = n.targetText ? findTargetSpan(originalText, n.targetText) : null;
+    return { note: n, pos: span ? span.start : Infinity };
   });
   withPos.sort((a, b) => a.pos - b.pos);
   return withPos.map((item, i) => ({ ...item.note, id: i + 1 }));
@@ -108,6 +150,7 @@ export function reorderNotesByPosition<T extends { id: number; content: string; 
 
 /**
  * Check if a word range in chunks matches any targetText and return the note id.
+ * Uses token-sequence matching against the full text.
  */
 export function findSuperscriptForWord(
   fullText: string,
@@ -115,18 +158,19 @@ export function findSuperscriptForWord(
   wordEnd: number,
   syntaxNotes: SyntaxNoteWithTarget[]
 ): number | null {
-  const lowerText = fullText.toLowerCase();
-
   for (const note of syntaxNotes) {
     if (!note.targetText) continue;
-    const targetLower = note.targetText.toLowerCase();
-    const matchIdx = lowerText.indexOf(targetLower);
-    if (matchIdx === -1) continue;
-    const matchEnd = matchIdx + targetLower.length;
+    const span = findTargetSpan(fullText, note.targetText);
+    if (!span) continue;
     // Show superscript on the last word of the match
-    if (wordEnd <= matchEnd && wordEnd > matchEnd - 3 && wordStart >= matchIdx) {
+    if (wordEnd <= span.end && wordEnd > span.end - 3 && wordStart >= span.start) {
       return note.id;
     }
   }
   return null;
 }
+
+/**
+ * Exported for PDF and other consumers that need the raw span data.
+ */
+export { findTargetSpan };

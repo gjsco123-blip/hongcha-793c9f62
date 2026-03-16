@@ -411,6 +411,17 @@ function buildAutoSystemPrompt() {
   ✅ 지시대명사 that → targetText: "that is a"
   ✅ 수동태 be p.p. → targetText: "was discovered by"
   ✅ 관계대명사 who가 이끄는 절 → targetText: "who attended the"
+- targetText는 반드시 원문의 정확한 표면형(surface form)을 사용해야 한다. 절대로 단어를 축약하거나 원형/기본형으로 바꾸지 말 것.
+  ❌ its → it (축약 금지)
+  ❌ holds → hold (원형 변환 금지)
+  ❌ discovered → discover (원형 변환 금지)
+  ✅ 원문에 "its"가 있으면 targetText에도 반드시 "its"를 포함
+  ✅ 원문에 "holds"가 있으면 targetText에도 반드시 "holds"를 포함
+- 짧은 단어(it, its, that, this, those, a, the 등)만으로 targetText를 구성하지 말 것. 반드시 2단어 이상, 주변 단어를 포함하여 문맥상 유일하게 식별 가능하도록 하라.
+  ❌ targetText: "it" (너무 짧아 오매칭 위험)
+  ❌ targetText: "its" (너무 짧아 오매칭 위험)
+  ✅ targetText: "it is important" (주변 포함)
+  ✅ targetText: "holds its breath" (주변 포함)
 
 [동일 대상 병합 규칙]
 - 같은 단어/구문에 대해 여러 포인트가 있으면(예: to부정사의 명사적 용법 + restrict A to B가 동일한 "to restrict"에 해당), 동일한 targetText를 공유하고 points 배열에서 연속 배치하라.
