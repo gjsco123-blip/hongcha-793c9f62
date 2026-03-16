@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate, useLocation } from "react-router-dom";
 import { pdf } from "@react-pdf/renderer";
-import { ArrowLeft, FileDown, Eye, Loader2, X } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { PreviewPdf } from "@/components/PreviewPdf";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { PreviewPassageInput } from "@/components/preview/PreviewPassageInput";
@@ -358,27 +359,24 @@ export default function Preview() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2 flex-1">
-            <Eye className="w-5 h-5" />
             <h1 className="text-xl font-bold tracking-wide">{pdfTitle}</h1>
           </div>
           {canExport && (
             <div className="flex items-center gap-2">
-              <button
-                onClick={handleTogglePreviewCompleted}
-                disabled={loadingSavedState}
-                className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full border text-xs font-medium transition-colors disabled:opacity-50 ${
-                  previewCompleted
-                    ? "border-emerald-600 text-emerald-700 hover:bg-emerald-600 hover:text-white"
-                    : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
-                }`}
-              >
-                {previewCompleted ? "완료됨" : "완료 표시"}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-muted-foreground">완료</span>
+                <Switch
+                  checked={previewCompleted}
+                  onCheckedChange={handleTogglePreviewCompleted}
+                  disabled={loadingSavedState}
+                  className="scale-75"
+                />
+              </div>
+              <button onClick={handlePreviewPdf} disabled={pdfGenerating} className="px-3 py-1 rounded-full border border-foreground text-foreground text-[11px] font-medium hover:bg-foreground hover:text-background transition-colors disabled:opacity-50">
+                {pdfGenerating ? "생성 중..." : "PDF 미리보기"}
               </button>
-              <button onClick={handlePreviewPdf} disabled={pdfGenerating} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors disabled:opacity-50">
-                {pdfGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />} PDF 미리보기
-              </button>
-              <button onClick={handleExportPdf} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-foreground text-foreground text-xs font-medium hover:bg-foreground hover:text-background transition-colors">
-                <FileDown className="w-3.5 h-3.5" /> PDF 저장
+              <button onClick={handleExportPdf} className="px-3 py-1 rounded-full border border-foreground text-foreground text-[11px] font-medium hover:bg-foreground hover:text-background transition-colors">
+                PDF 저장
               </button>
             </div>
           )}
@@ -444,9 +442,9 @@ export default function Preview() {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleExportPdf}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-foreground text-foreground hover:bg-foreground hover:text-background transition-colors"
+                className="px-3 py-1 rounded-full text-[11px] font-medium border border-foreground text-foreground hover:bg-foreground hover:text-background transition-colors"
               >
-                <FileDown className="w-3.5 h-3.5" /> 다운로드
+                다운로드
               </button>
               <button onClick={closePdfPreview} className="text-muted-foreground hover:text-foreground">
                 <X className="w-4 h-4" />

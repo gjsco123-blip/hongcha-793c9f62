@@ -1,4 +1,3 @@
-import { Loader2, RefreshCw } from "lucide-react";
 import type { SectionStatus } from "./types";
 
 interface Props {
@@ -14,7 +13,7 @@ export function SectionHeader({ title, status, onRegenerate, isRegenerating, chi
     <div className="flex items-center gap-2 mb-4">
       <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground flex items-center gap-2">
         {title}
-        {status === "loading" && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground inline-block" />}
+        {status === "loading" && <span className="text-muted-foreground">...</span>}
       </h2>
       <div className="flex-1" />
       {children}
@@ -22,10 +21,9 @@ export function SectionHeader({ title, status, onRegenerate, isRegenerating, chi
         <button
           onClick={onRegenerate}
           disabled={isRegenerating}
-          className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors disabled:opacity-40"
+          className="text-[10px] px-2 py-0.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors disabled:opacity-40"
         >
-          <RefreshCw className={`w-3 h-3 ${isRegenerating ? "animate-spin" : ""}`} />
-          재생성
+          {isRegenerating ? "재생성 중..." : "재생성"}
         </button>
       )}
     </div>

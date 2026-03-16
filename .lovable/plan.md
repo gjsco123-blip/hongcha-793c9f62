@@ -1,39 +1,22 @@
 
 
-# 버튼 미니멀화 — 아이콘 제거 + 크기 축소 + 완료 토글
+## 구문분석 패턴 고정(Pin) 기능
 
-## 변경 요약
+### 완료된 변경
 
-모든 액션 버튼에서 아이콘을 제거하고 크기를 줄입니다. "완료 표시"는 작은 토글 스위치로 변경합니다.
+1. **DB: `syntax_patterns` 테이블** — user_id, tag, pinned_content, example_sentence + RLS
+2. **`supabase/functions/grammar/index.ts`** — `fetchPinnedPatterns()` 추가, 자동생성/힌트 모드 모두 시스템 프롬프트에 `[고정 패턴]` 블록 주입
+3. **`supabase/functions/grammar-chat/index.ts`** — 동일하게 고정 패턴 주입
+4. **`src/components/SyntaxNotesSection.tsx`** — 각 노트에 📌 호버 버튼 (자동 태그 감지 + 선택), 고정 패턴 관리 버튼
+5. **`src/components/PinnedPatternsManager.tsx`** (신규) — Sheet 형태 관리 UI (목록/삭제/직접 추가)
 
-## 변경 파일
+## 위첨자(Superscript) 안정화 리팩터링
 
-### 1. `src/pages/Index.tsx` (639~695행)
-- **PDF 미리보기 / PDF 저장 / Preview 버튼**: 아이콘 제거, `px-4 py-2` → `px-3 py-1`, `gap-1.5` 제거
-- **실패 재시도 버튼**: 아이콘 제거, 동일하게 축소
-- **분석하기 버튼**: `px-5 py-2` → `px-4 py-1.5`
-- **완료 표시**: 버튼 → 작은 토글 스위치 (`Switch` 컴포넌트 + "완료" 라벨, `text-[10px]`)
-- 사용하지 않는 아이콘 import 제거 (`Eye`, `FileDown`, `Loader2`, `RefreshCw`)
+### 완료된 변경
 
-### 2. `src/pages/Preview.tsx` (364~382행)
-- 헤더의 **PDF 미리보기 / PDF 저장** 버튼: 아이콘 제거, `px-3 py-1`로 축소
-- **완료 표시**: 동일하게 토글 스위치로 변경
-- 타이틀 옆 `Eye` 아이콘 제거
-- 사용하지 않는 아이콘 import 제거
-
-### 3. `src/components/preview/SectionHeader.tsx`
-- 재생성 버튼의 `RefreshCw` 아이콘 제거, 텍스트만 유지
-- 로딩 스피너(`Loader2`)는 텍스트 "..." 으로 대체
-
-### 4. `src/components/preview/PreviewPassageInput.tsx`
-- Generate 버튼 크기 축소 (확인 후 아이콘 있으면 제거)
-
-## 토글 스위치 상세
-기존 shadcn `Switch` 컴포넌트를 활용:
-```
-<div className="flex items-center gap-1.5">
-  <span className="text-[10px] text-muted-foreground">완료</span>
-  <Switch checked={completed} onCheckedChange={toggle} className="scale-75" />
-</div>
-```
-
+1. **`src/lib/syntax-superscript.tsx`** — `indexOf` 기반 부분문자열 매칭을 **단어 토큰 시퀀스 매칭(`findTargetSpan`)**으로 완전 교체. "it"이 "point" 안에서 매칭되는 등의 오류 차단.
+2. **`src/components/PdfDocument.tsx`** — 공통 `computeSuperscriptPositions`가 토큰 매칭을 사용하므로 PDF도 자동으로 동일 로직 적용.
+3. **`supabase/functions/grammar/index.ts`** — targetText 규칙 강화:
+   - 표면형 그대로 반환 의무화 (its→it 축약 금지)
+   - 짧은 단어 단독 사용 금지 (최소 2단어 + 주변 문맥 포함)
+   - 구체적 ✅/❌ 예시 추가
