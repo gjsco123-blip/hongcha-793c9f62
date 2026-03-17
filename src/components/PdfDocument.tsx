@@ -338,7 +338,8 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
 
       const pushSegmentText = (text: string, keyBase: string) => {
         if (!text) return;
-        if (!seg.isVerb) {
+        const canUnderline = seg.isVerb && /[A-Za-z]/.test(text);
+        if (!canUnderline) {
           elements.push(<Text key={keyBase}>{text}</Text>);
           return;
         }

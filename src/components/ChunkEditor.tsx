@@ -127,6 +127,8 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
     const target = isEditing ? draftChunks : chunks;
     const chunk = target[chunkIndex];
     const words = segmentsToWords(chunk.segments);
+    // Ignore punctuation-only tokens like dash/em-dash.
+    if (!/[A-Za-z]/.test(words[wordIndex]?.word || "")) return;
     words[wordIndex] = { ...words[wordIndex], isVerb: !words[wordIndex].isVerb };
     const newSegments = wordsToSegments(words);
 
@@ -312,7 +314,7 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
                   key={wi}
                   onClick={isEditing ? () => handleWordInteraction(i, wi) : undefined}
                   onDoubleClick={isEditing ? () => handleWordDoubleClick(i, wi) : undefined}
-                  className={`${w.isVerb ? "underline decoration-foreground decoration-2 underline-offset-[3px]" : ""}
+                  className={`${w.isVerb && /[A-Za-z]/.test(w.word) ? "underline decoration-foreground decoration-2 underline-offset-[3px]" : ""}
                     ${isEditing ? "cursor-pointer hover:bg-muted/80 rounded-sm" : ""}`}
                   title={isEditing ? "클릭: 분할 / 더블클릭: 동사 표시" : ""}
                 >

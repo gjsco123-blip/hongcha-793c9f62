@@ -11,6 +11,10 @@ export interface Chunk {
   segments: ChunkSegment[];
 }
 
+function hasEnglishLetterToken(word: string): boolean {
+  return /[A-Za-z]/.test(word);
+}
+
 /** Parse <v>...</v> tags inside a chunk's text into segments */
 function parseVerbSegments(raw: string): ChunkSegment[] {
   const segments: ChunkSegment[] = [];
@@ -128,7 +132,8 @@ export function segmentsToWords(segments: ChunkSegment[]): { word: string; isVer
     const parts = seg.text.split(/(\s+)/);
     for (const part of parts) {
       if (part.trim()) {
-        words.push({ word: part, isVerb: seg.isVerb });
+        // Keep punctuation tokens (e.g. "—") from being treated as verbs.
+        words.push({ word: part, isVerb: seg.isVerb && hasEnglishLetterToken(part) });
       }
     }
   }
