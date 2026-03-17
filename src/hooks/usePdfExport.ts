@@ -1,6 +1,8 @@
 import { useCallback, createElement } from "react";
 import { pdf } from "@react-pdf/renderer";
+import { PDFDocument } from "pdf-lib";
 import { PdfDocument } from "@/components/PdfDocument";
+import { PreviewPdf } from "@/components/PreviewPdf";
 import { Chunk } from "@/lib/chunk-utils";
 
 interface SyntaxNote {
@@ -22,6 +24,36 @@ interface SentenceResult {
   hideHongT?: boolean;
 }
 
+interface VocabItem {
+  word: string;
+  pos: string;
+  meaning_ko: string;
+  in_context: string;
+}
+
+interface SynAntItem {
+  word: string;
+  synonym: string;
+  antonym: string;
+}
+
+interface ExamBlock {
+  topic: string;
+  topic_ko?: string;
+  title: string;
+  title_ko?: string;
+  one_sentence_summary: string;
+  one_sentence_summary_ko?: string;
+}
+
+interface PreviewPayload {
+  vocab: VocabItem[];
+  synonyms: SynAntItem[];
+  summary: string;
+  examBlock: ExamBlock | null;
+  title?: string;
+}
+
 function triggerDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -31,6 +63,18 @@ function triggerDownload(blob: Blob, filename: string) {
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function mergePdfBlobs(blobs: Blob[]): Promise<Blob> {
+  const merged = await PDFDocument.create();
+  for (const b of blobs) {
+    const bytes = new Uint8Array(await b.arrayBuffer());
+    const src = await PDFDocument.load(bytes);
+    const copied = await merged.copyPages(src, src.getPageIndices());
+    copied.forEach((p) => merged.addPage(p));
+  }
+  const out = await merged.save();
+  return new Blob([out], { type: "application/pdf" });
 }
 
 export function usePdfExport() {
@@ -61,5 +105,31 @@ export function usePdfExport() {
     []
   );
 
-  return { exportToPdf, previewPdf };
+  const exportCombinedPdf = useCallback(
+    async (
+      previewData: PreviewPayload,
+      syntaxResults: SentenceResult[],
+      title: string,
+      subtitle: string,
+      filename: string = "worksheet-combined.pdf"
+    ) => {
+      const previewDocument = createElement(PreviewPdf, {
+        vocab: previewData.vocab,
+        synonyms: previewData.synonyms,
+        summary: previewData.summary,
+        examBlock: previewData.examBlock,
+        title: previewData.title || title,
+      });
+      const syntaxDocument = createElement(PdfDocument, { results: syntaxResults, title, subtitle });
+      const [previewBlob, syntaxBlob] = await Promise.all([
+        pdf(previewDocument).toBlob(),
+        pdf(syntaxDocument).toBlob(),
+      ]);
+      const mergedBlob = await mergePdfBlobs([previewBlob, syntaxBlob]);
+      triggerDownload(mergedBlob, filename);
+    },
+    []
+  );
+
+  return { exportToPdf, previewPdf, exportCombinedPdf };
 }

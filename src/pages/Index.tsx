@@ -106,6 +106,7 @@ export default function Index() {
   const [preset, setPreset] = useState<Preset>("수능");
   const [results, setResults] = useState<SentenceResult[]>([]);
   const [syntaxCompleted, setSyntaxCompleted] = useState(false);
+  const [previewCompleted, setPreviewCompleted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [pdfTitle, setPdfTitle] = useState("SYNTAX");
@@ -173,6 +174,7 @@ export default function Index() {
       setPdfTitle(p.pdf_title || p.name || "SYNTAX");
       setPreset((p.preset as Preset) || "수능");
       setSyntaxCompleted(!!store.completion?.syntaxCompleted);
+      setPreviewCompleted(!!store.completion?.previewCompleted);
       if (store.syntaxResults && Array.isArray(store.syntaxResults)) {
         const loaded = (store.syntaxResults as any[]).map((r: any) => ({
           ...r,
@@ -189,6 +191,8 @@ export default function Index() {
         setResults([]);
       }
       dataLoadedRef.current = true;
+    } else {
+      setPreviewCompleted(false);
     }
   }, [categories.selectedPassageId, categories.selectedPassage]);
 
@@ -226,6 +230,25 @@ export default function Index() {
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
   }, [autoSave]);
 
+  useEffect(() => {
+    if (!categories.selectedPassageId) return;
+    let cancelled = false;
+    const syncPreviewCompletion = async () => {
+      const { data } = await supabase
+        .from("passages")
+        .select("results_json")
+        .eq("id", categories.selectedPassageId!)
+        .single();
+      if (cancelled || !data) return;
+      const store = parsePassageStore(data.results_json);
+      setPreviewCompleted(!!store.completion?.previewCompleted);
+    };
+    syncPreviewCompletion();
+    return () => {
+      cancelled = true;
+    };
+  }, [categories.selectedPassageId]);
+
   const autoSentences = useMemo(
     () => splitIntoSentences(passage),
     [passage]
@@ -239,8 +262,9 @@ export default function Index() {
     setEditedSentences(autoSentences);
   }
 
-  const { exportToPdf, previewPdf } = usePdfExport();
+  const { exportToPdf, previewPdf, exportCombinedPdf } = usePdfExport();
   const [pdfGenerating, setPdfGenerating] = useState(false);
+  const [combinedPdfGenerating, setCombinedPdfGenerating] = useState(false);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
 
   // PDF 페이지 구분선 계산 — 공용 페이지네이션 로직 사용 (PDF와 100% 동일)
@@ -570,6 +594,51 @@ export default function Index() {
     setPdfBlobUrl(null);
   };
 
+  const handleExportCombinedPdf = async () => {
+    if (!categories.selectedPassageId || combinedPdfGenerating) return;
+    setCombinedPdfGenerating(true);
+    try {
+      const { data, error } = await supabase
+        .from("passages")
+        .select("results_json")
+        .eq("id", categories.selectedPassageId)
+        .single();
+      if (error) throw error;
+
+      const store = parsePassageStore(data?.results_json);
+      const syntaxDone = !!store.completion?.syntaxCompleted || syntaxCompleted;
+      const previewDone = !!store.completion?.previewCompleted;
+      if (!syntaxDone || !previewDone) {
+        throw new Error("구문분석/Preview 완료 토글을 모두 켜주세요.");
+      }
+
+      const preview = store.preview;
+      if (!preview) {
+        throw new Error("Preview 저장 데이터가 없습니다. Preview 화면에서 완료 표시를 먼저 눌러주세요.");
+      }
+
+      await exportCombinedPdf(
+        {
+          vocab: Array.isArray(preview.vocab) ? (preview.vocab as any[]) : [],
+          synonyms: Array.isArray(preview.synonyms) ? (preview.synonyms as any[]) : [],
+          summary: typeof preview.summary === "string" ? preview.summary : "",
+          examBlock: (preview.examBlock as any) || null,
+          title: typeof preview.pdfTitle === "string" && preview.pdfTitle.trim() ? preview.pdfTitle : pdfTitle,
+        },
+        results,
+        pdfTitle,
+        "",
+        `${pdfTitle}+통합.pdf`
+      );
+      setPreviewCompleted(true);
+      toast.success("통합 PDF 다운로드가 시작되었습니다.");
+    } catch (err: any) {
+      toast.error(`통합 PDF 저장 실패: ${err.message}`);
+    } finally {
+      setCombinedPdfGenerating(false);
+    }
+  };
+
   const handleToggleSyntaxCompleted = async () => {
     if (!categories.selectedPassageId) return;
     const next = !syntaxCompleted;
@@ -663,6 +732,15 @@ export default function Index() {
                   >
                     PDF 저장
                   </button>
+                  {syntaxCompleted && previewCompleted && (
+                    <button
+                      onClick={handleExportCombinedPdf}
+                      disabled={combinedPdfGenerating}
+                      className="px-3 py-1 rounded-full border border-foreground text-foreground text-[11px] font-medium hover:bg-foreground hover:text-background transition-colors disabled:opacity-50"
+                    >
+                      {combinedPdfGenerating ? "통합 중..." : "통합 PDF 저장"}
+                    </button>
+                  )}
                 </>
               )}
               {failedResults.length > 0 && !loading && (
