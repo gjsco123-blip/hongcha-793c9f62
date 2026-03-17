@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { CompareOverlay } from "./CompareOverlay";
-import { Plus, Loader2, X, MousePointerClick } from "lucide-react";
+import { Plus, Loader2, X, MousePointerClick, Check } from "lucide-react";
 import type { SynAntItem, SectionStatus } from "./types";
 
 interface Props {
@@ -44,8 +44,29 @@ export function PreviewSynonymsSection({
 }: Props) {
   const [isRegen, setIsRegen] = useState(false);
   const [candidate, setCandidate] = useState<SynAntItem[] | null>(null);
+  const [addingManual, setAddingManual] = useState(false);
+  const [manualWord, setManualWord] = useState("");
+  const [manualSynonym, setManualSynonym] = useState("");
+  const [manualAntonym, setManualAntonym] = useState("");
 
   if (status === "idle") return null;
+
+  const resetManual = () => {
+    setAddingManual(false);
+    setManualWord("");
+    setManualSynonym("");
+    setManualAntonym("");
+  };
+
+  const addManualRow = () => {
+    const word = manualWord.trim();
+    if (!word) return;
+    onSynonymsChange([
+      ...synonyms,
+      { word, synonym: manualSynonym.trim(), antonym: manualAntonym.trim() },
+    ]);
+    resetManual();
+  };
 
   const handleDeleteChip = (rowIdx: number, field: "synonym" | "antonym", chipIdx: number) => {
     const chips = splitChips(synonyms[rowIdx][field]);
@@ -114,24 +135,79 @@ export function PreviewSynonymsSection({
     <section className="border-t border-border pt-5">
       {status === "error" && <p className="text-xs text-destructive">동/반의어 생성에 실패했습니다.</p>}
 
-      {synonyms.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex justify-end">
-            <button
-              onClick={onRequestAddFromPassage}
-              className={`inline-flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-full border transition-colors ${
-                synonymSelectMode
-                  ? "border-foreground bg-foreground text-background"
-                  : "border-border text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <MousePointerClick className="w-3 h-3" />
-              {synonymSelectMode ? "선택 중..." : "지문에서 추가"}
-            </button>
-          </div>
-          {renderTable(synonyms)}
+      <div className="space-y-2">
+        <div className="flex justify-end gap-1.5">
+          <button
+            onClick={() => setAddingManual((prev) => !prev)}
+            className={`inline-flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-full border transition-colors ${
+              addingManual
+                ? "border-foreground bg-foreground text-background"
+                : "border-border text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Plus className="w-3 h-3" />
+            {addingManual ? "입력 중..." : "직접 추가"}
+          </button>
+          
+          <button
+            onClick={onRequestAddFromPassage}
+            className={`inline-flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-full border transition-colors ${
+              synonymSelectMode
+                ? "border-foreground bg-foreground text-background"
+                : "border-border text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <MousePointerClick className="w-3 h-3" />
+            {synonymSelectMode ? "선택 중..." : "지문에서 추가"}
+          </button>
         </div>
-      )}
+
+        {addingManual && (
+          <div className="border border-border rounded-xl p-2 grid grid-cols-1 md:grid-cols-[1.2fr_1fr_1fr_auto] gap-2 items-center">
+            <input
+              value={manualWord}
+              onChange={(e) => setManualWord(e.target.value)}
+              placeholder="WORD 입력 (예: influence (영향))"
+              className="h-8 px-2 text-xs border border-border rounded bg-background outline-none focus:border-foreground"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") addManualRow();
+                if (e.key === "Escape") resetManual();
+              }}
+            />
+            <input
+              value={manualSynonym}
+              onChange={(e) => setManualSynonym(e.target.value)}
+              placeholder="SYNONYM (쉼표로 구분)"
+              className="h-8 px-2 text-xs border border-border rounded bg-background outline-none focus:border-foreground"
+            />
+            <input
+              value={manualAntonym}
+              onChange={(e) => setManualAntonym(e.target.value)}
+              placeholder="ANTONYM (쉼표로 구분)"
+              className="h-8 px-2 text-xs border border-border rounded bg-background outline-none focus:border-foreground"
+            />
+            <div className="flex items-center justify-end gap-1">
+              <button
+                onClick={addManualRow}
+                disabled={!manualWord.trim()}
+                className="p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-40"
+                title="행 추가"
+              >
+                <Check className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={resetManual}
+                className="p-1.5 text-muted-foreground hover:text-destructive"
+                title="취소"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {synonyms.length > 0 && renderTable(synonyms)}
+      </div>
 
       {candidate && (
         <CompareOverlay
