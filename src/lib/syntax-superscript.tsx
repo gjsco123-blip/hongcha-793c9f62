@@ -29,6 +29,15 @@ function findTargetSpan(
   originalText: string,
   targetText: string
 ): { start: number; end: number } | null {
+  const wordCharRe = /[A-Za-z'\u2019\u0300-\u036f0-9]/;
+  const expandToTokenBounds = (start: number, end: number) => {
+    let s = Math.max(0, start);
+    let e = Math.min(originalText.length, end);
+    while (s > 0 && wordCharRe.test(originalText[s - 1])) s--;
+    while (e < originalText.length && wordCharRe.test(originalText[e])) e++;
+    return { start: s, end: e };
+  };
+
   const srcTokens = tokenize(originalText);
   const tgtTokens = tokenize(targetText);
   if (tgtTokens.length === 0 || srcTokens.length === 0) return null;
@@ -48,6 +57,39 @@ function findTargetSpan(
       };
     }
   }
+
+  // Fallback 1: direct substring match (helps when user selects partial token)
+  const srcLower = originalText.toLowerCase();
+  const tgtLower = targetText.toLowerCase().trim();
+  if (tgtLower) {
+    const directIdx = srcLower.indexOf(tgtLower);
+    if (directIdx !== -1) {
+      return expandToTokenBounds(directIdx, directIdx + tgtLower.length);
+    }
+  }
+
+  // Fallback 2: whitespace-insensitive match (helps when selection text collapses spaces)
+  if (tgtLower) {
+    const compactSrcChars: string[] = [];
+    const compactToOrigIndex: number[] = [];
+    for (let i = 0; i < srcLower.length; i++) {
+      const ch = srcLower[i];
+      if (/\s/.test(ch)) continue;
+      compactSrcChars.push(ch);
+      compactToOrigIndex.push(i);
+    }
+    const compactSrc = compactSrcChars.join("");
+    const compactTgt = tgtLower.replace(/\s+/g, "");
+    if (compactTgt) {
+      const compactIdx = compactSrc.indexOf(compactTgt);
+      if (compactIdx !== -1) {
+        const origStart = compactToOrigIndex[compactIdx];
+        const origEnd = compactToOrigIndex[compactIdx + compactTgt.length - 1] + 1;
+        return expandToTokenBounds(origStart, origEnd);
+      }
+    }
+  }
+
   return null;
 }
 

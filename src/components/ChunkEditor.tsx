@@ -306,19 +306,19 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
 
           return (
           <div key={`${chunk.tag}-${i}`} className="flex items-center gap-1 max-w-full">
-            <span
-              className="inline-flex items-center gap-0.5 px-2 py-1 text-xs font-english border border-border rounded-md bg-background text-foreground flex-wrap break-words max-w-full"
-            >
+            <span className="inline px-2 py-1 text-xs font-english border border-border rounded-md bg-background text-foreground break-words max-w-full">
               {words.map((w, wi) => (
-                <span
-                  key={wi}
-                  onClick={isEditing ? () => handleWordInteraction(i, wi) : undefined}
-                  onDoubleClick={isEditing ? () => handleWordDoubleClick(i, wi) : undefined}
-                  className={`${w.isVerb && /[A-Za-z]/.test(w.word) ? "underline decoration-foreground decoration-2 underline-offset-[3px]" : ""}
-                    ${isEditing ? "cursor-pointer hover:bg-muted/80 rounded-sm" : ""}`}
-                  title={isEditing ? "클릭: 분할 / 더블클릭: 동사 표시" : ""}
-                >
-                  {w.word}
+                <span key={wi}>
+                  <span
+                    onClick={isEditing ? () => handleWordInteraction(i, wi) : undefined}
+                    onDoubleClick={isEditing ? () => handleWordDoubleClick(i, wi) : undefined}
+                    className={`${w.isVerb && /[A-Za-z]/.test(w.word) ? "underline decoration-foreground decoration-2 underline-offset-[3px]" : ""}
+                      ${isEditing ? "cursor-pointer hover:bg-muted/80 rounded-sm" : ""}`}
+                    title={isEditing ? "클릭: 분할 / 더블클릭: 동사 표시" : ""}
+                  >
+                    {w.word}
+                  </span>
+                  {wi < words.length - 1 ? " " : ""}
                 </span>
               ))}
             </span>
