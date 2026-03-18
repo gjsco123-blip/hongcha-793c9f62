@@ -51,6 +51,25 @@ const IRREGULAR_BASE: Record<string, string> = {
   counseling: "counsel",
   counselling: "counsel",
   passed: "pass",
+  survived: "survive",
+  stepping: "step",
+  taking: "take",
+  staying: "stay",
+  remaining: "remain",
+  continuing: "continue",
+  passing: "pass",
+  venturing: "venture",
+  clinging: "cling",
+  sticking: "stick",
+  adhering: "adhere",
+  embracing: "embrace",
+  holding: "hold",
+  keeping: "keep",
+  advising: "advise",
+  guiding: "guide",
+  mentoring: "mentor",
+  neglecting: "neglect",
+  ignoring: "ignore",
   survives: "survive",
   undergoing: "undergo",
   experiencing: "experience",
@@ -111,11 +130,41 @@ const splitEntry = (raw: string) => {
 
 const joinEntry = (en: string, ko: string) => (ko ? `${en} (${ko})` : en);
 
+const hasDoubleFinalConsonant = (word: string) => {
+  if (word.length < 2) return false;
+  const last = word.at(-1) ?? "";
+  const prev = word.at(-2) ?? "";
+  return last === prev && "bdgklmnprt".includes(last);
+};
+
 const toBaseToken = (token: string) => {
   const clean = normalizeEnglish(token);
   if (!clean) return "";
   if (IRREGULAR_BASE[clean]) return IRREGULAR_BASE[clean];
+  // Keep words like "focus" intact; naive trailing-s stripping would break them.
+  if (clean.endsWith("us")) return clean;
+  if (clean.endsWith("ing") && clean.length > 4) {
+    let base = clean.slice(0, -3);
+    if (IRREGULAR_BASE[base]) return IRREGULAR_BASE[base];
+    if (hasDoubleFinalConsonant(base)) {
+      base = base.slice(0, -1);
+      if (IRREGULAR_BASE[base]) return IRREGULAR_BASE[base];
+    }
+    return base;
+  }
+  if (clean === "died") return "die";
+  if (clean.endsWith("ied") && clean.length > 3) return `${clean.slice(0, -3)}y`;
   if (clean.endsWith("ies") && clean.length > 4) return `${clean.slice(0, -3)}y`;
+  if (clean.endsWith("ed") && clean.length > 3) {
+    let base = clean.slice(0, -2);
+    if (IRREGULAR_BASE[base]) return IRREGULAR_BASE[base];
+    if (hasDoubleFinalConsonant(base)) {
+      base = base.slice(0, -1);
+      if (IRREGULAR_BASE[base]) return IRREGULAR_BASE[base];
+    }
+    if (base.endsWith("i")) return `${base.slice(0, -1)}y`;
+    return base;
+  }
   if (/(ches|shes|xes|zes|oes|sses)$/.test(clean)) return clean.slice(0, -2);
   if (clean.endsWith("s") && clean.length > 3 && !clean.endsWith("ss") && !/[uio]s$/.test(clean) && !clean.endsWith("ous")) return clean.slice(0, -1);
   return clean;

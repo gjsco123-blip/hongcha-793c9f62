@@ -32,8 +32,31 @@ describe("sanitizeSynonymItems", () => {
     );
 
     expect(out[0].word).toBe("pass away (세상을 떠나다, 사망하다)");
-    expect(out[0].synonym).toBe("died (죽었다)");
-    expect(out[0].antonym).toBe("survived (살아남았다)");
+    expect(out[0].synonym).toBe("die (죽었다)");
+    expect(out[0].antonym).toBe("survive (살아남았다)");
+  });
+
+  it("normalizes gerund verb phrases but keeps noun-like focus intact", () => {
+    const out = sanitizeSynonymItems(
+      [
+        {
+          word: "stepping out (도전하다)",
+          synonym: "venturing (모험하다), taking a risk (위험을 무릅쓰다)",
+          antonym: "staying (머무르다), remaining (남아 있다)",
+        },
+        {
+          word: "focus on (집중하다)",
+          synonym: "concentrate on (에 집중하다)",
+          antonym: "ignore (를 무시하다)",
+        },
+      ],
+      "I felt that stepping out of my comfort zone would have such a positive effect on how I felt about myself."
+    );
+
+    expect(out[0].word).toBe("step out (도전하다)");
+    expect(out[0].synonym).toBe("venture (모험하다), take a risk (위험을 무릅쓰다)");
+    expect(out[0].antonym).toBe("stay (머무르다), remain (남아 있다)");
+    expect(out[1].word).toBe("focus on (집중하다)");
   });
 
   it("filters entries not present in passage when filterByPassage is enabled", () => {
@@ -58,4 +81,3 @@ describe("sanitizeSynonymItems", () => {
     expect(out[0].word).toBe("focus on (집중하다)");
   });
 });
-
