@@ -137,12 +137,22 @@ const hasDoubleFinalConsonant = (word: string) => {
   return last === prev && "bdgklmnprt".includes(last);
 };
 
+const NOUN_LIKE_SUFFIXES = [
+  "ous", "sis", "ness", "less", "ics", "itis", "osis", "iasis", "ment",
+  "ance", "ence", "ity", "ship", "hood", "dom", "ism", "ure", "age",
+];
+
+const shouldPreserveNounLikeForm = (word: string) => {
+  if (!word) return false;
+  if (word.endsWith("us") || word.endsWith("is") || word.endsWith("os") || word.endsWith("ous")) return true;
+  return NOUN_LIKE_SUFFIXES.some((suffix) => word.endsWith(suffix));
+};
+
 const toBaseToken = (token: string) => {
   const clean = normalizeEnglish(token);
   if (!clean) return "";
   if (IRREGULAR_BASE[clean]) return IRREGULAR_BASE[clean];
-  // Keep words like "focus" intact; naive trailing-s stripping would break them.
-  if (clean.endsWith("us")) return clean;
+  if (shouldPreserveNounLikeForm(clean)) return clean;
   if (clean.endsWith("ing") && clean.length > 4) {
     let base = clean.slice(0, -3);
     if (IRREGULAR_BASE[base]) return IRREGULAR_BASE[base];
@@ -166,7 +176,7 @@ const toBaseToken = (token: string) => {
     return base;
   }
   if (/(ches|shes|xes|zes|oes|sses)$/.test(clean)) return clean.slice(0, -2);
-  if (clean.endsWith("s") && clean.length > 3 && !clean.endsWith("ss") && !/[uio]s$/.test(clean) && !clean.endsWith("ous")) return clean.slice(0, -1);
+  if (clean.endsWith("s") && clean.length > 3 && !clean.endsWith("ss") && !shouldPreserveNounLikeForm(clean)) return clean.slice(0, -1);
   return clean;
 };
 

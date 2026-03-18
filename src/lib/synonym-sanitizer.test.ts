@@ -75,9 +75,13 @@ describe("sanitizeSynonymItems", () => {
 
   it("preserves Latin-root words ending in -us/-is/-os/-ous", () => {
     const out = sanitizeSynonymItems(
-      [{ word: "focus on (집중하다)", synonym: "concentrate on (집중하다)", antonym: "" }],
+      [
+        { word: "focus on (집중하다)", synonym: "concentrate on (집중하다)", antonym: "" },
+        { word: "analysis (분석)", synonym: "examination (검토)", antonym: "" },
+      ],
       "You should focus on your studies."
     );
     expect(out[0].word).toBe("focus on (집중하다)");
+    expect(out[1].word).toBe("analysis (분석)");
   });
 });
