@@ -15,8 +15,8 @@ describe("sanitizeSynonymItems", () => {
     );
 
     expect(out[0].word).toBe("counsel (상담하다)");
-    expect(out[0].synonym).toBe("advise (조언하다), guide (지도하다), mentor (멘토링하다)");
-    expect(out[0].antonym).toBe("neglect (방치하다), ignore (무시하다)");
+    expect(out[0].synonym).toBe("advised (조언하다), guided (지도하다), mentored (멘토링하다)");
+    expect(out[0].antonym).toBe("neglected (방치하다), ignored (무시하다)");
   });
 
   it("normalizes phrasal verbs and fixes missing Korean separators", () => {
@@ -32,8 +32,8 @@ describe("sanitizeSynonymItems", () => {
     );
 
     expect(out[0].word).toBe("pass away (세상을 떠나다, 사망하다)");
-    expect(out[0].synonym).toBe("die (죽었다)");
-    expect(out[0].antonym).toBe("survive (살아남았다)");
+    expect(out[0].synonym).toBe("died (죽었다)");
+    expect(out[0].antonym).toBe("survived (살아남았다)");
   });
 
   it("normalizes gerund verb phrases but keeps noun-like focus intact", () => {
@@ -54,9 +54,25 @@ describe("sanitizeSynonymItems", () => {
     );
 
     expect(out[0].word).toBe("step out (도전하다)");
-    expect(out[0].synonym).toBe("venture (모험하다), take a risk (위험을 무릅쓰다)");
-    expect(out[0].antonym).toBe("stay (머무르다), remain (남아 있다)");
+    expect(out[0].synonym).toBe("venturing (모험하다), taking a risk (위험을 무릅쓰다)");
+    expect(out[0].antonym).toBe("staying (머무르다), remaining (남아 있다)");
     expect(out[1].word).toBe("focus on (집중하다)");
+  });
+
+  it("keeps synonym and antonym chip spelling intact while normalizing Korean glosses", () => {
+    const out = sanitizeSynonymItems(
+      [
+        {
+          word: "deal with (처리하다, 대처하다)",
+          synonym: "handled (다루다), coped with (대처하다), tackled (씨름하다)",
+          antonym: "ignored (무시하다), neglected (방치하다)",
+        },
+      ],
+      "You need to deal with the problem carefully."
+    );
+
+    expect(out[0].synonym).toBe("handled (다루다), coped with (대처하다), tackled (씨름하다)");
+    expect(out[0].antonym).toBe("ignored (무시하다), neglected (방치하다)");
   });
 
   it("filters entries not present in passage when filterByPassage is enabled", () => {

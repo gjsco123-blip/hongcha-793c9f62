@@ -201,7 +201,7 @@ const normalizeChipField = (raw: string) => {
     .filter(Boolean)
     .map((chip) => {
       const { en, ko } = splitEntry(chip);
-      const normalizedEn = normalizeVerbPhraseHead(en, ko);
+      const normalizedEn = normalizeEnglish(en);
       return joinEntry(normalizedEn, ko);
     })
     .filter(Boolean);
