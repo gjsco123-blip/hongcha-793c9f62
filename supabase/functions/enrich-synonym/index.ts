@@ -25,11 +25,14 @@ Given a word (which may be a single word, phrasal verb, or idiomatic expression)
 
 Rules:
 - Every word must include a Korean meaning in parentheses, e.g. identify(확인하다)
-- Generate 2-3 additional synonyms and 1-2 additional antonyms
+- Generate 3 additional synonyms by default
+- If the 3rd synonym is forced/unnatural, generate 2 synonyms
+- Generate 2 additional antonyms by default (or 1 if only one natural opposite exists)
 - Do NOT repeat any existing entries
 - Keep the same part of speech as the original word
 - Prefer common academic synonyms used in Korean high school exams
 - Antonyms must represent meaningful conceptual opposites
+- Never output incorrect EN-KO mappings (e.g., adverse=추앙하는 is invalid)
 - For phrasal verbs or idioms (e.g. "turn down", "take up"), treat them as a single unit
 
 Output ONLY valid JSON (no markdown, no explanation):

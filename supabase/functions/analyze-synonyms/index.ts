@@ -42,6 +42,116 @@ function parseMarkdownTable(raw: string): { word: string; synonym: string; anton
   }).filter((item) => item.word);
 }
 
+function safeJsonParse(raw: string): any {
+  const cleaned = String(raw ?? "")
+    .replace(/```json\s*/gi, "")
+    .replace(/```\s*/g, "")
+    .trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start !== -1 && end !== -1 && end > start) {
+      return JSON.parse(cleaned.slice(start, end + 1));
+    }
+    throw new Error("Failed to parse validator JSON");
+  }
+}
+
+function splitCsvItems(raw: string): string[] {
+  return String(raw ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+function normalizeRowText(raw: string): string {
+  return String(raw ?? "")
+    .replace(/\(\(/g, "(")
+    .replace(/\)\)/g, ")")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function applyCountPolicy(rows: { word: string; synonym: string; antonym: string }[]) {
+  return rows
+    .map((row) => {
+      const syn = splitCsvItems(row.synonym).slice(0, 3);
+      const ant = splitCsvItems(row.antonym).slice(0, 2);
+      return {
+        word: normalizeRowText(row.word),
+        synonym: syn.join(", "),
+        antonym: ant.join(", "),
+      };
+    })
+    .filter((row) => !!row.word && splitCsvItems(row.synonym).length > 0);
+}
+
+async function validateRowsWithAI(
+  rows: { word: string; synonym: string; antonym: string }[],
+  passage: string,
+  apiKey: string,
+): Promise<{ word: string; synonym: string; antonym: string }[]> {
+  if (!rows.length) return rows;
+
+  const systemPrompt = `You are a strict bilingual EN-KO vocabulary QA reviewer for Korean high-school exam materials.
+
+Task:
+- Validate and correct EN-KO meaning alignment for each row.
+- Fix wrong Korean glosses (example of wrong mapping: adverse=추앙하는).
+- Keep part-of-speech and meaning consistency.
+- Remove forced/unnatural synonym or antonym chips.
+
+Output policy:
+- For synonyms: default 3 high-quality chips. If a 3rd chip is forced/awkward, return 2.
+- For antonyms: default 2 high-quality chips. If only one is natural, return 1.
+- Every chip must keep the format: english (한국어뜻)
+- English should be lowercase dictionary/base form when possible.
+- Korean should be concise dictionary style.
+- If a row is low quality overall, drop that row.
+
+Output ONLY JSON:
+{"rows":[{"word":"...", "synonym":"...", "antonym":"..."}]}`;
+
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      temperature: 0.05,
+      max_tokens: 2200,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: JSON.stringify({ passage, rows }) },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error("validator AI error:", response.status, errText);
+    return rows;
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content ?? "";
+  try {
+    const parsed = safeJsonParse(content);
+    const validated = Array.isArray(parsed?.rows) ? parsed.rows : [];
+    return validated
+      .map((r: any) => ({
+        word: normalizeRowText(String(r?.word ?? "")),
+        synonym: normalizeRowText(String(r?.synonym ?? "")),
+        antonym: normalizeRowText(String(r?.antonym ?? "")),
+      }))
+      .filter((r: any) => r.word && r.synonym);
+  } catch (e) {
+    console.error("validator parse error:", e);
+    return rows;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -139,8 +249,8 @@ Examples: thing, people, way, kind, good, many, make, use
 --------------------------------------------------
 
 SYNONYM RULES
-- Provide up to 3 synonyms.
-- If natural synonyms are limited, provide 1–2.
+- Provide 3 synonyms by default.
+- If a 3rd synonym is forced/unnatural, provide 2.
 - Synonyms must keep the same part of speech.
 - Prefer common academic synonyms used in exams.
 - Avoid extremely rare vocabulary.
@@ -176,7 +286,8 @@ Use these patterns as guidance.
 FINAL INSTRUCTION
 
 Act as a Korean high school teacher writing vocabulary questions.
-Before producing the final table, remove vocabulary that would be unrealistic for synonym or antonym questions in Korean high school exams.`;
+Before producing the final table, remove vocabulary that would be unrealistic for synonym or antonym questions in Korean high school exams.
+Also verify EN-KO meaning alignment strictly and never output mistranslations.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -215,6 +326,10 @@ Before producing the final table, remove vocabulary that would be unrealistic fo
 
     // Parse and post-process
     let synonyms = parseMarkdownTable(content);
+
+    // 2nd-pass QA to catch mistranslations and enforce quality policy.
+    synonyms = await validateRowsWithAI(synonyms, trimmedPassage, LOVABLE_API_KEY);
+    synonyms = applyCountPolicy(synonyms);
 
     // Filter out STOP_VOCABULARY
     synonyms = synonyms.filter((item) => {
