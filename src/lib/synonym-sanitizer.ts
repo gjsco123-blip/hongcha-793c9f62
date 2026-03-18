@@ -33,6 +33,9 @@ const IRREGULAR_BASE: Record<string, string> = {
   lets: "let",
   kept: "keep",
   holds: "hold",
+  paid: "pay",
+  said: "say",
+  laid: "lay",
   keeps: "keep",
   clings: "cling",
   sticks: "stick",
@@ -149,6 +152,9 @@ const shouldPreserveNounLikeForm = (word: string) => {
   return NOUN_LIKE_SUFFIXES.some((suffix) => word.endsWith(suffix));
 };
 
+const shouldRestoreSilentE = (base: string) =>
+  /[aeiou][^aeiouwxy]$/.test(base) && !hasDoubleFinalConsonant(base);
+
 const toBaseToken = (token: string) => {
   const clean = normalizeEnglish(token);
   if (!clean) return "";
@@ -161,6 +167,7 @@ const toBaseToken = (token: string) => {
       base = base.slice(0, -1);
       if (IRREGULAR_BASE[base]) return IRREGULAR_BASE[base];
     }
+    if (shouldRestoreSilentE(base)) return base + "e";
     return base;
   }
   if (clean === "died") return "die";
@@ -174,6 +181,7 @@ const toBaseToken = (token: string) => {
       if (IRREGULAR_BASE[base]) return IRREGULAR_BASE[base];
     }
     if (base.endsWith("i")) return `${base.slice(0, -1)}y`;
+    if (shouldRestoreSilentE(base)) return base + "e";
     return base;
   }
   if (/(ches|shes|xes|zes|oes|sses)$/.test(clean)) return clean.slice(0, -2);

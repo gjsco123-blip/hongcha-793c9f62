@@ -122,6 +122,30 @@ describe("sanitizeSynonymItems", () => {
     expect(out[0].word).toBe("go through (어려움을 겪다)");
   });
 
+  it("normalizes 'dated back to' → 'date back to' (silent e restoration)", () => {
+    const out = sanitizeSynonymItems(
+      [{ word: "dated back to (거슬러 올라가다)", synonym: "traced back to (추적하다)", antonym: "" }],
+      "This tradition dated back to the 18th century."
+    );
+    expect(out[0].word).toBe("date back to (거슬러 올라가다)");
+  });
+
+  it("normalizes 'paid attention to' → 'pay attention to' (irregular verb)", () => {
+    const out = sanitizeSynonymItems(
+      [{ word: "paid attention to (주의를 기울이다)", synonym: "focused on (집중하다)", antonym: "ignored (무시하다)" }],
+      "She paid attention to the details."
+    );
+    expect(out[0].word).toBe("pay attention to (주의를 기울이다)");
+  });
+
+  it("restores silent e after -ing removal (creating → create)", () => {
+    const out = sanitizeSynonymItems(
+      [{ word: "creating (만들다)", synonym: "producing (생산하다)", antonym: "" }],
+      "She is creating something new."
+    );
+    expect(out[0].word).toBe("create (만들다)");
+  });
+
   it("preserves Latin-root words ending in -us/-is/-os/-ous", () => {
     const out = sanitizeSynonymItems(
       [
