@@ -1,22 +1,83 @@
 
 
-## 구문분석 패턴 고정(Pin) 기능
+# synonym-sanitizer.ts 버그 분석 결과
 
-### 완료된 변경
+현재 코드에서 발견된 문제 **3가지**:
 
-1. **DB: `syntax_patterns` 테이블** — user_id, tag, pinned_content, example_sentence + RLS
-2. **`supabase/functions/grammar/index.ts`** — `fetchPinnedPatterns()` 추가, 자동생성/힌트 모드 모두 시스템 프롬프트에 `[고정 패턴]` 블록 주입
-3. **`supabase/functions/grammar-chat/index.ts`** — 동일하게 고정 패턴 주입
-4. **`src/components/SyntaxNotesSection.tsx`** — 각 노트에 📌 호버 버튼 (자동 태그 감지 + 선택), 고정 패턴 관리 버튼
-5. **`src/components/PinnedPatternsManager.tsx`** (신규) — Sheet 형태 관리 UI (목록/삭제/직접 추가)
+---
 
-## 위첨자(Superscript) 안정화 리팩터링
+## 버그 1: "dated" → "dat" (무음 e 복원 누락)
 
-### 완료된 변경
+**위치**: `toBaseToken()` line 169-177
 
-1. **`src/lib/syntax-superscript.tsx`** — `indexOf` 기반 부분문자열 매칭을 **단어 토큰 시퀀스 매칭(`findTargetSpan`)**으로 완전 교체. "it"이 "point" 안에서 매칭되는 등의 오류 차단.
-2. **`src/components/PdfDocument.tsx`** — 공통 `computeSuperscriptPositions`가 토큰 매칭을 사용하므로 PDF도 자동으로 동일 로직 적용.
-3. **`supabase/functions/grammar/index.ts`** — targetText 규칙 강화:
-   - 표면형 그대로 반환 의무화 (its→it 축약 금지)
-   - 짧은 단어 단독 사용 금지 (최소 2단어 + 주변 문맥 포함)
-   - 구체적 ✅/❌ 예시 추가
+`-ed` 제거 후 무음 e를 복원하지 않음.
+
+| 입력 | 현재 결과 | 올바른 결과 |
+|------|----------|------------|
+| dated | dat | date |
+| created | creat | create |
+| celebrated | celebrat | celebrate |
+| influenced | influenc | influence |
+| recognized | recogniz | recognize |
+
+**원인**: line 177에서 `return base;`만 하고 끝남. `모음+자음` 패턴(dat, creat 등)일 때 `e`를 붙여야 함.
+
+**수정**: `-ed` 제거 후 `/[aeiou][^aeiou]$/` 패턴이면 `base + "e"` 반환
+
+---
+
+## 버그 2: `-ing` 제거에도 같은 문제
+
+**위치**: `toBaseToken()` line 157-164
+
+| 입력 | 현재 결과 | 올바른 결과 |
+|------|----------|------------|
+| creating | creat | create |
+| celebrating | celebrat | celebrate |
+| influencing | influenc | influence |
+| recognizing | recogniz | recognize |
+| dating | dat | date |
+
+**원인**: line 164에서도 동일하게 `return base;`만 하고 무음 e 미복원.
+
+**수정**: `-ed`와 동일한 휴리스틱 적용
+
+---
+
+## 버그 3: `paid`, `said`, `laid` 등 불규칙 동사 누락
+
+**위치**: `IRREGULAR_BASE` 맵
+
+| 입력 | 현재 결과 | 올바른 결과 |
+|------|----------|------------|
+| paid | paid | pay |
+| said | said | say |
+| laid | laid | lay |
+
+**원인**: 이 단어들은 `-ed`로 끝나지 않아서 어떤 규칙에도 안 걸림.
+
+---
+
+## 수정 계획
+
+### `src/lib/synonym-sanitizer.ts`
+
+1. **IRREGULAR_BASE에 추가**: `paid: "pay"`, `said: "say"`, `laid: "lay"`
+
+2. **무음 e 복원 헬퍼 추가**:
+```text
+shouldRestoreSilentE(base) → base + "e"
+조건: /[aeiou][^aeiouwxy]$/ 패턴 (dat→date, creat→create)
+예외: help, want 같은 자음+자음은 해당 안 됨
+```
+
+3. **두 곳에 적용**:
+   - `-ed` 제거 후 (line 177)
+   - `-ing` 제거 후 (line 164)
+
+### `src/lib/synonym-sanitizer.test.ts`
+
+- "dated back to" → "date back to" 테스트
+- "paid attention to" → "pay attention to" 테스트
+- "creating" → "create" 테스트
+
