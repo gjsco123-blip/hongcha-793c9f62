@@ -28,6 +28,7 @@ const IRREGULAR_BASE: Record<string, string> = {
   goes: "go",
   went: "go",
   gone: "go",
+  going: "go",
   lets: "let",
   kept: "keep",
 };
@@ -67,18 +68,6 @@ const toBaseToken = (token: string) => {
   if (clean.endsWith("ies") && clean.length > 4) return `${clean.slice(0, -3)}y`;
   if (/(ches|shes|xes|zes|oes|sses)$/.test(clean)) return clean.slice(0, -2);
   if (clean.endsWith("s") && clean.length > 3 && !clean.endsWith("ss")) return clean.slice(0, -1);
-  if (clean.endsWith("ing") && clean.length > 5) {
-    let base = clean.slice(0, -3);
-    if (/(.)\1$/.test(base)) base = base.slice(0, -1);
-    if (!base.endsWith("e") && /(mak|tak|giv|writ|rid)$/.test(base)) base += "e";
-    return base;
-  }
-  if (clean.endsWith("ed") && clean.length > 4) {
-    let base = clean.slice(0, -2);
-    if (/(.)\1$/.test(base)) base = base.slice(0, -1);
-    if (base.endsWith("i")) base = `${base.slice(0, -1)}y`;
-    return base;
-  }
   return clean;
 };
 
@@ -103,7 +92,8 @@ const normalizeChipField = (raw: string) => {
     .filter(Boolean)
     .map((chip) => {
       const { en, ko } = splitEntry(chip);
-      const normalizedEn = normalizeVerbPhraseHead(en, ko);
+      // Keep chip text stable to avoid over-stemming (e.g. guide -> guid).
+      const normalizedEn = normalizeEnglish(en);
       return joinEntry(normalizedEn, ko);
     })
     .filter(Boolean);
@@ -166,4 +156,3 @@ export function sanitizeSynonymItems(items: SynAntItem[], passage: string, optio
   }
   return deduped;
 }
-
