@@ -195,6 +195,24 @@ const normalizeVerbPhraseHead = (en: string, ko: string) => {
   return [toBaseToken(head), ...rest].join(" ").trim();
 };
 
+const normalizeWordHead = (en: string, ko: string) => {
+  const tokens = tokenizeEnglish(en);
+  if (tokens.length === 0) return "";
+
+  const verbLikeByMeaning = ko.endsWith("다");
+  const verbLikeByPhrase = tokens.length > 1 && PARTICLES.has(tokens[1]);
+  if (verbLikeByMeaning || verbLikeByPhrase) {
+    const [head, ...rest] = tokens;
+    return [toBaseToken(head), ...rest].join(" ").trim();
+  }
+
+  if (tokens.length === 1) {
+    return toBaseToken(tokens[0]);
+  }
+
+  return tokens.join(" ");
+};
+
 const normalizeChipField = (raw: string) => {
   const chips = raw
     .split(",")
@@ -244,7 +262,7 @@ export function sanitizeSynonymItems(items: SynAntItem[], passage: string, optio
   const normalized = (Array.isArray(items) ? items : [])
     .map((item) => {
       const { en, ko } = splitEntry(item.word);
-      const normalizedWordEn = normalizeVerbPhraseHead(en, ko);
+      const normalizedWordEn = normalizeWordHead(en, ko);
       const word = joinEntry(normalizedWordEn, ko);
       return {
         word,

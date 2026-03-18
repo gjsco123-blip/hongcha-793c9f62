@@ -92,6 +92,22 @@ describe("sanitizeSynonymItems", () => {
     expect(out[0].antonym).toBe("ignored (무시하다), neglected (방치하다)");
   });
 
+  it("normalizes plural noun word heads to singular form", () => {
+    const out = sanitizeSynonymItems(
+      [
+        {
+          word: "efforts (노력)",
+          synonym: "attempts (시도), endeavors (노력)",
+          antonym: "",
+        },
+      ],
+      "It takes efforts to improve."
+    );
+
+    expect(out[0].word).toBe("effort (노력)");
+    expect(out[0].synonym).toBe("attempts (시도), endeavors (노력)");
+  });
+
   it("filters entries not present in passage when filterByPassage is enabled", () => {
     const out = sanitizeSynonymItems(
       [
