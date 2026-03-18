@@ -18,6 +18,7 @@ const IRREGULAR_BASE: Record<string, string> = {
   were: "be",
   been: "be",
   being: "be",
+  took: "take",
   has: "have",
   had: "have",
   having: "have",

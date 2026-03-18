@@ -36,6 +36,23 @@ describe("sanitizeSynonymItems", () => {
     expect(out[0].antonym).toBe("survived (살아남았다)");
   });
 
+  it("normalizes took place to take place", () => {
+    const out = sanitizeSynonymItems(
+      [
+        {
+          word: "took place (개최되다, 일어나다)",
+          synonym: "occurred (발생하다), happened (일어나다)",
+          antonym: "be held (개최되다)",
+        },
+      ],
+      "The event took place last week."
+    );
+
+    expect(out[0].word).toBe("take place (개최되다, 일어나다)");
+    expect(out[0].synonym).toBe("occurred (발생하다), happened (일어나다)");
+    expect(out[0].antonym).toBe("be held (개최되다)");
+  });
+
   it("normalizes gerund verb phrases but keeps noun-like focus intact", () => {
     const out = sanitizeSynonymItems(
       [
