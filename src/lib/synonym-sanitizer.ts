@@ -117,7 +117,7 @@ const toBaseToken = (token: string) => {
   if (IRREGULAR_BASE[clean]) return IRREGULAR_BASE[clean];
   if (clean.endsWith("ies") && clean.length > 4) return `${clean.slice(0, -3)}y`;
   if (/(ches|shes|xes|zes|oes|sses)$/.test(clean)) return clean.slice(0, -2);
-  if (clean.endsWith("s") && clean.length > 3 && !clean.endsWith("ss")) return clean.slice(0, -1);
+  if (clean.endsWith("s") && clean.length > 3 && !clean.endsWith("ss") && !/[uio]s$/.test(clean) && !clean.endsWith("ous")) return clean.slice(0, -1);
   return clean;
 };
 

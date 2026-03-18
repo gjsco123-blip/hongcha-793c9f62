@@ -74,7 +74,7 @@ async function mergePdfBlobs(blobs: Blob[]): Promise<Blob> {
     copied.forEach((p) => merged.addPage(p));
   }
   const out = await merged.save();
-  return new Blob([out], { type: "application/pdf" });
+  return new Blob([out.buffer as ArrayBuffer], { type: "application/pdf" });
 }
 
 export function usePdfExport() {
