@@ -142,7 +142,7 @@ export function PreviewSynonymsSection({
             className={`inline-flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-full border transition-colors ${
               addingManual
                 ? "border-foreground bg-foreground text-background"
-                : "border-border text-muted-foreground hover:text-foreground"
+                : "border-foreground text-foreground hover:bg-foreground hover:text-background"
             }`}
           >
             <Plus className="w-3 h-3" />
@@ -203,6 +203,18 @@ export function PreviewSynonymsSection({
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
+          </div>
+        )}
+
+        {!addingManual && (
+          <div className="flex justify-end">
+            <button
+              onClick={() => setAddingManual(true)}
+              className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full border border-foreground text-foreground hover:bg-foreground hover:text-background transition-colors"
+            >
+              <Plus className="w-3 h-3" />
+              직접 추가
+            </button>
           </div>
         )}
 
