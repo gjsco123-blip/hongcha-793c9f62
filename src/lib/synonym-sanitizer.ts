@@ -31,6 +31,32 @@ const IRREGULAR_BASE: Record<string, string> = {
   going: "go",
   lets: "let",
   kept: "keep",
+  holds: "hold",
+  keeps: "keep",
+  clings: "cling",
+  sticks: "stick",
+  adheres: "adhere",
+  embraces: "embrace",
+  advises: "advise",
+  advised: "advise",
+  guides: "guide",
+  guided: "guide",
+  mentors: "mentor",
+  mentored: "mentor",
+  neglects: "neglect",
+  neglected: "neglect",
+  ignores: "ignore",
+  ignored: "ignore",
+  counseled: "counsel",
+  counseling: "counsel",
+  counselling: "counsel",
+  passed: "pass",
+  survives: "survive",
+  undergoing: "undergo",
+  experiencing: "experience",
+  enduring: "endure",
+  avoiding: "avoid",
+  bypassing: "bypass",
 };
 
 const normalizeSpaces = (s: string) => String(s ?? "").replace(/\s+/g, " ").trim();
@@ -51,9 +77,22 @@ const toKoreanDictionaryForm = (token: string) => {
   return t;
 };
 
+const splitKoreanPhrases = (text: string) => {
+  const cleaned = normalizeSpaces(text);
+  if (!cleaned) return [];
+  if (cleaned.includes(",")) return cleaned.split(",").map((p) => p.trim()).filter(Boolean);
+
+  // Handle model outputs like "세상을 떠나다 사망하다" (missing comma).
+  const phrases = cleaned.match(/[^,]+?다(?=\s|$)/g)?.map((p) => p.trim()).filter(Boolean) || [];
+  if (phrases.length >= 2) {
+    const recomposed = normalizeSpaces(phrases.join(" "));
+    if (recomposed === cleaned) return phrases;
+  }
+  return [cleaned];
+};
+
 const normalizeKoreanMeaning = (s: string) =>
-  normalizeSpaces(s.replace(/[()]/g, ""))
-    .split(",")
+  splitKoreanPhrases(s.replace(/[()]/g, ""))
     .map((part) => toKoreanDictionaryForm(part))
     .join(", ");
 
@@ -103,8 +142,7 @@ const normalizeChipField = (raw: string) => {
     .filter(Boolean)
     .map((chip) => {
       const { en, ko } = splitEntry(chip);
-      // Keep chip text stable to avoid over-stemming (e.g. guide -> guid).
-      const normalizedEn = normalizeEnglish(en);
+      const normalizedEn = normalizeVerbPhraseHead(en, ko);
       return joinEntry(normalizedEn, ko);
     })
     .filter(Boolean);
