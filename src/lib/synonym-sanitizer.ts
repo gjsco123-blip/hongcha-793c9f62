@@ -167,6 +167,7 @@ const toBaseToken = (token: string) => {
       base = base.slice(0, -1);
       if (IRREGULAR_BASE[base]) return IRREGULAR_BASE[base];
     }
+    if (shouldRestoreSilentE(base)) return base + "e";
     return base;
   }
   if (clean === "died") return "die";
