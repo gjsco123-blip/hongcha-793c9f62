@@ -181,6 +181,7 @@ const toBaseToken = (token: string) => {
       if (IRREGULAR_BASE[base]) return IRREGULAR_BASE[base];
     }
     if (base.endsWith("i")) return `${base.slice(0, -1)}y`;
+    if (shouldRestoreSilentE(base)) return base + "e";
     return base;
   }
   if (/(ches|shes|xes|zes|oes|sses)$/.test(clean)) return clean.slice(0, -2);
