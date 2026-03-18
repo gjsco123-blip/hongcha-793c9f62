@@ -152,6 +152,9 @@ const shouldPreserveNounLikeForm = (word: string) => {
   return NOUN_LIKE_SUFFIXES.some((suffix) => word.endsWith(suffix));
 };
 
+const shouldRestoreSilentE = (base: string) =>
+  /[aeiou][^aeiouwxy]$/.test(base) && !hasDoubleFinalConsonant(base);
+
 const toBaseToken = (token: string) => {
   const clean = normalizeEnglish(token);
   if (!clean) return "";
