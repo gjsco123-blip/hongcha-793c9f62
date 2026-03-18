@@ -14,6 +14,7 @@ import { PreviewSynonymsSection } from "@/components/preview/PreviewSynonymsSect
 import { PreviewExamSection } from "@/components/preview/PreviewExamSection";
 import type { VocabItem, SynAntItem, ExamBlock, SectionStatus } from "@/components/preview/types";
 import { mergePassageStore, parsePassageStore } from "@/lib/passage-store";
+import { sanitizeSynonymItems } from "@/lib/synonym-sanitizer";
 
 async function invokeRetry(fn: string, body: any, maxRetries = 3) {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -50,11 +51,14 @@ export default function Preview() {
 
   // If navigated with a new passage, use it; otherwise restore cache
   const isNewPassage = !!incomingPassage && incomingPassage !== cached?.passage;
+  const initialPassage = isNewPassage ? incomingPassage : (cached?.passage || incomingPassage || "");
 
-  const [passage, setPassage] = useState(isNewPassage ? incomingPassage : (cached?.passage || incomingPassage || ""));
+  const [passage, setPassage] = useState(initialPassage);
   const [vocab, setVocab] = useState<VocabItem[]>(isNewPassage ? [] : (cached?.vocab || []));
   const [vocabStatus, setVocabStatus] = useState<SectionStatus>(isNewPassage ? "idle" : (cached?.vocab?.length ? "done" : "idle"));
-  const [synonyms, setSynonyms] = useState<SynAntItem[]>(isNewPassage ? [] : (cached?.synonyms || []));
+  const [synonyms, setSynonyms] = useState<SynAntItem[]>(
+    isNewPassage ? [] : sanitizeSynonymItems(cached?.synonyms || [], initialPassage)
+  );
   const [synonymsStatus, setSynonymsStatus] = useState<SectionStatus>(isNewPassage ? "idle" : (cached?.synonyms?.length ? "done" : "idle"));
   const [summary, setSummary] = useState(isNewPassage ? "" : (cached?.summary || ""));
   const [examBlock, setExamBlock] = useState<ExamBlock | null>(isNewPassage ? null : (cached?.examBlock || null));
@@ -98,9 +102,12 @@ export default function Preview() {
         const savedSynonyms = Array.isArray(store.preview.synonyms) ? (store.preview.synonyms as SynAntItem[]) : [];
         const savedSummary = typeof store.preview.summary === "string" ? store.preview.summary : "";
         const savedExam = store.preview.examBlock ? (store.preview.examBlock as ExamBlock) : null;
+        const savedPassage = typeof store.preview.passage === "string" && store.preview.passage
+          ? store.preview.passage
+          : (typeof data.passage_text === "string" ? data.passage_text : "");
 
         setVocab(savedVocab);
-        setSynonyms(savedSynonyms);
+        setSynonyms(sanitizeSynonymItems(savedSynonyms, savedPassage));
         setSummary(savedSummary);
         setExamBlock(savedExam);
 
@@ -130,7 +137,10 @@ export default function Preview() {
       .catch((e) => { toast.error(`어휘 생성 실패: ${e.message}`); setVocabStatus("error"); });
 
     const synPromise = invokeRetry("analyze-synonyms", { passage })
-      .then((d) => { setSynonyms(d.synonyms || []); setSynonymsStatus("done"); })
+      .then((d) => {
+        setSynonyms(sanitizeSynonymItems(d.synonyms || [], passage, { filterByPassage: true }));
+        setSynonymsStatus("done");
+      })
       .catch((e) => { toast.error(`동/반의어 생성 실패: ${e.message}`); setSynonymsStatus("error"); });
 
     const capitalizeFirst = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
@@ -196,7 +206,7 @@ export default function Preview() {
 
   const regenSynonyms = useCallback(async (): Promise<SynAntItem[]> => {
     const data = await invokeRetry("analyze-synonyms", { passage });
-    return data.synonyms || [];
+    return sanitizeSynonymItems(data.synonyms || [], passage, { filterByPassage: true });
   }, [passage]);
 
   const handleEnrichRow = useCallback(async (idx: number) => {
@@ -211,12 +221,12 @@ export default function Preview() {
         passage,
       });
       setSynonyms((prev) =>
-        prev.map((s, i) => {
+        sanitizeSynonymItems(prev.map((s, i) => {
           if (i !== idx) return s;
           const newSyn = data.synonyms ? `${s.synonym}, ${data.synonyms}` : s.synonym;
           const newAnt = data.antonyms ? `${s.antonym}, ${data.antonyms}` : s.antonym;
           return { ...s, synonym: newSyn, antonym: newAnt };
-        })
+        }), passage)
       );
       toast.success(`"${item.word}" 동/반의어 추가 완료`);
     } catch (e: any) {
@@ -254,7 +264,7 @@ export default function Preview() {
         synonym: data.synonyms || "",
         antonym: data.antonyms || "",
       };
-      setSynonyms((prev) => [...prev, newItem]);
+      setSynonyms((prev) => sanitizeSynonymItems([...prev, newItem], passage));
       toast.success(`"${word}" 동반의어 추가됨`);
     } catch (e: any) {
       toast.error(`동반의어 추가 실패: ${e.message}`);
@@ -417,7 +427,7 @@ export default function Preview() {
           synonyms={synonyms}
           vocab={vocab}
           status={synonymsStatus}
-          onSynonymsChange={setSynonyms}
+          onSynonymsChange={(next) => setSynonyms(sanitizeSynonymItems(next, passage))}
           onRegenerate={regenSynonyms}
           onEnrichRow={handleEnrichRow}
           enrichingIdx={enrichingIdx}
