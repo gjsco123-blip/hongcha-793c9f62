@@ -43,8 +43,19 @@ const normalizeEnglish = (s: string) =>
       .toLowerCase()
   );
 
+const toKoreanDictionaryForm = (token: string) => {
+  const t = normalizeSpaces(token);
+  if (!t) return t;
+  if (t.endsWith("했다")) return `${t.slice(0, -2)}하다`;
+  if (t.endsWith("하였습니다")) return `${t.slice(0, -5)}하다`;
+  return t;
+};
+
 const normalizeKoreanMeaning = (s: string) =>
-  normalizeSpaces(s.replace(/[()]/g, ""));
+  normalizeSpaces(s.replace(/[()]/g, ""))
+    .split(",")
+    .map((part) => toKoreanDictionaryForm(part))
+    .join(", ");
 
 const splitEntry = (raw: string) => {
   const text = normalizeSpaces(raw);
