@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { CompareOverlay } from "./CompareOverlay";
 import { Plus, Loader2, X, MousePointerClick, Check } from "lucide-react";
-import type { SynAntItem, SectionStatus } from "./types";
+import type { SynAntItem, SectionStatus, VocabItem } from "./types";
 
 interface Props {
   synonyms: SynAntItem[];
+  vocab: VocabItem[];
   status: SectionStatus;
   onSynonymsChange: (v: SynAntItem[]) => void;
   onRegenerate: () => Promise<SynAntItem[]>;
@@ -39,7 +40,7 @@ function ChipList({ chips, onDelete }: { chips: string[]; onDelete: (chipIdx: nu
 }
 
 export function PreviewSynonymsSection({
-  synonyms, status, onSynonymsChange, onRegenerate, onEnrichRow, enrichingIdx,
+  synonyms, vocab, status, onSynonymsChange, onRegenerate, onEnrichRow, enrichingIdx,
   onDeleteRow, onRequestAddFromPassage, synonymSelectMode,
 }: Props) {
   const [isRegen, setIsRegen] = useState(false);
@@ -58,12 +59,28 @@ export function PreviewSynonymsSection({
     setManualAntonym("");
   };
 
+  const normalizeWord = (text: string) =>
+    text
+      .toLowerCase()
+      .replace(/\s*\([^)]*\)\s*$/g, "")
+      .replace(/[^a-z0-9'\s-]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const withAutoMeaning = (word: string) => {
+    if (/\([^)]*\)\s*$/.test(word)) return word;
+    const key = normalizeWord(word);
+    if (!key) return word;
+    const found = vocab.find((v) => normalizeWord(v.word) === key && v.meaning_ko?.trim());
+    return found ? `${word} (${found.meaning_ko.trim()})` : word;
+  };
+
   const addManualRow = () => {
     const word = manualWord.trim();
     if (!word) return;
     onSynonymsChange([
       ...synonyms,
-      { word, synonym: manualSynonym.trim(), antonym: manualAntonym.trim() },
+      { word: withAutoMeaning(word), synonym: manualSynonym.trim(), antonym: manualAntonym.trim() },
     ]);
     resetManual();
   };
@@ -203,18 +220,6 @@ export function PreviewSynonymsSection({
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
-          </div>
-        )}
-
-        {!addingManual && (
-          <div className="flex justify-end">
-            <button
-              onClick={() => setAddingManual(true)}
-              className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full border border-foreground text-foreground hover:bg-foreground hover:text-background transition-colors"
-            >
-              <Plus className="w-3 h-3" />
-              직접 추가
-            </button>
           </div>
         )}
 

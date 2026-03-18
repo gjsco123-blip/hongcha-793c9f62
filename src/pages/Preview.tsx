@@ -415,6 +415,7 @@ export default function Preview() {
 
         <PreviewSynonymsSection
           synonyms={synonyms}
+          vocab={vocab}
           status={synonymsStatus}
           onSynonymsChange={setSynonyms}
           onRegenerate={regenSynonyms}
