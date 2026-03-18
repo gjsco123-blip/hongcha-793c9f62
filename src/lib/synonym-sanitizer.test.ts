@@ -49,5 +49,13 @@ describe("sanitizeSynonymItems", () => {
     expect(out).toHaveLength(1);
     expect(out[0].word).toBe("go through (어려움을 겪다)");
   });
+
+  it("preserves Latin-root words ending in -us/-is/-os/-ous", () => {
+    const out = sanitizeSynonymItems(
+      [{ word: "focus on (집중하다)", synonym: "concentrate on (집중하다)", antonym: "" }],
+      "You should focus on your studies."
+    );
+    expect(out[0].word).toBe("focus on (집중하다)");
+  });
 });
 
