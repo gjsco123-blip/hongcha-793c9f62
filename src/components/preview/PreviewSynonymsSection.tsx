@@ -131,8 +131,25 @@ export function PreviewSynonymsSection({
             <tr key={idx} className="border-t border-border/50 group">
               <td className="px-3 py-2 text-foreground font-normal border-r border-border">
                 <div className="flex items-center justify-between">
-                  <span>{item.word}</span>
-                  {showActions && (
+                  {editingCell?.row === idx && editingCell.field === "word" ? (
+                    <input
+                      autoFocus
+                      value={editDraft}
+                      onChange={(e) => setEditDraft(e.target.value)}
+                      onBlur={commitEdit}
+                      onKeyDown={(e) => { if (e.key === "Enter") commitEdit(); if (e.key === "Escape") cancelEdit(); }}
+                      className="w-full bg-background border border-foreground rounded px-1.5 py-0.5 text-[12px] outline-none"
+                    />
+                  ) : (
+                    <span
+                      onDoubleClick={() => startEdit(idx, "word")}
+                      className="cursor-pointer"
+                      title="더블클릭으로 편집"
+                    >
+                      {item.word}
+                    </span>
+                  )}
+                  {showActions && !editingCell && (
                     <button
                       onClick={() => onDeleteRow(idx)}
                       className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive ml-1"
@@ -144,10 +161,38 @@ export function PreviewSynonymsSection({
                 </div>
               </td>
               <td className="px-3 py-2">
-                <ChipList chips={splitChips(item.synonym)} onDelete={(chipIdx) => handleDeleteChip(idx, "synonym", chipIdx)} />
+                {editingCell?.row === idx && editingCell.field === "synonym" ? (
+                  <input
+                    autoFocus
+                    value={editDraft}
+                    onChange={(e) => setEditDraft(e.target.value)}
+                    onBlur={commitEdit}
+                    onKeyDown={(e) => { if (e.key === "Enter") commitEdit(); if (e.key === "Escape") cancelEdit(); }}
+                    className="w-full bg-background border border-foreground rounded px-1.5 py-0.5 text-[12px] outline-none"
+                    placeholder="쉼표로 구분"
+                  />
+                ) : (
+                  <div onDoubleClick={() => startEdit(idx, "synonym")} className="cursor-pointer min-h-[24px]" title="더블클릭으로 편집">
+                    <ChipList chips={splitChips(item.synonym)} onDelete={(chipIdx) => handleDeleteChip(idx, "synonym", chipIdx)} />
+                  </div>
+                )}
               </td>
               <td className="px-3 py-2">
-                <ChipList chips={splitChips(item.antonym)} onDelete={(chipIdx) => handleDeleteChip(idx, "antonym", chipIdx)} />
+                {editingCell?.row === idx && editingCell.field === "antonym" ? (
+                  <input
+                    autoFocus
+                    value={editDraft}
+                    onChange={(e) => setEditDraft(e.target.value)}
+                    onBlur={commitEdit}
+                    onKeyDown={(e) => { if (e.key === "Enter") commitEdit(); if (e.key === "Escape") cancelEdit(); }}
+                    className="w-full bg-background border border-foreground rounded px-1.5 py-0.5 text-[12px] outline-none"
+                    placeholder="쉼표로 구분"
+                  />
+                ) : (
+                  <div onDoubleClick={() => startEdit(idx, "antonym")} className="cursor-pointer min-h-[24px]" title="더블클릭으로 편집">
+                    <ChipList chips={splitChips(item.antonym)} onDelete={(chipIdx) => handleDeleteChip(idx, "antonym", chipIdx)} />
+                  </div>
+                )}
               </td>
               {showActions && (
                 <td className="px-2 py-2 text-center">
