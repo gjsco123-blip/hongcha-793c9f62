@@ -32,8 +32,8 @@ describe("sanitizeSynonymItems", () => {
     );
 
     expect(out[0].word).toBe("pass away (세상을 떠나다, 사망하다)");
-    expect(out[0].synonym).toBe("died (죽었다)");
-    expect(out[0].antonym).toBe("survived (살아남았다)");
+    expect(out[0].synonym).toBe("die (죽었다)");
+    expect(out[0].antonym).toBe("survive (살아남았다)");
   });
 
   it("normalizes took place to take place", () => {
