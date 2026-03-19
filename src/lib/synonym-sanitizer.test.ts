@@ -71,8 +71,8 @@ describe("sanitizeSynonymItems", () => {
     );
 
     expect(out[0].word).toBe("step out (도전하다)");
-    expect(out[0].synonym).toBe("venturing (모험하다), taking a risk (위험을 무릅쓰다)");
-    expect(out[0].antonym).toBe("staying (머무르다), remaining (남아 있다)");
+    expect(out[0].synonym).toBe("venture (모험하다), take a risk (위험을 무릅쓰다)");
+    expect(out[0].antonym).toBe("stay (머무르다), remain (남아 있다)");
     expect(out[1].word).toBe("focus on (집중하다)");
   });
 
