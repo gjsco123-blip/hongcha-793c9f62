@@ -15,8 +15,8 @@ describe("sanitizeSynonymItems", () => {
     );
 
     expect(out[0].word).toBe("counsel (상담하다)");
-    expect(out[0].synonym).toBe("advised (조언하다), guided (지도하다), mentored (멘토링하다)");
-    expect(out[0].antonym).toBe("neglected (방치하다), ignored (무시하다)");
+    expect(out[0].synonym).toBe("advise (조언하다), guide (지도하다), mentor (멘토링하다)");
+    expect(out[0].antonym).toBe("neglect (방치하다), ignore (무시하다)");
   });
 
   it("normalizes phrasal verbs and fixes missing Korean separators", () => {
