@@ -49,7 +49,7 @@ describe("sanitizeSynonymItems", () => {
     );
 
     expect(out[0].word).toBe("take place (개최되다, 일어나다)");
-    expect(out[0].synonym).toBe("occurred (발생하다), happened (일어나다)");
+    expect(out[0].synonym).toBe("occur (발생하다), happen (일어나다)");
     expect(out[0].antonym).toBe("be held (개최되다)");
   });
 
