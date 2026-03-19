@@ -191,4 +191,3 @@ describe("sanitizeSynonymItems", () => {
     expect(out[0].antonym).toBe("lose (잃다), shed (벗다)");
   });
 });
-});
