@@ -146,6 +146,22 @@ describe("sanitizeSynonymItems", () => {
     expect(out[0].word).toBe("create (만들다)");
   });
 
+  it("preserves adjective forms like convincing when Korean meaning is not a verb", () => {
+    const out = sanitizeSynonymItems(
+      [{ word: "convincing (설득력 있는)", synonym: "persuasive (설득력 있는)", antonym: "" }],
+      "The argument was convincing."
+    );
+    expect(out[0].word).toBe("convincing (설득력 있는)");
+  });
+
+  it("preserves past-participle adjectives like required when not a verb", () => {
+    const out = sanitizeSynonymItems(
+      [{ word: "required (필수적인)", synonym: "necessary (필요한)", antonym: "optional (선택적인)" }],
+      "This is a required document."
+    );
+    expect(out[0].word).toBe("required (필수적인)");
+  });
+
   it("preserves Latin-root words ending in -us/-is/-os/-ous", () => {
     const out = sanitizeSynonymItems(
       [

@@ -203,6 +203,17 @@ const normalizeVerbPhraseHead = (en: string, ko: string) => {
   return [toBaseToken(head), ...rest].join(" ").trim();
 };
 
+/** Singularize only — no -ing/-ed stemming. For non-verb single words. */
+const toSingularOnly = (token: string) => {
+  const clean = normalizeEnglish(token);
+  if (!clean) return "";
+  if (shouldPreserveNounLikeForm(clean)) return clean;
+  if (/(ches|shes|xes|zes|oes|sses)$/.test(clean)) return clean.slice(0, -2);
+  if (clean.endsWith("ies") && clean.length > 4) return `${clean.slice(0, -3)}y`;
+  if (clean.endsWith("s") && clean.length > 3 && !clean.endsWith("ss")) return clean.slice(0, -1);
+  return clean;
+};
+
 const normalizeWordHead = (en: string, ko: string) => {
   const tokens = tokenizeEnglish(en);
   if (tokens.length === 0) return "";
@@ -214,8 +225,9 @@ const normalizeWordHead = (en: string, ko: string) => {
     return [toBaseToken(head), ...rest].join(" ").trim();
   }
 
+  // Non-verb single word: only singularize, don't stem -ing/-ed
   if (tokens.length === 1) {
-    return toBaseToken(tokens[0]);
+    return toSingularOnly(tokens[0]);
   }
 
   return tokens.join(" ");
