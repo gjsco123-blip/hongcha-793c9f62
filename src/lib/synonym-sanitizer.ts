@@ -289,8 +289,8 @@ export function sanitizeSynonymItems(items: SynAntItem[], passage: string, optio
       const word = joinEntry(normalizedWordEn, ko);
       return {
         word,
-        synonym: normalizeChipField(item.synonym || ""),
-        antonym: normalizeChipField(item.antonym || ""),
+        synonym: normalizeChipField(item.synonym || "", ko),
+        antonym: normalizeChipField(item.antonym || "", ko),
       };
     })
     .filter((item) => splitEntry(item.word).en);

@@ -173,4 +173,22 @@ describe("sanitizeSynonymItems", () => {
     expect(out[0].word).toBe("focus on (집중하다)");
     expect(out[1].word).toBe("analysis (분석)");
   });
+
+  it("normalizes synonym/antonym chips to base form when word is a verb", () => {
+    const out = sanitizeSynonymItems(
+      [
+        {
+          word: "takes on (띠다)",
+          synonym: "assumes (띠다), acquires (얻다)",
+          antonym: "loses (잃다), sheds (벗다)",
+        },
+      ],
+      "The city takes on a festive atmosphere."
+    );
+
+    expect(out[0].word).toBe("take on (띠다)");
+    expect(out[0].synonym).toBe("assume (띠다), acquire (얻다)");
+    expect(out[0].antonym).toBe("lose (잃다), shed (벗다)");
+  });
+});
 });
