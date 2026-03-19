@@ -98,6 +98,23 @@ export function PreviewSynonymsSection({
     return splitChips(item.synonym).length < 4 || splitChips(item.antonym).length < 4;
   };
 
+  const startEdit = (row: number, field: "word" | "synonym" | "antonym") => {
+    setEditingCell({ row, field });
+    setEditDraft(synonyms[row][field]);
+  };
+
+  const commitEdit = () => {
+    if (!editingCell) return;
+    const { row, field } = editingCell;
+    const newSynonyms = synonyms.map((s, i) =>
+      i === row ? { ...s, [field]: editDraft.trim() } : s
+    );
+    onSynonymsChange(newSynonyms);
+    setEditingCell(null);
+  };
+
+  const cancelEdit = () => setEditingCell(null);
+
   const renderTable = (items: SynAntItem[], showActions = true) => (
     <div className="border border-border rounded-xl overflow-hidden">
       <table className="w-full text-[12px]">
