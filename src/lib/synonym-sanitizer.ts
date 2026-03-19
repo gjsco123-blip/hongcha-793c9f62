@@ -51,6 +51,18 @@ const IRREGULAR_BASE: Record<string, string> = {
   neglected: "neglect",
   ignores: "ignore",
   ignored: "ignore",
+  handled: "handle",
+  handles: "handle",
+  handling: "handle",
+  tackled: "tackle",
+  tackles: "tackle",
+  tackling: "tackle",
+  occurred: "occur",
+  occurs: "occur",
+  occurring: "occur",
+  happened: "happen",
+  happens: "happen",
+  happening: "happen",
   counseled: "counsel",
   counseling: "counsel",
   counselling: "counsel",
@@ -233,14 +245,17 @@ const normalizeWordHead = (en: string, ko: string) => {
   return tokens.join(" ");
 };
 
-const normalizeChipField = (raw: string) => {
+const normalizeChipField = (raw: string, wordKo: string) => {
+  const isVerbContext = wordKo.endsWith("다");
   const chips = raw
     .split(",")
     .map((c) => c.trim())
     .filter(Boolean)
     .map((chip) => {
       const { en, ko } = splitEntry(chip);
-      const normalizedEn = normalizeEnglish(en);
+      const normalizedEn = isVerbContext
+        ? normalizeVerbPhraseHead(en, ko || wordKo)
+        : toSingularOnly(normalizeEnglish(en));
       return joinEntry(normalizedEn, ko);
     })
     .filter(Boolean);
@@ -286,8 +301,8 @@ export function sanitizeSynonymItems(items: SynAntItem[], passage: string, optio
       const word = joinEntry(normalizedWordEn, ko);
       return {
         word,
-        synonym: normalizeChipField(item.synonym || ""),
-        antonym: normalizeChipField(item.antonym || ""),
+        synonym: normalizeChipField(item.synonym || "", ko),
+        antonym: normalizeChipField(item.antonym || "", ko),
       };
     })
     .filter((item) => splitEntry(item.word).en);

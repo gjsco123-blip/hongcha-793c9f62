@@ -15,8 +15,8 @@ describe("sanitizeSynonymItems", () => {
     );
 
     expect(out[0].word).toBe("counsel (상담하다)");
-    expect(out[0].synonym).toBe("advised (조언하다), guided (지도하다), mentored (멘토링하다)");
-    expect(out[0].antonym).toBe("neglected (방치하다), ignored (무시하다)");
+    expect(out[0].synonym).toBe("advise (조언하다), guide (지도하다), mentor (멘토링하다)");
+    expect(out[0].antonym).toBe("neglect (방치하다), ignore (무시하다)");
   });
 
   it("normalizes phrasal verbs and fixes missing Korean separators", () => {
@@ -32,8 +32,8 @@ describe("sanitizeSynonymItems", () => {
     );
 
     expect(out[0].word).toBe("pass away (세상을 떠나다, 사망하다)");
-    expect(out[0].synonym).toBe("died (죽었다)");
-    expect(out[0].antonym).toBe("survived (살아남았다)");
+    expect(out[0].synonym).toBe("die (죽었다)");
+    expect(out[0].antonym).toBe("survive (살아남았다)");
   });
 
   it("normalizes took place to take place", () => {
@@ -49,7 +49,7 @@ describe("sanitizeSynonymItems", () => {
     );
 
     expect(out[0].word).toBe("take place (개최되다, 일어나다)");
-    expect(out[0].synonym).toBe("occurred (발생하다), happened (일어나다)");
+    expect(out[0].synonym).toBe("occur (발생하다), happen (일어나다)");
     expect(out[0].antonym).toBe("be held (개최되다)");
   });
 
@@ -71,8 +71,8 @@ describe("sanitizeSynonymItems", () => {
     );
 
     expect(out[0].word).toBe("step out (도전하다)");
-    expect(out[0].synonym).toBe("venturing (모험하다), taking a risk (위험을 무릅쓰다)");
-    expect(out[0].antonym).toBe("staying (머무르다), remaining (남아 있다)");
+    expect(out[0].synonym).toBe("venture (모험하다), take a risk (위험을 무릅쓰다)");
+    expect(out[0].antonym).toBe("stay (머무르다), remain (남아 있다)");
     expect(out[1].word).toBe("focus on (집중하다)");
   });
 
@@ -88,8 +88,8 @@ describe("sanitizeSynonymItems", () => {
       "You need to deal with the problem carefully."
     );
 
-    expect(out[0].synonym).toBe("handled (다루다), coped with (대처하다), tackled (씨름하다)");
-    expect(out[0].antonym).toBe("ignored (무시하다), neglected (방치하다)");
+    expect(out[0].synonym).toBe("handle (다루다), cope with (대처하다), tackle (씨름하다)");
+    expect(out[0].antonym).toBe("ignore (무시하다), neglect (방치하다)");
   });
 
   it("normalizes plural noun word heads to singular form", () => {
@@ -105,7 +105,7 @@ describe("sanitizeSynonymItems", () => {
     );
 
     expect(out[0].word).toBe("effort (노력)");
-    expect(out[0].synonym).toBe("attempts (시도), endeavors (노력)");
+    expect(out[0].synonym).toBe("attempt (시도), endeavor (노력)");
   });
 
   it("filters entries not present in passage when filterByPassage is enabled", () => {
@@ -172,5 +172,22 @@ describe("sanitizeSynonymItems", () => {
     );
     expect(out[0].word).toBe("focus on (집중하다)");
     expect(out[1].word).toBe("analysis (분석)");
+  });
+
+  it("normalizes synonym/antonym chips to base form when word is a verb", () => {
+    const out = sanitizeSynonymItems(
+      [
+        {
+          word: "takes on (띠다)",
+          synonym: "assumes (띠다), acquires (얻다)",
+          antonym: "loses (잃다), sheds (벗다)",
+        },
+      ],
+      "The city takes on a festive atmosphere."
+    );
+
+    expect(out[0].word).toBe("take on (띠다)");
+    expect(out[0].synonym).toBe("assume (띠다), acquire (얻다)");
+    expect(out[0].antonym).toBe("lose (잃다), shed (벗다)");
   });
 });
