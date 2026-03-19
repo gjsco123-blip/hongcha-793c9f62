@@ -233,14 +233,17 @@ const normalizeWordHead = (en: string, ko: string) => {
   return tokens.join(" ");
 };
 
-const normalizeChipField = (raw: string) => {
+const normalizeChipField = (raw: string, wordKo: string) => {
+  const isVerbContext = wordKo.endsWith("다");
   const chips = raw
     .split(",")
     .map((c) => c.trim())
     .filter(Boolean)
     .map((chip) => {
       const { en, ko } = splitEntry(chip);
-      const normalizedEn = normalizeEnglish(en);
+      const normalizedEn = isVerbContext
+        ? normalizeVerbPhraseHead(en, ko || wordKo)
+        : toSingularOnly(normalizeEnglish(en));
       return joinEntry(normalizedEn, ko);
     })
     .filter(Boolean);
