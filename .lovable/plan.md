@@ -1,22 +1,40 @@
 
 
-## 구문분석 패턴 고정(Pin) 기능
+# Passage Logic 명사형 마무리 전환 + 품질 고정
 
-### 완료된 변경
+## 현황
+- Passage Logic(summary)은 현재 종결 스타일 지정이 없어서 AI가 자유롭게 `~합니다`, `~한다`, `~이다` 등 혼용
+- 홍T, Structure는 이미 명사형 마무리로 통일되어 있음
 
-1. **DB: `syntax_patterns` 테이블** — user_id, tag, pinned_content, example_sentence + RLS
-2. **`supabase/functions/grammar/index.ts`** — `fetchPinnedPatterns()` 추가, 자동생성/힌트 모드 모두 시스템 프롬프트에 `[고정 패턴]` 블록 주입
-3. **`supabase/functions/grammar-chat/index.ts`** — 동일하게 고정 패턴 주입
-4. **`src/components/SyntaxNotesSection.tsx`** — 각 노트에 📌 호버 버튼 (자동 태그 감지 + 선택), 고정 패턴 관리 버튼
-5. **`src/components/PinnedPatternsManager.tsx`** (신규) — Sheet 형태 관리 UI (목록/삭제/직접 추가)
+## 변경 내용
 
-## 위첨자(Superscript) 안정화 리팩터링
+### `supabase/functions/analyze-preview/index.ts` — 프롬프트 수정
 
-### 완료된 변경
+summary 규칙 섹션(line 141~156)에 **종결 스타일 규칙**과 **Good/Bad 예시**를 추가:
 
-1. **`src/lib/syntax-superscript.tsx`** — `indexOf` 기반 부분문자열 매칭을 **단어 토큰 시퀀스 매칭(`findTargetSpan`)**으로 완전 교체. "it"이 "point" 안에서 매칭되는 등의 오류 차단.
-2. **`src/components/PdfDocument.tsx`** — 공통 `computeSuperscriptPositions`가 토큰 매칭을 사용하므로 PDF도 자동으로 동일 로직 적용.
-3. **`supabase/functions/grammar/index.ts`** — targetText 규칙 강화:
-   - 표면형 그대로 반환 의무화 (its→it 축약 금지)
-   - 짧은 단어 단독 사용 금지 (최소 2단어 + 주변 문맥 포함)
-   - 구체적 ✅/❌ 예시 추가
+```text
+────────────────────
+종결 스타일 (summary 전용)
+────────────────────
+- 모든 문장은 반드시 명사형으로 마무리할 것.
+- 허용 패턴: ~라는 점, ~하는 구조, ~하는 흐름, ~라는 전제, ~경향, ~라는 의미, ~하는 방식, ~필요성, ~중요성, ~라는 주장
+- 금지 패턴: ~한다, ~된다, ~이다, ~있다, ~했다, ~합니다, ~됩니다, ~임, ~함
+- Good: "① 보상의 즉각성이 의사결정에 미치는 영향"
+- Good: "② 즉각적 보상이 장기적 이익보다 선호되는 경향"
+- Bad: "① 보상의 즉각성이 의사결정에 영향을 미친다"
+- Bad: "② 즉각적 보상이 장기적 이익보다 선호됨"
+```
+
+이렇게 하면:
+1. **명사형 마무리**가 홍T/Structure와 통일됨
+2. **Good/Bad 예시**를 프롬프트에 직접 넣어서 AI가 패턴을 정확히 학습
+3. 현재 품질(4문장 구조, 쉬운 한국어, 논리 충실도)은 기존 규칙이 그대로 유지하므로 변하지 않음
+
+### 품질 유지 방안
+- 기존 프롬프트의 4문장 구조 규칙, 의미 왜곡 금지, 중학생 수준 표현 등은 **일체 수정하지 않음**
+- 종결 스타일 규칙만 **추가**하는 방식이므로 출력 내용 품질에 영향 없음
+- 모델도 현재 `google/gemini-3-flash-preview` 그대로 유지
+
+### 수정 범위
+- 파일 1개: `supabase/functions/analyze-preview/index.ts` (프롬프트에 종결 스타일 규칙 블록 추가)
+
