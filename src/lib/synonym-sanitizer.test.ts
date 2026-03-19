@@ -88,8 +88,8 @@ describe("sanitizeSynonymItems", () => {
       "You need to deal with the problem carefully."
     );
 
-    expect(out[0].synonym).toBe("handled (다루다), coped with (대처하다), tackled (씨름하다)");
-    expect(out[0].antonym).toBe("ignored (무시하다), neglected (방치하다)");
+    expect(out[0].synonym).toBe("handle (다루다), cope with (대처하다), tackle (씨름하다)");
+    expect(out[0].antonym).toBe("ignore (무시하다), neglect (방치하다)");
   });
 
   it("normalizes plural noun word heads to singular form", () => {
