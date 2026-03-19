@@ -48,6 +48,8 @@ export function PreviewSynonymsSection({
   const [addingManual, setAddingManual] = useState(false);
   const [manualWord, setManualWord] = useState("");
   const [manualSynonym, setManualSynonym] = useState("");
+  const [editingCell, setEditingCell] = useState<{ row: number; field: "word" | "synonym" | "antonym" } | null>(null);
+  const [editDraft, setEditDraft] = useState("");
   const [manualAntonym, setManualAntonym] = useState("");
 
   if (status === "idle") return null;
