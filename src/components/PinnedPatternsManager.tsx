@@ -34,6 +34,18 @@ export function PinnedPatternsManager({ open, onOpenChange }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTag, setEditTag] = useState("");
   const [editContent, setEditContent] = useState("");
+  const [groupedView, setGroupedView] = useState(false);
+
+  const grouped = useMemo(() => {
+    if (!groupedView) return null;
+    const map = patterns.reduce<Record<string, PinnedPattern[]>>((acc, p) => {
+      const key = p.tag || "기타";
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(p);
+      return acc;
+    }, {});
+    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b, "ko"));
+  }, [patterns, groupedView]);
 
   const fetchPatterns = async () => {
     if (!user) return;
