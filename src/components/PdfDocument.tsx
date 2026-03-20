@@ -66,6 +66,7 @@ interface PdfDocumentProps {
   results: SentenceResult[];
   title: string;
   subtitle: string;
+  teacherLabel?: string;
 }
 
 // 5mm = 14.17pt, 12mm = 34.02pt
