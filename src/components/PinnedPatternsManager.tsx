@@ -111,6 +111,85 @@ export function PinnedPatternsManager({ open, onOpenChange }: Props) {
     setEditingId(null);
   };
 
+  const renderPatternCard = (p: PinnedPattern) => (
+    <div key={p.id} className="border border-border p-2.5 group/pattern">
+      {editingId === p.id ? (
+        <div className="space-y-1.5">
+          <select
+            value={TAG_OPTIONS.includes(editTag) ? editTag : "__custom__"}
+            onChange={(e) => {
+              if (e.target.value === "__custom__") setEditTag("");
+              else setEditTag(e.target.value);
+            }}
+            className="w-full bg-muted border border-border px-2 py-1 text-xs outline-none focus:border-foreground"
+          >
+            {TAG_OPTIONS.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+            <option value="__custom__">✏️ 직접 입력</option>
+          </select>
+          {!TAG_OPTIONS.includes(editTag) && (
+            <input
+              value={editTag}
+              onChange={(e) => setEditTag(e.target.value)}
+              placeholder="문법 사항을 직접 입력하세요"
+              className="w-full bg-muted border border-border px-2 py-1 text-xs outline-none focus:border-foreground"
+            />
+          )}
+          <textarea
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+            rows={2}
+            className="w-full bg-background border border-border px-2 py-1 text-xs outline-none focus:border-foreground resize-none"
+          />
+          <div className="flex gap-1">
+            <button
+              onClick={handleUpdate}
+              disabled={!editContent.trim()}
+              className="text-[10px] px-2 py-0.5 bg-foreground text-background hover:opacity-90 disabled:opacity-30 inline-flex items-center gap-0.5"
+            >
+              <Check className="w-2.5 h-2.5" />
+              저장
+            </button>
+            <button
+              onClick={() => setEditingId(null)}
+              className="text-[10px] px-2 py-0.5 border border-border text-muted-foreground hover:text-foreground"
+            >
+              취소
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            {!groupedView && (
+              <span className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground bg-muted px-1.5 py-0.5 inline-block mb-1">
+                {p.tag}
+              </span>
+            )}
+            <p className="text-xs leading-relaxed text-foreground">{p.pinned_content}</p>
+          </div>
+          <div className="flex items-center gap-0.5 shrink-0">
+            <button
+              onClick={() => startEditing(p)}
+              className="p-1 text-muted-foreground/30 hover:text-foreground opacity-0 group-hover/pattern:opacity-100 transition-opacity"
+              title="수정"
+            >
+              <Pencil className="w-3 h-3" />
+            </button>
+            <button
+              onClick={() => handleDelete(p.id)}
+              className="p-1 text-muted-foreground/30 hover:text-destructive opacity-0 group-hover/pattern:opacity-100 transition-opacity"
+              title="삭제"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[90vw] max-w-lg h-[70vh] flex flex-col p-0 gap-0">
@@ -143,83 +222,21 @@ export function PinnedPatternsManager({ open, onOpenChange }: Props) {
                 구문분석 노트에서 📌 버튼을 눌러 패턴을 고정하세요.
               </p>
             </div>
-          ) : (
-            patterns.map((p) => (
-              <div key={p.id} className="border border-border p-2.5 group/pattern">
-                {editingId === p.id ? (
-                  <div className="space-y-1.5">
-                    <select
-                      value={TAG_OPTIONS.includes(editTag) ? editTag : "__custom__"}
-                      onChange={(e) => {
-                        if (e.target.value === "__custom__") setEditTag("");
-                        else setEditTag(e.target.value);
-                      }}
-                      className="w-full bg-muted border border-border px-2 py-1 text-xs outline-none focus:border-foreground"
-                    >
-                      {TAG_OPTIONS.map((t) => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                      <option value="__custom__">✏️ 직접 입력</option>
-                    </select>
-                    {!TAG_OPTIONS.includes(editTag) && (
-                      <input
-                        value={editTag}
-                        onChange={(e) => setEditTag(e.target.value)}
-                        placeholder="문법 사항을 직접 입력하세요"
-                        className="w-full bg-muted border border-border px-2 py-1 text-xs outline-none focus:border-foreground"
-                      />
-                    )}
-                    <textarea
-                      value={editContent}
-                      onChange={(e) => setEditContent(e.target.value)}
-                      rows={2}
-                      className="w-full bg-background border border-border px-2 py-1 text-xs outline-none focus:border-foreground resize-none"
-                    />
-                    <div className="flex gap-1">
-                      <button
-                        onClick={handleUpdate}
-                        disabled={!editContent.trim()}
-                        className="text-[10px] px-2 py-0.5 bg-foreground text-background hover:opacity-90 disabled:opacity-30 inline-flex items-center gap-0.5"
-                      >
-                        <Check className="w-2.5 h-2.5" />
-                        저장
-                      </button>
-                      <button
-                        onClick={() => setEditingId(null)}
-                        className="text-[10px] px-2 py-0.5 border border-border text-muted-foreground hover:text-foreground"
-                      >
-                        취소
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <span className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground bg-muted px-1.5 py-0.5 inline-block mb-1">
-                        {p.tag}
-                      </span>
-                      <p className="text-xs leading-relaxed text-foreground">{p.pinned_content}</p>
-                    </div>
-                    <div className="flex items-center gap-0.5 shrink-0">
-                      <button
-                        onClick={() => startEditing(p)}
-                        className="p-1 text-muted-foreground/30 hover:text-foreground opacity-0 group-hover/pattern:opacity-100 transition-opacity"
-                        title="수정"
-                      >
-                        <Pencil className="w-3 h-3" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(p.id)}
-                        className="p-1 text-muted-foreground/30 hover:text-destructive opacity-0 group-hover/pattern:opacity-100 transition-opacity"
-                        title="삭제"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+          ) : groupedView && grouped ? (
+            grouped.map(([tag, items]) => (
+              <Collapsible key={tag} defaultOpen>
+                <CollapsibleTrigger className="flex items-center gap-1.5 w-full text-left py-1.5 group/tag">
+                  <ChevronDown className="w-3 h-3 text-muted-foreground transition-transform group-data-[state=closed]/tag:-rotate-90" />
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{tag}</span>
+                  <span className="text-[9px] text-muted-foreground/50">({items.length})</span>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-1.5 pl-4 pt-1">
+                  {items.map((p) => renderPatternCard(p))}
+                </CollapsibleContent>
+              </Collapsible>
             ))
+          ) : (
+            patterns.map((p) => renderPatternCard(p))
           )}
 
           {adding && (
