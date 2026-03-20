@@ -114,7 +114,7 @@ export function HongTSection({ value, onChange, onGenerate, generating, onDelete
               onChange={(e) => onChange(e.target.value)}
               rows={3}
               className="w-full bg-background border border-border px-3 py-2 text-sm font-sans leading-relaxed text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-foreground transition-colors resize-y"
-              placeholder="홍T 해설을 입력하세요..."
+              placeholder={`${teacherLabel} 해설을 입력하세요...`}
             />
           ) : (
             <p className="text-sm font-sans leading-relaxed text-foreground whitespace-pre-wrap">
