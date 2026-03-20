@@ -81,18 +81,18 @@ export function PreviewVocabSection({ vocab, status, onDelete, onEdit, onRegenIt
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 w-14 justify-end">
+                  <div className="flex items-center justify-end gap-1 w-[3.75rem] min-w-[3.75rem] shrink-0">
                     <button
                       onClick={() => handleRegen(globalIdx)}
                       disabled={isRegening}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary disabled:opacity-50"
+                      className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary disabled:opacity-50"
                       title="품사/뜻 재생성"
                     >
                       <RefreshCw className={`w-3 h-3 ${isRegening ? "animate-spin" : ""}`} />
                     </button>
                     <button
                       onClick={() => onDelete(globalIdx)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                      className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
