@@ -1,26 +1,36 @@
 
 
-# 고정 패턴 태그별 그룹화 기능
+# 직역·의역 반말(~했다/~이다) 스타일 통일
 
-## 현황
-현재 패턴이 생성일 역순으로 나열됨. 패턴이 많아지면 같은 태그(분사, 비교구문 등)가 흩어져서 찾기 어려움.
+## 리스크 분석
+
+**다른 기능에 문제 없음.** 이유:
+
+1. **직역(korean_literal_tagged)**: 청크 단위 번역이라 종결 스타일이 청킹 로직·태그 매칭·verb 태깅에 전혀 영향 없음
+2. **의역(korean_natural)**: 태그 없는 순수 번역문. 다른 곳에서 참조하지 않고 그대로 표시만 함
+3. **홍T/구문분석/Preview**: 별도 프롬프트를 사용하므로 영향 범위 밖
+4. **품질**: 종결 스타일 지정은 오히려 일관성을 높여서 품질 향상에 도움
 
 ## 변경 내용
 
-### `src/components/PinnedPatternsManager.tsx`
+### `supabase/functions/engine/index.ts` — KOREAN TRANSLATION RULES 섹션에 추가
 
-1. **그룹 보기 토글 추가**: 상단에 "태그별 보기" 토글 버튼 추가. 기본은 현재 목록 보기 유지.
+현재 line 156~161의 규칙 블록 끝에 종결 스타일 규칙 추가:
 
-2. **태그별 그룹화 뷰**: 토글 활성화 시 패턴을 `tag` 기준으로 그룹핑하여 표시
-   - 각 그룹은 태그명을 헤더로, 해당 태그의 패턴 목록을 하위에 나열
-   - 기존 `Collapsible` 컴포넌트를 활용하여 그룹 접기/펼치기 지원
-   - 그룹 헤더에 패턴 개수 표시 (예: `분사 (3)`)
+```text
+## KOREAN TRANSLATION RULES
+- NEVER use Chinese characters (漢字/Hanja) in Korean translations.
+- Write all Korean in pure Hangul only.
+- Do NOT add parenthetical Hanja explanations like 현현(顯現).
+- Use simple, natural Korean words appropriate for middle/high school students.
+- 직역(korean_literal_tagged)과 의역(korean_natural) 모두 반말 종결(~했다, ~이다, ~한다, ~였다)로 통일할 것.
+- 금지 패턴: ~합니다, ~됩니다, ~했습니다, ~입니다 (존댓말 금지)
+- Good 직역: "연구자들은 그 효과를 연구했다"
+- Bad 직역: "연구자들은 그 효과를 연구했습니다"
+- Good 의역: "이 실험은 보상이 의사결정에 미치는 영향을 보여준다"
+- Bad 의역: "이 실험은 보상이 의사결정에 미치는 영향을 보여줍니다"
+```
 
-3. **기존 기능 유지**: 수정/삭제/추가 등 모든 기존 동작은 그대로 유지. 그룹 뷰에서도 동일하게 수정/삭제 가능.
-
-### 구현 세부
-- `groupedView` boolean 상태 추가
-- `Object.groupBy` 대신 `reduce`로 `Record<string, PinnedPattern[]>` 생성
-- 그룹 키를 한글 가나다순으로 정렬
-- 수정 파일: `PinnedPatternsManager.tsx` 1개
+### 수정 파일
+- `supabase/functions/engine/index.ts` 1개 (프롬프트 규칙 추가만)
 
