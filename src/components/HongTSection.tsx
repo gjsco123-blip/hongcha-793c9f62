@@ -57,7 +57,7 @@ export function HongTSection({ value, onChange, onGenerate, generating, onDelete
           <button
             onClick={onDelete}
             className="absolute top-1.5 right-1.5 p-0.5 text-muted-foreground/50 hover:text-destructive opacity-0 group-hover/hongt:opacity-100 transition-opacity"
-            title="홍T 삭제"
+            title={`${teacherLabel} 삭제`}
           >
             <X className="w-3 h-3" />
           </button>
