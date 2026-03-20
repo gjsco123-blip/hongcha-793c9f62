@@ -468,7 +468,7 @@ function SentenceBlock({ result, index, isLast, teacherLabel = "홍T" }: { resul
   );
 }
 
-export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
+export function PdfDocument({ results, title, subtitle, teacherLabel = "홍T" }: PdfDocumentProps) {
   const { pages } = paginateResults(results);
 
   // Track global sentence index across pages
