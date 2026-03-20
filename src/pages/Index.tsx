@@ -577,7 +577,7 @@ export default function Index() {
     if (pdfGenerating) return;
     setPdfGenerating(true);
     try {
-      const url = await previewPdf(results, pdfTitle, "");
+      const url = await previewPdf(results, pdfTitle, "", teacherLabel);
       // Convert blob URL to data URL for sandbox compatibility
       const resp = await fetch(url);
       const blob = await resp.blob();
