@@ -996,6 +996,7 @@ export default function Index() {
                         sentence={result.original}
                         fullPassage={results.map((r) => r.original).join(" ")}
                         preset={preset}
+                        teacherLabel={teacherLabel}
                       />
                     )}
 
