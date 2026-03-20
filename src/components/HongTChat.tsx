@@ -129,7 +129,7 @@ export function HongTChat({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md flex flex-col p-0 gap-0">
         <SheetHeader className="px-4 py-3 border-b border-border shrink-0">
-          <SheetTitle className="text-sm font-bold">홍T 대화 수정</SheetTitle>
+          <SheetTitle className="text-sm font-bold">{teacherLabel} 대화 수정</SheetTitle>
           <p className="text-[10px] text-muted-foreground leading-snug line-clamp-2 mt-1">
             {sentence}
           </p>
