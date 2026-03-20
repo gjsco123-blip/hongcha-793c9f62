@@ -493,7 +493,7 @@ export function PdfDocument({ results, title, subtitle, teacherLabel = "홍T" }:
                 {pageResults.map((result, idx) => {
                   const isLastInPage = idx === pageResults.length - 1;
                   return (
-                    <SentenceBlock key={result.id} result={result} index={pageStartIndex + idx} isLast={isLastInPage} />
+                    <SentenceBlock key={result.id} result={result} index={pageStartIndex + idx} isLast={isLastInPage} teacherLabel={teacherLabel} />
                   );
                 })}
               </View>
