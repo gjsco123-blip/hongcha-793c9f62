@@ -18,6 +18,7 @@ interface HongTChatProps {
   currentExplanation: string;
   fullPassage?: string;
   preset?: string;
+  teacherLabel?: string;
   onApplySuggestion: (suggestion: string) => void;
 }
 
