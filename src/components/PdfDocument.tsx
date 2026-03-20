@@ -387,7 +387,7 @@ function renderChunksSlashPlain(chunks: Chunk[]): string {
 
 // Height estimation & pagination now live in src/lib/pdf-pagination.ts
 
-function SentenceBlock({ result, index, isLast }: { result: SentenceResult; index: number; isLast: boolean }) {
+function SentenceBlock({ result, index, isLast, teacherLabel = "홍T" }: { result: SentenceResult; index: number; isLast: boolean; teacherLabel?: string }) {
   return (
     <View
       key={result.id}
