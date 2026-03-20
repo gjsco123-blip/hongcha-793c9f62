@@ -97,9 +97,10 @@ export function usePdfExport() {
     async (
       results: SentenceResult[],
       title: string,
-      subtitle: string
+      subtitle: string,
+      teacherLabel?: string
     ): Promise<string> => {
-      const pdfDocument = createElement(PdfDocument, { results, title, subtitle });
+      const pdfDocument = createElement(PdfDocument, { results, title, subtitle, teacherLabel });
       const blob = await pdf(pdfDocument).toBlob();
       return URL.createObjectURL(blob);
     },
