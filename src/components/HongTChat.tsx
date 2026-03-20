@@ -138,7 +138,7 @@ export function HongTChat({
         {/* Current explanation */}
         <div className="px-4 py-2.5 bg-muted/40 border-b border-border shrink-0">
           <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold mb-1">
-            현재 홍T 설명
+            현재 {teacherLabel} 설명
           </p>
           <p className="text-xs leading-relaxed text-foreground">
             {currentExplanation || "아직 설명이 없습니다."}
