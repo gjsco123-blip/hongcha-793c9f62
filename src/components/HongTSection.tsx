@@ -13,6 +13,7 @@ interface HongTSectionProps {
   sentence?: string;
   fullPassage?: string;
   preset?: string;
+  teacherLabel?: string;
 }
 
 export function HongTSection({ value, onChange, onGenerate, generating, onDelete, sentence, fullPassage, preset }: HongTSectionProps) {
