@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Trash2, Plus, X, Pencil, Check } from "lucide-react";
+import { Trash2, Plus, X, Pencil, Check, ChevronDown, List, FolderOpen } from "lucide-react";
 
 interface PinnedPattern {
   id: string;
