@@ -30,6 +30,7 @@ export function HongTChat({
   fullPassage,
   preset,
   onApplySuggestion,
+  teacherLabel = "홍T",
 }: HongTChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
