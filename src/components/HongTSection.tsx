@@ -66,7 +66,7 @@ export function HongTSection({ value, onChange, onGenerate, generating, onDelete
           <div className="flex items-center gap-3">
             <div className="w-0.5 h-4 bg-foreground shrink-0" />
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-              홍T
+              {teacherLabel}
             </span>
           </div>
           <div className="flex items-center gap-1.5">
