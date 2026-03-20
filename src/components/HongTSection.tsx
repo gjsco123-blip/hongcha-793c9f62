@@ -118,7 +118,7 @@ export function HongTSection({ value, onChange, onGenerate, generating, onDelete
             />
           ) : (
             <p className="text-sm font-sans leading-relaxed text-foreground whitespace-pre-wrap">
-              {value || <span className="text-muted-foreground/50">홍T 해설이 없습니다.</span>}
+              {value || <span className="text-muted-foreground/50">{teacherLabel} 해설이 없습니다.</span>}
             </p>
           )}
         </div>
