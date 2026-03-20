@@ -8,6 +8,7 @@ import { SentencePreview } from "@/components/SentencePreview";
 import { CategoryHeaderBar, CategoryFullScreen } from "@/components/CategorySelector";
 import { Chunk, parseTagged, chunksToTagged } from "@/lib/chunk-utils";
 import { usePdfExport } from "@/hooks/usePdfExport";
+import { useTeacherLabel } from "@/hooks/useTeacherLabel";
 import { useCategories } from "@/hooks/useCategories";
 import { renderWithSuperscripts, reorderNotesByPosition } from "@/lib/syntax-superscript";
 import { paginateResults } from "@/lib/pdf-pagination";
