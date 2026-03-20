@@ -426,7 +426,7 @@ function SentenceBlock({ result, index, isLast, teacherLabel = "홍T" }: { resul
           {result.hongTNotes && !result.hideHongT ? (
             <View style={styles.translationRow}>
               <View style={styles.translationBar} />
-              <Text style={styles.translationLabel}>홍T</Text>
+              <Text style={styles.translationLabel}>{teacherLabel}</Text>
               <Text style={styles.translationContent}>{result.hongTNotes}</Text>
             </View>
           ) : null}
