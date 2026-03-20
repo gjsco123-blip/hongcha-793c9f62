@@ -48,7 +48,7 @@ export function HongTSection({ value, onChange, onGenerate, generating, onDelete
       {generating && (
         <div className="absolute inset-0 bg-muted/80 flex items-center justify-center z-10">
           <span className="text-xs text-muted-foreground animate-pulse">
-            홍T 해설 생성 중...
+            {teacherLabel} 해설 생성 중...
           </span>
         </div>
       )}
