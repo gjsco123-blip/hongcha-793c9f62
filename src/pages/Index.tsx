@@ -690,14 +690,33 @@ export default function Index() {
       <header className="bg-card border-b border-border no-print">
         <div className="max-w-4xl mx-auto px-6 py-4">
           <CategoryHeaderBar {...categoryProps} />
-          <div className="mt-3">
+          <div className="mt-3 flex items-center gap-2">
             <input
               type="text"
               value={pdfTitle}
               onChange={(e) => setPdfTitle(e.target.value)}
               placeholder="제목"
-              className="text-xl font-bold tracking-wide bg-transparent outline-none border-none text-foreground placeholder:text-muted-foreground/50 w-full"
+              className="text-xl font-bold tracking-wide bg-transparent outline-none border-none text-foreground placeholder:text-muted-foreground/50 flex-1"
             />
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="p-1.5 text-muted-foreground hover:text-foreground transition-colors" title="설정">
+                  <Settings2 className="w-4 h-4" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-56 p-3">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  해설 선생님 이름
+                </label>
+                <input
+                  type="text"
+                  value={teacherLabel}
+                  onChange={(e) => setTeacherLabel(e.target.value)}
+                  placeholder="홍T"
+                  className="mt-1.5 w-full bg-muted border border-border px-2.5 py-1.5 text-sm outline-none focus:border-foreground transition-colors"
+                />
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
       </header>
