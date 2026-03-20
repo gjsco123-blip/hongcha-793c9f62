@@ -630,7 +630,8 @@ export default function Index() {
         results,
         pdfTitle,
         "",
-        `${pdfTitle}+통합.pdf`
+        `${pdfTitle}+통합.pdf`,
+        teacherLabel
       );
       setPreviewCompleted(true);
       toast.success("통합 PDF 다운로드가 시작되었습니다.");
