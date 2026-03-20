@@ -115,6 +115,7 @@ export default function Index() {
   const [editedSentences, setEditedSentences] = useState<string[]>([]);
 
   const categories = useCategories();
+  const { teacherLabel, setTeacherLabel } = useTeacherLabel();
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const dataLoadedRef = useRef(false);
   
