@@ -13,9 +13,10 @@ interface HongTSectionProps {
   sentence?: string;
   fullPassage?: string;
   preset?: string;
+  teacherLabel?: string;
 }
 
-export function HongTSection({ value, onChange, onGenerate, generating, onDelete, sentence, fullPassage, preset }: HongTSectionProps) {
+export function HongTSection({ value, onChange, onGenerate, generating, onDelete, sentence, fullPassage, preset, teacherLabel = "홍T" }: HongTSectionProps) {
   const [editing, setEditing] = useState(false);
   const [checking, setChecking] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
@@ -47,7 +48,7 @@ export function HongTSection({ value, onChange, onGenerate, generating, onDelete
       {generating && (
         <div className="absolute inset-0 bg-muted/80 flex items-center justify-center z-10">
           <span className="text-xs text-muted-foreground animate-pulse">
-            홍T 해설 생성 중...
+            {teacherLabel} 해설 생성 중...
           </span>
         </div>
       )}
@@ -56,7 +57,7 @@ export function HongTSection({ value, onChange, onGenerate, generating, onDelete
           <button
             onClick={onDelete}
             className="absolute top-1.5 right-1.5 p-0.5 text-muted-foreground/50 hover:text-destructive opacity-0 group-hover/hongt:opacity-100 transition-opacity"
-            title="홍T 삭제"
+            title={`${teacherLabel} 삭제`}
           >
             <X className="w-3 h-3" />
           </button>
@@ -65,7 +66,7 @@ export function HongTSection({ value, onChange, onGenerate, generating, onDelete
           <div className="flex items-center gap-3">
             <div className="w-0.5 h-4 bg-foreground shrink-0" />
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-              홍T
+              {teacherLabel}
             </span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -113,11 +114,11 @@ export function HongTSection({ value, onChange, onGenerate, generating, onDelete
               onChange={(e) => onChange(e.target.value)}
               rows={3}
               className="w-full bg-background border border-border px-3 py-2 text-sm font-sans leading-relaxed text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-foreground transition-colors resize-y"
-              placeholder="홍T 해설을 입력하세요..."
+              placeholder={`${teacherLabel} 해설을 입력하세요...`}
             />
           ) : (
             <p className="text-sm font-sans leading-relaxed text-foreground whitespace-pre-wrap">
-              {value || <span className="text-muted-foreground/50">홍T 해설이 없습니다.</span>}
+              {value || <span className="text-muted-foreground/50">{teacherLabel} 해설이 없습니다.</span>}
             </p>
           )}
         </div>
@@ -131,6 +132,7 @@ export function HongTSection({ value, onChange, onGenerate, generating, onDelete
           currentExplanation={value}
           fullPassage={fullPassage}
           preset={preset}
+          teacherLabel={teacherLabel}
           onApplySuggestion={(suggestion) => onChange(suggestion)}
         />
       )}

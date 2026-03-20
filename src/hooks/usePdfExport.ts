@@ -83,9 +83,10 @@ export function usePdfExport() {
       results: SentenceResult[],
       title: string,
       subtitle: string,
-      filename: string = "worksheet.pdf"
+      filename: string = "worksheet.pdf",
+      teacherLabel?: string
     ) => {
-      const pdfDocument = createElement(PdfDocument, { results, title, subtitle });
+      const pdfDocument = createElement(PdfDocument, { results, title, subtitle, teacherLabel });
       const blob = await pdf(pdfDocument).toBlob();
       triggerDownload(blob, filename);
     },
@@ -96,9 +97,10 @@ export function usePdfExport() {
     async (
       results: SentenceResult[],
       title: string,
-      subtitle: string
+      subtitle: string,
+      teacherLabel?: string
     ): Promise<string> => {
-      const pdfDocument = createElement(PdfDocument, { results, title, subtitle });
+      const pdfDocument = createElement(PdfDocument, { results, title, subtitle, teacherLabel });
       const blob = await pdf(pdfDocument).toBlob();
       return URL.createObjectURL(blob);
     },
@@ -111,7 +113,8 @@ export function usePdfExport() {
       syntaxResults: SentenceResult[],
       title: string,
       subtitle: string,
-      filename: string = "worksheet-combined.pdf"
+      filename: string = "worksheet-combined.pdf",
+      teacherLabel?: string
     ) => {
       const previewDocument = createElement(PreviewPdf, {
         vocab: previewData.vocab,
@@ -120,7 +123,7 @@ export function usePdfExport() {
         examBlock: previewData.examBlock,
         title: previewData.title || title,
       });
-      const syntaxDocument = createElement(PdfDocument, { results: syntaxResults, title, subtitle });
+      const syntaxDocument = createElement(PdfDocument, { results: syntaxResults, title, subtitle, teacherLabel });
       const [previewBlob, syntaxBlob] = await Promise.all([
         pdf(previewDocument).toBlob(),
         pdf(syntaxDocument).toBlob(),

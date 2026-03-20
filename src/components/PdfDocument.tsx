@@ -66,6 +66,7 @@ interface PdfDocumentProps {
   results: SentenceResult[];
   title: string;
   subtitle: string;
+  teacherLabel?: string;
 }
 
 // 5mm = 14.17pt, 12mm = 34.02pt
@@ -386,7 +387,7 @@ function renderChunksSlashPlain(chunks: Chunk[]): string {
 
 // Height estimation & pagination now live in src/lib/pdf-pagination.ts
 
-function SentenceBlock({ result, index, isLast }: { result: SentenceResult; index: number; isLast: boolean }) {
+function SentenceBlock({ result, index, isLast, teacherLabel = "홍T" }: { result: SentenceResult; index: number; isLast: boolean; teacherLabel?: string }) {
   return (
     <View
       key={result.id}
@@ -425,7 +426,7 @@ function SentenceBlock({ result, index, isLast }: { result: SentenceResult; inde
           {result.hongTNotes && !result.hideHongT ? (
             <View style={styles.translationRow}>
               <View style={styles.translationBar} />
-              <Text style={styles.translationLabel}>홍T</Text>
+              <Text style={styles.translationLabel}>{teacherLabel}</Text>
               <Text style={styles.translationContent}>{result.hongTNotes}</Text>
             </View>
           ) : null}
@@ -467,7 +468,7 @@ function SentenceBlock({ result, index, isLast }: { result: SentenceResult; inde
   );
 }
 
-export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
+export function PdfDocument({ results, title, subtitle, teacherLabel = "홍T" }: PdfDocumentProps) {
   const { pages } = paginateResults(results);
 
   // Track global sentence index across pages
@@ -492,7 +493,7 @@ export function PdfDocument({ results, title, subtitle }: PdfDocumentProps) {
                 {pageResults.map((result, idx) => {
                   const isLastInPage = idx === pageResults.length - 1;
                   return (
-                    <SentenceBlock key={result.id} result={result} index={pageStartIndex + idx} isLast={isLastInPage} />
+                    <SentenceBlock key={result.id} result={result} index={pageStartIndex + idx} isLast={isLastInPage} teacherLabel={teacherLabel} />
                   );
                 })}
               </View>

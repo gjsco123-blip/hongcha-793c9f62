@@ -8,12 +8,14 @@ import { SentencePreview } from "@/components/SentencePreview";
 import { CategoryHeaderBar, CategoryFullScreen } from "@/components/CategorySelector";
 import { Chunk, parseTagged, chunksToTagged } from "@/lib/chunk-utils";
 import { usePdfExport } from "@/hooks/usePdfExport";
+import { useTeacherLabel } from "@/hooks/useTeacherLabel";
 import { useCategories } from "@/hooks/useCategories";
 import { renderWithSuperscripts, reorderNotesByPosition } from "@/lib/syntax-superscript";
 import { paginateResults } from "@/lib/pdf-pagination";
 import { mergePassageStore, parsePassageStore } from "@/lib/passage-store";
 import { toast } from "sonner";
-import { FileDown, RotateCw, X, Scissors, RefreshCw, Eye, Loader2 } from "lucide-react";
+import { FileDown, RotateCw, X, Scissors, RefreshCw, Eye, Loader2, Settings2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
@@ -114,6 +116,7 @@ export default function Index() {
   const [editedSentences, setEditedSentences] = useState<string[]>([]);
 
   const categories = useCategories();
+  const { teacherLabel, setTeacherLabel } = useTeacherLabel();
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const dataLoadedRef = useRef(false);
   
@@ -564,7 +567,7 @@ export default function Index() {
 
   const handleExportPdf = async () => {
     try {
-      await exportToPdf(results, pdfTitle, "", `${pdfTitle}+구문분석.pdf`);
+      await exportToPdf(results, pdfTitle, "", `${pdfTitle}+구문분석.pdf`, teacherLabel);
       toast.success("PDF 다운로드가 시작되었습니다.");
     } catch (err: any) {
       toast.error(`PDF 저장 실패: ${err.message}`);
@@ -575,7 +578,7 @@ export default function Index() {
     if (pdfGenerating) return;
     setPdfGenerating(true);
     try {
-      const url = await previewPdf(results, pdfTitle, "");
+      const url = await previewPdf(results, pdfTitle, "", teacherLabel);
       // Convert blob URL to data URL for sandbox compatibility
       const resp = await fetch(url);
       const blob = await resp.blob();
@@ -628,7 +631,8 @@ export default function Index() {
         results,
         pdfTitle,
         "",
-        `${pdfTitle}+통합.pdf`
+        `${pdfTitle}+통합.pdf`,
+        teacherLabel
       );
       setPreviewCompleted(true);
       toast.success("통합 PDF 다운로드가 시작되었습니다.");
@@ -686,14 +690,33 @@ export default function Index() {
       <header className="bg-card border-b border-border no-print">
         <div className="max-w-4xl mx-auto px-6 py-4">
           <CategoryHeaderBar {...categoryProps} />
-          <div className="mt-3">
+          <div className="mt-3 flex items-center gap-2">
             <input
               type="text"
               value={pdfTitle}
               onChange={(e) => setPdfTitle(e.target.value)}
               placeholder="제목"
-              className="text-xl font-bold tracking-wide bg-transparent outline-none border-none text-foreground placeholder:text-muted-foreground/50 w-full"
+              className="text-xl font-bold tracking-wide bg-transparent outline-none border-none text-foreground placeholder:text-muted-foreground/50 flex-1"
             />
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="p-1.5 text-muted-foreground hover:text-foreground transition-colors" title="설정">
+                  <Settings2 className="w-4 h-4" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-56 p-3">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  해설 선생님 이름
+                </label>
+                <input
+                  type="text"
+                  value={teacherLabel}
+                  onChange={(e) => setTeacherLabel(e.target.value)}
+                  placeholder="홍T"
+                  className="mt-1.5 w-full bg-muted border border-border px-2.5 py-1.5 text-sm outline-none focus:border-foreground transition-colors"
+                />
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
       </header>
@@ -993,6 +1016,7 @@ export default function Index() {
                         sentence={result.original}
                         fullPassage={results.map((r) => r.original).join(" ")}
                         preset={preset}
+                        teacherLabel={teacherLabel}
                       />
                     )}
 

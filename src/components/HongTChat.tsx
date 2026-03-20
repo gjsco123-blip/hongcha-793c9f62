@@ -18,6 +18,7 @@ interface HongTChatProps {
   currentExplanation: string;
   fullPassage?: string;
   preset?: string;
+  teacherLabel?: string;
   onApplySuggestion: (suggestion: string) => void;
 }
 
@@ -29,6 +30,7 @@ export function HongTChat({
   fullPassage,
   preset,
   onApplySuggestion,
+  teacherLabel = "홍T",
 }: HongTChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -127,7 +129,7 @@ export function HongTChat({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md flex flex-col p-0 gap-0">
         <SheetHeader className="px-4 py-3 border-b border-border shrink-0">
-          <SheetTitle className="text-sm font-bold">홍T 대화 수정</SheetTitle>
+          <SheetTitle className="text-sm font-bold">{teacherLabel} 대화 수정</SheetTitle>
           <p className="text-[10px] text-muted-foreground leading-snug line-clamp-2 mt-1">
             {sentence}
           </p>
@@ -136,7 +138,7 @@ export function HongTChat({
         {/* Current explanation */}
         <div className="px-4 py-2.5 bg-muted/40 border-b border-border shrink-0">
           <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold mb-1">
-            현재 홍T 설명
+            현재 {teacherLabel} 설명
           </p>
           <p className="text-xs leading-relaxed text-foreground">
             {currentExplanation || "아직 설명이 없습니다."}
