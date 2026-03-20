@@ -81,7 +81,7 @@ export function PreviewVocabSection({ vocab, status, onDelete, onEdit, onRegenIt
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-0.5 w-10 justify-end">
+                  <div className="flex items-center gap-1 w-14 justify-end">
                     <button
                       onClick={() => handleRegen(globalIdx)}
                       disabled={isRegening}
