@@ -1,36 +1,89 @@
 
+# Vocabulary 액션 UI를 hover → 클릭 기반으로 전환
 
-# 계정별 선생님 이름 커스터마이징
+## 판단
+지금 증상은 단순 아이콘 크기 문제가 아니라, `PreviewVocabSection.tsx`의 현재 방식이 구조적으로 불안정해서 반복해서 깨지는 상태로 보임.
 
-## 개요
-"홍T"를 계정별로 다른 이름(예: "미현T")으로 표시할 수 있도록 설정 기능 추가.
+현재 코드:
+- 액션 버튼이 `opacity-0 group-hover:opacity-100`에 의존
+- 행 끝 action 영역이 좁고 고정폭
+- 컬럼 카드가 `overflow-hidden`
+- 사용자 환경에서는 hover 자체가 불안정할 수 있음
 
-## 변경 사항
+그래서 계속 “하나는 보이고 하나는 사라짐”, “둘 다 안 보임” 같은 현상이 반복되기 쉬움.
 
-### 1. DB 테이블 생성
-`user_preferences` 테이블 — `user_id`(PK), `teacher_label`(기본값 '홍T'). RLS로 본인 데이터만 접근.
+## 구현 방향
+사용자 제안대로 **단어를 클릭하면 해당 행의 액션 메뉴가 뜨는 방식**으로 바꾸는 게 가장 합리적임.
 
-### 2. 커스텀 훅 생성
-`src/hooks/useTeacherLabel.ts` — DB에서 label 조회, 없으면 '홍T'로 upsert, 변경 함수 제공.
+### 왜 이 방식이 좋은가
+- hover 의존 제거
+- 모바일/터치 환경에서도 동일하게 동작
+- 액션 버튼 공간을 행 안에 억지로 확보할 필요 없음
+- 삭제/재생성 버튼이 레이아웃에 밀려 사라질 위험 감소
+- 지금 기능 구조(`onDelete`, `onRegenItem`)는 그대로 재사용 가능
 
-### 3. 설정 UI
-헤더 영역(CategoryHeaderBar 옆 또는 아래)에 작은 설정 아이콘 추가. 클릭하면 팝오버로 선생님 이름 입력 필드 표시.
+## 변경 계획
 
-### 4. 컴포넌트 수정 (prop 전달)
-| 파일 | 변경 |
-|------|------|
-| `Index.tsx` | `useTeacherLabel()` 호출, HongTSection에 `teacherLabel` prop 전달 |
-| `HongTSection.tsx` | `teacherLabel` prop 받아서 하드코딩된 "홍T" 대체 |
-| `HongTChat.tsx` | `teacherLabel` prop 받아서 "홍T 대화 수정" → `${teacherLabel} 대화 수정` 등 |
-| `PdfDocument.tsx` | `teacherLabel` prop 추가, PDF 라벨 동적 표시 |
-| `usePdfExport.ts` | `teacherLabel` 파라미터 추가하여 PdfDocument에 전달 |
+### 1) `src/components/preview/PreviewVocabSection.tsx` 구조 변경
+행마다 항상 숨겨진 버튼 2개를 두는 방식 대신,
+- `activeMenuIdx` 상태 추가
+- 영어 단어(`v.word`)를 **클릭 가능한 버튼**으로 변경
+- 클릭 시 해당 단어 옆 또는 위에 작은 액션 메뉴 표시
 
-### 5. 변경하지 않는 것
-- Edge Function 프롬프트 (AI 내부용, 출력에 "홍T" 텍스트 없음)
-- 기존 테이블 구조
-- 분석/생성 로직
+메뉴 항목:
+- 품사/뜻 재생성
+- 삭제
 
-### 리스크
-- 모든 변경은 표시 문자열만 교체 (기본값 '홍T'로 폴백)
-- 기존 기능에 영향 없음
+### 2) 표시 방식은 inline hover 대신 Popover 사용
+기존 프로젝트에 이미 있는 `Popover` 컴포넌트를 활용하는 쪽이 안전함.
 
+이유:
+- 포털 기반이라 `overflow-hidden`에 잘리지 않음
+- 좁은 행 내부 레이아웃을 억지로 늘릴 필요 없음
+- 클릭 열기/닫기, 바깥 클릭 닫기가 안정적임
+
+### 3) 기존 입력 UX는 유지
+다음은 그대로 유지:
+- `pos` 직접 수정 input
+- `meaning_ko` 직접 수정 input
+- PDF 줄바꿈 경고 아이콘
+- 개별 재생성 로딩 스피너
+- 삭제 후 번호 자동 재배열
+
+즉, **액션 노출 방식만 바꾸고 데이터 로직은 건드리지 않음**.
+
+### 4) 액션 실행 후 닫힘 처리
+- 재생성 클릭 → 해당 항목만 로딩 표시 후 메뉴 닫기
+- 삭제 클릭 → 삭제 실행 후 메뉴 닫기
+- 다른 단어 클릭 → 이전 메뉴 닫고 새 메뉴 열기
+- 바깥 클릭 → 메뉴 닫기
+
+## 예상 수정 파일
+- `src/components/preview/PreviewVocabSection.tsx`
+
+필요 시 import 추가:
+- `Popover`, `PopoverContent`, `PopoverTrigger`
+- 아이콘/버튼 스타일용 기존 UI 유틸
+
+## 리스크 평가
+낮음.
+
+이유:
+- 백엔드/DB 영향 없음
+- 삭제/재생성 콜백은 기존 함수 그대로 사용
+- 문제의 핵심인 hover/폭/overflow 조합만 제거
+- 현재 깨진 부분을 국소적으로 교체하는 수준
+
+오히려 지금처럼 hover 버튼을 억지로 맞추는 것보다 훨씬 안정적임.
+
+## 테스트 기준
+구현 후 아래만 확인하면 됨:
+1. 단어 클릭 시 액션 메뉴가 확실히 보이는지
+2. 재생성 클릭 시 해당 단어만 다시 생성되는지
+3. 삭제 클릭 시 올바른 행이 지워지고 번호가 당겨지는지
+4. `pos`, `뜻` 직접 수정 입력이 그대로 되는지
+5. 좁은 화면에서도 메뉴가 잘리지 않는지
+
+## 결론
+객관적으로 보면, 지금 문제는 CSS 수치 조정으로 계속 잡을 종류가 아니라 **interaction 패턴 자체를 hover에서 click으로 바꾸는 게 맞음**.  
+가장 안전한 구현은 `PreviewVocabSection`에서 **영단어 클릭 → Popover 액션 메뉴(재생성/삭제)** 구조로 전환하는 것임.
