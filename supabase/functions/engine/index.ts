@@ -158,6 +158,12 @@ ONLY finite verbs — verbs that serve as the predicate of a clause with a subje
 - Write all Korean in pure Hangul only.
 - Do NOT add parenthetical Hanja explanations like 현현(顯現).
 - Use simple, natural Korean words appropriate for middle/high school students.
+- 직역(korean_literal_tagged)과 의역(korean_natural) 모두 반말 종결(~했다, ~이다, ~한다, ~였다)로 통일할 것.
+- 금지 패턴: ~합니다, ~됩니다, ~했습니다, ~입니다 (존댓말 금지)
+- Good 직역: "연구자들은 그 효과를 연구했다"
+- Bad 직역: "연구자들은 그 효과를 연구했습니다"
+- Good 의역: "이 실험은 보상이 의사결정에 미치는 영향을 보여준다"
+- Bad 의역: "이 실험은 보상이 의사결정에 미치는 영향을 보여줍니다"
 
 You MUST respond by calling the "analysis_result" function with the structured output.`;
 
