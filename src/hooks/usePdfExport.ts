@@ -83,9 +83,10 @@ export function usePdfExport() {
       results: SentenceResult[],
       title: string,
       subtitle: string,
-      filename: string = "worksheet.pdf"
+      filename: string = "worksheet.pdf",
+      teacherLabel?: string
     ) => {
-      const pdfDocument = createElement(PdfDocument, { results, title, subtitle });
+      const pdfDocument = createElement(PdfDocument, { results, title, subtitle, teacherLabel });
       const blob = await pdf(pdfDocument).toBlob();
       triggerDownload(blob, filename);
     },
