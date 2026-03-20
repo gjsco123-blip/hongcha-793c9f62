@@ -16,7 +16,7 @@ interface HongTSectionProps {
   teacherLabel?: string;
 }
 
-export function HongTSection({ value, onChange, onGenerate, generating, onDelete, sentence, fullPassage, preset }: HongTSectionProps) {
+export function HongTSection({ value, onChange, onGenerate, generating, onDelete, sentence, fullPassage, preset, teacherLabel = "홍T" }: HongTSectionProps) {
   const [editing, setEditing] = useState(false);
   const [checking, setChecking] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
