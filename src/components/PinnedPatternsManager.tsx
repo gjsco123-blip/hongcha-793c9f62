@@ -115,9 +115,19 @@ export function PinnedPatternsManager({ open, onOpenChange }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[90vw] max-w-lg h-[70vh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-4 py-3 border-b border-border shrink-0">
-          <DialogTitle className="text-sm font-bold">
-            고정 패턴 관리
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-sm font-bold">
+              고정 패턴 관리
+            </DialogTitle>
+            <button
+              onClick={() => setGroupedView(!groupedView)}
+              className="inline-flex items-center gap-1 text-[10px] px-2 py-1 border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors mr-6"
+              title={groupedView ? "목록 보기" : "태그별 보기"}
+            >
+              {groupedView ? <List className="w-3 h-3" /> : <FolderOpen className="w-3 h-3" />}
+              {groupedView ? "목록" : "태그별"}
+            </button>
+          </div>
           <p className="text-[10px] text-muted-foreground mt-1">
             고정된 설명 방식은 구문분석 자동생성 및 AI 수정에 항상 반영됩니다.
           </p>
