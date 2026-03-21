@@ -243,7 +243,7 @@ export function HongTChat({
             </button>
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
