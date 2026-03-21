@@ -8,15 +8,15 @@ Font.register({
   family: "Pretendard",
   fonts: [
     {
-      src: "https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-kr@5.1/korean-400-normal.ttf",
+      src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-Regular.otf",
       fontWeight: 400,
     },
     {
-      src: "https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-kr@5.1/korean-600-normal.ttf",
+      src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-SemiBold.otf",
       fontWeight: 600,
     },
     {
-      src: "https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-kr@5.1/korean-700-normal.ttf",
+      src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-Bold.otf",
       fontWeight: 700,
     },
   ],
