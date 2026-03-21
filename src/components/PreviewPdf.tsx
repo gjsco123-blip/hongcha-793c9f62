@@ -6,15 +6,15 @@ Font.register({
   family: "Pretendard",
   fonts: [
     {
-      src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-Regular.otf",
+      src: "https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-kr@5.1/korean-400-normal.ttf",
       fontWeight: 400,
     },
     {
-      src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-SemiBold.otf",
+      src: "https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-kr@5.1/korean-600-normal.ttf",
       fontWeight: 600,
     },
     {
-      src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-Bold.otf",
+      src: "https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-kr@5.1/korean-700-normal.ttf",
       fontWeight: 700,
     },
   ],
@@ -23,15 +23,15 @@ Font.register({
 Font.register({
   family: "SourceSerif4",
   fonts: [
-    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@latest/latin-400-normal.ttf", fontWeight: 400 },
-    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@latest/latin-600-normal.ttf", fontWeight: 600 },
-    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@latest/latin-700-normal.ttf", fontWeight: 700 },
+    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@4.0/latin-400-normal.ttf", fontWeight: 400 },
+    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@4.0/latin-600-normal.ttf", fontWeight: 600 },
+    { src: "https://cdn.jsdelivr.net/fontsource/fonts/source-serif-4@4.0/latin-700-normal.ttf", fontWeight: 700 },
   ],
 });
 
 Font.register({
   family: "Jua",
-  src: "https://cdn.jsdelivr.net/fontsource/fonts/jua@latest/korean-400-normal.ttf",
+  src: "https://cdn.jsdelivr.net/fontsource/fonts/jua@5.1/korean-400-normal.ttf",
 });
 
 Font.registerHyphenationCallback((word) => [word]);
