@@ -58,7 +58,11 @@ export function PinnedPatternsManager({ open, onOpenChange }: Props) {
       .select("id, tag, pinned_content, example_sentence")
       .eq("is_global", true)
       .order("created_at", { ascending: false });
-    if (!error && data) setPatterns(data as any);
+    if (error) {
+      toast.error("고정 패턴을 불러오지 못했습니다.");
+    } else if (data) {
+      setPatterns(data as any);
+    }
     setLoading(false);
   };
 
