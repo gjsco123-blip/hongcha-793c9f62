@@ -67,7 +67,13 @@ function safeJsonParse(raw: string): any {
 }
 
 function sanitizeEndings(text: string): string {
-  return String(text ?? "").replace(/([가-힣]{2,})(임|됨|있음|함)(?=[.\s/,)~]|$)/g, (_m, stem) => stem);
+  return String(text ?? "")
+    .replace(/역할임(?=[.\s/,)~]|$)/g, "역할")
+    .replace(/구조임(?=[.\s/,)~]|$)/g, "구조")
+    .replace(/의미임(?=[.\s/,)~]|$)/g, "의미")
+    .replace(/수일치함(?=[.\s/,)~]|$)/g, "수일치")
+    .replace(/수동의 의미임(?=[.\s/,)~]|$)/g, "수동의 의미")
+    .replace(/목적격 보어 역할임(?=[.\s/,)~]|$)/g, "목적격 보어 역할");
 }
 
 function repairTruncatedSyntaxPhrases(text: string): string {
