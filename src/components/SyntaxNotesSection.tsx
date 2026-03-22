@@ -14,6 +14,8 @@ const TAG_OPTIONS = [
   "병렬구조", "전치사+동명사", "비교구문", "수일치", "생략", "숙어/표현", "기타",
 ];
 
+const SYNTAX_PATTERN_ADMIN_EMAIL = "co500123@naver.com";
+
 function autoDetectTag(content: string): string {
   const c = content.toLowerCase();
   if (c.includes("관계대명사") || c.includes("주관대") || c.includes("목관대")) return "관계대명사";
@@ -47,6 +49,7 @@ interface SyntaxNotesSectionProps {
 
 export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, sentence, fullPassage, preset }: SyntaxNotesSectionProps) {
   const { user } = useAuth();
+  const isAdmin = (user?.email || "").toLowerCase() === SYNTAX_PATTERN_ADMIN_EMAIL;
   const [editing, setEditing] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [selectedNoteIndex, setSelectedNoteIndex] = useState<number | null>(null);
@@ -57,7 +60,7 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
 
   const fetchCustomTags = useCallback(async () => {
     if (!user) return;
-    const { data } = await supabase.from("syntax_patterns").select("tag").eq("user_id", user.id);
+    const { data } = await supabase.from("syntax_patterns").select("tag").eq("is_global", true);
     if (data) {
       const unique = Array.from(new Set(data.map((d: any) => d.tag)));
       setCustomTags(unique.filter((t) => !TAG_OPTIONS.includes(t)));
@@ -96,9 +99,14 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
       toast.error("로그인이 필요합니다.");
       return;
     }
+    if (!isAdmin) {
+      toast.error("관리자만 고정 패턴을 수정할 수 있습니다.");
+      return;
+    }
     const tag = pinTag || "기타";
     const { error } = await supabase.from("syntax_patterns").insert({
       user_id: user.id,
+      is_global: true,
       tag,
       pinned_content: noteContent.trim(),
       example_sentence: sentence || null,
@@ -114,6 +122,10 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
   };
 
   const startPinning = (note: SyntaxNote) => {
+    if (!isAdmin) {
+      toast.error("관리자만 고정 패턴을 수정할 수 있습니다.");
+      return;
+    }
     const detected = autoDetectTag(note.content);
     setPinTag(detected);
     setPinningId(note.id);
@@ -230,7 +242,7 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
                           <X className="w-2.5 h-2.5" />
                         </button>
                     </div>
-                  ) : (
+                  ) : isAdmin ? (
                     <button
                       onClick={() => startPinning(note)}
                       className="p-0.5 text-muted-foreground/30 hover:text-foreground opacity-0 group-hover/note:opacity-100 transition-opacity"
@@ -238,7 +250,7 @@ export function SyntaxNotesSection({ notes, onChange, onGenerate, generating, se
                     >
                       <Pin className="w-3 h-3" />
                     </button>
-                  )}
+                  ) : null}
                   <button
                     onClick={() => handleDeleteNote(note.id)}
                     className="shrink-0 p-0.5 text-muted-foreground/30 hover:text-destructive opacity-0 group-hover/note:opacity-100 transition-opacity"

@@ -107,41 +107,44 @@ serve(async (req) => {
     // Fetch learning examples + pinned patterns
     let learningBlock = "";
     let pinnedBlock = "";
-    if (userId) {
-      try {
-        const supabaseUrl = Deno.env.get("SUPABASE_URL");
-        const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-        if (supabaseUrl && serviceRoleKey) {
-          const [learningRes, patternsRes] = await Promise.all([
-            fetch(`${supabaseUrl}/rest/v1/learning_examples?user_id=eq.${userId}&type=eq.syntax&order=created_at.desc&limit=3&select=sentence,ai_draft,final_version`, {
-              headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` },
-            }),
-            fetch(`${supabaseUrl}/rest/v1/syntax_patterns?user_id=eq.${userId}&order=created_at.desc&select=tag,pinned_content`, {
-              headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` },
-            }),
-          ]);
-          if (learningRes.ok) {
-            const examples = await learningRes.json();
-            if (examples.length > 0) {
-              const lines = examples.map((e: any) => `원문: ${e.sentence}\nAI초안: ${e.ai_draft}\n최종: ${e.final_version}`).join("\n---\n");
-              learningBlock = `\n\n[사용자 선호 스타일 예시]\n${lines}`;
-            }
-          }
-          if (patternsRes.ok) {
-            const patterns = await patternsRes.json();
-            if (patterns.length > 0) {
-              const tagLines = patterns.map((p: any) => `- ${p.tag}: ${p.pinned_content}`).join("\n");
-              pinnedBlock = `\n\n[고정 패턴 — 최우선 규칙]\n` +
-                `아래 태그에 해당하는 포인트는 반드시 해당 패턴의 문장을 그대로 사용하라.\n` +
-                `___만 실제 단어로 교체하고, 그 외 단어·구조·어순은 절대 바꾸거나 추가하지 말 것.\n` +
-                `패턴에 없는 부가 설명, 슬래시(/) 뒤 추가 분석, 범위 표시 등을 덧붙이지 말 것.\n` +
-                `${tagLines}\n` +
-                `출력에 태그명 접두어(예: 관계대명사:, 5형식:)를 붙이지 말 것.`;
-            }
+    try {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL");
+      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      if (supabaseUrl && serviceRoleKey) {
+        const patternsReq = fetch(
+          `${supabaseUrl}/rest/v1/syntax_patterns?is_global=eq.true&order=created_at.desc&select=tag,pinned_content`,
+          { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } },
+        );
+        const learningReq = userId
+          ? fetch(
+              `${supabaseUrl}/rest/v1/learning_examples?user_id=eq.${userId}&type=eq.syntax&order=created_at.desc&limit=3&select=sentence,ai_draft,final_version`,
+              { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } },
+            )
+          : Promise.resolve(null);
+
+        const [patternsRes, learningRes] = await Promise.all([patternsReq, learningReq]);
+
+        if (learningRes?.ok) {
+          const examples = await learningRes.json();
+          if (examples.length > 0) {
+            const lines = examples.map((e: any) => `원문: ${e.sentence}\nAI초안: ${e.ai_draft}\n최종: ${e.final_version}`).join("\n---\n");
+            learningBlock = `\n\n[사용자 선호 스타일 예시]\n${lines}`;
           }
         }
-      } catch {}
-    }
+        if (patternsRes.ok) {
+          const patterns = await patternsRes.json();
+          if (patterns.length > 0) {
+            const tagLines = patterns.map((p: any) => `- ${p.tag}: ${p.pinned_content}`).join("\n");
+            pinnedBlock = `\n\n[고정 패턴 — 최우선 규칙]\n` +
+              `아래 태그에 해당하는 포인트는 반드시 해당 패턴의 문장을 그대로 사용하라.\n` +
+              `___만 실제 단어로 교체하고, 그 외 단어·구조·어순은 절대 바꾸거나 추가하지 말 것.\n` +
+              `패턴에 없는 부가 설명, 슬래시(/) 뒤 추가 분석, 범위 표시 등을 덧붙이지 말 것.\n` +
+              `${tagLines}\n` +
+              `출력에 태그명 접두어(예: 관계대명사:, 5형식:)를 붙이지 말 것.`;
+          }
+        }
+      }
+    } catch {}
 
     const aiMessages = [
       { role: "system", content: systemPrompt + targetedSystemAddendum + pinnedBlock + learningBlock },

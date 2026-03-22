@@ -123,6 +123,7 @@ export type Database = {
           created_at: string
           example_sentence: string | null
           id: string
+          is_global: boolean
           pinned_content: string
           tag: string
           user_id: string
@@ -131,6 +132,7 @@ export type Database = {
           created_at?: string
           example_sentence?: string | null
           id?: string
+          is_global?: boolean
           pinned_content: string
           tag: string
           user_id: string
@@ -139,6 +141,7 @@ export type Database = {
           created_at?: string
           example_sentence?: string | null
           id?: string
+          is_global?: boolean
           pinned_content?: string
           tag?: string
           user_id?: string

@@ -24,8 +24,11 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
+const SYNTAX_PATTERN_ADMIN_EMAIL = "co500123@naver.com";
+
 export function PinnedPatternsManager({ open, onOpenChange }: Props) {
   const { user } = useAuth();
+  const isAdmin = (user?.email || "").toLowerCase() === SYNTAX_PATTERN_ADMIN_EMAIL;
   const [patterns, setPatterns] = useState<PinnedPattern[]>([]);
   const [loading, setLoading] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -53,7 +56,7 @@ export function PinnedPatternsManager({ open, onOpenChange }: Props) {
     const { data, error } = await supabase
       .from("syntax_patterns" as any)
       .select("id, tag, pinned_content, example_sentence")
-      .eq("user_id", user.id)
+      .eq("is_global", true)
       .order("created_at", { ascending: false });
     if (!error && data) setPatterns(data as any);
     setLoading(false);
@@ -64,6 +67,10 @@ export function PinnedPatternsManager({ open, onOpenChange }: Props) {
   }, [open, user]);
 
   const handleDelete = async (id: string) => {
+    if (!isAdmin) {
+      toast.error("관리자만 고정 패턴을 수정할 수 있습니다.");
+      return;
+    }
     await supabase.from("syntax_patterns" as any).delete().eq("id", id);
     setPatterns((prev) => prev.filter((p) => p.id !== id));
     toast.success("패턴이 삭제되었습니다.");
@@ -71,8 +78,13 @@ export function PinnedPatternsManager({ open, onOpenChange }: Props) {
 
   const handleAdd = async () => {
     if (!user || !newContent.trim()) return;
+    if (!isAdmin) {
+      toast.error("관리자만 고정 패턴을 수정할 수 있습니다.");
+      return;
+    }
     const { error } = await supabase.from("syntax_patterns" as any).insert({
       user_id: user.id,
+      is_global: true,
       tag: newTag,
       pinned_content: newContent.trim(),
     });
@@ -93,10 +105,14 @@ export function PinnedPatternsManager({ open, onOpenChange }: Props) {
   };
 
   const handleUpdate = async () => {
+    if (!isAdmin) {
+      toast.error("관리자만 고정 패턴을 수정할 수 있습니다.");
+      return;
+    }
     if (!editingId || !editContent.trim()) return;
     const { error } = await supabase
       .from("syntax_patterns" as any)
-      .update({ tag: editTag, pinned_content: editContent.trim() })
+      .update({ tag: editTag, pinned_content: editContent.trim(), is_global: true })
       .eq("id", editingId);
     if (error) {
       toast.error("수정 실패");
@@ -169,22 +185,24 @@ export function PinnedPatternsManager({ open, onOpenChange }: Props) {
             )}
             <p className="text-xs leading-relaxed text-foreground">{p.pinned_content}</p>
           </div>
-          <div className="flex items-center gap-0.5 shrink-0">
-            <button
-              onClick={() => startEditing(p)}
-              className="p-1 text-muted-foreground/30 hover:text-foreground opacity-0 group-hover/pattern:opacity-100 transition-opacity"
-              title="수정"
-            >
-              <Pencil className="w-3 h-3" />
-            </button>
-            <button
-              onClick={() => handleDelete(p.id)}
-              className="p-1 text-muted-foreground/30 hover:text-destructive opacity-0 group-hover/pattern:opacity-100 transition-opacity"
-              title="삭제"
-            >
-              <Trash2 className="w-3 h-3" />
-            </button>
-          </div>
+          {isAdmin && (
+            <div className="flex items-center gap-0.5 shrink-0">
+              <button
+                onClick={() => startEditing(p)}
+                className="p-1 text-muted-foreground/30 hover:text-foreground opacity-0 group-hover/pattern:opacity-100 transition-opacity"
+                title="수정"
+              >
+                <Pencil className="w-3 h-3" />
+              </button>
+              <button
+                onClick={() => handleDelete(p.id)}
+                className="p-1 text-muted-foreground/30 hover:text-destructive opacity-0 group-hover/pattern:opacity-100 transition-opacity"
+                title="삭제"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -208,7 +226,8 @@ export function PinnedPatternsManager({ open, onOpenChange }: Props) {
             </button>
           </div>
           <p className="text-[10px] text-muted-foreground mt-1">
-            고정된 설명 방식은 구문분석 자동생성 및 AI 수정에 항상 반영됩니다.
+            고정된 설명 방식은 모든 계정의 구문분석 자동생성 및 AI 수정에 반영됩니다.
+            {!isAdmin && " (현재 계정은 조회 전용)"}
           </p>
         </DialogHeader>
 
@@ -239,7 +258,7 @@ export function PinnedPatternsManager({ open, onOpenChange }: Props) {
             patterns.map((p) => renderPatternCard(p))
           )}
 
-          {adding && (
+          {adding && isAdmin && (
             <div className="border border-foreground/20 p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground">새 패턴</p>
@@ -291,15 +310,17 @@ export function PinnedPatternsManager({ open, onOpenChange }: Props) {
           )}
         </div>
 
-        <div className="px-4 py-3 border-t border-border shrink-0">
-          <button
-            onClick={() => setAdding(true)}
-            className="inline-flex items-center gap-1 text-[10px] px-3 py-1.5 border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"
-          >
-            <Plus className="w-3 h-3" />
-            직접 추가
-          </button>
-        </div>
+        {isAdmin && (
+          <div className="px-4 py-3 border-t border-border shrink-0">
+            <button
+              onClick={() => setAdding(true)}
+              className="inline-flex items-center gap-1 text-[10px] px-3 py-1.5 border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors"
+            >
+              <Plus className="w-3 h-3" />
+              직접 추가
+            </button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

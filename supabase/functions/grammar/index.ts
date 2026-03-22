@@ -564,8 +564,7 @@ const autoTools = [
 // -----------------------------
 // Shared: fetch pinned patterns
 // -----------------------------
-async function fetchPinnedPatterns(userId: string | undefined, authHeader?: string | null): Promise<PinnedPatternsData> {
-  if (!userId) return { promptBlock: "", byTag: new Map() };
+async function fetchPinnedPatterns(_userId: string | undefined, authHeader?: string | null): Promise<PinnedPatternsData> {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -574,7 +573,7 @@ async function fetchPinnedPatterns(userId: string | undefined, authHeader?: stri
     const apiKey = serviceRoleKey || anonKey!;
     const auth = serviceRoleKey ? `Bearer ${serviceRoleKey}` : (authHeader || "");
     if (!auth) return { promptBlock: "", byTag: new Map() };
-    const url = `${supabaseUrl}/rest/v1/syntax_patterns?user_id=eq.${userId}&order=created_at.desc&select=tag,pinned_content`;
+    const url = `${supabaseUrl}/rest/v1/syntax_patterns?is_global=eq.true&order=created_at.desc&select=tag,pinned_content`;
     const res = await fetch(url, { headers: { apikey: apiKey, Authorization: auth } });
     if (!res.ok) return { promptBlock: "", byTag: new Map() };
     const patterns = await res.json();
