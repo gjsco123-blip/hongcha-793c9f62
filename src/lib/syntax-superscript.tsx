@@ -6,6 +6,15 @@ export interface SyntaxNoteWithTarget {
   targetText?: string;
 }
 
+const COMMON_ENGLISH_STOPWORDS = new Set([
+  "a", "an", "and", "are", "as", "at", "be", "been", "being", "but", "by",
+  "can", "could", "did", "do", "does", "for", "from", "had", "has", "have",
+  "he", "her", "him", "his", "if", "in", "into", "is", "it", "its", "may",
+  "might", "must", "not", "of", "on", "or", "our", "she", "that", "the",
+  "their", "them", "there", "they", "this", "to", "us", "was", "we", "were",
+  "which", "who", "will", "with", "would", "you", "your",
+]);
+
 /**
  * Tokenize text into words with their character positions.
  * A "word" is a sequence of word characters (letters, digits, apostrophes, unicode marks).
@@ -93,10 +102,86 @@ function findTargetSpan(
   return null;
 }
 
+function normalizeAlphaWord(word: string): string {
+  return String(word ?? "")
+    .toLowerCase()
+    .replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, "");
+}
+
+function extractEnglishHints(noteContent: string): string[] {
+  const words = String(noteContent ?? "").match(/[A-Za-z][A-Za-z'\u2019-]*/g) || [];
+  return Array.from(
+    new Set(
+      words
+        .map(normalizeAlphaWord)
+        .filter((w) => w.length >= 2 && !COMMON_ENGLISH_STOPWORDS.has(w))
+    )
+  );
+}
+
+function isVerbFocusedNote(noteContent: string): boolean {
+  const text = String(noteContent ?? "").toLowerCase();
+  return /(동사|수일치|조동사|수동태|시제|서술어|3형식|4형식|5형식)/.test(text);
+}
+
+function isLikelyVerbToken(word: string): boolean {
+  const w = normalizeAlphaWord(word);
+  if (!w || COMMON_ENGLISH_STOPWORDS.has(w)) return false;
+  if (["am", "is", "are", "was", "were", "be", "been", "being", "do", "does", "did", "have", "has", "had"].includes(w)) {
+    return true;
+  }
+  return /(ed|ing|en|ify|ise|ize|ate|s)$/.test(w);
+}
+
+function tokenMatchesHint(tokenWord: string, hint: string): boolean {
+  const token = normalizeAlphaWord(tokenWord);
+  const h = normalizeAlphaWord(hint);
+  if (!token || !h) return false;
+  if (token === h) return true;
+  if (h.length >= 4 && token.startsWith(h)) return true; // inspire -> inspires
+  if (token.length >= 4 && h.startsWith(token)) return true;
+  return false;
+}
+
+function chooseAnchorOffset(
+  originalText: string,
+  span: { start: number; end: number },
+  noteContent: string
+): number {
+  const tokensInSpan = tokenize(originalText).filter(
+    (tok) => tok.start >= span.start && tok.end <= span.end
+  );
+  if (tokensInSpan.length === 0) return span.start;
+
+  const hints = extractEnglishHints(noteContent);
+  const verbFocused = isVerbFocusedNote(noteContent);
+
+  if (verbFocused) {
+    const hintedVerb = tokensInSpan.find(
+      (tok) =>
+        !COMMON_ENGLISH_STOPWORDS.has(tok.word) &&
+        hints.some((hint) => tokenMatchesHint(tok.word, hint))
+    );
+    if (hintedVerb) return hintedVerb.start;
+
+    const firstVerbLike = tokensInSpan.find((tok) => isLikelyVerbToken(tok.word));
+    if (firstVerbLike) return firstVerbLike.start;
+  }
+
+  const hintedToken = tokensInSpan.find(
+    (tok) =>
+      !COMMON_ENGLISH_STOPWORDS.has(tok.word) &&
+      hints.some((hint) => tokenMatchesHint(tok.word, hint))
+  );
+  if (hintedToken) return hintedToken.start;
+
+  return tokensInSpan[0].start;
+}
+
 /**
  * Compute superscript positions by matching targetText against the original text
  * using word-token-sequence matching (prevents partial-word matches).
- * Returns a Map from character start-position to array of note IDs.
+ * Returns a Map from character anchor-position to array of note IDs.
  */
 export function computeSuperscriptPositions(
   originalText: string,
@@ -108,9 +193,10 @@ export function computeSuperscriptPositions(
     if (!note.targetText) continue;
     const span = findTargetSpan(originalText, note.targetText);
     if (!span) continue;
-    const arr = result.get(span.start) || [];
-    arr.push(note.id);
-    result.set(span.start, arr);
+    const anchor = chooseAnchorOffset(originalText, span, note.content);
+    const arr = result.get(anchor) || [];
+    if (!arr.includes(note.id)) arr.push(note.id);
+    result.set(anchor, arr);
   }
 
   return result;
@@ -124,45 +210,33 @@ export function renderWithSuperscripts(
   text: string,
   syntaxNotes: SyntaxNoteWithTarget[]
 ): React.ReactNode[] {
-  const annotations = syntaxNotes
-    .filter((n) => n.targetText)
-    .map((n) => ({
-      id: n.id,
-      target: n.targetText!,
-    }));
+  const positions = computeSuperscriptPositions(text, syntaxNotes);
+  if (positions.size === 0) return [text];
 
-  if (annotations.length === 0) return [text];
-
-  // Find all matches with positions using token matching
-  const matches: { start: number; end: number; id: number }[] = [];
-
-  for (const ann of annotations) {
-    const span = findTargetSpan(text, ann.target);
-    if (span) {
-      matches.push({ start: span.start, end: span.end, id: ann.id });
-    }
-  }
-
-  if (matches.length === 0) return [text];
-
-  // Sort by position
-  matches.sort((a, b) => a.start - b.start);
+  const anchors = [...positions.entries()]
+    .filter(([offset]) => Number.isFinite(offset) && offset >= 0 && offset <= text.length)
+    .sort((a, b) => a[0] - b[0]);
+  if (anchors.length === 0) return [text];
 
   const elements: React.ReactNode[] = [];
   let cursor = 0;
 
-  for (const m of matches) {
-    if (m.start < cursor) continue; // skip overlapping
-    if (m.start > cursor) {
-      elements.push(text.slice(cursor, m.start));
+  for (const [offset, ids] of anchors) {
+    if (offset > cursor) {
+      elements.push(text.slice(cursor, offset));
     }
-    elements.push(
-      <React.Fragment key={`sup-${m.id}`}>
-        <sup className="text-[8px] font-bold text-muted-foreground mr-[1px]" style={{ verticalAlign: 'super', position: 'relative', top: '-0.6em' }}>{m.id}</sup>
-        {text.slice(m.start, m.end)}
-      </React.Fragment>
-    );
-    cursor = m.end;
+    [...ids].sort((a, b) => a - b).forEach((id, idx) => {
+      elements.push(
+        <sup
+          key={`sup-${offset}-${id}-${idx}`}
+          className="text-[8px] font-bold text-muted-foreground mr-[1px]"
+          style={{ verticalAlign: "super", position: "relative", top: "-0.6em" }}
+        >
+          {id}
+        </sup>
+      );
+    });
+    cursor = offset;
   }
 
   if (cursor < text.length) {
@@ -200,13 +274,10 @@ export function findSuperscriptForWord(
   wordEnd: number,
   syntaxNotes: SyntaxNoteWithTarget[]
 ): number | null {
-  for (const note of syntaxNotes) {
-    if (!note.targetText) continue;
-    const span = findTargetSpan(fullText, note.targetText);
-    if (!span) continue;
-    // Show superscript on the last word of the match
-    if (wordEnd <= span.end && wordEnd > span.end - 3 && wordStart >= span.start) {
-      return note.id;
+  const positions = computeSuperscriptPositions(fullText, syntaxNotes);
+  for (const [offset, ids] of positions) {
+    if (offset >= wordStart && offset < wordEnd) {
+      return ids[0] ?? null;
     }
   }
   return null;
