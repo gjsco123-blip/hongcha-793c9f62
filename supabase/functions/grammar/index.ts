@@ -137,6 +137,9 @@ function stripTrailingFieldLabel(line: string) {
     .replace(/\s*"?tag"?\s*:\s*$/gi, "")
     .replace(/,\s*"?finish_reason"?\s*:\s*$/gi, "")
     .replace(/\s*"?finish_reason"?\s*:\s*$/gi, "")
+    .replace(/\s*[A-Za-z0-9_]*assistant[A-Za-z0-9_]*syntax[A-Za-z0-9_]*points?:tag:\s*$/gi, "")
+    .replace(/\s*[A-Za-z0-9_]*syntax[A-Za-z0-9_]*result[A-Za-z0-9_]*points?:tag:\s*$/gi, "")
+    .replace(/\s*[A-Za-z0-9_]+(?:_[A-Za-z0-9_]+){2,}:tag:\s*$/g, "")
     .trim();
 }
 
@@ -769,6 +772,9 @@ serve(async (req) => {
          .replace(/\s*"?tag"?\s*:\s*$/gi, "")
          .replace(/,\s*"?finish_reason"?\s*:\s*$/gi, "")
          .replace(/\s*"?finish_reason"?\s*:\s*$/gi, "")
+         .replace(/\s*[A-Za-z0-9_]*assistant[A-Za-z0-9_]*syntax[A-Za-z0-9_]*points?:tag:\s*$/gi, "")
+         .replace(/\s*[A-Za-z0-9_]*syntax[A-Za-z0-9_]*result[A-Za-z0-9_]*points?:tag:\s*$/gi, "")
+         .replace(/\s*[A-Za-z0-9_]+(?:_[A-Za-z0-9_]+){2,}:tag:\s*$/g, "")
          .replace(/,\s*$/g, "")
          .trim();
 

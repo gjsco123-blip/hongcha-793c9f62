@@ -205,6 +205,16 @@ function extractPrepRelativeHint(noteContent: string): string | null {
   return normalizeAlphaWord(m[1]);
 }
 
+function isTooToInfinitiveNote(noteContent: string): boolean {
+  const text = String(noteContent ?? "");
+  return /(too\s*\+\s*형용사|too\s*\+\s*부사|too\s*\+\s*형용사\/부사|too.*to\s*v)/i.test(text);
+}
+
+function isBeGoingToNote(noteContent: string): boolean {
+  const text = String(noteContent ?? "");
+  return /(be\s+going\s+to\s*\+\s*동사원형|be\s+going\s+to)/i.test(text);
+}
+
 function extractSubjectStartHint(noteContent: string): string | null {
   const text = String(noteContent ?? "");
   const m = text.match(/명사\s+([A-Za-z][A-Za-z'\u2019-]*(?:\s+[A-Za-z][A-Za-z'\u2019-]*)*)/i);
@@ -386,6 +396,23 @@ function chooseAnchorOffset(
       findTokenByPredicate(nearbyTokens, (tok) => normalizeAlphaWord(tok.word).startsWith("it")) ||
       findTokenByPredicate(allTokens, (tok) => normalizeAlphaWord(tok.word).startsWith("it"));
     if (itToken) return itToken.start;
+  }
+
+  if (isTooToInfinitiveNote(rawContent)) {
+    const tooToken =
+      findTokenByPredicate(tokensInSpan, (tok) => normalizeAlphaWord(tok.word) === "too") ||
+      findTokenByPredicate(nearbyTokens, (tok) => normalizeAlphaWord(tok.word) === "too") ||
+      findTokenByPredicate(allTokens, (tok) => normalizeAlphaWord(tok.word) === "too");
+    if (tooToken) return tooToken.start;
+  }
+
+  if (isBeGoingToNote(rawContent)) {
+    const beForms = new Set(["am", "is", "are", "was", "were", "be", "been", "being"]);
+    const beToken =
+      findTokenByPredicate(tokensInSpan, (tok) => beForms.has(normalizeAlphaWord(tok.word))) ||
+      findTokenByPredicate(nearbyTokens, (tok) => beForms.has(normalizeAlphaWord(tok.word))) ||
+      findTokenByPredicate(allTokens, (tok) => beForms.has(normalizeAlphaWord(tok.word)));
+    if (beToken) return beToken.start;
   }
 
   if (/(to부정사|to-v|to v|to부정사의)/i.test(rawContent)) {
