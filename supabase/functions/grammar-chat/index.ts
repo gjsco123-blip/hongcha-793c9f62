@@ -193,13 +193,19 @@ serve(async (req) => {
     const suggestionMatch = content.match(/\[수정안\]([\s\S]*?)\[\/수정안\]/);
     const suggestion = suggestionMatch ? suggestionMatch[1].trim() : null;
 
-    // Sanitize forbidden endings
+    // Sanitize forbidden endings without truncating valid words like "쓰임/보임/취함"
     function sanitizeEndings(text: string): string {
-      return text.replace(/(임|됨|있음|함)(?=[.\s/,)~]|$)/g, (match, _g, offset, str) => {
-        const prev = str[offset - 1];
-        if (prev && /[가-힣]/.test(prev)) return '';
-        return match;
-      });
+      return String(text ?? "").replace(/([가-힣]{2,})(임|됨|있음|함)(?=[.\s/,)~]|$)/g, (_m, stem) => stem);
+    }
+
+    function repairTruncatedSyntaxPhrases(text: string): string {
+      let out = String(text ?? "");
+      out = out.replace(/구동사로\s*쓰(?=\s*(?:\/|$))/g, "구동사로 쓰임");
+      out = out.replace(/표현으로\s*쓰(?=\s*(?:\/|$))/g, "표현으로 쓰임");
+      out = out.replace(/구조로\s*쓰(?=\s*(?:\/|$))/g, "구조로 쓰임");
+      out = out.replace(/용법으로\s*쓰(?=\s*(?:\/|$))/g, "용법으로 쓰임");
+      out = out.replace(/\s{2,}/g, " ").trim();
+      return out;
     }
 
     const TAG_PREFIX_LABELS = [
@@ -240,12 +246,27 @@ serve(async (req) => {
       return out;
     }
 
+    function stripTrailingFieldLabel(line: string) {
+      return String(line ?? "")
+        .replace(/,\s*"?tag"?\s*:\s*$/gi, "")
+        .replace(/\s*"?tag"?\s*:\s*$/gi, "")
+        .replace(/,\s*"?finish_reason"?\s*:\s*$/gi, "")
+        .replace(/\s*"?finish_reason"?\s*:\s*$/gi, "")
+        .trim();
+    }
+
     // Parse suggestion into array of note strings
     let suggestionNotes: string[] | null = null;
     if (suggestion) {
       suggestionNotes = suggestion
         .split("\n")
-        .map((line: string) => stripLeadingTagLabel(sanitizeEndings(line.replace(/^\s*\d+\.\s*/, "").trim())))
+        .map((line: string) =>
+          stripTrailingFieldLabel(
+            repairTruncatedSyntaxPhrases(
+              sanitizeEndings(stripLeadingTagLabel(line.replace(/^\s*\d+\.\s*/, "").trim()))
+            )
+          )
+        )
         .filter((line: string) => line.length > 0);
     }
 
