@@ -155,6 +155,21 @@ function extractRangeStartHint(noteContent: string): string | null {
   return null;
 }
 
+function extractPatternVerbHint(noteContent: string): string | null {
+  const text = String(noteContent ?? "");
+  const m = text.match(/\bA\s+([A-Za-z][A-Za-z'\u2019-]*)\s+B\b/i);
+  if (!m?.[1]) return null;
+  return normalizeAlphaWord(m[1]);
+}
+
+function extractSubjectStartHint(noteContent: string): string | null {
+  const text = String(noteContent ?? "");
+  const m = text.match(/명사\s+([A-Za-z][A-Za-z'\u2019-]*(?:\s+[A-Za-z][A-Za-z'\u2019-]*)*)/i);
+  if (!m?.[1]) return null;
+  const first = m[1].trim().split(/\s+/)[0] || "";
+  return normalizeAlphaWord(first);
+}
+
 function findTokenByPredicate(
   tokensInSpan: { word: string; start: number; end: number }[],
   predicate: (token: { word: string; start: number; end: number }) => boolean
@@ -202,16 +217,22 @@ function chooseAnchorOffset(
   span: { start: number; end: number },
   noteContent: string
 ): number {
+  const allTokens = tokenize(originalText);
   const tokensInSpan = tokenize(originalText).filter(
     (tok) => tok.start >= span.start && tok.end <= span.end
   );
   if (tokensInSpan.length === 0) return span.start;
+  const nearbyTokens = allTokens.filter(
+    (tok) => tok.start >= Math.max(0, span.start - 48) && tok.end <= Math.min(originalText.length, span.end + 48)
+  );
 
   const rawContent = String(noteContent ?? "");
   const contentLower = rawContent.toLowerCase();
   const hints = extractEnglishHints(noteContent);
   const verbFocused = isVerbFocusedNote(noteContent);
   const rangeStartHint = extractRangeStartHint(noteContent);
+  const patternVerbHint = extractPatternVerbHint(noteContent);
+  const subjectStartHint = extractSubjectStartHint(noteContent);
 
   const punctuationAnchor = findPunctuationAnchor(rawContent, originalText, span);
   if (punctuationAnchor !== null) return punctuationAnchor;
@@ -238,7 +259,22 @@ function chooseAnchorOffset(
     if (beToken) return beToken.start;
   }
 
+  if (patternVerbHint) {
+    const patternVerbToken =
+      findTokenByPredicate(tokensInSpan, (tok) => tokenMatchesHint(tok.word, patternVerbHint)) ||
+      findTokenByPredicate(nearbyTokens, (tok) => tokenMatchesHint(tok.word, patternVerbHint)) ||
+      findTokenByPredicate(allTokens, (tok) => tokenMatchesHint(tok.word, patternVerbHint));
+    if (patternVerbToken) return patternVerbToken.start;
+  }
+
   if (contentLower.includes("수일치") || contentLower.includes("주어")) {
+    if (subjectStartHint) {
+      const subjectHintToken =
+        findTokenByPredicate(tokensInSpan, (tok) => tokenMatchesHint(tok.word, subjectStartHint)) ||
+        findTokenByPredicate(nearbyTokens, (tok) => tokenMatchesHint(tok.word, subjectStartHint)) ||
+        findTokenByPredicate(allTokens, (tok) => tokenMatchesHint(tok.word, subjectStartHint));
+      if (subjectHintToken) return subjectHintToken.start;
+    }
     const subjectStart = findTokenByPredicate(
       tokensInSpan,
       (tok) => !LEADING_CONJUNCTIONS.has(normalizeAlphaWord(tok.word))
@@ -247,14 +283,22 @@ function chooseAnchorOffset(
   }
 
   if (verbFocused) {
-    const hintedVerb = tokensInSpan.find(
+    const hintedVerb = findTokenByPredicate(
+      tokensInSpan,
       (tok) =>
-        !COMMON_ENGLISH_STOPWORDS.has(tok.word) &&
+        (isLikelyVerbToken(tok.word) || MODAL_WORDS.has(normalizeAlphaWord(tok.word)) || normalizeAlphaWord(tok.word) === "be") &&
+        hints.some((hint) => tokenMatchesHint(tok.word, hint))
+    ) || findTokenByPredicate(
+      nearbyTokens,
+      (tok) =>
+        (isLikelyVerbToken(tok.word) || MODAL_WORDS.has(normalizeAlphaWord(tok.word)) || normalizeAlphaWord(tok.word) === "be") &&
         hints.some((hint) => tokenMatchesHint(tok.word, hint))
     );
     if (hintedVerb) return hintedVerb.start;
 
-    const firstVerbLike = tokensInSpan.find((tok) => isLikelyVerbToken(tok.word));
+    const firstVerbLike =
+      findTokenByPredicate(tokensInSpan, (tok) => isLikelyVerbToken(tok.word) || MODAL_WORDS.has(normalizeAlphaWord(tok.word))) ||
+      findTokenByPredicate(nearbyTokens, (tok) => isLikelyVerbToken(tok.word) || MODAL_WORDS.has(normalizeAlphaWord(tok.word)));
     if (firstVerbLike) return firstVerbLike.start;
   }
 
