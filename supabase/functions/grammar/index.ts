@@ -82,6 +82,40 @@ function stripLeadingBullets(line: string) {
     .trim();
 }
 
+const TAG_PREFIX_LABELS = [
+  "관계대명사",
+  "관계부사",
+  "분사구문",
+  "분사 후치수식",
+  "수동태",
+  "조동사+수동",
+  "to부정사",
+  "명사절",
+  "가주어/진주어",
+  "가목적어/진목적어",
+  "5형식",
+  "병렬구조",
+  "전치사+동명사",
+  "비교구문",
+  "수일치",
+  "생략",
+  "숙어/표현",
+  "기타",
+];
+
+function escapeRegex(text: string) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const TAG_PREFIX_RE = new RegExp(
+  `^\\s*(?:[•·\\-*]\\s*)?(?:\\d+[\\).]\\s*)?(?:${TAG_PREFIX_LABELS.map(escapeRegex).join("|")})\\s*:\\s*`,
+  "u"
+);
+
+function stripLeadingTagLabel(line: string) {
+  return String(line ?? "").replace(TAG_PREFIX_RE, "").trim();
+}
+
 function formatAsLines(points: string[], maxLines: number) {
   const cleaned = points
     .map((p) => oneLine(p))
@@ -809,6 +843,7 @@ serve(async (req) => {
       .map(oneLine)
       .filter(Boolean)
       .map(stripLeadingBullets)
+      .map(stripLeadingTagLabel)
       .map(sanitizeEndings)
       .map((p) => applyPinnedPattern(p, tags, pinnedData.byTag));
 

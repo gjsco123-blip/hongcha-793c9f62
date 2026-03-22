@@ -199,12 +199,46 @@ serve(async (req) => {
       });
     }
 
+    const TAG_PREFIX_LABELS = [
+      "관계대명사",
+      "관계부사",
+      "분사구문",
+      "분사 후치수식",
+      "수동태",
+      "조동사+수동",
+      "to부정사",
+      "명사절",
+      "가주어/진주어",
+      "가목적어/진목적어",
+      "5형식",
+      "병렬구조",
+      "전치사+동명사",
+      "비교구문",
+      "수일치",
+      "생략",
+      "숙어/표현",
+      "기타",
+    ];
+
+    function escapeRegex(text: string) {
+      return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    const TAG_PREFIX_RE = new RegExp(
+      `^\\s*(?:[•·\\-*]\\s*)?(?:\\d+[\\).]\\s*)?(?:${TAG_PREFIX_LABELS.map(escapeRegex).join("|")})\\s*:\\s*`,
+      "u"
+    );
+
+    function stripLeadingTagLabel(line: string) {
+      return String(line ?? "").replace(TAG_PREFIX_RE, "").trim();
+    }
+
     // Parse suggestion into array of note strings
     let suggestionNotes: string[] | null = null;
     if (suggestion) {
       suggestionNotes = suggestion
         .split("\n")
-        .map((line: string) => sanitizeEndings(line.replace(/^\s*\d+\.\s*/, "").trim()))
+        .map((line: string) => stripLeadingTagLabel(sanitizeEndings(line.replace(/^\s*\d+\.\s*/, "").trim())))
         .filter((line: string) => line.length > 0);
     }
 
