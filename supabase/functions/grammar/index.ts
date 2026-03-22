@@ -124,6 +124,13 @@ function stripLeadingTagLabel(line: string) {
   return out;
 }
 
+function stripTrailingFieldLabel(line: string) {
+  return String(line ?? "")
+    .replace(/,\s*"?tag"?\s*:\s*$/gi, "")
+    .replace(/\s*"?tag"?\s*:\s*$/gi, "")
+    .trim();
+}
+
 function detectLeadingTagLabel(line: string): string {
   const text = String(line ?? "").trim();
   if (!text) return "";
@@ -748,14 +755,18 @@ serve(async (req) => {
       // Strip JSON artifacts that leak when response is truncated
       const stripJsonArtifacts = (s: string) =>
         s.replace(/[{}\[\]]/g, "")
-         .replace(/"?(text|targetText)"?\s*:/gi, "")
+         .replace(/"?(text|targetText|tag)"?\s*:/gi, "")
+         .replace(/,\s*"?tag"?\s*:\s*$/gi, "")
+         .replace(/\s*"?tag"?\s*:\s*$/gi, "")
          .replace(/,\s*$/g, "")
          .trim();
 
       autoPoints = autoPoints
         .map((p) => ({
           text: applyPinnedPattern(
-            stripLeadingTagLabel(sanitizeEndings(oneLine(stripLeadingBullets(stripJsonArtifacts(p.text))))),
+            stripTrailingFieldLabel(
+              stripLeadingTagLabel(sanitizeEndings(oneLine(stripLeadingBullets(stripJsonArtifacts(p.text)))))
+            ),
             [],
             pinnedData.byTag,
             normalizeModelTagToUiTag(String(p.tag ?? "")),
@@ -897,6 +908,7 @@ serve(async (req) => {
       .map(stripLeadingTagLabel)
       .map(sanitizeEndings)
       .map(stripLeadingTagLabel)
+      .map(stripTrailingFieldLabel)
       .map((p) => applyPinnedPattern(p, tags, pinnedData.byTag));
 
     if (points.length === 0) {
