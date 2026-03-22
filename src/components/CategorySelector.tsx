@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Plus, Trash2, LogOut, ChevronRight, BookOpen, School as SchoolIcon, GripVertical, Pencil, Check, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { School, Passage } from "@/hooks/useCategories";
@@ -58,22 +58,25 @@ export function CategoryHeaderBar({
 function PassageNameAutocomplete({
   value,
   suggestions,
+  highlightIdx,
   onSelect,
   visible,
 }: {
   value: string;
   suggestions: string[];
+  highlightIdx: number;
   onSelect: (name: string) => void;
   visible: boolean;
 }) {
-  const [highlightIdx, setHighlightIdx] = useState(-1);
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const filtered = value.trim()
     ? suggestions.filter((s) => s.toLowerCase().includes(value.toLowerCase()))
     : suggestions;
 
   useEffect(() => {
-    setHighlightIdx(-1);
-  }, [value]);
+    if (highlightIdx < 0) return;
+    itemRefs.current[highlightIdx]?.scrollIntoView({ block: "nearest" });
+  }, [highlightIdx, filtered.length]);
 
   if (!visible || filtered.length === 0) return null;
 
@@ -82,6 +85,9 @@ function PassageNameAutocomplete({
       {filtered.map((name, i) => (
         <button
           key={name}
+          ref={(el) => {
+            itemRefs.current[i] = el;
+          }}
           onMouseDown={(e) => { e.preventDefault(); onSelect(name); }}
           className={`w-full text-left px-3 py-2 text-sm hover:bg-muted/60 transition-colors ${i === highlightIdx ? "bg-muted/60" : ""}`}
         >
@@ -115,13 +121,36 @@ export function CategoryFullScreen({
   const [editingPassageId, setEditingPassageId] = useState<string | null>(null);
   const [editingPassageName, setEditingPassageName] = useState("");
   const [savingPassageId, setSavingPassageId] = useState<string | null>(null);
+  const [passageHighlightIdx, setPassageHighlightIdx] = useState(-1);
 
   // Drag state
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [overIdx, setOverIdx] = useState<number | null>(null);
 
   const selectedSchool = schools.find((s) => s.id === selectedSchoolId);
-  const passageSuggestions = passages.map((p) => p.name);
+  const passageSuggestions = useMemo(() => {
+    const seen = new Set<string>();
+    return [...passages]
+      .sort((a, b) => {
+        const bTime = Date.parse(b.created_at || "") || 0;
+        const aTime = Date.parse(a.created_at || "") || 0;
+        return bTime - aTime;
+      })
+      .map((p) => p.name)
+      .filter((name) => {
+        const key = name.trim().toLowerCase();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  }, [passages]);
+
+  const filteredPassageSuggestions = useMemo(() => {
+    const query = newName.trim().toLowerCase();
+    return query
+      ? passageSuggestions.filter((s) => s.toLowerCase().includes(query))
+      : passageSuggestions;
+  }, [newName, passageSuggestions]);
 
   const handleAddSchool = async () => {
     if (!newName.trim()) return;
@@ -138,6 +167,7 @@ export function CategoryFullScreen({
     setNewName("");
     setAddingPassage(false);
     setShowSuggestions(false);
+    setPassageHighlightIdx(-1);
   };
 
   const handleDrop = (dropIdx: number) => {
@@ -183,6 +213,10 @@ export function CategoryFullScreen({
     if (ok) cancelPassageRename();
     else setSavingPassageId(null);
   };
+
+  useEffect(() => {
+    setPassageHighlightIdx(-1);
+  }, [newName]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -359,10 +393,38 @@ export function CategoryFullScreen({
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
                       onFocus={() => setShowSuggestions(true)}
-                      onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                      onBlur={() => setTimeout(() => { setShowSuggestions(false); setPassageHighlightIdx(-1); }, 150)}
                       onKeyDown={(e) => {
+                        if (showSuggestions && filteredPassageSuggestions.length > 0) {
+                          if (e.key === "ArrowDown") {
+                            e.preventDefault();
+                            setShowSuggestions(true);
+                            setPassageHighlightIdx((prev) =>
+                              prev < 0 ? 0 : Math.min(prev + 1, filteredPassageSuggestions.length - 1)
+                            );
+                            return;
+                          }
+                          if (e.key === "ArrowUp") {
+                            e.preventDefault();
+                            setShowSuggestions(true);
+                            setPassageHighlightIdx((prev) =>
+                              prev <= 0 ? filteredPassageSuggestions.length - 1 : prev - 1
+                            );
+                            return;
+                          }
+                          if (e.key === "Enter" && passageHighlightIdx >= 0) {
+                            e.preventDefault();
+                            const selected = filteredPassageSuggestions[passageHighlightIdx];
+                            if (selected) {
+                              setNewName(selected);
+                              setShowSuggestions(false);
+                              setPassageHighlightIdx(-1);
+                            }
+                            return;
+                          }
+                        }
                         if (e.key === "Enter") handleAddPassage();
-                        if (e.key === "Escape") { setAddingPassage(false); setNewName(""); setShowSuggestions(false); }
+                        if (e.key === "Escape") { setAddingPassage(false); setNewName(""); setShowSuggestions(false); setPassageHighlightIdx(-1); }
                       }}
                       placeholder="지문 이름 입력"
                       className="w-full h-10 px-3 border-b border-border bg-transparent text-sm outline-none focus:border-foreground transition-colors"
@@ -370,6 +432,7 @@ export function CategoryFullScreen({
                     <PassageNameAutocomplete
                       value={newName}
                       suggestions={passageSuggestions}
+                      highlightIdx={passageHighlightIdx}
                       onSelect={(name) => { setNewName(name); setShowSuggestions(false); }}
                       visible={showSuggestions}
                     />
