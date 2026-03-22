@@ -6,6 +6,8 @@ export interface SyntaxNoteWithTarget {
   targetText?: string;
 }
 
+type TextToken = { word: string; start: number; end: number };
+
 const COMMON_ENGLISH_STOPWORDS = new Set([
   "a", "an", "and", "are", "as", "at", "be", "been", "being", "but", "by",
   "can", "could", "did", "do", "does", "for", "from", "had", "has", "have",
@@ -22,8 +24,8 @@ const MODAL_WORDS = new Set(["can", "could", "may", "might", "must", "should", "
  * Tokenize text into words with their character positions.
  * A "word" is a sequence of word characters (letters, digits, apostrophes, unicode marks).
  */
-function tokenize(text: string): { word: string; start: number; end: number }[] {
-  const tokens: { word: string; start: number; end: number }[] = [];
+function tokenize(text: string): TextToken[] {
+  const tokens: TextToken[] = [];
   const re = /[A-Za-z'\u2019\u0300-\u036f0-9]+/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
@@ -32,15 +34,27 @@ function tokenize(text: string): { word: string; start: number; end: number }[] 
   return tokens;
 }
 
+function uniqSpans(spans: { start: number; end: number }[]) {
+  const seen = new Set<string>();
+  const out: { start: number; end: number }[] = [];
+  for (const s of spans) {
+    const key = `${s.start}-${s.end}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(s);
+  }
+  return out.sort((a, b) => a.start - b.start || a.end - b.end);
+}
+
 /**
  * Find the token-sequence match of targetText within originalText.
  * Returns the character range [start, end) in originalText, or null if not found.
  * Uses word-boundary-aware matching: "it" won't match inside "point".
  */
-function findTargetSpan(
+function findTargetSpans(
   originalText: string,
   targetText: string
-): { start: number; end: number } | null {
+): { start: number; end: number }[] {
   const wordCharRe = /[A-Za-z'\u2019\u0300-\u036f0-9]/;
   const expandToTokenBounds = (start: number, end: number) => {
     let s = Math.max(0, start);
@@ -54,6 +68,7 @@ function findTargetSpan(
   const tgtTokens = tokenize(targetText);
   if (tgtTokens.length === 0 || srcTokens.length === 0) return null;
 
+  const tokenSpans: { start: number; end: number }[] = [];
   for (let i = 0; i <= srcTokens.length - tgtTokens.length; i++) {
     let match = true;
     for (let j = 0; j < tgtTokens.length; j++) {
@@ -63,12 +78,13 @@ function findTargetSpan(
       }
     }
     if (match) {
-      return {
+      tokenSpans.push({
         start: srcTokens[i].start,
         end: srcTokens[i + tgtTokens.length - 1].end,
-      };
+      });
     }
   }
+  if (tokenSpans.length > 0) return uniqSpans(tokenSpans);
 
   // Fallback 1: direct substring match (helps when user selects partial token)
   const srcLower = originalText.toLowerCase();
@@ -76,7 +92,7 @@ function findTargetSpan(
   if (tgtLower) {
     const directIdx = srcLower.indexOf(tgtLower);
     if (directIdx !== -1) {
-      return expandToTokenBounds(directIdx, directIdx + tgtLower.length);
+      return [expandToTokenBounds(directIdx, directIdx + tgtLower.length)];
     }
   }
 
@@ -97,12 +113,19 @@ function findTargetSpan(
       if (compactIdx !== -1) {
         const origStart = compactToOrigIndex[compactIdx];
         const origEnd = compactToOrigIndex[compactIdx + compactTgt.length - 1] + 1;
-        return expandToTokenBounds(origStart, origEnd);
+        return [expandToTokenBounds(origStart, origEnd)];
       }
     }
   }
 
-  return null;
+  return [];
+}
+
+function findTargetSpan(
+  originalText: string,
+  targetText: string
+): { start: number; end: number } | null {
+  return findTargetSpans(originalText, targetText)[0] ?? null;
 }
 
 function normalizeAlphaWord(word: string): string {
@@ -171,11 +194,89 @@ function extractSubjectStartHint(noteContent: string): string | null {
 }
 
 function findTokenByPredicate(
-  tokensInSpan: { word: string; start: number; end: number }[],
-  predicate: (token: { word: string; start: number; end: number }) => boolean
-): { word: string; start: number; end: number } | null {
+  tokensInSpan: TextToken[],
+  predicate: (token: TextToken) => boolean
+): TextToken | null {
   const found = tokensInSpan.find(predicate);
   return found || null;
+}
+
+function tokensWithinSpan(allTokens: TextToken[], span: { start: number; end: number }): TextToken[] {
+  return allTokens.filter((tok) => tok.start >= span.start && tok.end <= span.end);
+}
+
+function containsToken(tokens: TextToken[], token: string): boolean {
+  const t = normalizeAlphaWord(token);
+  if (!t) return false;
+  return tokens.some((tok) => normalizeAlphaWord(tok.word) === t);
+}
+
+function scoreSpanForNote(
+  span: { start: number; end: number },
+  noteContent: string,
+  allTokens: TextToken[]
+): number {
+  const tokensInSpan = tokensWithinSpan(allTokens, span);
+  if (tokensInSpan.length === 0) return -1_000_000;
+
+  const rawContent = String(noteContent ?? "");
+  const contentLower = rawContent.toLowerCase();
+  const hints = extractEnglishHints(rawContent);
+  const rangeStartHint = extractRangeStartHint(rawContent);
+  const patternVerbHint = extractPatternVerbHint(rawContent);
+  const subjectStartHint = extractSubjectStartHint(rawContent);
+
+  let score = 0;
+
+  const matchedHints = hints.filter((hint) =>
+    tokensInSpan.some((tok) => tokenMatchesHint(tok.word, hint))
+  );
+  score += matchedHints.length * 8;
+
+  if (rangeStartHint && tokenMatchesHint(tokensInSpan[0].word, rangeStartHint)) score += 30;
+  if (patternVerbHint && tokensInSpan.some((tok) => tokenMatchesHint(tok.word, patternVerbHint))) score += 25;
+  if (subjectStartHint && tokenMatchesHint(tokensInSpan[0].word, subjectStartHint)) score += 18;
+
+  if (/(to부정사|to-v|to v|to부정사의)/i.test(rawContent) && containsToken(tokensInSpan, "to")) score += 20;
+  if (/(강조구문|it\s+is\s*~\s*that|it\s+is\s+.+\s+that)/i.test(rawContent) && containsToken(tokensInSpan, "it")) score += 20;
+  if (((contentLower.includes("조동사") && contentLower.includes("수동")) || /be\s*p\.?p|be\s+pp/i.test(rawContent)) &&
+      (tokensInSpan.some((tok) => MODAL_WORDS.has(normalizeAlphaWord(tok.word))) || containsToken(tokensInSpan, "be"))) {
+    score += 20;
+  }
+
+  if (isVerbFocusedNote(rawContent) && tokensInSpan.some((tok) => isLikelyVerbToken(tok.word))) score += 6;
+
+  // Prefer tighter matches when scores are comparable.
+  score -= (span.end - span.start) / 120;
+  return score;
+}
+
+function selectBestSpanForNote(
+  originalText: string,
+  targetText: string,
+  noteContent: string,
+  allTokens: TextToken[]
+): { start: number; end: number } | null {
+  const spans = findTargetSpans(originalText, targetText);
+  if (spans.length === 0) return null;
+  if (spans.length === 1) return spans[0];
+
+  let best = spans[0];
+  let bestScore = scoreSpanForNote(best, noteContent, allTokens);
+  for (let i = 1; i < spans.length; i++) {
+    const score = scoreSpanForNote(spans[i], noteContent, allTokens);
+    if (score > bestScore + 0.01) {
+      best = spans[i];
+      bestScore = score;
+      continue;
+    }
+    if (Math.abs(score - bestScore) <= 0.01 && spans[i].start < best.start) {
+      best = spans[i];
+      bestScore = score;
+    }
+  }
+
+  return best;
 }
 
 function findPunctuationAnchor(
@@ -215,12 +316,11 @@ function findPunctuationAnchor(
 function chooseAnchorOffset(
   originalText: string,
   span: { start: number; end: number },
-  noteContent: string
+  noteContent: string,
+  allTokensInput?: TextToken[]
 ): number {
-  const allTokens = tokenize(originalText);
-  const tokensInSpan = tokenize(originalText).filter(
-    (tok) => tok.start >= span.start && tok.end <= span.end
-  );
+  const allTokens = allTokensInput ?? tokenize(originalText);
+  const tokensInSpan = tokensWithinSpan(allTokens, span);
   if (tokensInSpan.length === 0) return span.start;
   const nearbyTokens = allTokens.filter(
     (tok) => tok.start >= Math.max(0, span.start - 48) && tok.end <= Math.min(originalText.length, span.end + 48)
@@ -243,19 +343,31 @@ function chooseAnchorOffset(
   }
 
   if (/(강조구문|it\s+is\s*~\s*that|it\s+is\s+.+\s+that)/i.test(rawContent)) {
-    const itToken = findTokenByPredicate(tokensInSpan, (tok) => normalizeAlphaWord(tok.word).startsWith("it"));
+    const itToken =
+      findTokenByPredicate(tokensInSpan, (tok) => normalizeAlphaWord(tok.word).startsWith("it")) ||
+      findTokenByPredicate(nearbyTokens, (tok) => normalizeAlphaWord(tok.word).startsWith("it")) ||
+      findTokenByPredicate(allTokens, (tok) => normalizeAlphaWord(tok.word).startsWith("it"));
     if (itToken) return itToken.start;
   }
 
   if (/(to부정사|to-v|to v|to부정사의)/i.test(rawContent)) {
-    const toToken = findTokenByPredicate(tokensInSpan, (tok) => normalizeAlphaWord(tok.word) === "to");
+    const toToken =
+      findTokenByPredicate(tokensInSpan, (tok) => normalizeAlphaWord(tok.word) === "to") ||
+      findTokenByPredicate(nearbyTokens, (tok) => normalizeAlphaWord(tok.word) === "to") ||
+      findTokenByPredicate(allTokens, (tok) => normalizeAlphaWord(tok.word) === "to");
     if (toToken) return toToken.start;
   }
 
   if ((contentLower.includes("조동사") && contentLower.includes("수동")) || /be\s*p\.?p|be\s+pp/i.test(rawContent)) {
-    const modalToken = findTokenByPredicate(tokensInSpan, (tok) => MODAL_WORDS.has(normalizeAlphaWord(tok.word)));
+    const modalToken =
+      findTokenByPredicate(tokensInSpan, (tok) => MODAL_WORDS.has(normalizeAlphaWord(tok.word))) ||
+      findTokenByPredicate(nearbyTokens, (tok) => MODAL_WORDS.has(normalizeAlphaWord(tok.word))) ||
+      findTokenByPredicate(allTokens, (tok) => MODAL_WORDS.has(normalizeAlphaWord(tok.word)));
     if (modalToken) return modalToken.start;
-    const beToken = findTokenByPredicate(tokensInSpan, (tok) => normalizeAlphaWord(tok.word) === "be");
+    const beToken =
+      findTokenByPredicate(tokensInSpan, (tok) => normalizeAlphaWord(tok.word) === "be") ||
+      findTokenByPredicate(nearbyTokens, (tok) => normalizeAlphaWord(tok.word) === "be") ||
+      findTokenByPredicate(allTokens, (tok) => normalizeAlphaWord(tok.word) === "be");
     if (beToken) return beToken.start;
   }
 
@@ -309,11 +421,65 @@ function chooseAnchorOffset(
   );
   if (hintedToken) return hintedToken.start;
 
+  const hintedNearby = nearbyTokens.find(
+    (tok) =>
+      !COMMON_ENGLISH_STOPWORDS.has(tok.word) &&
+      hints.some((hint) => tokenMatchesHint(tok.word, hint))
+  );
+  if (hintedNearby) return hintedNearby.start;
+
+  const hintedGlobal = allTokens.find(
+    (tok) =>
+      !COMMON_ENGLISH_STOPWORDS.has(tok.word) &&
+      hints.some((hint) => tokenMatchesHint(tok.word, hint))
+  );
+  if (hintedGlobal) return hintedGlobal.start;
+
   const firstNonConjunction = findTokenByPredicate(
     tokensInSpan,
     (tok) => !LEADING_CONJUNCTIONS.has(normalizeAlphaWord(tok.word))
   );
   return firstNonConjunction?.start ?? tokensInSpan[0].start;
+}
+
+function findAlternativeAnchorInSpan(
+  span: { start: number; end: number },
+  noteContent: string,
+  allTokens: TextToken[],
+  occupiedAnchors: Set<number>,
+  preferredAnchor: number
+): number {
+  const tokensInSpan = tokensWithinSpan(allTokens, span);
+  if (tokensInSpan.length === 0) return preferredAnchor;
+
+  const rawContent = String(noteContent ?? "");
+  const hints = extractEnglishHints(rawContent);
+  const candidates: number[] = [];
+  const push = (offset: number) => {
+    if (!Number.isFinite(offset)) return;
+    if (offset < span.start || offset >= span.end) return;
+    if (!candidates.includes(offset)) candidates.push(offset);
+  };
+
+  // Strongest candidates first: explicit hint tokens.
+  for (const tok of tokensInSpan) {
+    if (hints.some((hint) => tokenMatchesHint(tok.word, hint))) push(tok.start);
+  }
+  // Then verbs / modals for grammar notes.
+  if (isVerbFocusedNote(rawContent)) {
+    for (const tok of tokensInSpan) {
+      const w = normalizeAlphaWord(tok.word);
+      if (isLikelyVerbToken(w) || MODAL_WORDS.has(w) || w === "be") push(tok.start);
+    }
+  }
+  // Then all token starts in span order.
+  for (const tok of tokensInSpan) push(tok.start);
+  push(span.start);
+
+  for (const offset of candidates) {
+    if (!occupiedAnchors.has(offset)) return offset;
+  }
+  return preferredAnchor;
 }
 
 /**
@@ -325,16 +491,30 @@ export function computeSuperscriptPositions(
   originalText: string,
   syntaxNotes: SyntaxNoteWithTarget[]
 ): Map<number, number[]> {
+  const allTokens = tokenize(originalText);
   const result = new Map<number, number[]>();
+  const occupiedAnchors = new Set<number>();
+  const anchorToSpans = new Map<number, { start: number; end: number }[]>();
 
   for (const note of syntaxNotes) {
     if (!note.targetText) continue;
-    const span = findTargetSpan(originalText, note.targetText);
+    const span = selectBestSpanForNote(originalText, note.targetText, note.content, allTokens);
     if (!span) continue;
-    const anchor = chooseAnchorOffset(originalText, span, note.content);
+    let anchor = chooseAnchorOffset(originalText, span, note.content, allTokens);
+
+    const existingSpans = anchorToSpans.get(anchor) || [];
+    const hasDifferentSpanAtSameAnchor = existingSpans.some(
+      (s) => s.start !== span.start || s.end !== span.end
+    );
+    if (hasDifferentSpanAtSameAnchor) {
+      anchor = findAlternativeAnchorInSpan(span, note.content, allTokens, occupiedAnchors, anchor);
+    }
+
     const arr = result.get(anchor) || [];
     if (!arr.includes(note.id)) arr.push(note.id);
     result.set(anchor, arr);
+    occupiedAnchors.add(anchor);
+    anchorToSpans.set(anchor, [...existingSpans, span]);
   }
 
   return result;
@@ -393,9 +573,10 @@ export function reorderNotesByPosition<T extends { id: number; content: string; 
   originalText: string
 ): T[] {
   if (notes.length <= 1) return notes.map((n, i) => ({ ...n, id: i + 1 }));
+  const allTokens = tokenize(originalText);
 
   const withPos = notes.map((n) => {
-    const span = n.targetText ? findTargetSpan(originalText, n.targetText) : null;
+    const span = n.targetText ? selectBestSpanForNote(originalText, n.targetText, n.content, allTokens) : null;
     return { note: n, pos: span ? span.start : Infinity };
   });
   withPos.sort((a, b) => a.pos - b.pos);

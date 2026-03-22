@@ -70,6 +70,17 @@ function sanitizeEndings(text: string): string {
   return String(text ?? "").replace(/([가-힣]{2,})(임|됨|있음|함)(?=[.\s/,)~]|$)/g, (_m, stem) => stem);
 }
 
+function repairTruncatedSyntaxPhrases(text: string): string {
+  let out = String(text ?? "");
+  // Keep common intended form "쓰임" if model output got clipped to "쓰".
+  out = out.replace(/구동사로\s*쓰(?=\s*(?:\/|$))/g, "구동사로 쓰임");
+  out = out.replace(/표현으로\s*쓰(?=\s*(?:\/|$))/g, "표현으로 쓰임");
+  out = out.replace(/구조로\s*쓰(?=\s*(?:\/|$))/g, "구조로 쓰임");
+  out = out.replace(/용법으로\s*쓰(?=\s*(?:\/|$))/g, "용법으로 쓰임");
+  out = out.replace(/\s{2,}/g, " ").trim();
+  return out;
+}
+
 function stripLeadingBullets(line: string) {
   return String(line ?? "")
     .replace(/^(\s*[\u2460-\u2473])\s*[•·\-\*]\s*/u, "$1 ")
@@ -765,7 +776,11 @@ serve(async (req) => {
         .map((p) => ({
           text: applyPinnedPattern(
             stripTrailingFieldLabel(
-              stripLeadingTagLabel(sanitizeEndings(oneLine(stripLeadingBullets(stripJsonArtifacts(p.text)))))
+              stripLeadingTagLabel(
+                repairTruncatedSyntaxPhrases(
+                  sanitizeEndings(oneLine(stripLeadingBullets(stripJsonArtifacts(p.text))))
+                )
+              )
             ),
             [],
             pinnedData.byTag,
@@ -907,6 +922,7 @@ serve(async (req) => {
       .map(stripLeadingBullets)
       .map(stripLeadingTagLabel)
       .map(sanitizeEndings)
+      .map(repairTruncatedSyntaxPhrases)
       .map(stripLeadingTagLabel)
       .map(stripTrailingFieldLabel)
       .map((p) => applyPinnedPattern(p, tags, pinnedData.byTag));
