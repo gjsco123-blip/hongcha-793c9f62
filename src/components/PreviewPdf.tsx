@@ -138,7 +138,9 @@ const s = StyleSheet.create({
   synTable: { borderWidth: 0.5, borderColor: T.rule },
   synHdr: {
     flexDirection: "row" as const,
-    paddingVertical: 5,
+    alignItems: "center" as const,
+    minHeight: 24,
+    paddingVertical: 0,
     paddingHorizontal: 4,
     borderBottomWidth: 1,
     borderBottomColor: T.black,
@@ -180,7 +182,16 @@ const s = StyleSheet.create({
     borderLeftWidth: 0.5,
     borderLeftColor: T.rule,
   },
-  synHdrText: { fontSize: 7.5, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.6 },
+  synHdrText: {
+    fontSize: 7.5,
+    fontWeight: 700,
+    color: T.g50,
+    textTransform: "uppercase" as const,
+    letterSpacing: 0.6,
+    lineHeight: 1,
+    paddingTop: 0,
+    paddingBottom: 0,
+  },
   fieldLabel: {
     fontSize: 7.5,
     fontWeight: 700,
