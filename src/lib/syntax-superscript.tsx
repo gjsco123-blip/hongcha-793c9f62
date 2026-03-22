@@ -15,6 +15,9 @@ const COMMON_ENGLISH_STOPWORDS = new Set([
   "which", "who", "will", "with", "would", "you", "your",
 ]);
 
+const LEADING_CONJUNCTIONS = new Set(["and", "but", "or", "so", "yet", "for", "nor"]);
+const MODAL_WORDS = new Set(["can", "could", "may", "might", "must", "should", "will", "would"]);
+
 /**
  * Tokenize text into words with their character positions.
  * A "word" is a sequence of word characters (letters, digits, apostrophes, unicode marks).
@@ -143,6 +146,57 @@ function tokenMatchesHint(tokenWord: string, hint: string): boolean {
   return false;
 }
 
+function extractRangeStartHint(noteContent: string): string | null {
+  const text = String(noteContent ?? "");
+  const inParen = text.match(/\(([A-Za-z][A-Za-z'\u2019-]*)\s*~[^)]*\)/);
+  if (inParen?.[1]) return normalizeAlphaWord(inParen[1]);
+  const plain = text.match(/\b([A-Za-z][A-Za-z'\u2019-]*)\s*~/);
+  if (plain?.[1]) return normalizeAlphaWord(plain[1]);
+  return null;
+}
+
+function findTokenByPredicate(
+  tokensInSpan: { word: string; start: number; end: number }[],
+  predicate: (token: { word: string; start: number; end: number }) => boolean
+): { word: string; start: number; end: number } | null {
+  const found = tokensInSpan.find(predicate);
+  return found || null;
+}
+
+function findPunctuationAnchor(
+  noteContent: string,
+  originalText: string,
+  span: { start: number; end: number }
+): number | null {
+  const text = String(noteContent ?? "").toLowerCase();
+  const candidates: string[] = [];
+  if (text.includes("세미콜론")) candidates.push(";");
+  if (text.includes("콜론")) candidates.push(":");
+  if (text.includes("쉼표") || text.includes("comma")) candidates.push(",");
+  if (text.includes("대시") || text.includes("dash")) candidates.push("—", "-");
+  if (text.includes("괄호") || text.includes("parenthesis")) candidates.push("(", ")");
+  if (candidates.length === 0) return null;
+
+  const inRangeEnd = Math.min(originalText.length, span.end + 4);
+  for (const ch of candidates) {
+    const inRangeIdx = originalText.indexOf(ch, span.start);
+    if (inRangeIdx !== -1 && inRangeIdx < inRangeEnd) return inRangeIdx;
+  }
+
+  let best: { idx: number; dist: number } | null = null;
+  for (const ch of candidates) {
+    let from = 0;
+    while (true) {
+      const idx = originalText.indexOf(ch, from);
+      if (idx === -1) break;
+      const dist = Math.abs(idx - span.start);
+      if (!best || dist < best.dist) best = { idx, dist };
+      from = idx + 1;
+    }
+  }
+  return best?.idx ?? null;
+}
+
 function chooseAnchorOffset(
   originalText: string,
   span: { start: number; end: number },
@@ -153,8 +207,44 @@ function chooseAnchorOffset(
   );
   if (tokensInSpan.length === 0) return span.start;
 
+  const rawContent = String(noteContent ?? "");
+  const contentLower = rawContent.toLowerCase();
   const hints = extractEnglishHints(noteContent);
   const verbFocused = isVerbFocusedNote(noteContent);
+  const rangeStartHint = extractRangeStartHint(noteContent);
+
+  const punctuationAnchor = findPunctuationAnchor(rawContent, originalText, span);
+  if (punctuationAnchor !== null) return punctuationAnchor;
+
+  if (rangeStartHint) {
+    const rangeStartToken = findTokenByPredicate(tokensInSpan, (tok) => tokenMatchesHint(tok.word, rangeStartHint));
+    if (rangeStartToken) return rangeStartToken.start;
+  }
+
+  if (/(강조구문|it\s+is\s*~\s*that|it\s+is\s+.+\s+that)/i.test(rawContent)) {
+    const itToken = findTokenByPredicate(tokensInSpan, (tok) => normalizeAlphaWord(tok.word).startsWith("it"));
+    if (itToken) return itToken.start;
+  }
+
+  if (/(to부정사|to-v|to v|to부정사의)/i.test(rawContent)) {
+    const toToken = findTokenByPredicate(tokensInSpan, (tok) => normalizeAlphaWord(tok.word) === "to");
+    if (toToken) return toToken.start;
+  }
+
+  if ((contentLower.includes("조동사") && contentLower.includes("수동")) || /be\s*p\.?p|be\s+pp/i.test(rawContent)) {
+    const modalToken = findTokenByPredicate(tokensInSpan, (tok) => MODAL_WORDS.has(normalizeAlphaWord(tok.word)));
+    if (modalToken) return modalToken.start;
+    const beToken = findTokenByPredicate(tokensInSpan, (tok) => normalizeAlphaWord(tok.word) === "be");
+    if (beToken) return beToken.start;
+  }
+
+  if (contentLower.includes("수일치") || contentLower.includes("주어")) {
+    const subjectStart = findTokenByPredicate(
+      tokensInSpan,
+      (tok) => !LEADING_CONJUNCTIONS.has(normalizeAlphaWord(tok.word))
+    );
+    if (subjectStart) return subjectStart.start;
+  }
 
   if (verbFocused) {
     const hintedVerb = tokensInSpan.find(
@@ -175,7 +265,11 @@ function chooseAnchorOffset(
   );
   if (hintedToken) return hintedToken.start;
 
-  return tokensInSpan[0].start;
+  const firstNonConjunction = findTokenByPredicate(
+    tokensInSpan,
+    (tok) => !LEADING_CONJUNCTIONS.has(normalizeAlphaWord(tok.word))
+  );
+  return firstNonConjunction?.start ?? tokensInSpan[0].start;
 }
 
 /**

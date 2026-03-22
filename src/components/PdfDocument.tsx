@@ -222,12 +222,15 @@ const styles = StyleSheet.create({
 function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote[], original?: string) {
   const elements: React.ReactNode[] = [];
 
-  const clampToWordStart = (text: string, rawOffset: number) => {
+  const clampOffsetInSegment = (text: string, rawOffset: number) => {
     let o = Math.max(0, Math.min(rawOffset, text.length));
-    // If mapped offset lands on whitespace/punctuation, move to the next word start.
-    while (o < text.length && !/[A-Za-z0-9]/.test(text[o])) o++;
-    // If annotation points inside a word, snap to that word start to avoid t¹hat-style splits.
-    while (o > 0 && /[A-Za-z0-9]/.test(text[o - 1])) o--;
+    // Keep punctuation anchors intact (e.g. semicolon notes).
+    if (o >= text.length) return o;
+    const isWord = (ch: string) => /[A-Za-z0-9]/.test(ch);
+    // Only snap when the anchor falls inside a word token.
+    if (o > 0 && o < text.length && isWord(text[o - 1]) && isWord(text[o])) {
+      while (o > 0 && isWord(text[o - 1])) o--;
+    }
     return o;
   };
 
@@ -294,7 +297,7 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
         for (const so of co.segOffsets) {
           if (matchStart >= so.start && matchStart < so.end) {
             const segText = chunks[co.ci].segments[so.si]?.text ?? "";
-            const offsetInSeg = clampToWordStart(segText, matchStart - so.start);
+            const offsetInSeg = clampOffsetInSegment(segText, matchStart - so.start);
             for (const id of noteIds) addSup(`${co.ci}-${so.si}`, { id, offset: offsetInSeg });
             placed = true;
             break;

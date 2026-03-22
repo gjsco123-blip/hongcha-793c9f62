@@ -128,6 +128,8 @@ function stripTrailingFieldLabel(line: string) {
   return String(line ?? "")
     .replace(/,\s*"?tag"?\s*:\s*$/gi, "")
     .replace(/\s*"?tag"?\s*:\s*$/gi, "")
+    .replace(/,\s*"?finish_reason"?\s*:\s*$/gi, "")
+    .replace(/\s*"?finish_reason"?\s*:\s*$/gi, "")
     .trim();
 }
 
@@ -755,9 +757,11 @@ serve(async (req) => {
       // Strip JSON artifacts that leak when response is truncated
       const stripJsonArtifacts = (s: string) =>
         s.replace(/[{}\[\]]/g, "")
-         .replace(/"?(text|targetText|tag)"?\s*:/gi, "")
+         .replace(/"?(text|targetText|tag|finish_reason)"?\s*:/gi, "")
          .replace(/,\s*"?tag"?\s*:\s*$/gi, "")
          .replace(/\s*"?tag"?\s*:\s*$/gi, "")
+         .replace(/,\s*"?finish_reason"?\s*:\s*$/gi, "")
+         .replace(/\s*"?finish_reason"?\s*:\s*$/gi, "")
          .replace(/,\s*$/g, "")
          .trim();
 
