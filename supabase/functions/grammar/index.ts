@@ -116,6 +116,19 @@ function stripLeadingTagLabel(line: string) {
   return String(line ?? "").replace(TAG_PREFIX_RE, "").trim();
 }
 
+function detectLeadingTagLabel(line: string): string {
+  const text = String(line ?? "").trim();
+  if (!text) return "";
+  for (const label of TAG_PREFIX_LABELS) {
+    const re = new RegExp(
+      `^\\s*(?:[•·\\-*]\\s*)?(?:\\d+[\\).]\\s*)?${escapeRegex(label)}\\s*:`,
+      "u"
+    );
+    if (re.test(text)) return label;
+  }
+  return "";
+}
+
 function formatAsLines(points: string[], maxLines: number) {
   const cleaned = points
     .map((p) => oneLine(p))
@@ -302,13 +315,41 @@ function normalizeModelTagToUiTag(tag: string): string {
 
 function applyPinnedPattern(
   content: string,
-  _hintTags: TagId[],
-  _pinnedByTag: Map<string, string>,
-  _explicitUiTag?: string,
+  hintTags: TagId[],
+  pinnedByTag: Map<string, string>,
+  explicitUiTag?: string,
 ): string {
-  // No-op: pinned patterns are now enforced via prompt, not post-processing replacement.
-  // Keeping the function signature to avoid breaking callers.
-  return content;
+  const raw = oneLine(content);
+  if (!raw) return raw;
+  if (!pinnedByTag || pinnedByTag.size === 0) return raw;
+
+  const candidates: string[] = [];
+  if (explicitUiTag) candidates.push(explicitUiTag);
+
+  const leadingTag = detectLeadingTagLabel(content);
+  if (leadingTag) candidates.push(leadingTag);
+
+  for (const t of hintTags || []) {
+    candidates.push(mapTagIdToUiTag(t));
+  }
+
+  candidates.push(detectUiTagFromContent(raw));
+
+  const seen = new Set<string>();
+  for (const candidate of candidates) {
+    const key = normalizeTagKey(candidate);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    const pinned = oneLine(String(pinnedByTag.get(key) ?? ""));
+    if (!pinned) continue;
+
+    const normalizedPinned = stripLeadingTagLabel(pinned);
+    // Keep model output if the pattern is still a template.
+    if (normalizedPinned.includes("___")) return raw;
+    return normalizedPinned;
+  }
+
+  return raw;
 }
 
 // -----------------------------
@@ -622,7 +663,10 @@ serve(async (req) => {
         fetchLearningBlock(userId, reqAuth),
         fetchPinnedPatterns(userId, reqAuth),
       ]);
-      const userMessage = `문장: ${full}\n이 문장에서 수능에 출제될 수 있는 핵심 문법 포인트를 찾아서 points로 작성하라. 각 포인트마다 원문에서 해당 문법이 적용되는 핵심 구문(2~5단어)을 targetText로 함께 반환하라.`;
+      const userMessage = `문장: ${full}\n` +
+        `이 문장에서 수능에 출제될 수 있는 핵심 문법 포인트를 찾아서 points로 작성하라.\n` +
+        `각 포인트마다 원문에서 해당 문법이 적용되는 핵심 구문(2~5단어)을 targetText로 함께 반환하라.\n` +
+        `고정 패턴과 태그가 매칭되면 해당 패턴을 최우선으로 따르라.`;
 
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -704,7 +748,7 @@ serve(async (req) => {
       autoPoints = autoPoints
         .map((p) => ({
           text: applyPinnedPattern(
-            sanitizeEndings(oneLine(stripLeadingBullets(stripJsonArtifacts(p.text)))),
+            stripLeadingTagLabel(sanitizeEndings(oneLine(stripLeadingBullets(stripJsonArtifacts(p.text))))),
             [],
             pinnedData.byTag,
             normalizeModelTagToUiTag(String(p.tag ?? "")),
@@ -845,6 +889,7 @@ serve(async (req) => {
       .map(stripLeadingBullets)
       .map(stripLeadingTagLabel)
       .map(sanitizeEndings)
+      .map(stripLeadingTagLabel)
       .map((p) => applyPinnedPattern(p, tags, pinnedData.byTag));
 
     if (points.length === 0) {
