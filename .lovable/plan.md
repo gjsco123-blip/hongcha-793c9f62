@@ -1,15 +1,26 @@
 
-# 홍T AI 수정 채팅: Sheet → Dialog(중앙 모달)로 변경
+
+# 핵심 엔진 3개 모델 → gemini-3.1-pro-preview 업그레이드
+
+## 현재 → 변경
+
+| 함수 | 현재 모델 | 변경 후 |
+|------|----------|---------|
+| `engine` (메인 엔진) | `gemini-3-flash-preview` | `gemini-3.1-pro-preview` |
+| `analyze-structure` (구조 분석) | `gemini-2.5-flash` | `gemini-3.1-pro-preview` |
+| `analyze-preview` (Preview 분석) | `gemini-3-flash-preview` | `gemini-3.1-pro-preview` |
 
 ## 변경 내용
+각 파일에서 `model:` 값 한 줄만 교체. 프롬프트·로직 변경 없음.
 
-### `src/components/HongTChat.tsx`
-- `Sheet`/`SheetContent`/`SheetHeader`/`SheetTitle` → `Dialog`/`DialogContent`/`DialogHeader`/`DialogTitle`로 교체
-- 구문분석 AI 채팅(SyntaxChat)과 동일하게 중앙 모달 형태로 표시
-- 클래스: `w-[90vw] max-w-lg` + `max-h-[80vh]` + flex column 레이아웃
-- 내부 구조(메시지 목록, 입력창, 수정안 적용 등)는 그대로 유지
+### 수정 파일
+1. `supabase/functions/engine/index.ts` — line 222
+2. `supabase/functions/analyze-structure/index.ts` — line 78
+3. `supabase/functions/analyze-preview/index.ts` — line 196
 
-### 변경 범위
-- `HongTChat.tsx` 1개 파일만 수정
-- import 교체 + 컨테이너 태그 교체만으로 완료
-- 데이터 로직, 콜백, 기존 기능 영향 없음
+## 나머지 함수는 유지
+홍T, 구문분석, 어휘, 채팅 등은 `gemini-3-flash-preview` 그대로 유지 (속도 우선).
+
+## 리스크
+없음. 모델명만 변경, 프롬프트 호환성 문제 없음. 응답 시간은 Pro 계열이라 약간 느려질 수 있으나 품질 향상이 더 큼.
+
