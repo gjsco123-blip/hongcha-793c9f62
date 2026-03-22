@@ -19,6 +19,10 @@ const COMMON_ENGLISH_STOPWORDS = new Set([
 
 const LEADING_CONJUNCTIONS = new Set(["and", "but", "or", "so", "yet", "for", "nor"]);
 const MODAL_WORDS = new Set(["can", "could", "may", "might", "must", "should", "will", "would"]);
+const AUXILIARY_WORDS = new Set([
+  "am", "is", "are", "was", "were", "be", "been", "being",
+  "do", "does", "did", "have", "has", "had",
+]);
 
 /**
  * Tokenize text into words with their character positions.
@@ -185,6 +189,22 @@ function extractPatternVerbHint(noteContent: string): string | null {
   return normalizeAlphaWord(m[1]);
 }
 
+function extractLeadingExpressionStartHint(noteContent: string): string | null {
+  const text = String(noteContent ?? "").trim();
+  const m = text.match(/^([A-Za-z][A-Za-z'\u2019-]*(?:\s+[A-Za-z][A-Za-z'\u2019-]*){0,3})\s*:/);
+  if (!m?.[1]) return null;
+  const first = m[1].split(/\s+/)[0] || "";
+  return normalizeAlphaWord(first);
+}
+
+function extractPrepRelativeHint(noteContent: string): string | null {
+  const text = String(noteContent ?? "");
+  if (!/(전치사|preposition)/i.test(text) || !/(관계대명사|which|whom)/i.test(text)) return null;
+  const m = text.match(/\(([A-Za-z][A-Za-z'\u2019-]*)\s+(?:which|whom)\)/i);
+  if (!m?.[1]) return null;
+  return normalizeAlphaWord(m[1]);
+}
+
 function extractSubjectStartHint(noteContent: string): string | null {
   const text = String(noteContent ?? "");
   const m = text.match(/명사\s+([A-Za-z][A-Za-z'\u2019-]*(?:\s+[A-Za-z][A-Za-z'\u2019-]*)*)/i);
@@ -332,6 +352,8 @@ function chooseAnchorOffset(
   const verbFocused = isVerbFocusedNote(noteContent);
   const rangeStartHint = extractRangeStartHint(noteContent);
   const patternVerbHint = extractPatternVerbHint(noteContent);
+  const leadingExpressionHint = extractLeadingExpressionStartHint(noteContent);
+  const prepRelativeHint = extractPrepRelativeHint(noteContent);
   const subjectStartHint = extractSubjectStartHint(noteContent);
 
   const punctuationAnchor = findPunctuationAnchor(rawContent, originalText, span);
@@ -340,6 +362,22 @@ function chooseAnchorOffset(
   if (rangeStartHint) {
     const rangeStartToken = findTokenByPredicate(tokensInSpan, (tok) => tokenMatchesHint(tok.word, rangeStartHint));
     if (rangeStartToken) return rangeStartToken.start;
+  }
+
+  if (prepRelativeHint) {
+    const prepToken =
+      findTokenByPredicate(tokensInSpan, (tok) => tokenMatchesHint(tok.word, prepRelativeHint)) ||
+      findTokenByPredicate(nearbyTokens, (tok) => tokenMatchesHint(tok.word, prepRelativeHint)) ||
+      findTokenByPredicate(allTokens, (tok) => tokenMatchesHint(tok.word, prepRelativeHint));
+    if (prepToken) return prepToken.start;
+  }
+
+  if (leadingExpressionHint) {
+    const leadingExprToken =
+      findTokenByPredicate(tokensInSpan, (tok) => tokenMatchesHint(tok.word, leadingExpressionHint)) ||
+      findTokenByPredicate(nearbyTokens, (tok) => tokenMatchesHint(tok.word, leadingExpressionHint)) ||
+      findTokenByPredicate(allTokens, (tok) => tokenMatchesHint(tok.word, leadingExpressionHint));
+    if (leadingExprToken) return leadingExprToken.start;
   }
 
   if (/(강조구문|it\s+is\s*~\s*that|it\s+is\s+.+\s+that)/i.test(rawContent)) {
@@ -395,6 +433,30 @@ function chooseAnchorOffset(
   }
 
   if (verbFocused) {
+    const hintedAnyInSpan = findTokenByPredicate(
+      tokensInSpan,
+      (tok) =>
+        !COMMON_ENGLISH_STOPWORDS.has(normalizeAlphaWord(tok.word)) &&
+        hints.some((hint) => tokenMatchesHint(tok.word, hint))
+    );
+    if (hintedAnyInSpan) return hintedAnyInSpan.start;
+
+    const hintedAnyNearby = findTokenByPredicate(
+      nearbyTokens,
+      (tok) =>
+        !COMMON_ENGLISH_STOPWORDS.has(normalizeAlphaWord(tok.word)) &&
+        hints.some((hint) => tokenMatchesHint(tok.word, hint))
+    );
+    if (hintedAnyNearby) return hintedAnyNearby.start;
+
+    const hintedAnyGlobal = findTokenByPredicate(
+      allTokens,
+      (tok) =>
+        !COMMON_ENGLISH_STOPWORDS.has(normalizeAlphaWord(tok.word)) &&
+        hints.some((hint) => tokenMatchesHint(tok.word, hint))
+    );
+    if (hintedAnyGlobal) return hintedAnyGlobal.start;
+
     const hintedVerb = findTokenByPredicate(
       tokensInSpan,
       (tok) =>
@@ -407,6 +469,17 @@ function chooseAnchorOffset(
         hints.some((hint) => tokenMatchesHint(tok.word, hint))
     );
     if (hintedVerb) return hintedVerb.start;
+
+    const firstLexicalVerbLike =
+      findTokenByPredicate(
+        tokensInSpan,
+        (tok) => (isLikelyVerbToken(tok.word) || MODAL_WORDS.has(normalizeAlphaWord(tok.word))) && !AUXILIARY_WORDS.has(normalizeAlphaWord(tok.word))
+      ) ||
+      findTokenByPredicate(
+        nearbyTokens,
+        (tok) => (isLikelyVerbToken(tok.word) || MODAL_WORDS.has(normalizeAlphaWord(tok.word))) && !AUXILIARY_WORDS.has(normalizeAlphaWord(tok.word))
+      );
+    if (firstLexicalVerbLike) return firstLexicalVerbLike.start;
 
     const firstVerbLike =
       findTokenByPredicate(tokensInSpan, (tok) => isLikelyVerbToken(tok.word) || MODAL_WORDS.has(normalizeAlphaWord(tok.word))) ||
