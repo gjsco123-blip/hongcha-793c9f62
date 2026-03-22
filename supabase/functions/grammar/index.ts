@@ -99,6 +99,7 @@ const TAG_PREFIX_LABELS = [
   "비교구문",
   "수일치",
   "생략",
+  "지칭",
   "숙어/표현",
   "기타",
 ];
@@ -113,7 +114,14 @@ const TAG_PREFIX_RE = new RegExp(
 );
 
 function stripLeadingTagLabel(line: string) {
-  return String(line ?? "").replace(TAG_PREFIX_RE, "").trim();
+  let out = String(line ?? "").replace(TAG_PREFIX_RE, "").trim();
+
+  // Fallback: strip custom Korean classifier prefixes such as "지칭:".
+  out = out.replace(/^([가-힣][가-힣A-Za-z0-9_+/\-\s]{0,24})\s*:\s*/u, "").trim();
+  // Fallback: strip uppercase tag-like prefixes such as "REL_SUBJ:".
+  out = out.replace(/^([A-Z][A-Z0-9_+/\-\s]{1,24})\s*:\s*/, "").trim();
+
+  return out;
 }
 
 function detectLeadingTagLabel(line: string): string {

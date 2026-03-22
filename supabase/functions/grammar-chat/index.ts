@@ -216,6 +216,7 @@ serve(async (req) => {
       "비교구문",
       "수일치",
       "생략",
+      "지칭",
       "숙어/표현",
       "기타",
     ];
@@ -230,7 +231,10 @@ serve(async (req) => {
     );
 
     function stripLeadingTagLabel(line: string) {
-      return String(line ?? "").replace(TAG_PREFIX_RE, "").trim();
+      let out = String(line ?? "").replace(TAG_PREFIX_RE, "").trim();
+      out = out.replace(/^([가-힣][가-힣A-Za-z0-9_+/\-\s]{0,24})\s*:\s*/u, "").trim();
+      out = out.replace(/^([A-Z][A-Z0-9_+/\-\s]{1,24})\s*:\s*/, "").trim();
+      return out;
     }
 
     // Parse suggestion into array of note strings
