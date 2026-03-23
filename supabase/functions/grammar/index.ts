@@ -992,6 +992,20 @@ serve(async (req) => {
         tag: p.tag,
       }));
 
+      // Post-processing: force pinned pattern replacement on auto-generated points
+      if (pinnedByTag && pinnedByTag.size > 0) {
+        autoPoints = autoPoints.map((p) => ({
+          ...p,
+          text: applyPinnedPattern(
+            p.text,
+            [],
+            pinnedByTag,
+            p.tag || undefined,
+            p.targetText || sentence,
+          ),
+        }));
+      }
+
       if (autoPoints.length === 0) {
         autoPoints = [{ text: "(이 문장에서 주요 문법 포인트를 찾지 못했습니다)", targetText: "", tag: "" }];
       }
