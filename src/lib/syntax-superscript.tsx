@@ -19,6 +19,24 @@ const COMMON_ENGLISH_STOPWORDS = new Set([
 
 const LEADING_CONJUNCTIONS = new Set(["and", "but", "or", "so", "yet", "for", "nor"]);
 const MODAL_WORDS = new Set(["can", "could", "may", "might", "must", "should", "will", "would"]);
+const FIVE_FORM_CONTROL_VERBS = new Set([
+  "allow",
+  "enable",
+  "cause",
+  "help",
+  "let",
+  "make",
+  "have",
+  "get",
+  "force",
+  "encourage",
+  "permit",
+  "persuade",
+  "ask",
+  "tell",
+  "order",
+  "advise",
+]);
 const AUXILIARY_WORDS = new Set([
   "am", "is", "are", "was", "were", "be", "been", "being",
   "do", "does", "did", "have", "has", "had",
@@ -412,6 +430,17 @@ function chooseAnchorOffset(
       findTokenByPredicate(nearbyTokens, (tok) => normalizeAlphaWord(tok.word) === "too") ||
       findTokenByPredicate(allTokens, (tok) => normalizeAlphaWord(tok.word) === "too");
     if (tooToken) return tooToken.start;
+  }
+
+  const looksLikeFiveForm =
+    /(5형식|목적격\s*보어|목적어\s*\+.*to\s*v|allow\s*\+|enable\s*\+|make\s*\+|have\s*\+|get\s*\+|let\s*\+|cause\s*\+|help\s*\+)/i.test(rawContent) ||
+    hints.some((hint) => FIVE_FORM_CONTROL_VERBS.has(normalizeAlphaWord(hint)));
+  if (looksLikeFiveForm) {
+    const controlVerbToken =
+      findTokenByPredicate(tokensInSpan, (tok) => FIVE_FORM_CONTROL_VERBS.has(normalizeAlphaWord(tok.word))) ||
+      findTokenByPredicate(nearbyTokens, (tok) => FIVE_FORM_CONTROL_VERBS.has(normalizeAlphaWord(tok.word))) ||
+      findTokenByPredicate(allTokens, (tok) => FIVE_FORM_CONTROL_VERBS.has(normalizeAlphaWord(tok.word)));
+    if (controlVerbToken) return controlVerbToken.start;
   }
 
   if (isBeGoingToNote(rawContent)) {
