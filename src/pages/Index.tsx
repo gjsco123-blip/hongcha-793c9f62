@@ -76,6 +76,7 @@ interface SentenceResult {
 }
 
 const PRESETS: Preset[] = ["고1", "고2", "수능"];
+const INDEX_DRAFT_KEY_PREFIX = "index-draft:";
 
 function splitIntoSentences(text: string): string[] {
   // Split on sentence-ending punctuation followed by whitespace,
@@ -119,6 +120,8 @@ export default function Index() {
   const categories = useCategories();
   const { teacherLabel, setTeacherLabel } = useTeacherLabel();
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const persistInFlightRef = useRef(false);
+  const persistQueuedRef = useRef(false);
   const dataLoadedRef = useRef(false);
   const latestPersistRef = useRef<{
     passage: string;
@@ -187,12 +190,60 @@ export default function Index() {
     const p = categories.selectedPassage;
     if (p) {
       const store = parsePassageStore(p.results_json);
-      setPassage(p.passage_text || "");
-      setPdfTitle(p.pdf_title || p.name || "SYNTAX");
-      setPreset((p.preset as Preset) || "수능");
-      setSyntaxCompleted(!!store.completion?.syntaxCompleted);
+      const basePassage = p.passage_text || "";
+      const basePdfTitle = p.pdf_title || p.name || "SYNTAX";
+      const basePreset = (p.preset as Preset) || "수능";
+      const baseSyntaxCompleted = !!store.completion?.syntaxCompleted;
+      let nextPassage = basePassage;
+      let nextPdfTitle = basePdfTitle;
+      let nextPreset = basePreset;
+      let nextSyntaxCompleted = baseSyntaxCompleted;
+
+      let loadedFromDraft = false;
+      try {
+        const raw = localStorage.getItem(`${INDEX_DRAFT_KEY_PREFIX}${p.id}`);
+        if (raw) {
+          const draft = JSON.parse(raw) as {
+            savedAt?: number;
+            passage?: string;
+            pdfTitle?: string;
+            preset?: Preset;
+            syntaxCompleted?: boolean;
+            results?: unknown[];
+          };
+          const dbUpdatedAt = Date.parse(p.updated_at || "");
+          const draftSavedAt = Number(draft?.savedAt || 0);
+          const hasNewerDraft = draftSavedAt > (Number.isFinite(dbUpdatedAt) ? dbUpdatedAt : 0);
+          if (hasNewerDraft) {
+            if (typeof draft.passage === "string") nextPassage = draft.passage;
+            if (typeof draft.pdfTitle === "string" && draft.pdfTitle.trim()) nextPdfTitle = draft.pdfTitle;
+            if (draft.preset && PRESETS.includes(draft.preset)) nextPreset = draft.preset;
+            if (typeof draft.syntaxCompleted === "boolean") nextSyntaxCompleted = draft.syntaxCompleted;
+            if (Array.isArray(draft.results)) {
+              const loadedDraft = (draft.results as any[]).map((r: any) => ({
+                ...r,
+                englishChunks: r.englishChunks || [],
+                koreanLiteralChunks: r.koreanLiteralChunks || [],
+                syntaxNotes: r.syntaxNotes || [],
+                generatingSyntax: false,
+                generatingHongT: false,
+                regenerating: false,
+              }));
+              setResults(loadedDraft);
+              loadedFromDraft = true;
+            }
+          }
+        }
+      } catch {
+        // ignore broken local draft payload
+      }
+
+      setPassage(nextPassage);
+      setPdfTitle(nextPdfTitle);
+      setPreset(nextPreset);
+      setSyntaxCompleted(nextSyntaxCompleted);
       setPreviewCompleted(!!store.completion?.previewCompleted);
-      if (store.syntaxResults && Array.isArray(store.syntaxResults)) {
+      if (!loadedFromDraft && store.syntaxResults && Array.isArray(store.syntaxResults)) {
         const loaded = (store.syntaxResults as any[]).map((r: any) => ({
           ...r,
           englishChunks: r.englishChunks || [],
@@ -204,7 +255,7 @@ export default function Index() {
           regenerating: false,
         }));
         setResults(loaded);
-      } else {
+      } else if (!store.syntaxResults || !Array.isArray(store.syntaxResults)) {
         setResults([]);
       }
       dataLoadedRef.current = true;
@@ -218,6 +269,11 @@ export default function Index() {
     prevResultsRef.current = results;
   }, [results]);
 
+  const getIndexDraftKey = useCallback(
+    (id: string) => `${INDEX_DRAFT_KEY_PREFIX}${id}`,
+    []
+  );
+
   useEffect(() => {
     latestPersistRef.current = {
       passage,
@@ -228,11 +284,11 @@ export default function Index() {
     };
   }, [passage, pdfTitle, preset, results, syntaxCompleted]);
 
-  const persistIndexState = useCallback(async () => {
-    if (!categories.selectedPassageId || !dataLoadedRef.current) return;
+  const persistIndexState = useCallback(async (): Promise<boolean> => {
+    if (!categories.selectedPassageId || !dataLoadedRef.current) return false;
     const { passage: latestPassage, pdfTitle: latestPdfTitle, preset: latestPreset, results: latestResults, syntaxCompleted: latestSyntaxCompleted } = latestPersistRef.current;
     const hasTransientWork = latestResults.some((r) => r.generatingSyntax || r.generatingHongT || r.regenerating);
-    if (hasTransientWork) return;
+    if (hasTransientWork) return false;
 
     const sanitizedResults = latestResults.map(({ generatingSyntax, generatingHongT, regenerating, ...rest }) => rest);
     const mergedStore = mergePassageStore(categories.selectedPassage?.results_json, {
@@ -240,13 +296,36 @@ export default function Index() {
       completion: { syntaxCompleted: latestSyntaxCompleted },
     });
 
-    await categories.updatePassage(categories.selectedPassageId, {
+    const ok = await categories.updatePassage(categories.selectedPassageId, {
       passage_text: latestPassage,
       pdf_title: latestPdfTitle,
       preset: latestPreset,
       results_json: mergedStore,
     });
-  }, [categories]);
+    if (ok) {
+      localStorage.removeItem(getIndexDraftKey(categories.selectedPassageId));
+    }
+    return ok;
+  }, [categories, getIndexDraftKey]);
+
+  const runPersistIndexState = useCallback(async () => {
+    if (persistInFlightRef.current) {
+      persistQueuedRef.current = true;
+      return false;
+    }
+
+    persistInFlightRef.current = true;
+    try {
+      let lastOk = false;
+      do {
+        persistQueuedRef.current = false;
+        lastOk = await persistIndexState();
+      } while (persistQueuedRef.current);
+      return lastOk;
+    } finally {
+      persistInFlightRef.current = false;
+    }
+  }, [persistIndexState]);
 
   // Auto-save with debounce
   const autoSave = useCallback(() => {
@@ -255,9 +334,10 @@ export default function Index() {
     if (hasTransientWork) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
-      void persistIndexState();
+      saveTimerRef.current = null;
+      void runPersistIndexState();
     }, 2000);
-  }, [categories.selectedPassageId, results, persistIndexState]);
+  }, [categories.selectedPassageId, passage, pdfTitle, preset, syntaxCompleted, results, runPersistIndexState]);
 
   const flushAutoSave = useCallback(() => {
     if (!categories.selectedPassageId || !dataLoadedRef.current) return;
@@ -265,8 +345,8 @@ export default function Index() {
       clearTimeout(saveTimerRef.current);
       saveTimerRef.current = null;
     }
-    void persistIndexState();
-  }, [categories.selectedPassageId, persistIndexState]);
+    void runPersistIndexState();
+  }, [categories.selectedPassageId, runPersistIndexState]);
 
   useEffect(() => {
     autoSave();
@@ -283,6 +363,22 @@ export default function Index() {
       flushAutoSave();
     };
   }, [flushAutoSave]);
+
+  useEffect(() => {
+    if (!categories.selectedPassageId || !dataLoadedRef.current) return;
+    const hasTransientWork = results.some((r) => r.generatingSyntax || r.generatingHongT || r.regenerating);
+    if (hasTransientWork) return;
+
+    const payload = {
+      savedAt: Date.now(),
+      passage,
+      pdfTitle,
+      preset,
+      syntaxCompleted,
+      results: results.map(({ generatingSyntax, generatingHongT, regenerating, ...rest }) => rest),
+    };
+    localStorage.setItem(getIndexDraftKey(categories.selectedPassageId), JSON.stringify(payload));
+  }, [categories.selectedPassageId, getIndexDraftKey, passage, pdfTitle, preset, results, syntaxCompleted]);
 
   useEffect(() => {
     if (!categories.selectedPassageId) return;
@@ -752,6 +848,7 @@ export default function Index() {
               type="text"
               value={pdfTitle}
               onChange={(e) => setPdfTitle(e.target.value)}
+              onBlur={flushAutoSave}
               placeholder="제목"
               className="text-xl font-bold tracking-wide bg-transparent outline-none border-none text-foreground placeholder:text-muted-foreground/50 flex-1"
             />
@@ -786,6 +883,7 @@ export default function Index() {
           <textarea
             value={passage}
             onChange={(e) => setPassage(e.target.value)}
+            onBlur={flushAutoSave}
             placeholder="영어 지문을 입력하세요..."
             rows={5}
             className="w-full bg-card border border-border rounded-xl px-4 py-3 text-sm font-english leading-relaxed text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-foreground transition-colors resize-y"
