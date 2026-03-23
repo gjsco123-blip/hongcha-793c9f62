@@ -777,7 +777,7 @@ serve(async (req) => {
 
       const [learningBlock, pinnedData] = await Promise.all([
         fetchLearningBlock(userId, reqAuth),
-        fetchPinnedPatterns(userId, reqAuth),
+        fetchPinnedPatterns(userId, reqAuth, full),
       ]);
       const userMessage = `문장: ${full}\n` +
         `이 문장에서 수능에 출제될 수 있는 핵심 문법 포인트를 찾아서 points로 작성하라.\n` +
