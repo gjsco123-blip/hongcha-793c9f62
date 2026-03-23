@@ -65,6 +65,30 @@ function chatNormalizeTagKey(s: string): string {
   return chatOneLine(s).toLowerCase().replace(/\s+/g, "");
 }
 
+function chatExtractEnglishKeywords(content: string): string[] {
+  const matches = content.match(/[A-Za-z][A-Za-z'\-]{1,}/g) || [];
+  const stopWords = new Set([
+    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
+    "to", "of", "in", "for", "on", "at", "by", "and", "or", "not", "with",
+    "from", "that", "this", "it", "its", "as", "but", "if", "so", "do", "no", "up",
+  ]);
+
+  return matches
+    .map((m) => m.toLowerCase())
+    .filter((m) => m.length >= 2 && !stopWords.has(m));
+}
+
+function chatShouldForcePinnedTemplateForSentence(template: string, sentence?: string): boolean {
+  const templateText = chatOneLine(template || "");
+  const sentenceText = chatOneLine(sentence || "").toLowerCase();
+  if (!templateText || !sentenceText) return false;
+
+  const keywords = chatExtractEnglishKeywords(templateText);
+  if (keywords.length === 0) return false;
+
+  return keywords.every((kw) => sentenceText.includes(kw));
+}
+
 function chatDetectUiTagFromContent(content: string): string {
   const c = chatOneLine(content).toLowerCase();
   if (c.includes("관계사")) {
@@ -220,14 +244,24 @@ serve(async (req) => {
         const patternsRes = await patternsReq;
         if (patternsRes.ok) {
           const patterns = await patternsRes.json();
-          if (patterns.length > 0) {
-            for (const p of patterns) {
+          const sentenceLower = chatOneLine(sentence || "").toLowerCase();
+          const relevantPatterns = sentenceLower
+            ? patterns
+                .filter((p: any) => {
+                  const keywords = chatExtractEnglishKeywords(String(p?.pinned_content ?? ""));
+                  return keywords.some((kw) => sentenceLower.includes(kw));
+                })
+                .slice(0, 10)
+            : patterns;
+          if (relevantPatterns.length > 0) {
+            for (const p of relevantPatterns) {
               const tag = String(p?.tag ?? "").trim();
               const content = String(p?.pinned_content ?? "").trim();
+              if (!chatShouldForcePinnedTemplateForSentence(content, sentence)) continue;
               const key = chatNormalizeTagKey(tag);
               if (key && content && !pinnedByTag.has(key)) pinnedByTag.set(key, content);
             }
-            const tagLines = patterns.map((p: any) => `- ${p.tag}: ${p.pinned_content}`).join("\n");
+            const tagLines = relevantPatterns.map((p: any) => `- ${p.tag}: ${p.pinned_content}`).join("\n");
             pinnedBlock = `\n\n[고정 패턴 — 최우선 규칙]\n` +
               `아래 태그에 해당하는 포인트는 반드시 해당 패턴의 문장을 그대로 사용하라.\n` +
               `___만 실제 단어로 교체하고, 그 외 단어·구조·어순은 절대 바꾸거나 추가하지 말 것.\n` +

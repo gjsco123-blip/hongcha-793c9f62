@@ -38,6 +38,17 @@ type PinnedPatternsData = {
   byTag: Map<string, string>;
 };
 
+function shouldForcePinnedTemplateForSentence(template: string, sentence?: string): boolean {
+  const templateText = oneLine(template || "");
+  const sentenceText = oneLine(sentence || "").toLowerCase();
+  if (!templateText || !sentenceText) return false;
+
+  const keywords = extractEnglishKeywords(templateText);
+  if (keywords.length === 0) return false;
+
+  return keywords.every((kw) => sentenceText.includes(kw));
+}
+
 function oneLine(s: string) {
   return String(s ?? "")
     .replace(/\s*\n+\s*/g, " ")
@@ -681,15 +692,7 @@ async function fetchPinnedPatterns(
     if (!res.ok) return { promptBlock: "", byTag: new Map() };
     const allPatterns = await res.json();
     if (allPatterns.length === 0) return { promptBlock: "", byTag: new Map() };
-
     const byTag = new Map<string, string>();
-    for (const p of allPatterns) {
-      const tag = String(p?.tag ?? "").trim();
-      const content = String(p?.pinned_content ?? "").trim();
-      if (!tag || !content) continue;
-      const key = normalizeTagKey(tag);
-      if (!byTag.has(key)) byTag.set(key, content);
-    }
 
     let relevantPatterns = allPatterns;
     const sentenceLower = oneLine(sentence || "").toLowerCase();
@@ -703,6 +706,14 @@ async function fetchPinnedPatterns(
     }
 
     if (relevantPatterns.length === 0) return { promptBlock: "", byTag };
+    for (const p of relevantPatterns) {
+      const tag = String(p?.tag ?? "").trim();
+      const content = String(p?.pinned_content ?? "").trim();
+      if (!tag || !content) continue;
+      if (!shouldForcePinnedTemplateForSentence(content, sentence)) continue;
+      const key = normalizeTagKey(tag);
+      if (!byTag.has(key)) byTag.set(key, content);
+    }
 
     const tagLines = relevantPatterns
       .map((p: any) => {
@@ -860,15 +871,7 @@ serve(async (req) => {
 
       autoPoints = autoPoints
         .map((p) => ({
-          text: finalizeSyntaxText(
-            applyPinnedPattern(
-              finalizeSyntaxText(stripJsonArtifacts(p.text)),
-              [],
-              pinnedData.byTag,
-              normalizeModelTagToUiTag(String(p.tag ?? "")),
-              p.targetText,
-            )
-          ),
+          text: finalizeSyntaxText(stripJsonArtifacts(p.text)),
           targetText: oneLine(p.targetText),
           tag: oneLine(String(p.tag ?? "")),
         }))
@@ -1002,7 +1005,7 @@ serve(async (req) => {
     points = points
       .map(finalizeSyntaxText)
       .filter(Boolean)
-      .map((p) => finalizeSyntaxText(applyPinnedPattern(p, tags, pinnedData.byTag)));
+      .map((p) => useFreestyle ? finalizeSyntaxText(p) : finalizeSyntaxText(applyPinnedPattern(p, tags, pinnedData.byTag)));
 
     if (points.length === 0) {
       points = useFreestyle
