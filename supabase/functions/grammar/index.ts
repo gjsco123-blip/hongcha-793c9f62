@@ -922,7 +922,7 @@ serve(async (req) => {
     // Fetch learning examples + pinned patterns for hint mode too
     const [learningBlock, pinnedData] = await Promise.all([
       fetchLearningBlock(userId, reqAuth),
-      fetchPinnedPatterns(userId, reqAuth),
+      fetchPinnedPatterns(userId, reqAuth, full),
     ]);
 
     const userMessage = useFreestyle
