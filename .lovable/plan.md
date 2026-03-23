@@ -1,60 +1,52 @@
 
 
-# 고정 패턴 강제 적용 — 전체 경로 강화 계획
+# 고정 패턴 강제 적용 안 되는 근본 원인 수정
 
-## 근본 원인 (프롬프트 톤이 아닌 구조적 문제)
+## 원인 분석
 
-현재 프롬프트에 "필수 적용 규칙"이라고 써도 모델이 무시하는 이유는 **프롬프트만으로는 100% 강제가 불가능**하기 때문입니다. LLM은 확률 기반이라 아무리 강한 톤을 써도 자기 판단을 우선할 수 있습니다.
+### 원인 1: `byTag` 맵 구축 시 이중 필터링
+- `fetchPinnedPatterns()` line 817: `shouldForcePinnedTemplateForSentence()` 체크
+- 이 함수는 `keywords.every(kw => sentenceText.includes(kw))` — 패턴의 **모든** 영어 키워드가 문장에 있어야 통과
+- 예: 패턴 `과거분사 built가 명사구를 수식` → "built"가 새 문장에 없으면 byTag에 안 들어감
+- 결과: 후처리 `applyPinnedPattern`이 빈 맵을 받아서 아무것도 교체 안 함
 
-실제로 코드에는 이미 `applyPinnedPattern` → `materializePinnedPattern`이라는 **후처리 강제 교체 로직**이 있습니다. 하지만 두 가지 이유로 작동하지 않고 있습니다:
-
-1. **`materializePinnedPattern`이 `___` 없는 패턴을 무시함** (line 445: `if (!normalizedTemplate.includes("___")) return raw;`)
-   - 대부분의 고정 패턴에 `___`가 없으므로 AI 출력이 그대로 통과됨
-2. **자동생성 모드에서 `applyPinnedPattern` 후처리를 아예 안 함** (line 980-997)
-   - 힌트 모드만 후처리 적용 (line 1116)
-3. **`grammar-chat`은 옛날 필터링 로직 사용** (line 248-254: `keywords.some()`)
-   - 관련성 점수 시스템을 적용하지 않음
-
-## 해결 방향: 프롬프트 강화 + 후처리 강제의 이중 구조
-
-프롬프트만으로는 100% 보장 불가 → **후처리에서 태그가 매칭되면 AI 출력을 고정 패턴으로 교체**하는 것이 유일한 확실한 방법입니다.
-
-### 단점/트레이드오프
-
-- `___` 없는 패턴을 후처리로 강제하면, AI가 문장에 맞게 단어를 채워넣은 결과 대신 **고정 패턴 원문 그대로** 나옴
-- 즉, 패턴에 `___`를 넣어야 AI가 실제 단어로 교체할 수 있음
-- `___` 없이 강제하면 "관계대명사 who가 선행사 ___를 수식"이 아니라 패턴 원문 그대로 출력됨
-
-→ **권장**: `___` 없는 패턴도 강제하되, 프롬프트에서 AI가 `___`를 채운 버전을 먼저 시도하고, 후처리에서 태그 매칭 시 패턴 구조를 강제 적용
+### 원인 2: 비표준 태그 매칭 실패
+- DB에 `강조구문`, `분사`, `전치사+관계대명사`, `현재완료+수동`, `계속적용법 관계대명사`, `대동사` 등 비표준 태그 존재
+- `detectUiTagFromContent()`와 `normalizeModelTagToUiTag()`가 이 태그들을 인식 못 함
+- → byTag에 `분사` 키로 저장돼도, AI 출력에서 `분사 후치수식`으로 감지되면 매칭 안 됨
 
 ## 수정 계획
 
-### 1. `materializePinnedPattern` — `___` 없는 패턴도 강제 적용
-- `___`가 없으면 AI 출력을 버리지 않고, 고정 패턴 원문을 그대로 반환
-- 단, AI 출력에서 추출한 실제 단어(관계사, 선행사 등)를 패턴에 병합하는 로직 추가
+### 1. `shouldForcePinnedTemplateForSentence` 이중 필터 제거
+- `byTag` 맵 구축 시 `patternRelevanceScore`를 이미 통과한 패턴은 무조건 `byTag`에 넣기
+- line 817의 `if (!shouldForcePinnedTemplateForSentence(...)) continue;` 제거
 
-### 2. 자동생성 모드 — 후처리 추가
-- line 980-997: `autoPoints`에 `applyPinnedPattern` 적용
-- AI가 반환한 `tag` 필드로 `pinnedByTag` 매칭 → 태그가 일치하면 패턴으로 교체
+### 2. 태그 매칭 확장 — 비표준 태그 인식
+- `detectUiTagFromContent()`에 누락된 키워드 추가:
+  - `강조` → `강조구문`
+  - `분사` (분사구문/후치수식 아닌 일반) → `분사`
+  - `전치사+관계대명사` → `전치사+관계대명사`
+  - `현재완료+수동`, `현재완료 수동` → `현재완료+수동`
+  - `계속적용법`, `계속적 용법` → `계속적용법 관계대명사`
+  - `대동사` → `대동사`
+- 같은 로직을 `grammar-chat`의 `chatDetectUiTagFromContent`에도 동기화
 
-### 3. `grammar-chat` — 관련성 필터 + 프롬프트 톤 업그레이드
-- `keywords.some()` → `patternRelevanceScore()` 방식으로 교체
-- 프롬프트 톤도 `grammar/index.ts`와 동일하게 "필수 적용 규칙"으로 통일
+### 3. `byTag` 조회 시 폴백 매칭 추가
+- `applyPinnedPattern`에서 정확히 일치하는 태그가 없으면, 부분 일치(contains) 폴백 시도
+- 예: AI 출력이 "분사 후치수식"이면 `분사후치수식` 키를 먼저 찾고, 없으면 `분사`를 포함하는 키도 체크
 
-### 4. 프롬프트 보강 — 패턴 복제 지시 강화
-- 현재 `buildAutoSystemPrompt()`의 `[문체 예시]` 섹션에 "고정 패턴이 있으면 문체 예시보다 고정 패턴을 우선하라" 지시 추가
+### 4. `grammar-chat`도 동일하게 후처리 강제
+- 현재 `grammar-chat`에서 `chatApplyPinnedPattern`을 `suggestionNotes`에 적용하고 있지만, `pinnedByTag` 구축 시에도 같은 문제(관련성 점수 통과했는데 byTag에 안 넣는 등)가 없는지 확인 → 현재는 `pinnedByTag`에 조건 없이 넣고 있으므로 OK, 하지만 태그 매칭 확장은 필요
 
 ## 수정 파일
 
-| 파일 | 변경 내용 |
-|------|-----------|
-| `supabase/functions/grammar/index.ts` | `materializePinnedPattern` 개선, 자동생성 후처리 추가, 프롬프트 보강 |
-| `supabase/functions/grammar-chat/index.ts` | 관련성 필터 교체, 프롬프트 톤 통일 |
+| 파일 | 변경 |
+|------|------|
+| `supabase/functions/grammar/index.ts` | `shouldForcePinnedTemplateForSentence` 필터 제거, `detectUiTagFromContent` 확장, `applyPinnedPattern` 폴백 매칭 |
+| `supabase/functions/grammar-chat/index.ts` | `chatDetectUiTagFromContent` 확장 동기화 |
 
 ## 기대 결과
-
-- 태그가 매칭되는 고정 패턴은 AI 출력과 무관하게 **반드시 그 형식으로 교체**됨
-- `___`가 있는 패턴: AI 출력에서 실제 단어 추출 → 패턴에 삽입
-- `___`가 없는 패턴: 패턴 원문 그대로 적용 (단, AI 출력에서 실제 영어 단어를 추출해 병합 시도)
-- 3개 경로(자동생성, 힌트, AI채팅) 모두 동일한 강제 수준
+- `patternRelevanceScore`를 통과한 패턴은 반드시 후처리에서 강제 교체됨
+- `분사`, `강조구문`, `대동사` 등 비표준 태그도 정상 매칭
+- 프롬프트 의존도가 낮아져 고정 패턴 준수율 대폭 향상
 
