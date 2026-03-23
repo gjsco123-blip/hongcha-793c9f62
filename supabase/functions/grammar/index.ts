@@ -883,6 +883,14 @@ serve(async (req) => {
           tag: oneLine(String(p.tag ?? "")),
         }))
         .filter((p) => p.text);
+      // Deduplicate by text content
+      const seenTexts = new Set<string>();
+      autoPoints = autoPoints.filter((p) => {
+        const key = p.text.toLowerCase().trim();
+        if (seenTexts.has(key)) return false;
+        seenTexts.add(key);
+        return true;
+      });
       autoPoints = autoPoints.slice(0, 5).map((p) => ({
         text: p.text,
         targetText: p.targetText,
