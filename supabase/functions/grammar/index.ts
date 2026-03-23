@@ -817,17 +817,10 @@ async function fetchPinnedPatterns(
       if (!byTag.has(key)) byTag.set(key, content);
     }
 
-    // CRITICAL: Only inject strictly relevant patterns into prompt
-    // Only include reusable templates (with ___) in the prompt block
-    // Sentence-specific examples should NOT be injected as they contaminate other sentences
-    const templatePatterns = relevantPatterns.filter((p: any) => {
-      const content = String(p?.pinned_content ?? "");
-      return isReusableTemplate(content);
-    });
+    // Inject all relevance-scored patterns (no template-only filter)
+    if (relevantPatterns.length === 0) return { promptBlock: "", byTag };
 
-    if (templatePatterns.length === 0) return { promptBlock: "", byTag };
-
-    const tagLines = templatePatterns
+    const tagLines = relevantPatterns
       .map((p: any) => {
         const tag = String(p?.tag ?? "").trim();
         const content = String(p?.pinned_content ?? "").trim();
@@ -836,9 +829,10 @@ async function fetchPinnedPatterns(
       .filter(Boolean)
       .join("\n");
     const promptBlock =
-      `\n\n[참고 패턴 — 템플릿만]\n` +
-      `아래는 현재 문장과 관련 있을 수 있는 고정 스타일 패턴이다.\n` +
-      `해당 문법 요소가 문장에 실제로 존재할 때만, ___만 실제 단어로 교체하여 이 형식을 따르라.\n` +
+      `\n\n[관련 고정 패턴]\n` +
+      `아래는 현재 문장과 관련 있는 고정 스타일 패턴이다.\n` +
+      `해당 문법 요소가 문장에 실제로 존재할 때, 이 형식과 설명 스타일을 따르라.\n` +
+      `___가 있으면 실제 단어로 교체하라.\n` +
       `문장에 해당 문법 요소가 없으면 이 패턴을 완전히 무시하라. 억지로 적용하지 말 것.\n` +
       `${tagLines}\n` +
       `출력에 태그명 접두어(예: 관계대명사:, 5형식:)를 붙이지 말 것.`;
