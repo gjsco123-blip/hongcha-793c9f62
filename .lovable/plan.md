@@ -1,42 +1,46 @@
 
 
-# 자동저장이 사라지는 원인 분석 및 수정 계획
+# 구문분석에 엉뚱한 문법이 반복 나오는 원인 및 수정
 
-## 발견된 버그 2개
+## 원인
 
-### 버그 1: Index 페이지가 Preview 저장 데이터를 덮어씀 (핵심 원인)
+`fetchPinnedPatterns` (line 651-694)가 DB의 **모든 고정 패턴 55개**를 무조건 프롬프트에 주입하고 있음.
 
-1. Preview에서 어휘/요약 등을 수정 → DB에 `results_json.preview`로 저장됨
-2. 뒤로가기로 Index(구문분석)로 돌아옴
-3. Index 페이지의 `persistIndexState`가 `categories.selectedPassage?.results_json`을 base로 사용
-4. 하지만 이 `selectedPassage`는 **처음 로드한 시점의 데이터**이고, Preview에서 저장한 최신 데이터가 반영되지 않음
-5. Index 자동저장이 실행되면 → `mergePassageStore(옛날 데이터, ...)` → **Preview에서 수정한 내용이 사라짐**
+```
+[고정 패턴 — 최우선 규칙]
+아래 태그에 해당하는 포인트는 반드시 해당 패턴의 문장을 그대로 사용하라.
+- 기타: rather than: ~라기보다는 ...
+- 분사: 과거분사 built가 ...
+- 관계대명사: 주관대 that이 ...
+... (55개 전부)
+```
 
-### 버그 2: Index 페이지에서 passage/pdfTitle 편집 시 자동저장 안 됨
+"최우선 규칙 + 반드시 사용하라"라는 강제 지시 → AI가 문장에 `rather than`이 없어도 억지로 적용 → 같은 패턴 2~3번 중복 출력.
 
-- `autoSave` 콜백의 의존성이 `[selectedPassageId, results, persistIndexState]`뿐
-- `passage`나 `pdfTitle`을 직접 편집해도 `autoSave`가 재실행되지 않음
-- 편집 후 다른 지문 선택하거나 새로고침하면 수정 사항 유실
+로그에서도 `content: null` (빈 응답)이 나온 건 55개 패턴 토큰이 실제 분석을 압도했기 때문.
 
-## 수정 계획
+## 수정 내용
 
-### 1. Index의 mergePassageStore base를 최신 DB 데이터로 교체
-- `persistIndexState` 실행 시 **먼저 DB에서 현재 `results_json`을 읽은 후** 그걸 base로 merge
-- 또는 `baseResultsJson` ref를 Index에도 도입하여, Preview에서 돌아올 때 DB에서 fresh load
+### 1. 문장에 관련된 패턴만 필터링 (핵심)
+- `fetchPinnedPatterns`에 `sentence` 파라미터 추가
+- 각 패턴의 `pinned_content`에서 영어 키워드 추출 → 문장에 실제로 존재하는 패턴만 포함
+- auto 모드: 문장 텍스트 기반 필터링
+- hint 모드: 감지된 태그에 해당하는 패턴만
+- **최대 10개**로 제한
 
-### 2. Index 자동저장 의존성에 `passage`, `pdfTitle` 추가
-- `autoSave`의 deps에 `passage`, `pdfTitle`도 포함
-- 또는 auto-save useEffect의 의존성에 직접 추가
+### 2. 프롬프트 문구 완화
+- "최우선 규칙" → "참고 패턴"
+- "반드시 사용하라" → "해당 문법이 문장에 실제로 존재할 때만 적용하라"
+- "문장에 해당 문법 요소가 없으면 이 패턴을 무시하라" 명시 추가
 
-### 3. Preview → Index 복귀 시 passages 데이터 갱신
-- `useCategories`의 `fetchPassages`를 Index 복귀 시 다시 호출하거나
-- `selectedPassage`의 `results_json`을 DB에서 재로드
+### 3. 후처리 중복 제거
+- auto 모드 응답에서 동일한 `text`를 가진 포인트 제거
 
 ## 수정 파일
-
-1. **`src/pages/Index.tsx`** — persistIndexState에서 fresh base 사용 + autoSave deps 보강
-2. **`src/hooks/useCategories.ts`** — 필요시 passage 단건 reload 함수 추가
+- `supabase/functions/grammar/index.ts` — `fetchPinnedPatterns` 필터링 + 프롬프트 완화 + 중복 제거
 
 ## 기대 효과
-- Preview에서 수정한 어휘/요약이 Index 자동저장에 의해 덮어써지지 않음
-- passage/pdfTitle 직접 편집도 자동저장됨
+- 문장에 없는 문법이 출력되지 않음
+- 같은 분석 2~3번 반복 해소
+- 프롬프트 크기 대폭 축소 → 응답 품질·속도 개선
+
