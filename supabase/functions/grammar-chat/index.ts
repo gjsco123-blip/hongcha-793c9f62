@@ -71,11 +71,59 @@ function chatExtractEnglishKeywords(content: string): string[] {
     "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
     "to", "of", "in", "for", "on", "at", "by", "and", "or", "not", "with",
     "from", "that", "this", "it", "its", "as", "but", "if", "so", "do", "no", "up",
+    "has", "have", "had", "will", "would", "could", "should", "may", "might",
+    "can", "shall", "did", "does", "about", "into", "through", "than", "then",
+    "them", "they", "their", "there", "these", "those", "what", "which", "who",
+    "whom", "whose", "when", "where", "why", "how", "all", "each", "every",
+    "both", "few", "more", "most", "other", "some", "such", "only", "own",
+    "same", "just", "also", "very", "often", "once", "here", "even", "well",
+    "back", "much", "many", "still", "after", "before", "between", "under",
+    "over", "again", "out", "off", "down", "away", "too", "any", "nor",
+    "rather", "while", "during", "among", "along", "since", "until", "because",
+    "although", "though", "whether", "either", "neither", "yet", "however",
+    "never", "always", "sometimes", "already", "really", "quite", "make",
+    "made", "take", "get", "got", "give", "go", "come", "see", "say", "know",
+    "think", "find", "tell", "ask", "use", "work", "call", "try", "need",
+    "keep", "let", "put", "set", "seem", "help", "show", "turn", "play",
+    "run", "move", "live", "believe", "bring", "happen", "write", "provide",
+    "sit", "stand", "lose", "pay", "meet", "include", "continue", "learn",
+    "change", "lead", "understand", "watch", "follow", "stop", "create",
+    "speak", "read", "allow", "add", "grow", "open", "walk", "win", "offer",
+    "remember", "consider", "appear", "buy", "wait", "serve", "die", "send",
+    "expect", "build", "stay", "fall", "cut", "reach", "kill", "remain",
+    "suggest", "raise", "pass", "sell", "require", "report", "decide",
+    "pull", "develop", "able", "like", "new", "old", "long", "great",
+    "small", "large", "big", "high", "low", "right", "left", "different",
+    "important", "another", "last", "first", "next", "young", "good", "bad",
+    "best", "better", "sure", "free", "true", "real", "full", "hard",
+    "early", "possible",
   ]);
 
   return matches
     .map((m) => m.toLowerCase())
     .filter((m) => m.length >= 2 && !stopWords.has(m));
+}
+
+// Relevance scoring matching grammar/index.ts logic
+function chatPatternRelevanceScore(patternContent: string, sentence: string): number {
+  const patternText = chatOneLine(patternContent).toLowerCase();
+  const sentenceLower = chatOneLine(sentence).toLowerCase();
+
+  // Check for phrase-level matches (e.g., "rather than", "not only ~ but also")
+  const phrasePatterns = patternText.match(/[a-z]+(?:\s*~\s*[a-z]+)*(?:\s+[a-z]+)*/g) || [];
+  for (const phrase of phrasePatterns) {
+    const words = phrase.replace(/~/g, " ").split(/\s+/).filter((w: string) => w.length >= 3);
+    if (words.length >= 2) {
+      const exactPhrase = words.join(".*?");
+      if (new RegExp(exactPhrase, "i").test(sentenceLower)) return 1.0;
+    }
+  }
+
+  // Keyword ratio check
+  const keywords = chatExtractEnglishKeywords(patternText);
+  if (keywords.length === 0) return 0;
+  const matched = keywords.filter((kw: string) => sentenceLower.includes(kw));
+  return keywords.length > 0 ? matched.length / keywords.length : 0;
 }
 
 function chatShouldForcePinnedTemplateForSentence(template: string, sentence?: string): boolean {
