@@ -440,16 +440,18 @@ function extractPinnedTemplateValues(raw: string, targetText?: string): string[]
 
 function materializePinnedPattern(template: string, raw: string, targetText?: string): string {
   const normalizedTemplate = stripLeadingTagLabel(oneLine(template));
-  // Only server-enforce template-style pinned patterns. Concrete sentence-specific
-  // patterns without placeholders can leak unrelated words into new sentences.
-  if (!normalizedTemplate.includes("___")) return raw;
 
-  const values = extractPinnedTemplateValues(raw, targetText);
-  if (values.length === 0) return raw;
+  // If template has ___ placeholders, fill them with values extracted from AI output
+  if (normalizedTemplate.includes("___")) {
+    const values = extractPinnedTemplateValues(raw, targetText);
+    if (values.length === 0) return normalizedTemplate; // still force template even without values
+    let idx = 0;
+    const filled = normalizedTemplate.replace(/___/g, () => values[idx++] ?? values[values.length - 1] ?? "___");
+    return filled;
+  }
 
-  let idx = 0;
-  const filled = normalizedTemplate.replace(/___/g, () => values[idx++] ?? values[values.length - 1] ?? "___");
-  return filled.includes("___") ? raw : filled;
+  // No ___ placeholders: force template as-is (user's exact wording)
+  return normalizedTemplate;
 }
 
 function applyPinnedPattern(
