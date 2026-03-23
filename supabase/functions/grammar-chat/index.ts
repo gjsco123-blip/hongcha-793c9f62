@@ -65,73 +65,43 @@ function chatNormalizeTagKey(s: string): string {
   return chatOneLine(s).toLowerCase().replace(/\s+/g, "");
 }
 
-function chatExtractEnglishKeywords(content: string): string[] {
-  const matches = content.match(/[A-Za-z][A-Za-z'\-]{1,}/g) || [];
-  const stopWords = new Set([
-    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
-    "to", "of", "in", "for", "on", "at", "by", "and", "or", "not", "with",
-    "from", "that", "this", "it", "its", "as", "but", "if", "so", "do", "no", "up",
-    "has", "have", "had", "will", "would", "could", "should", "may", "might",
-    "can", "shall", "did", "does", "about", "into", "through", "than", "then",
-    "them", "they", "their", "there", "these", "those", "what", "which", "who",
-    "whom", "whose", "when", "where", "why", "how", "all", "each", "every",
-    "both", "few", "more", "most", "other", "some", "such", "only", "own",
-    "same", "just", "also", "very", "often", "once", "here", "even", "well",
-    "back", "much", "many", "still", "after", "before", "between", "under",
-    "over", "again", "out", "off", "down", "away", "too", "any", "nor",
-    "rather", "while", "during", "among", "along", "since", "until", "because",
-    "although", "though", "whether", "either", "neither", "yet", "however",
-    "never", "always", "sometimes", "already", "really", "quite", "make",
-    "made", "take", "get", "got", "give", "go", "come", "see", "say", "know",
-    "think", "find", "tell", "ask", "use", "work", "call", "try", "need",
-    "keep", "let", "put", "set", "seem", "help", "show", "turn", "play",
-    "run", "move", "live", "believe", "bring", "happen", "write", "provide",
-    "sit", "stand", "lose", "pay", "meet", "include", "continue", "learn",
-    "change", "lead", "understand", "watch", "follow", "stop", "create",
-    "speak", "read", "allow", "add", "grow", "open", "walk", "win", "offer",
-    "remember", "consider", "appear", "buy", "wait", "serve", "die", "send",
-    "expect", "build", "stay", "fall", "cut", "reach", "kill", "remain",
-    "suggest", "raise", "pass", "sell", "require", "report", "decide",
-    "pull", "develop", "able", "like", "new", "old", "long", "great",
-    "small", "large", "big", "high", "low", "right", "left", "different",
-    "important", "another", "last", "first", "next", "young", "good", "bad",
-    "best", "better", "sure", "free", "true", "real", "full", "hard",
-    "early", "possible",
-  ]);
+function chatCanonicalTagKey(raw: string): string {
+  const key = chatNormalizeTagKey(raw);
+  if (!key) return "";
 
-  return matches
-    .map((m) => m.toLowerCase())
-    .filter((m) => m.length >= 2 && !stopWords.has(m));
-}
+  const aliases: Record<string, string> = {
+    "주관대": "관계대명사",
+    "목관대": "관계대명사",
+    "관계사": "관계대명사",
+    "관계대명사": "관계대명사",
+    "관계부사": "관계부사",
+    "동격접": "동격접",
+    "동격": "동격접",
+    "5형식": "5형식",
+    "5형식(o.c)": "5형식",
+    "5형식oc": "5형식",
+    "목적격보어": "5형식",
+    "분사후치수식": "분사후치수식",
+    "분사": "분사",
+    "분사구문": "분사구문",
+    "to부정사": "to부정사",
+    "명사절": "명사절",
+    "수동태": "수동태",
+    "조동사+수동": "조동사+수동",
+    "수일치": "수일치",
+    "병렬구조": "병렬구조",
+    "전치사+동명사": "전치사+동명사",
+    "전치사+관계대명사": "전치사+관계대명사",
+    "비교구문": "비교구문",
+    "강조구문": "강조구문",
+    "생략": "생략",
+    "지칭": "지칭",
+    "숙어/표현": "숙어/표현",
+    "기타": "기타",
+  };
 
-// Relevance scoring matching grammar/index.ts logic
-function chatPatternRelevanceScore(patternContent: string, sentence: string): number {
-  const patternText = chatOneLine(patternContent).toLowerCase();
-  const sentenceLower = chatOneLine(sentence).toLowerCase();
-
-  // Check for phrase-level matches (e.g., "rather than", "not only ~ but also")
-  const phrasePatterns = patternText.match(/[a-z]+(?:\s*~\s*[a-z]+)*(?:\s+[a-z]+)*/g) || [];
-  for (const phrase of phrasePatterns) {
-    const words = phrase.replace(/~/g, " ").split(/\s+/).filter((w: string) => w.length >= 3);
-    if (words.length >= 2) {
-      const exactPhrase = words.join(".*?");
-      if (new RegExp(exactPhrase, "i").test(sentenceLower)) return 1.0;
-    }
-  }
-
-  // Keyword ratio check
-  const keywords = chatExtractEnglishKeywords(patternText);
-  if (keywords.length === 0) return 0;
-  const matched = keywords.filter((kw: string) => sentenceLower.includes(kw));
-  return keywords.length > 0 ? matched.length / keywords.length : 0;
-}
-
-function chatShouldForcePinnedTemplateForSentence(template: string, sentence?: string): boolean {
-  const templateText = chatOneLine(template || "");
-  const sentenceText = chatOneLine(sentence || "");
-  if (!templateText || !sentenceText) return false;
-
-  return chatPatternRelevanceScore(templateText, sentenceText) >= 0.6;
+  if (aliases[key]) return aliases[key];
+  return key;
 }
 
 function chatDetectUiTagFromContent(content: string): string {
@@ -203,22 +173,6 @@ function chatExtractPinnedTemplateValues(raw: string): string[] {
   return values;
 }
 
-/**
- * Extract English word/phrase segments from a syntax note.
- */
-function chatExtractEnglishSegments(text: string): string[] {
-  const segments: string[] = [];
-  const parenMatches = text.match(/\([A-Za-z][A-Za-z'~\- ]*\)/g) || [];
-  for (const m of parenMatches) segments.push(m);
-  const wordMatches = text.match(/[A-Za-z][A-Za-z'~\-]*(?:\s+[A-Za-z][A-Za-z'~\-]*)*/g) || [];
-  for (const m of wordMatches) {
-    if (!parenMatches.some(p => p.includes(m))) {
-      if (m.length >= 2) segments.push(m);
-    }
-  }
-  return segments;
-}
-
 function chatMaterializePinnedPattern(template: string, raw: string, stripLeadingTagLabel: (line: string) => string): string {
   const normalizedTemplate = stripLeadingTagLabel(chatOneLine(template));
   const normalizedRaw = stripLeadingTagLabel(chatOneLine(raw));
@@ -231,22 +185,9 @@ function chatMaterializePinnedPattern(template: string, raw: string, stripLeadin
     return filled;
   }
 
-  // No ___ placeholders: use template as STYLE guide, swap English parts from AI output
-  const templateEnglish = chatExtractEnglishSegments(normalizedTemplate);
-  const rawEnglish = chatExtractEnglishSegments(normalizedRaw);
-
-  if (templateEnglish.length === 0 || rawEnglish.length === 0) {
-    return normalizedTemplate;
-  }
-
-  let result = normalizedTemplate;
-  let rawIdx = 0;
-  for (const tplSeg of templateEnglish) {
-    if (rawIdx >= rawEnglish.length) break;
-    result = result.replace(tplSeg, rawEnglish[rawIdx]);
-    rawIdx++;
-  }
-  return result;
+  // No placeholders: do not force template text substitution.
+  // Substitution was causing semantic drift (unrelated words/structures).
+  return normalizedRaw;
 }
 
 function chatApplyPinnedPattern(
@@ -264,23 +205,12 @@ function chatApplyPinnedPattern(
 
   const seen = new Set<string>();
   for (const candidate of candidates) {
-    const key = chatNormalizeTagKey(candidate);
+    const key = chatCanonicalTagKey(candidate);
     if (!key || seen.has(key)) continue;
     seen.add(key);
     const pinned = chatOneLine(String(pinnedByTag.get(key) ?? ""));
     if (!pinned) continue;
     return chatMaterializePinnedPattern(pinned, raw, stripLeadingTagLabel);
-  }
-
-  // Fallback: partial match
-  for (const candidate of candidates) {
-    const key = chatNormalizeTagKey(candidate);
-    if (!key) continue;
-    for (const [bKey, bVal] of pinnedByTag.entries()) {
-      if (bKey.includes(key) || key.includes(bKey)) {
-        return chatMaterializePinnedPattern(chatOneLine(bVal), raw, stripLeadingTagLabel);
-      }
-    }
   }
 
   return raw;
@@ -366,37 +296,32 @@ serve(async (req) => {
           if (isTargeted && targetNote) {
             // Single-point mode: only the target note's tag
             const tag = chatDetectUiTagFromContent(targetNote.content);
-            activeTagKeys.add(chatNormalizeTagKey(tag));
+            activeTagKeys.add(chatCanonicalTagKey(tag));
           } else if (Array.isArray(currentNotes)) {
             // Full mode: tags from all current notes
             for (const n of currentNotes) {
               const tag = chatDetectUiTagFromContent(n.content || "");
-              activeTagKeys.add(chatNormalizeTagKey(tag));
+              activeTagKeys.add(chatCanonicalTagKey(tag));
             }
           }
           // Remove empty/기타 to avoid pulling unrelated patterns
           activeTagKeys.delete("");
           activeTagKeys.delete("기타");
 
-          const sentenceText = chatOneLine(sentence || "");
           const relevantPatterns: any[] = [];
           for (const p of allPatterns) {
             const tag = String(p?.tag ?? "").trim();
             const content = String(p?.pinned_content ?? "").trim();
             if (!tag || !content) continue;
-            const tagKey = chatNormalizeTagKey(tag);
+            const tagKey = chatCanonicalTagKey(tag);
 
             // Include pattern if its tag matches any active note tag
             let matched = false;
             for (const activeKey of activeTagKeys) {
-              if (tagKey === activeKey || tagKey.includes(activeKey) || activeKey.includes(tagKey)) {
+              if (tagKey === activeKey) {
                 matched = true;
                 break;
               }
-            }
-            // Also include phrase patterns with high relevance score
-            if (!matched && sentenceText && chatPatternRelevanceScore(content, sentenceText) >= 0.6) {
-              matched = true;
             }
             if (matched) relevantPatterns.push(p);
           }
@@ -407,7 +332,7 @@ serve(async (req) => {
             for (const p of relevantPatterns) {
               const tag = String(p?.tag ?? "").trim();
               const content = String(p?.pinned_content ?? "").trim();
-              const key = chatNormalizeTagKey(tag);
+              const key = chatCanonicalTagKey(tag);
               if (key && content && !pinnedByTag.has(key)) pinnedByTag.set(key, content);
             }
             const tagLines = relevantPatterns.map((p: any) => `- ${p.tag}: ${p.pinned_content}`).join("\n");
