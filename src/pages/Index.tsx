@@ -234,8 +234,16 @@ export default function Index() {
     const hasTransientWork = latestResults.some((r) => r.generatingSyntax || r.generatingHongT || r.regenerating);
     if (hasTransientWork) return;
 
+    // Fetch fresh results_json from DB to avoid overwriting Preview edits
+    const { data: freshRow } = await supabase
+      .from("passages")
+      .select("results_json")
+      .eq("id", categories.selectedPassageId)
+      .single();
+    const freshBase = freshRow?.results_json ?? null;
+
     const sanitizedResults = latestResults.map(({ generatingSyntax, generatingHongT, regenerating, ...rest }) => rest);
-    const mergedStore = mergePassageStore(categories.selectedPassage?.results_json, {
+    const mergedStore = mergePassageStore(freshBase, {
       syntaxResults: sanitizedResults.length > 0 ? sanitizedResults : [],
       completion: { syntaxCompleted: latestSyntaxCompleted },
     });
