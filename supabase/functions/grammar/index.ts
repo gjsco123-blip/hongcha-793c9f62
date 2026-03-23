@@ -1024,13 +1024,13 @@ serve(async (req) => {
       }));
 
       // Post-processing: force pinned pattern replacement on auto-generated points
-      if (pinnedByTag && pinnedByTag.size > 0) {
+      if (pinnedData.byTag && pinnedData.byTag.size > 0) {
         autoPoints = autoPoints.map((p) => ({
           ...p,
           text: applyPinnedPattern(
             p.text,
             [],
-            pinnedByTag,
+            pinnedData.byTag,
             p.tag || undefined,
             p.targetText || sentence,
           ),

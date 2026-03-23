@@ -311,14 +311,24 @@ serve(async (req) => {
         if (patternsRes.ok) {
           const patterns = await patternsRes.json();
           const sentenceText = chatOneLine(sentence || "");
-          const relevantPatterns = sentenceText
-            ? patterns
-                .filter((p: any) => {
-                  const content = String(p?.pinned_content ?? "");
-                  return chatPatternRelevanceScore(content, sentenceText) >= 0.6;
-                })
-                .slice(0, 10)
-            : [];
+          // 2-track: grammar-tag patterns always included, phrase patterns need relevance
+          const GRAMMAR_TAGS = new Set([
+            "관계대명사", "관계부사", "분사구문", "분사 후치수식", "분사", "수동태", "조동사+수동",
+            "to부정사", "명사절", "가주어/진주어", "가목적어/진목적어", "5형식", "병렬구조",
+            "전치사+동명사", "비교구문", "수일치", "생략", "강조구문", "현재완료+수동",
+            "계속적용법 관계대명사", "대동사", "전치사+관계대명사", "지칭",
+          ]);
+          const relevantPatterns: any[] = [];
+          for (const p of patterns) {
+            const tag = String(p?.tag ?? "").trim();
+            const content = String(p?.pinned_content ?? "").trim();
+            if (!tag || !content) continue;
+            if (GRAMMAR_TAGS.has(tag)) {
+              relevantPatterns.push(p);
+            } else if (sentenceText && chatPatternRelevanceScore(content, sentenceText) >= 0.6) {
+              relevantPatterns.push(p);
+            }
+          }
           if (relevantPatterns.length > 0) {
             for (const p of relevantPatterns) {
               const tag = String(p?.tag ?? "").trim();
