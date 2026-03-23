@@ -404,29 +404,39 @@ function detectUiTagFromContent(content: string): string {
 function normalizeModelTagToUiTag(tag: string): string {
   const t = oneLine(tag).toLowerCase();
   if (!t) return "";
+  if (t.includes("동격") || t.includes("동격접")) return "동격접";
   if (t.includes("rel_subj") || t.includes("rel_obj_omit") || t.includes("관계대명사") || t.includes("주관대") || t.includes("목관대")) return "관계대명사";
   if (t.includes("rel_adv") || t.includes("관계부사")) return "관계부사";
   if (t.includes("agreement") || t.includes("수일치")) return "수일치";
   if (t.includes("noun_clause") || t.includes("명사절")) return "명사절";
   if (t.includes("it_dummy_subj") || t.includes("가주어") || t.includes("진주어")) return "가주어/진주어";
   if (t.includes("it_dummy_obj") || t.includes("가목적어") || t.includes("진목적어")) return "가목적어/진목적어";
+  if (t.includes("동명사") && t.includes("주어")) return "동명사주어";
   if (t.includes("five_pattern") || t.includes("5형식")) return "5형식";
+  if (t.includes("4형식")) return "4형식";
   if (t.includes("to_inf") || t.includes("to부정사")) return "to부정사";
   if (t.includes("participle_post") || t.includes("후치수식")) return "분사 후치수식";
   if (t.includes("participle_clause") || t.includes("분사구문")) return "분사구문";
   if (t.includes("modal_passive") || t.includes("조동사+수동")) return "조동사+수동";
+  if (t.includes("현재완료") && t.includes("수동")) return "현재완료+수동";
   if (t.includes("passive") || t.includes("수동태")) return "수동태";
   if (t.includes("parallel") || t.includes("병렬")) return "병렬구조";
   if (t.includes("prep_gerund") || (t.includes("전치사") && t.includes("동명사"))) return "전치사+동명사";
   if (t.includes("there_be")) return "기타";
+  if (t.includes("so") && t.includes("that")) return "so~that";
+  if (t.includes("too") && t.includes("to")) return "too~to";
+  if ((t.includes("as") && t.includes("원급")) || t.includes("as 형부 as") || t.includes("as~as")) return "as 형부 as";
   if (t.includes("comparison") || t.includes("비교")) return "비교구문";
   if (t.includes("omission") || t.includes("생략")) return "생략";
   if (t.includes("강조") && (t.includes("구문") || t.includes("it"))) return "강조구문";
-  if (t.includes("현재완료") && t.includes("수동")) return "현재완료+수동";
-  if (t.includes("계속적") && (t.includes("용법") || t.includes("관계"))) return "계속적용법 관계대명사";
+  if (t.includes("계속적") && (t.includes("용법") || t.includes("관계"))) {
+    if (t.includes("부사")) return "계속적 용법 관계부사";
+    return "계속적용법 관계대명사";
+  }
   if (t.includes("대동사")) return "대동사";
   if (t.includes("분사") && !t.includes("분사구문") && !t.includes("후치")) return "분사";
   if (t.includes("전치사") && t.includes("관계")) return "전치사+관계대명사";
+  if (t.includes("to be pp") || t.includes("to be p.p")) return "to be pp";
   return "";
 }
 
