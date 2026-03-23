@@ -381,6 +381,12 @@ function detectUiTagFromContent(content: string): string {
   if (c.includes("비교") || c.includes("최상급")) return "비교구문";
   if (c.includes("수일치")) return "수일치";
   if (c.includes("생략")) return "생략";
+  if (c.includes("강조") && (c.includes("구문") || c.includes("it is") || c.includes("it was"))) return "강조구문";
+  if (c.includes("현재완료") && c.includes("수동")) return "현재완료+수동";
+  if (c.includes("계속적") && (c.includes("용법") || c.includes("관계"))) return "계속적용법 관계대명사";
+  if (c.includes("대동사")) return "대동사";
+  if (c.includes("분사") && !c.includes("분사구문") && !c.includes("후치")) return "분사";
+  if (c.includes("전치사") && c.includes("관계")) return "전치사+관계대명사";
   return "기타";
 }
 
