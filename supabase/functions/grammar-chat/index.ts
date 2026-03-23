@@ -128,13 +128,10 @@ function chatPatternRelevanceScore(patternContent: string, sentence: string): nu
 
 function chatShouldForcePinnedTemplateForSentence(template: string, sentence?: string): boolean {
   const templateText = chatOneLine(template || "");
-  const sentenceText = chatOneLine(sentence || "").toLowerCase();
+  const sentenceText = chatOneLine(sentence || "");
   if (!templateText || !sentenceText) return false;
 
-  const keywords = chatExtractEnglishKeywords(templateText);
-  if (keywords.length === 0) return false;
-
-  return keywords.every((kw) => sentenceText.includes(kw));
+  return chatPatternRelevanceScore(templateText, sentenceText) >= 0.6;
 }
 
 function chatDetectUiTagFromContent(content: string): string {
