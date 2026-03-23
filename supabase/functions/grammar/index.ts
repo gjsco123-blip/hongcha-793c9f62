@@ -63,14 +63,33 @@ function countWords(text: string) {
 function extractEnglishKeywords(content: string): string[] {
   const matches = content.match(/[A-Za-z][A-Za-z'\-]{1,}/g) || [];
   const stopWords = new Set([
-    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
-    "to", "of", "in", "for", "on", "at", "by", "and", "or", "not", "with",
-    "from", "that", "this", "it", "its", "as", "but", "if", "so", "do", "no", "up",
+    // articles & determiners
+    "the", "a", "an", "this", "that", "these", "those", "some", "any", "such",
+    // be verbs
+    "is", "are", "was", "were", "be", "been", "being", "am",
+    // prepositions
+    "to", "of", "in", "for", "on", "at", "by", "with", "from", "into", "about",
+    "between", "through", "during", "before", "after", "above", "below", "over", "under",
+    // conjunctions & connectors
+    "and", "or", "but", "nor", "so", "yet", "if", "when", "while", "because",
+    // pronouns
+    "it", "its", "he", "she", "they", "them", "their", "we", "us", "our", "you", "your",
+    "him", "her", "his", "my", "me", "who", "whom", "whose", "which",
+    // common verbs
+    "do", "does", "did", "has", "had", "have", "can", "may", "will", "would",
+    "could", "should", "might", "must", "shall",
+    // adverbs & misc high-frequency
+    "not", "no", "up", "out", "also", "just", "very", "much", "more", "most",
+    "even", "still", "only", "rather", "than", "too", "well", "then", "now",
+    "here", "there", "where", "how", "what", "why", "all", "each", "every",
+    "both", "either", "neither", "other", "another", "own", "same",
+    // common adjectives
+    "new", "old", "good", "bad", "great", "first", "last", "long", "little", "big",
   ]);
 
   return matches
     .map((m) => m.toLowerCase())
-    .filter((m) => m.length >= 2 && !stopWords.has(m));
+    .filter((m) => m.length >= 3 && !stopWords.has(m));
 }
 
 function safeJsonParse(raw: string): any {
@@ -674,6 +693,69 @@ const autoTools = [
 // -----------------------------
 // Shared: fetch pinned patterns
 // -----------------------------
+/**
+ * Extract a leading phrase before a colon in pinned_content.
+ * e.g. "rather than: ~라기보다는" → "rather than"
+ * e.g. "as ~ as possible 구조로" → null (no colon pattern)
+ */
+function extractLeadingPhrase(content: string): string | null {
+  const match = content.match(/^([A-Za-z][A-Za-z\s~]+?)(?:\s*:)/);
+  if (match) {
+    const phrase = match[1].trim().toLowerCase().replace(/\s+/g, " ");
+    if (phrase.length >= 3) return phrase;
+  }
+  return null;
+}
+
+/**
+ * Check if a pattern is a reusable template (has ___ placeholders)
+ * vs a sentence-specific example (references specific words from one sentence).
+ */
+function isReusableTemplate(content: string): boolean {
+  return content.includes("___");
+}
+
+/**
+ * Strict relevance scoring for a pattern against a sentence.
+ * Returns a score 0-1. Higher = more relevant.
+ */
+function patternRelevanceScore(patternContent: string, sentenceLower: string): number {
+  if (!sentenceLower) return 0;
+
+  // 1) Check for leading phrase match (e.g., "rather than:", "as ~ as")
+  const phrase = extractLeadingPhrase(patternContent);
+  if (phrase) {
+    // For phrase patterns, the phrase itself must appear in the sentence
+    const normalizedPhrase = phrase.replace(/\s*~\s*/g, " ").trim();
+    if (sentenceLower.includes(normalizedPhrase)) return 1.0;
+    // Also handle tilde-separated patterns like "as ~ as" → check both parts
+    if (phrase.includes("~")) {
+      const parts = phrase.split("~").map(p => p.trim()).filter(p => p.length >= 2);
+      const allPresent = parts.every(p => sentenceLower.includes(p));
+      if (allPresent) return 0.9;
+    }
+    return 0; // Phrase pattern but phrase not in sentence → not relevant
+  }
+
+  // 2) For template patterns (with ___), use keyword ratio matching
+  const keywords = extractEnglishKeywords(patternContent);
+  if (keywords.length === 0) return 0;
+
+  // Deduplicate keywords
+  const uniqueKeywords = Array.from(new Set(keywords));
+  const matchCount = uniqueKeywords.filter(kw => sentenceLower.includes(kw)).length;
+  const ratio = matchCount / uniqueKeywords.length;
+
+  // For reusable templates, require lower threshold since blanks won't match
+  if (isReusableTemplate(patternContent)) {
+    return ratio >= 0.3 ? ratio : 0;
+  }
+
+  // For sentence-specific examples, require high match ratio
+  // because most keywords should be present if it's truly relevant
+  return ratio >= 0.6 ? ratio : 0;
+}
+
 async function fetchPinnedPatterns(
   _userId: string | undefined,
   authHeader?: string | null,
@@ -694,18 +776,38 @@ async function fetchPinnedPatterns(
     if (allPatterns.length === 0) return { promptBlock: "", byTag: new Map() };
     const byTag = new Map<string, string>();
 
-    let relevantPatterns = allPatterns;
+    let relevantPatterns: any[] = [];
     const sentenceLower = oneLine(sentence || "").toLowerCase();
+
     if (sentenceLower) {
-      relevantPatterns = allPatterns
-        .filter((p: any) => {
-          const keywords = extractEnglishKeywords(String(p?.pinned_content ?? ""));
-          return keywords.some((kw) => sentenceLower.includes(kw));
+      // Score each pattern and only keep those that pass strict relevance check
+      const scored = allPatterns
+        .map((p: any) => {
+          const content = String(p?.pinned_content ?? "");
+          const score = patternRelevanceScore(content, sentenceLower);
+          return { pattern: p, score };
         })
-        .slice(0, 10);
+        .filter((s: any) => s.score > 0)
+        .sort((a: any, b: any) => b.score - a.score)
+        .slice(0, 8);
+
+      relevantPatterns = scored.map((s: any) => s.pattern);
+
+      // Log which patterns matched for debugging
+      if (relevantPatterns.length > 0) {
+        console.log(`[pinned-patterns] Sentence: "${sentenceLower.slice(0, 60)}..."`);
+        console.log(`[pinned-patterns] Matched ${relevantPatterns.length}/${allPatterns.length} patterns:`);
+        for (const s of scored) {
+          console.log(`  - [${String(s.pattern.tag)}] score=${s.score.toFixed(2)}: "${String(s.pattern.pinned_content).slice(0, 50)}..."`);
+        }
+      } else {
+        console.log(`[pinned-patterns] No patterns matched for: "${sentenceLower.slice(0, 60)}..."`);
+      }
     }
 
     if (relevantPatterns.length === 0) return { promptBlock: "", byTag };
+
+    // Build byTag map only from patterns that pass template-force check
     for (const p of relevantPatterns) {
       const tag = String(p?.tag ?? "").trim();
       const content = String(p?.pinned_content ?? "").trim();
@@ -715,7 +817,17 @@ async function fetchPinnedPatterns(
       if (!byTag.has(key)) byTag.set(key, content);
     }
 
-    const tagLines = relevantPatterns
+    // CRITICAL: Only inject strictly relevant patterns into prompt
+    // Only include reusable templates (with ___) in the prompt block
+    // Sentence-specific examples should NOT be injected as they contaminate other sentences
+    const templatePatterns = relevantPatterns.filter((p: any) => {
+      const content = String(p?.pinned_content ?? "");
+      return isReusableTemplate(content);
+    });
+
+    if (templatePatterns.length === 0) return { promptBlock: "", byTag };
+
+    const tagLines = templatePatterns
       .map((p: any) => {
         const tag = String(p?.tag ?? "").trim();
         const content = String(p?.pinned_content ?? "").trim();
@@ -724,14 +836,15 @@ async function fetchPinnedPatterns(
       .filter(Boolean)
       .join("\n");
     const promptBlock =
-      `\n\n[참고 패턴]\n` +
-      `아래는 현재 문장과 관련 있는 고정 패턴이다. 해당 문법 요소가 문장에 실제로 존재할 때만 이 형식을 따르라.\n` +
-      `문장에 해당 문법 요소가 없으면 이 패턴을 무시하라.\n` +
-      `___만 실제 단어로 교체하고, 그 외 단어·구조·어순은 바꾸지 말 것.\n` +
+      `\n\n[참고 패턴 — 템플릿만]\n` +
+      `아래는 현재 문장과 관련 있을 수 있는 고정 스타일 패턴이다.\n` +
+      `해당 문법 요소가 문장에 실제로 존재할 때만, ___만 실제 단어로 교체하여 이 형식을 따르라.\n` +
+      `문장에 해당 문법 요소가 없으면 이 패턴을 완전히 무시하라. 억지로 적용하지 말 것.\n` +
       `${tagLines}\n` +
       `출력에 태그명 접두어(예: 관계대명사:, 5형식:)를 붙이지 말 것.`;
     return { promptBlock, byTag };
-  } catch {
+  } catch (e) {
+    console.error("[pinned-patterns] Error fetching patterns:", e);
     return { promptBlock: "", byTag: new Map() };
   }
 }
