@@ -265,7 +265,7 @@ export default function Index() {
     saveTimerRef.current = setTimeout(() => {
       void persistIndexState();
     }, 2000);
-  }, [categories.selectedPassageId, results, persistIndexState]);
+  }, [categories.selectedPassageId, results, passage, pdfTitle, preset, persistIndexState]);
 
   const flushAutoSave = useCallback(() => {
     if (!categories.selectedPassageId || !dataLoadedRef.current) return;
