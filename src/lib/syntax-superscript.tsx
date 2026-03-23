@@ -460,6 +460,12 @@ function chooseAnchorOffset(
     if (toToken) return toToken.start;
   }
 
+  // If the selected span is a single token, keep the direct selection unless a
+  // stronger syntax-specific rule above already anchored it elsewhere.
+  if (tokensInSpan.length === 1) {
+    return tokensInSpan[0].start;
+  }
+
   if ((contentLower.includes("조동사") && contentLower.includes("수동")) || /be\s*p\.?p|be\s+pp/i.test(rawContent)) {
     const modalToken =
       findTokenByPredicate(tokensInSpan, (tok) => MODAL_WORDS.has(normalizeAlphaWord(tok.word))) ||
