@@ -742,8 +742,8 @@ serve(async (req) => {
       });
     }
 
+    // Always analyze the user's selection as-is; use full sentence only as context
     let textToAnalyze = selected || full;
-    if (selected && countWords(selected) < 3 && full) textToAnalyze = full;
 
     // ── 자동 생성 모드: 태그 필터 없이 자유 추출 ──
     if (isAutoMode) {

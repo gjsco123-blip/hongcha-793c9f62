@@ -4,6 +4,7 @@ export interface SyntaxNoteWithTarget {
   id: number;
   content: string;
   targetText?: string;
+  anchorMode?: "selection-start" | "heuristic";
 }
 
 type TextToken = { word: string; start: number; end: number };
@@ -643,7 +644,15 @@ export function computeSuperscriptPositions(
     if (!note.targetText) continue;
     const span = selectBestSpanForNote(originalText, note.targetText, note.content, allTokens);
     if (!span) continue;
-    let anchor = chooseAnchorOffset(originalText, span, note.content, allTokens);
+
+    // Manual selection: always anchor to the first token of the span
+    let anchor: number;
+    if (note.anchorMode === "selection-start") {
+      const tokensInSpan = tokensWithinSpan(allTokens, span);
+      anchor = tokensInSpan.length > 0 ? tokensInSpan[0].start : span.start;
+    } else {
+      anchor = chooseAnchorOffset(originalText, span, note.content, allTokens);
+    }
 
     const existingSpans = anchorToSpans.get(anchor) || [];
     const hasDifferentSpanAtSameAnchor = existingSpans.some(
