@@ -188,14 +188,18 @@ function chatExtractPinnedTemplateValues(raw: string): string[] {
 
 function chatMaterializePinnedPattern(template: string, raw: string, stripLeadingTagLabel: (line: string) => string): string {
   const normalizedTemplate = stripLeadingTagLabel(chatOneLine(template));
-  // Only server-enforce template-style pinned patterns. Concrete sentence-specific
-  // patterns without placeholders can leak unrelated words into new sentences.
-  if (!normalizedTemplate.includes("___")) return raw;
-  const values = chatExtractPinnedTemplateValues(raw);
-  if (values.length === 0) return raw;
-  let idx = 0;
-  const filled = normalizedTemplate.replace(/___/g, () => values[idx++] ?? values[values.length - 1] ?? "___");
-  return filled.includes("___") ? raw : filled;
+
+  // If template has ___ placeholders, fill them with values from AI output
+  if (normalizedTemplate.includes("___")) {
+    const values = chatExtractPinnedTemplateValues(raw);
+    if (values.length === 0) return normalizedTemplate; // still force template
+    let idx = 0;
+    const filled = normalizedTemplate.replace(/___/g, () => values[idx++] ?? values[values.length - 1] ?? "___");
+    return filled;
+  }
+
+  // No ___ placeholders: force template as-is (user's exact wording)
+  return normalizedTemplate;
 }
 
 function chatApplyPinnedPattern(
