@@ -346,11 +346,55 @@ function normalizeModelTagToUiTag(tag: string): string {
   return "";
 }
 
+function extractPinnedTemplateValues(raw: string, targetText?: string): string[] {
+  const values: string[] = [];
+  const push = (value?: string) => {
+    const normalized = oneLine(String(value ?? "")).replace(/^[()]+|[()]+$/g, "").trim();
+    if (!normalized) return;
+    if (!values.includes(normalized)) values.push(normalized);
+  };
+
+  push(targetText);
+
+  const patterns = [
+    /관계(?:사|대명사|부사)\s+([A-Za-z][A-Za-z' -]*)/g,
+    /형용사절\(([^)]+)\)/g,
+    /명사절\(([^)]+)\)/g,
+    /부사절\(([^)]+)\)/g,
+    /선행사\s+([A-Za-z][A-Za-z' -]*)/g,
+    /동사\s+([A-Za-z][A-Za-z' -]*)/g,
+    /목적어\(?([A-Za-z][A-Za-z' -]*)\)?/g,
+    /보어\(?([A-Za-z][A-Za-z' -]*)\)?/g,
+    /\(([A-Za-z][A-Za-z' -]*~[A-Za-z][A-Za-z' -]*)\)/g,
+  ];
+
+  for (const re of patterns) {
+    for (const match of raw.matchAll(re)) {
+      push(match[1]);
+    }
+  }
+
+  return values;
+}
+
+function materializePinnedPattern(template: string, raw: string, targetText?: string): string {
+  const normalizedTemplate = stripLeadingTagLabel(oneLine(template));
+  if (!normalizedTemplate.includes("___")) return normalizedTemplate;
+
+  const values = extractPinnedTemplateValues(raw, targetText);
+  if (values.length === 0) return raw;
+
+  let idx = 0;
+  const filled = normalizedTemplate.replace(/___/g, () => values[idx++] ?? values[values.length - 1] ?? "___");
+  return filled.includes("___") ? raw : filled;
+}
+
 function applyPinnedPattern(
   content: string,
   hintTags: TagId[],
   pinnedByTag: Map<string, string>,
   explicitUiTag?: string,
+  targetText?: string,
 ): string {
   const raw = oneLine(content);
   if (!raw) return raw;
@@ -366,7 +410,8 @@ function applyPinnedPattern(
     candidates.push(mapTagIdToUiTag(t));
   }
 
-  candidates.push(detectUiTagFromContent(raw));
+  const inferredUiTag = detectUiTagFromContent(raw);
+  if (inferredUiTag) candidates.push(inferredUiTag);
 
   const seen = new Set<string>();
   for (const candidate of candidates) {
@@ -375,11 +420,7 @@ function applyPinnedPattern(
     seen.add(key);
     const pinned = oneLine(String(pinnedByTag.get(key) ?? ""));
     if (!pinned) continue;
-
-    const normalizedPinned = stripLeadingTagLabel(pinned);
-    // Keep model output if the pattern is still a template.
-    if (normalizedPinned.includes("___")) return raw;
-    return normalizedPinned;
+    return materializePinnedPattern(pinned, raw, targetText);
   }
 
   return raw;
@@ -797,6 +838,7 @@ serve(async (req) => {
             [],
             pinnedData.byTag,
             normalizeModelTagToUiTag(String(p.tag ?? "")),
+            p.targetText,
           ),
           targetText: oneLine(p.targetText),
           tag: oneLine(String(p.tag ?? "")),
