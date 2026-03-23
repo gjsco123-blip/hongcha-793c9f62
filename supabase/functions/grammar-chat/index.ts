@@ -192,20 +192,50 @@ function chatExtractPinnedTemplateValues(raw: string): string[] {
   return values;
 }
 
+/**
+ * Extract English word/phrase segments from a syntax note.
+ */
+function chatExtractEnglishSegments(text: string): string[] {
+  const segments: string[] = [];
+  const parenMatches = text.match(/\([A-Za-z][A-Za-z'~\- ]*\)/g) || [];
+  for (const m of parenMatches) segments.push(m);
+  const wordMatches = text.match(/[A-Za-z][A-Za-z'~\-]*(?:\s+[A-Za-z][A-Za-z'~\-]*)*/g) || [];
+  for (const m of wordMatches) {
+    if (!parenMatches.some(p => p.includes(m))) {
+      if (m.length >= 2) segments.push(m);
+    }
+  }
+  return segments;
+}
+
 function chatMaterializePinnedPattern(template: string, raw: string, stripLeadingTagLabel: (line: string) => string): string {
   const normalizedTemplate = stripLeadingTagLabel(chatOneLine(template));
+  const normalizedRaw = stripLeadingTagLabel(chatOneLine(raw));
 
-  // If template has ___ placeholders, fill them with values from AI output
   if (normalizedTemplate.includes("___")) {
-    const values = chatExtractPinnedTemplateValues(raw);
-    if (values.length === 0) return normalizedTemplate; // still force template
+    const values = chatExtractPinnedTemplateValues(normalizedRaw);
+    if (values.length === 0) return normalizedTemplate;
     let idx = 0;
     const filled = normalizedTemplate.replace(/___/g, () => values[idx++] ?? values[values.length - 1] ?? "___");
     return filled;
   }
 
-  // No ___ placeholders: force template as-is (user's exact wording)
-  return normalizedTemplate;
+  // No ___ placeholders: use template as STYLE guide, swap English parts from AI output
+  const templateEnglish = chatExtractEnglishSegments(normalizedTemplate);
+  const rawEnglish = chatExtractEnglishSegments(normalizedRaw);
+
+  if (templateEnglish.length === 0 || rawEnglish.length === 0) {
+    return normalizedTemplate;
+  }
+
+  let result = normalizedTemplate;
+  let rawIdx = 0;
+  for (const tplSeg of templateEnglish) {
+    if (rawIdx >= rawEnglish.length) break;
+    result = result.replace(tplSeg, rawEnglish[rawIdx]);
+    rawIdx++;
+  }
+  return result;
 }
 
 function chatApplyPinnedPattern(
