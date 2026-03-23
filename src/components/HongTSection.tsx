@@ -9,14 +9,14 @@ interface HongTSectionProps {
   onChange: (value: string) => void;
   onGenerate?: () => void;
   generating?: boolean;
-  onDelete?: () => void;
+  onHide?: () => void;
   sentence?: string;
   fullPassage?: string;
   preset?: string;
   teacherLabel?: string;
 }
 
-export function HongTSection({ value, onChange, onGenerate, generating, onDelete, sentence, fullPassage, preset, teacherLabel = "홍T" }: HongTSectionProps) {
+export function HongTSection({ value, onChange, onGenerate, generating, onHide, sentence, fullPassage, preset, teacherLabel = "홍T" }: HongTSectionProps) {
   const [editing, setEditing] = useState(false);
   const [checking, setChecking] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
@@ -53,11 +53,11 @@ export function HongTSection({ value, onChange, onGenerate, generating, onDelete
         </div>
       )}
       <div>
-        {onDelete && (
+        {onHide && (
           <button
-            onClick={onDelete}
+            onClick={onHide}
             className="absolute top-1.5 right-1.5 p-0.5 text-muted-foreground/50 hover:text-destructive opacity-0 group-hover/hongt:opacity-100 transition-opacity"
-            title={`${teacherLabel} 삭제`}
+            title={`${teacherLabel} 숨기기`}
           >
             <X className="w-3 h-3" />
           </button>
