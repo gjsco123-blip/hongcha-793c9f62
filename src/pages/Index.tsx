@@ -54,6 +54,7 @@ export interface SyntaxNote {
   id: number; // 1~5
   content: string;
   targetText?: string; // 드래그한 원문 텍스트
+  anchorMode?: "selection-start" | "heuristic"; // 수동 선택 vs 자동 생성
 }
 
 interface SentenceResult {
