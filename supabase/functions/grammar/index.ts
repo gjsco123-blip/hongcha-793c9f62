@@ -450,20 +450,70 @@ function extractPinnedTemplateValues(raw: string, targetText?: string): string[]
   return values;
 }
 
+/**
+ * Materialize a pinned pattern as a "style template":
+ * - Keep the Korean structure/tone/endings from the template
+ * - Replace English words/phrases with those from AI output (raw)
+ * 
+ * This prevents patterns like "what이 이끄는 명사절(What~important)"
+ * from injecting "what" into sentences that use "that".
+ */
 function materializePinnedPattern(template: string, raw: string, targetText?: string): string {
   const normalizedTemplate = stripLeadingTagLabel(oneLine(template));
+  const normalizedRaw = stripLeadingTagLabel(oneLine(raw));
 
   // If template has ___ placeholders, fill them with values extracted from AI output
   if (normalizedTemplate.includes("___")) {
-    const values = extractPinnedTemplateValues(raw, targetText);
-    if (values.length === 0) return normalizedTemplate; // still force template even without values
+    const values = extractPinnedTemplateValues(normalizedRaw, targetText);
+    if (values.length === 0) return normalizedTemplate;
     let idx = 0;
     const filled = normalizedTemplate.replace(/___/g, () => values[idx++] ?? values[values.length - 1] ?? "___");
     return filled;
   }
 
-  // No ___ placeholders: force template as-is (user's exact wording)
-  return normalizedTemplate;
+  // No ___ placeholders: use template as STYLE guide, swap English parts from AI output
+  // Extract English segments from both template and AI output
+  const templateEnglish = extractEnglishSegments(normalizedTemplate);
+  const rawEnglish = extractEnglishSegments(normalizedRaw);
+
+  if (templateEnglish.length === 0 || rawEnglish.length === 0) {
+    // No English to swap — return template as-is (pure Korean style pattern)
+    return normalizedTemplate;
+  }
+
+  // Replace English segments in template with corresponding ones from AI output
+  let result = normalizedTemplate;
+  let rawIdx = 0;
+  for (const tplSeg of templateEnglish) {
+    if (rawIdx >= rawEnglish.length) break;
+    // Replace the template's English segment with the AI's English segment
+    result = result.replace(tplSeg, rawEnglish[rawIdx]);
+    rawIdx++;
+  }
+  return result;
+}
+
+/**
+ * Extract English word/phrase segments from a syntax note.
+ * Captures things like: "what", "What~important", "that~them", "the project", 
+ * parenthesized English like "(What~important)", standalone words like "who"
+ */
+function extractEnglishSegments(text: string): string[] {
+  const segments: string[] = [];
+  // Match parenthesized English: (What~important), (that~them)
+  const parenMatches = text.match(/\([A-Za-z][A-Za-z'~\- ]*\)/g) || [];
+  for (const m of parenMatches) segments.push(m);
+  
+  // Match English words/phrases outside parens: "what이", "that이", "who가" etc.
+  // Pattern: English word(s) followed by Korean particle or at word boundary
+  const wordMatches = text.match(/[A-Za-z][A-Za-z'~\-]*(?:\s+[A-Za-z][A-Za-z'~\-]*)*/g) || [];
+  for (const m of wordMatches) {
+    // Skip if already captured inside a paren segment
+    if (!parenMatches.some(p => p.includes(m))) {
+      if (m.length >= 2) segments.push(m);
+    }
+  }
+  return segments;
 }
 
 function applyPinnedPattern(
