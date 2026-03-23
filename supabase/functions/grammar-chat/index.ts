@@ -192,20 +192,50 @@ function chatExtractPinnedTemplateValues(raw: string): string[] {
   return values;
 }
 
+/**
+ * Extract English word/phrase segments from a syntax note.
+ */
+function chatExtractEnglishSegments(text: string): string[] {
+  const segments: string[] = [];
+  const parenMatches = text.match(/\([A-Za-z][A-Za-z'~\- ]*\)/g) || [];
+  for (const m of parenMatches) segments.push(m);
+  const wordMatches = text.match(/[A-Za-z][A-Za-z'~\-]*(?:\s+[A-Za-z][A-Za-z'~\-]*)*/g) || [];
+  for (const m of wordMatches) {
+    if (!parenMatches.some(p => p.includes(m))) {
+      if (m.length >= 2) segments.push(m);
+    }
+  }
+  return segments;
+}
+
 function chatMaterializePinnedPattern(template: string, raw: string, stripLeadingTagLabel: (line: string) => string): string {
   const normalizedTemplate = stripLeadingTagLabel(chatOneLine(template));
+  const normalizedRaw = stripLeadingTagLabel(chatOneLine(raw));
 
-  // If template has ___ placeholders, fill them with values from AI output
   if (normalizedTemplate.includes("___")) {
-    const values = chatExtractPinnedTemplateValues(raw);
-    if (values.length === 0) return normalizedTemplate; // still force template
+    const values = chatExtractPinnedTemplateValues(normalizedRaw);
+    if (values.length === 0) return normalizedTemplate;
     let idx = 0;
     const filled = normalizedTemplate.replace(/___/g, () => values[idx++] ?? values[values.length - 1] ?? "___");
     return filled;
   }
 
-  // No ___ placeholders: force template as-is (user's exact wording)
-  return normalizedTemplate;
+  // No ___ placeholders: use template as STYLE guide, swap English parts from AI output
+  const templateEnglish = chatExtractEnglishSegments(normalizedTemplate);
+  const rawEnglish = chatExtractEnglishSegments(normalizedRaw);
+
+  if (templateEnglish.length === 0 || rawEnglish.length === 0) {
+    return normalizedTemplate;
+  }
+
+  let result = normalizedTemplate;
+  let rawIdx = 0;
+  for (const tplSeg of templateEnglish) {
+    if (rawIdx >= rawEnglish.length) break;
+    result = result.replace(tplSeg, rawEnglish[rawIdx]);
+    rawIdx++;
+  }
+  return result;
 }
 
 function chatApplyPinnedPattern(
@@ -339,8 +369,10 @@ serve(async (req) => {
             const tagLines = relevantPatterns.map((p: any) => `- ${p.tag}: ${p.pinned_content}`).join("\n");
             pinnedBlock = `\n\n[필수 적용 규칙 — 고정 패턴]\n` +
               `아래 패턴은 사용자가 직접 지정한 필수 설명 형식이다.\n` +
-              `해당 문법 요소가 문장에 존재하면, 반드시 아래 형식과 설명 스타일을 그대로 따라야 한다.\n` +
-              `너 자신의 설명 방식이나 표현을 사용하지 말고, 아래 패턴의 구조·어휘·종결 방식을 정확히 복제하라.\n` +
+              `해당 문법 요소가 문장에 존재하면, 반드시 아래 패턴의 설명 구조·말투·종결 방식을 그대로 따라야 한다.\n` +
+              `단, 패턴에 포함된 영어 단어(예: what, important, built 등)는 절대 그대로 쓰지 말 것.\n` +
+              `영어 단어와 구문 범위는 반드시 현재 문장의 실제 내용으로 교체하라.\n` +
+              `현재 문장에 없는 영어 단어가 출력에 포함되면 오류다.\n` +
               `___가 있으면 해당 문장의 실제 단어로 교체하라.\n` +
               `문장에 해당 문법 요소가 없으면 이 패턴을 완전히 무시하라. 억지로 적용하지 말 것.\n` +
               `${tagLines}\n` +
