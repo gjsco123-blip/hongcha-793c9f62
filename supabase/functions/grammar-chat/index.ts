@@ -373,22 +373,34 @@ serve(async (req) => {
 
     const targetUiTag = targetNote?.content ? chatDetectUiTagFromContent(targetNote.content) : "";
 
+    function finalizeSyntaxText(text: string): string {
+      let out = String(text ?? "").replace(/^\s*\d+\.\s*/, "").trim();
+      for (let i = 0; i < 3; i += 1) {
+        const next = stripLeadingTagLabel(
+          stripTrailingFieldLabel(
+            repairTruncatedSyntaxPhrases(
+              sanitizeEndings(out)
+            )
+          )
+        );
+        if (next === out) break;
+        out = next;
+      }
+      return out;
+    }
+
     // Parse suggestion into array of note strings
     let suggestionNotes: string[] | null = null;
     if (suggestion) {
       suggestionNotes = suggestion
         .split("\n")
         .map((line: string) =>
-          stripLeadingTagLabel(
-            stripTrailingFieldLabel(
-              repairTruncatedSyntaxPhrases(
-                chatApplyPinnedPattern(
-                  sanitizeEndings(stripLeadingTagLabel(line.replace(/^\s*\d+\.\s*/, "").trim())),
-                  pinnedByTag,
-                  stripLeadingTagLabel,
-                  targetUiTag,
-                )
-              )
+          finalizeSyntaxText(
+            chatApplyPinnedPattern(
+              finalizeSyntaxText(line),
+              pinnedByTag,
+              stripLeadingTagLabel,
+              targetUiTag,
             )
           )
         )

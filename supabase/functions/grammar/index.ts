@@ -163,11 +163,28 @@ function detectLeadingTagLabel(line: string): string {
   return "";
 }
 
+function finalizeSyntaxText(text: string): string {
+  let out = oneLine(text);
+  for (let i = 0; i < 3; i += 1) {
+    const next = stripLeadingTagLabel(
+      stripTrailingFieldLabel(
+        repairTruncatedSyntaxPhrases(
+          sanitizeEndings(
+            stripLeadingBullets(out)
+          )
+        )
+      )
+    );
+    if (next === out) break;
+    out = next;
+  }
+  return out;
+}
+
 function formatAsLines(points: string[], maxLines: number) {
   const cleaned = points
-    .map((p) => oneLine(p))
-    .filter(Boolean)
-    .map(stripLeadingBullets);
+    .map(finalizeSyntaxText)
+    .filter(Boolean);
 
   return cleaned.slice(0, maxLines).join("\n");
 }
@@ -828,21 +845,13 @@ serve(async (req) => {
 
       autoPoints = autoPoints
         .map((p) => ({
-          text: stripLeadingTagLabel(
-            stripTrailingFieldLabel(
-              applyPinnedPattern(
-                stripTrailingFieldLabel(
-                  stripLeadingTagLabel(
-                    repairTruncatedSyntaxPhrases(
-                      sanitizeEndings(oneLine(stripLeadingBullets(stripJsonArtifacts(p.text))))
-                    )
-                  )
-                ),
-                [],
-                pinnedData.byTag,
-                normalizeModelTagToUiTag(String(p.tag ?? "")),
-                p.targetText,
-              )
+          text: finalizeSyntaxText(
+            applyPinnedPattern(
+              finalizeSyntaxText(stripJsonArtifacts(p.text)),
+              [],
+              pinnedData.byTag,
+              normalizeModelTagToUiTag(String(p.tag ?? "")),
+              p.targetText,
             )
           ),
           targetText: oneLine(p.targetText),
@@ -976,15 +985,9 @@ serve(async (req) => {
     }
 
     points = points
-      .map(oneLine)
+      .map(finalizeSyntaxText)
       .filter(Boolean)
-      .map(stripLeadingBullets)
-      .map(stripLeadingTagLabel)
-      .map(sanitizeEndings)
-      .map(repairTruncatedSyntaxPhrases)
-      .map(stripLeadingTagLabel)
-      .map(stripTrailingFieldLabel)
-      .map((p) => stripLeadingTagLabel(stripTrailingFieldLabel(applyPinnedPattern(p, tags, pinnedData.byTag))));
+      .map((p) => finalizeSyntaxText(applyPinnedPattern(p, tags, pinnedData.byTag)));
 
     if (points.length === 0) {
       points = useFreestyle
