@@ -145,6 +145,7 @@ const splitEntry = (raw: string) => {
 };
 
 const joinEntry = (en: string, ko: string) => (ko ? `${en} (${ko})` : en);
+const hasGloss = (raw: string) => /\([^()]+\)/.test(normalizeSpaces(raw));
 
 const hasDoubleFinalConsonant = (word: string) => {
   if (word.length < 2) return false;
@@ -251,6 +252,7 @@ const normalizeChipField = (raw: string, wordKo: string) => {
     .split(",")
     .map((c) => c.trim())
     .filter(Boolean)
+    .filter(hasGloss)
     .map((chip) => {
       const { en, ko } = splitEntry(chip);
       const normalizedEn = isVerbContext

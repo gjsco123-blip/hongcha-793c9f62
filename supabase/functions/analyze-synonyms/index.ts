@@ -71,6 +71,77 @@ function normalizeRowText(raw: string): string {
     .trim();
 }
 
+function hasGloss(item: string): boolean {
+  return /\([^()]+\)/.test(String(item ?? ""));
+}
+
+function splitChipItems(raw: string): string[] {
+  return String(raw ?? "")
+    .split(",")
+    .map((s) => normalizeRowText(s))
+    .filter(Boolean);
+}
+
+function joinGlossedChipItems(raw: string): string {
+  return splitChipItems(raw).filter(hasGloss).join(", ");
+}
+
+async function fillMissingChipGlossesWithAI(
+  raw: string,
+  passage: string,
+  apiKey: string,
+  fieldLabel: "synonym" | "antonym",
+): Promise<string> {
+  const items = splitChipItems(raw);
+  if (!items.length || items.every(hasGloss)) return items.join(", ");
+
+  const systemPrompt = `You are fixing EN-KO vocabulary chips for Korean high-school exam materials.
+
+Task:
+- Every item must be returned in the exact format: english (한국어뜻)
+- Keep the original English chip text exactly if possible.
+- Only fill in missing Korean glosses.
+- If an item is low-quality or cannot be reliably glossed, drop it.
+- Output ONLY JSON: {"items":["chip1(뜻)","chip2(뜻)"]}`;
+
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      temperature: 0.05,
+      max_tokens: 500,
+      messages: [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: JSON.stringify({
+            field: fieldLabel,
+            passage,
+            items,
+          }),
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) return joinGlossedChipItems(raw);
+
+  try {
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content ?? "";
+    const parsed = safeJsonParse(content);
+    const fixed = Array.isArray(parsed?.items) ? parsed.items.map((x: any) => normalizeRowText(String(x ?? ""))).filter(Boolean) : [];
+    const glossed = fixed.filter(hasGloss);
+    return glossed.length ? glossed.join(", ") : joinGlossedChipItems(raw);
+  } catch {
+    return joinGlossedChipItems(raw);
+  }
+}
+
 function applyCountPolicy(rows: { word: string; synonym: string; antonym: string }[]) {
   return rows
     .map((row) => {
@@ -139,13 +210,21 @@ Output ONLY JSON:
   try {
     const parsed = safeJsonParse(content);
     const validated = Array.isArray(parsed?.rows) ? parsed.rows : [];
-    return validated
+    const normalized = validated
       .map((r: any) => ({
         word: normalizeRowText(String(r?.word ?? "")),
         synonym: normalizeRowText(String(r?.synonym ?? "")),
         antonym: normalizeRowText(String(r?.antonym ?? "")),
       }))
       .filter((r: any) => r.word && r.synonym);
+
+    return await Promise.all(
+      normalized.map(async (row: any) => ({
+        ...row,
+        synonym: await fillMissingChipGlossesWithAI(row.synonym, passage, apiKey, "synonym"),
+        antonym: await fillMissingChipGlossesWithAI(row.antonym, passage, apiKey, "antonym"),
+      }))
+    ).then((rows) => rows.filter((r: any) => r.word && r.synonym));
   } catch (e) {
     console.error("validator parse error:", e);
     return rows;
