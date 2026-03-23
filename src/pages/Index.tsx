@@ -522,7 +522,7 @@ export default function Index() {
           if (slotNumber) {
             // 특정 번호 슬롯에 저장
             const existingIdx = newNotes.findIndex((n) => n.id === slotNumber);
-            const noteEntry: SyntaxNote = { id: slotNumber, content: data.syntaxNotes, targetText: selectedText };
+            const noteEntry: SyntaxNote = { id: slotNumber, content: data.syntaxNotes, targetText: selectedText, anchorMode: "selection-start" };
             if (existingIdx >= 0) {
               newNotes[existingIdx] = noteEntry;
             } else {
