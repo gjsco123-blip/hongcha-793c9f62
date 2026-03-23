@@ -827,18 +827,22 @@ serve(async (req) => {
 
       autoPoints = autoPoints
         .map((p) => ({
-          text: applyPinnedPattern(
+          text: stripLeadingTagLabel(
             stripTrailingFieldLabel(
-              stripLeadingTagLabel(
-                repairTruncatedSyntaxPhrases(
-                  sanitizeEndings(oneLine(stripLeadingBullets(stripJsonArtifacts(p.text))))
-                )
+              applyPinnedPattern(
+                stripTrailingFieldLabel(
+                  stripLeadingTagLabel(
+                    repairTruncatedSyntaxPhrases(
+                      sanitizeEndings(oneLine(stripLeadingBullets(stripJsonArtifacts(p.text))))
+                    )
+                  )
+                ),
+                [],
+                pinnedData.byTag,
+                normalizeModelTagToUiTag(String(p.tag ?? "")),
+                p.targetText,
               )
-            ),
-            [],
-            pinnedData.byTag,
-            normalizeModelTagToUiTag(String(p.tag ?? "")),
-            p.targetText,
+            )
           ),
           targetText: oneLine(p.targetText),
           tag: oneLine(String(p.tag ?? "")),
@@ -979,7 +983,7 @@ serve(async (req) => {
       .map(repairTruncatedSyntaxPhrases)
       .map(stripLeadingTagLabel)
       .map(stripTrailingFieldLabel)
-      .map((p) => applyPinnedPattern(p, tags, pinnedData.byTag));
+      .map((p) => stripLeadingTagLabel(stripTrailingFieldLabel(applyPinnedPattern(p, tags, pinnedData.byTag))));
 
     if (points.length === 0) {
       points = useFreestyle

@@ -378,13 +378,15 @@ serve(async (req) => {
       suggestionNotes = suggestion
         .split("\n")
         .map((line: string) =>
-          stripTrailingFieldLabel(
-            repairTruncatedSyntaxPhrases(
-              chatApplyPinnedPattern(
-                sanitizeEndings(stripLeadingTagLabel(line.replace(/^\s*\d+\.\s*/, "").trim())),
-                pinnedByTag,
-                stripLeadingTagLabel,
-                targetUiTag,
+          stripLeadingTagLabel(
+            stripTrailingFieldLabel(
+              repairTruncatedSyntaxPhrases(
+                chatApplyPinnedPattern(
+                  sanitizeEndings(stripLeadingTagLabel(line.replace(/^\s*\d+\.\s*/, "").trim())),
+                  pinnedByTag,
+                  stripLeadingTagLabel,
+                  targetUiTag,
+                )
               )
             )
           )
