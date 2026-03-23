@@ -71,6 +71,32 @@ function chatExtractEnglishKeywords(content: string): string[] {
     "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
     "to", "of", "in", "for", "on", "at", "by", "and", "or", "not", "with",
     "from", "that", "this", "it", "its", "as", "but", "if", "so", "do", "no", "up",
+    "has", "have", "had", "will", "would", "could", "should", "may", "might",
+    "can", "shall", "did", "does", "about", "into", "through", "than", "then",
+    "them", "they", "their", "there", "these", "those", "what", "which", "who",
+    "whom", "whose", "when", "where", "why", "how", "all", "each", "every",
+    "both", "few", "more", "most", "other", "some", "such", "only", "own",
+    "same", "just", "also", "very", "often", "once", "here", "even", "well",
+    "back", "much", "many", "still", "after", "before", "between", "under",
+    "over", "again", "out", "off", "down", "away", "too", "any", "nor",
+    "rather", "while", "during", "among", "along", "since", "until", "because",
+    "although", "though", "whether", "either", "neither", "yet", "however",
+    "never", "always", "sometimes", "already", "really", "quite", "make",
+    "made", "take", "get", "got", "give", "go", "come", "see", "say", "know",
+    "think", "find", "tell", "ask", "use", "work", "call", "try", "need",
+    "keep", "let", "put", "set", "seem", "help", "show", "turn", "play",
+    "run", "move", "live", "believe", "bring", "happen", "write", "provide",
+    "sit", "stand", "lose", "pay", "meet", "include", "continue", "learn",
+    "change", "lead", "understand", "watch", "follow", "stop", "create",
+    "speak", "read", "allow", "add", "grow", "open", "walk", "win", "offer",
+    "remember", "consider", "appear", "buy", "wait", "serve", "die", "send",
+    "expect", "build", "stay", "fall", "cut", "reach", "kill", "remain",
+    "suggest", "raise", "pass", "sell", "require", "report", "decide",
+    "pull", "develop", "able", "like", "new", "old", "long", "great",
+    "small", "large", "big", "high", "low", "right", "left", "different",
+    "important", "another", "last", "first", "next", "young", "good", "bad",
+    "best", "better", "sure", "free", "true", "real", "full", "hard",
+    "early", "possible",
   ]);
 
   return matches
@@ -78,15 +104,34 @@ function chatExtractEnglishKeywords(content: string): string[] {
     .filter((m) => m.length >= 2 && !stopWords.has(m));
 }
 
+// Relevance scoring matching grammar/index.ts logic
+function chatPatternRelevanceScore(patternContent: string, sentence: string): number {
+  const patternText = chatOneLine(patternContent).toLowerCase();
+  const sentenceLower = chatOneLine(sentence).toLowerCase();
+
+  // Check for phrase-level matches (e.g., "rather than", "not only ~ but also")
+  const phrasePatterns = patternText.match(/[a-z]+(?:\s*~\s*[a-z]+)*(?:\s+[a-z]+)*/g) || [];
+  for (const phrase of phrasePatterns) {
+    const words = phrase.replace(/~/g, " ").split(/\s+/).filter((w: string) => w.length >= 3);
+    if (words.length >= 2) {
+      const exactPhrase = words.join(".*?");
+      if (new RegExp(exactPhrase, "i").test(sentenceLower)) return 1.0;
+    }
+  }
+
+  // Keyword ratio check
+  const keywords = chatExtractEnglishKeywords(patternText);
+  if (keywords.length === 0) return 0;
+  const matched = keywords.filter((kw: string) => sentenceLower.includes(kw));
+  return keywords.length > 0 ? matched.length / keywords.length : 0;
+}
+
 function chatShouldForcePinnedTemplateForSentence(template: string, sentence?: string): boolean {
   const templateText = chatOneLine(template || "");
-  const sentenceText = chatOneLine(sentence || "").toLowerCase();
+  const sentenceText = chatOneLine(sentence || "");
   if (!templateText || !sentenceText) return false;
 
-  const keywords = chatExtractEnglishKeywords(templateText);
-  if (keywords.length === 0) return false;
-
-  return keywords.every((kw) => sentenceText.includes(kw));
+  return chatPatternRelevanceScore(templateText, sentenceText) >= 0.6;
 }
 
 function chatDetectUiTagFromContent(content: string): string {
@@ -143,14 +188,18 @@ function chatExtractPinnedTemplateValues(raw: string): string[] {
 
 function chatMaterializePinnedPattern(template: string, raw: string, stripLeadingTagLabel: (line: string) => string): string {
   const normalizedTemplate = stripLeadingTagLabel(chatOneLine(template));
-  // Only server-enforce template-style pinned patterns. Concrete sentence-specific
-  // patterns without placeholders can leak unrelated words into new sentences.
-  if (!normalizedTemplate.includes("___")) return raw;
-  const values = chatExtractPinnedTemplateValues(raw);
-  if (values.length === 0) return raw;
-  let idx = 0;
-  const filled = normalizedTemplate.replace(/___/g, () => values[idx++] ?? values[values.length - 1] ?? "___");
-  return filled.includes("___") ? raw : filled;
+
+  // If template has ___ placeholders, fill them with values from AI output
+  if (normalizedTemplate.includes("___")) {
+    const values = chatExtractPinnedTemplateValues(raw);
+    if (values.length === 0) return normalizedTemplate; // still force template
+    let idx = 0;
+    const filled = normalizedTemplate.replace(/___/g, () => values[idx++] ?? values[values.length - 1] ?? "___");
+    return filled;
+  }
+
+  // No ___ placeholders: force template as-is (user's exact wording)
+  return normalizedTemplate;
 }
 
 function chatApplyPinnedPattern(
@@ -244,28 +293,29 @@ serve(async (req) => {
         const patternsRes = await patternsReq;
         if (patternsRes.ok) {
           const patterns = await patternsRes.json();
-          const sentenceLower = chatOneLine(sentence || "").toLowerCase();
-          const relevantPatterns = sentenceLower
+          const sentenceText = chatOneLine(sentence || "");
+          const relevantPatterns = sentenceText
             ? patterns
                 .filter((p: any) => {
-                  const keywords = chatExtractEnglishKeywords(String(p?.pinned_content ?? ""));
-                  return keywords.some((kw) => sentenceLower.includes(kw));
+                  const content = String(p?.pinned_content ?? "");
+                  return chatPatternRelevanceScore(content, sentenceText) >= 0.6;
                 })
                 .slice(0, 10)
-            : patterns;
+            : [];
           if (relevantPatterns.length > 0) {
             for (const p of relevantPatterns) {
               const tag = String(p?.tag ?? "").trim();
               const content = String(p?.pinned_content ?? "").trim();
-              if (!chatShouldForcePinnedTemplateForSentence(content, sentence)) continue;
               const key = chatNormalizeTagKey(tag);
               if (key && content && !pinnedByTag.has(key)) pinnedByTag.set(key, content);
             }
             const tagLines = relevantPatterns.map((p: any) => `- ${p.tag}: ${p.pinned_content}`).join("\n");
-            pinnedBlock = `\n\n[고정 패턴 — 최우선 규칙]\n` +
-              `아래 태그에 해당하는 포인트는 반드시 해당 패턴의 문장을 그대로 사용하라.\n` +
-              `___만 실제 단어로 교체하고, 그 외 단어·구조·어순은 절대 바꾸거나 추가하지 말 것.\n` +
-              `패턴에 없는 부가 설명, 슬래시(/) 뒤 추가 분석, 범위 표시 등을 덧붙이지 말 것.\n` +
+            pinnedBlock = `\n\n[필수 적용 규칙 — 고정 패턴]\n` +
+              `아래 패턴은 사용자가 직접 지정한 필수 설명 형식이다.\n` +
+              `해당 문법 요소가 문장에 존재하면, 반드시 아래 형식과 설명 스타일을 그대로 따라야 한다.\n` +
+              `너 자신의 설명 방식이나 표현을 사용하지 말고, 아래 패턴의 구조·어휘·종결 방식을 정확히 복제하라.\n` +
+              `___가 있으면 해당 문장의 실제 단어로 교체하라.\n` +
+              `문장에 해당 문법 요소가 없으면 이 패턴을 완전히 무시하라. 억지로 적용하지 말 것.\n` +
               `${tagLines}\n` +
               `출력에 태그명 접두어(예: 관계대명사:, 5형식:)를 붙이지 말 것.`;
           }
