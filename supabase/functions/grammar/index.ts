@@ -63,14 +63,33 @@ function countWords(text: string) {
 function extractEnglishKeywords(content: string): string[] {
   const matches = content.match(/[A-Za-z][A-Za-z'\-]{1,}/g) || [];
   const stopWords = new Set([
-    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
-    "to", "of", "in", "for", "on", "at", "by", "and", "or", "not", "with",
-    "from", "that", "this", "it", "its", "as", "but", "if", "so", "do", "no", "up",
+    // articles & determiners
+    "the", "a", "an", "this", "that", "these", "those", "some", "any", "such",
+    // be verbs
+    "is", "are", "was", "were", "be", "been", "being", "am",
+    // prepositions
+    "to", "of", "in", "for", "on", "at", "by", "with", "from", "into", "about",
+    "between", "through", "during", "before", "after", "above", "below", "over", "under",
+    // conjunctions & connectors
+    "and", "or", "but", "nor", "so", "yet", "if", "when", "while", "because",
+    // pronouns
+    "it", "its", "he", "she", "they", "them", "their", "we", "us", "our", "you", "your",
+    "him", "her", "his", "my", "me", "who", "whom", "whose", "which",
+    // common verbs
+    "do", "does", "did", "has", "had", "have", "can", "may", "will", "would",
+    "could", "should", "might", "must", "shall",
+    // adverbs & misc high-frequency
+    "not", "no", "up", "out", "also", "just", "very", "much", "more", "most",
+    "even", "still", "only", "rather", "than", "too", "well", "then", "now",
+    "here", "there", "where", "how", "what", "why", "all", "each", "every",
+    "both", "either", "neither", "other", "another", "own", "same",
+    // common adjectives
+    "new", "old", "good", "bad", "great", "first", "last", "long", "little", "big",
   ]);
 
   return matches
     .map((m) => m.toLowerCase())
-    .filter((m) => m.length >= 2 && !stopWords.has(m));
+    .filter((m) => m.length >= 3 && !stopWords.has(m));
 }
 
 function safeJsonParse(raw: string): any {
