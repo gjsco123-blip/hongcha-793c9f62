@@ -809,12 +809,11 @@ async function fetchPinnedPatterns(
 
     if (relevantPatterns.length === 0) return { promptBlock: "", byTag };
 
-    // Build byTag map only from patterns that pass template-force check
+    // Build byTag map from all relevance-scored patterns (no double filter)
     for (const p of relevantPatterns) {
       const tag = String(p?.tag ?? "").trim();
       const content = String(p?.pinned_content ?? "").trim();
       if (!tag || !content) continue;
-      if (!shouldForcePinnedTemplateForSentence(content, sentence)) continue;
       const key = normalizeTagKey(tag);
       if (!byTag.has(key)) byTag.set(key, content);
     }
