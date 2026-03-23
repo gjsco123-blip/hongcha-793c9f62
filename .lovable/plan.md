@@ -1,46 +1,26 @@
 
 
-# 구문분석에 엉뚱한 문법이 반복 나오는 원인 및 수정
+# 핵심 엔진 3개 모델 → gemini-3.1-pro-preview 업그레이드
 
-## 원인
+## 현재 → 변경
 
-`fetchPinnedPatterns` (line 651-694)가 DB의 **모든 고정 패턴 55개**를 무조건 프롬프트에 주입하고 있음.
+| 함수 | 현재 모델 | 변경 후 |
+|------|----------|---------|
+| `engine` (메인 엔진) | `gemini-3-flash-preview` | `gemini-3.1-pro-preview` |
+| `analyze-structure` (구조 분석) | `gemini-2.5-flash` | `gemini-3.1-pro-preview` |
+| `analyze-preview` (Preview 분석) | `gemini-3-flash-preview` | `gemini-3.1-pro-preview` |
 
-```
-[고정 패턴 — 최우선 규칙]
-아래 태그에 해당하는 포인트는 반드시 해당 패턴의 문장을 그대로 사용하라.
-- 기타: rather than: ~라기보다는 ...
-- 분사: 과거분사 built가 ...
-- 관계대명사: 주관대 that이 ...
-... (55개 전부)
-```
+## 변경 내용
+각 파일에서 `model:` 값 한 줄만 교체. 프롬프트·로직 변경 없음.
 
-"최우선 규칙 + 반드시 사용하라"라는 강제 지시 → AI가 문장에 `rather than`이 없어도 억지로 적용 → 같은 패턴 2~3번 중복 출력.
+### 수정 파일
+1. `supabase/functions/engine/index.ts` — line 222
+2. `supabase/functions/analyze-structure/index.ts` — line 78
+3. `supabase/functions/analyze-preview/index.ts` — line 196
 
-로그에서도 `content: null` (빈 응답)이 나온 건 55개 패턴 토큰이 실제 분석을 압도했기 때문.
+## 나머지 함수는 유지
+홍T, 구문분석, 어휘, 채팅 등은 `gemini-3-flash-preview` 그대로 유지 (속도 우선).
 
-## 수정 내용
-
-### 1. 문장에 관련된 패턴만 필터링 (핵심)
-- `fetchPinnedPatterns`에 `sentence` 파라미터 추가
-- 각 패턴의 `pinned_content`에서 영어 키워드 추출 → 문장에 실제로 존재하는 패턴만 포함
-- auto 모드: 문장 텍스트 기반 필터링
-- hint 모드: 감지된 태그에 해당하는 패턴만
-- **최대 10개**로 제한
-
-### 2. 프롬프트 문구 완화
-- "최우선 규칙" → "참고 패턴"
-- "반드시 사용하라" → "해당 문법이 문장에 실제로 존재할 때만 적용하라"
-- "문장에 해당 문법 요소가 없으면 이 패턴을 무시하라" 명시 추가
-
-### 3. 후처리 중복 제거
-- auto 모드 응답에서 동일한 `text`를 가진 포인트 제거
-
-## 수정 파일
-- `supabase/functions/grammar/index.ts` — `fetchPinnedPatterns` 필터링 + 프롬프트 완화 + 중복 제거
-
-## 기대 효과
-- 문장에 없는 문법이 출력되지 않음
-- 같은 분석 2~3번 반복 해소
-- 프롬프트 크기 대폭 축소 → 응답 품질·속도 개선
+## 리스크
+없음. 모델명만 변경, 프롬프트 호환성 문제 없음. 응답 시간은 Pro 계열이라 약간 느려질 수 있으나 품질 향상이 더 큼.
 

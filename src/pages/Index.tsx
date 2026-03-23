@@ -54,7 +54,6 @@ export interface SyntaxNote {
   id: number; // 1~5
   content: string;
   targetText?: string; // 드래그한 원문 텍스트
-  anchorMode?: "selection-start" | "heuristic"; // 수동 선택 vs 자동 생성
 }
 
 interface SentenceResult {
@@ -234,16 +233,8 @@ export default function Index() {
     const hasTransientWork = latestResults.some((r) => r.generatingSyntax || r.generatingHongT || r.regenerating);
     if (hasTransientWork) return;
 
-    // Fetch fresh results_json from DB to avoid overwriting Preview edits
-    const { data: freshRow } = await supabase
-      .from("passages")
-      .select("results_json")
-      .eq("id", categories.selectedPassageId)
-      .single();
-    const freshBase = freshRow?.results_json ?? null;
-
     const sanitizedResults = latestResults.map(({ generatingSyntax, generatingHongT, regenerating, ...rest }) => rest);
-    const mergedStore = mergePassageStore(freshBase, {
+    const mergedStore = mergePassageStore(categories.selectedPassage?.results_json, {
       syntaxResults: sanitizedResults.length > 0 ? sanitizedResults : [],
       completion: { syntaxCompleted: latestSyntaxCompleted },
     });
@@ -265,7 +256,7 @@ export default function Index() {
     saveTimerRef.current = setTimeout(() => {
       void persistIndexState();
     }, 2000);
-  }, [categories.selectedPassageId, results, passage, pdfTitle, preset, persistIndexState]);
+  }, [categories.selectedPassageId, results, persistIndexState]);
 
   const flushAutoSave = useCallback(() => {
     if (!categories.selectedPassageId || !dataLoadedRef.current) return;
@@ -530,7 +521,7 @@ export default function Index() {
           if (slotNumber) {
             // 특정 번호 슬롯에 저장
             const existingIdx = newNotes.findIndex((n) => n.id === slotNumber);
-            const noteEntry: SyntaxNote = { id: slotNumber, content: data.syntaxNotes, targetText: selectedText, anchorMode: "selection-start" };
+            const noteEntry: SyntaxNote = { id: slotNumber, content: data.syntaxNotes, targetText: selectedText };
             if (existingIdx >= 0) {
               newNotes[existingIdx] = noteEntry;
             } else {

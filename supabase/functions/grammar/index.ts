@@ -648,15 +648,7 @@ const autoTools = [
 // -----------------------------
 // Shared: fetch pinned patterns
 // -----------------------------
-function extractEnglishKeywords(content: string): string[] {
-  const matches = content.match(/[A-Za-z][A-Za-z'\-]{1,}/g) || [];
-  const stopWords = new Set(["the", "a", "an", "is", "are", "was", "were", "be", "been", "being", "to", "of", "in", "for", "on", "at", "by", "and", "or", "not", "with", "from", "that", "this", "it", "its", "as", "but", "if", "so", "do", "no", "up"]);
-  return matches
-    .map(m => m.toLowerCase())
-    .filter(m => m.length >= 2 && !stopWords.has(m));
-}
-
-async function fetchPinnedPatterns(_userId: string | undefined, authHeader?: string | null, sentence?: string): Promise<PinnedPatternsData> {
+async function fetchPinnedPatterns(_userId: string | undefined, authHeader?: string | null): Promise<PinnedPatternsData> {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -668,25 +660,11 @@ async function fetchPinnedPatterns(_userId: string | undefined, authHeader?: str
     const url = `${supabaseUrl}/rest/v1/syntax_patterns?is_global=eq.true&order=created_at.desc&select=tag,pinned_content`;
     const res = await fetch(url, { headers: { apikey: apiKey, Authorization: auth } });
     if (!res.ok) return { promptBlock: "", byTag: new Map() };
-    const allPatterns = await res.json();
-    if (allPatterns.length === 0) return { promptBlock: "", byTag: new Map() };
+    const patterns = await res.json();
+    if (patterns.length === 0) return { promptBlock: "", byTag: new Map() };
 
-    // Filter: only include patterns whose English keywords appear in the sentence
-    const sentenceLower = (sentence || "").toLowerCase();
-    let relevantPatterns = allPatterns;
-    if (sentenceLower) {
-      relevantPatterns = allPatterns.filter((p: any) => {
-        const keywords = extractEnglishKeywords(String(p?.pinned_content ?? ""));
-        // Pattern is relevant if at least one keyword appears in the sentence
-        return keywords.some(kw => sentenceLower.includes(kw));
-      });
-      // Limit to max 10 relevant patterns
-      relevantPatterns = relevantPatterns.slice(0, 10);
-    }
-
-    // byTag uses ALL patterns (for post-processing matching)
     const byTag = new Map<string, string>();
-    for (const p of allPatterns) {
+    for (const p of patterns) {
       const tag = String(p?.tag ?? "").trim();
       const content = String(p?.pinned_content ?? "").trim();
       if (!tag || !content) continue;
@@ -694,10 +672,7 @@ async function fetchPinnedPatterns(_userId: string | undefined, authHeader?: str
       if (!byTag.has(key)) byTag.set(key, content);
     }
 
-    // Prompt block only uses RELEVANT patterns
-    if (relevantPatterns.length === 0) return { promptBlock: "", byTag };
-
-    const tagLines = relevantPatterns
+    const tagLines = patterns
       .map((p: any) => {
         const tag = String(p?.tag ?? "").trim();
         const content = String(p?.pinned_content ?? "").trim();
@@ -706,10 +681,10 @@ async function fetchPinnedPatterns(_userId: string | undefined, authHeader?: str
       .filter(Boolean)
       .join("\n");
     const promptBlock =
-      `\n\n[참고 패턴]\n` +
-      `아래는 자주 쓰이는 표현 패턴이다. 해당 문법 요소가 문장에 실제로 존재할 때만 이 형식을 따르라.\n` +
-      `문장에 해당 문법 요소가 없으면 이 패턴을 무시하라.\n` +
-      `___만 실제 단어로 교체하고, 그 외 단어·구조·어순은 바꾸지 말 것.\n` +
+      `\n\n[고정 패턴 — 최우선 규칙]\n` +
+      `아래 태그에 해당하는 포인트는 반드시 해당 패턴의 문장을 그대로 사용하라.\n` +
+      `___만 실제 단어로 교체하고, 그 외 단어·구조·어순은 절대 바꾸거나 추가하지 말 것.\n` +
+      `패턴에 없는 부가 설명, 슬래시(/) 뒤 추가 분석, 범위 표시 등을 덧붙이지 말 것.\n` +
       `${tagLines}\n` +
       `출력에 태그명 접두어(예: 관계대명사:, 5형식:)를 붙이지 말 것.`;
     return { promptBlock, byTag };
@@ -767,8 +742,8 @@ serve(async (req) => {
       });
     }
 
-    // Always analyze the user's selection as-is; use full sentence only as context
     let textToAnalyze = selected || full;
+    if (selected && countWords(selected) < 3 && full) textToAnalyze = full;
 
     // ── 자동 생성 모드: 태그 필터 없이 자유 추출 ──
     if (isAutoMode) {
@@ -777,7 +752,7 @@ serve(async (req) => {
 
       const [learningBlock, pinnedData] = await Promise.all([
         fetchLearningBlock(userId, reqAuth),
-        fetchPinnedPatterns(userId, reqAuth, full),
+        fetchPinnedPatterns(userId, reqAuth),
       ]);
       const userMessage = `문장: ${full}\n` +
         `이 문장에서 수능에 출제될 수 있는 핵심 문법 포인트를 찾아서 points로 작성하라.\n` +
@@ -883,14 +858,6 @@ serve(async (req) => {
           tag: oneLine(String(p.tag ?? "")),
         }))
         .filter((p) => p.text);
-      // Deduplicate by text content
-      const seenTexts = new Set<string>();
-      autoPoints = autoPoints.filter((p) => {
-        const key = p.text.toLowerCase().trim();
-        if (seenTexts.has(key)) return false;
-        seenTexts.add(key);
-        return true;
-      });
       autoPoints = autoPoints.slice(0, 5).map((p) => ({
         text: p.text,
         targetText: p.targetText,
@@ -930,7 +897,7 @@ serve(async (req) => {
     // Fetch learning examples + pinned patterns for hint mode too
     const [learningBlock, pinnedData] = await Promise.all([
       fetchLearningBlock(userId, reqAuth),
-      fetchPinnedPatterns(userId, reqAuth, full),
+      fetchPinnedPatterns(userId, reqAuth),
     ]);
 
     const userMessage = useFreestyle
