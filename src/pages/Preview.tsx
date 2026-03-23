@@ -1,4 +1,4 @@
-import { useState, useEffect, createElement, useCallback } from "react";
+import { useState, useEffect, createElement, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -72,6 +72,27 @@ export default function Preview() {
   const [previewCompleted, setPreviewCompleted] = useState(false);
   const [loadingSavedState, setLoadingSavedState] = useState(false);
   const [baseResultsJson, setBaseResultsJson] = useState<unknown>(null);
+  const previewSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const previewLoadedRef = useRef(false);
+  const latestPreviewStateRef = useRef<{
+    passage: string;
+    pdfTitle: string;
+    vocab: VocabItem[];
+    synonyms: SynAntItem[];
+    summary: string;
+    examBlock: ExamBlock | null;
+    previewCompleted: boolean;
+    baseResultsJson: unknown;
+  }>({
+    passage: initialPassage,
+    pdfTitle,
+    vocab: [],
+    synonyms: [],
+    summary: "",
+    examBlock: null,
+    previewCompleted: false,
+    baseResultsJson: null,
+  });
 
   // Persist state to sessionStorage
   useEffect(() => {
@@ -117,12 +138,102 @@ export default function Preview() {
       } else if (typeof data.passage_text === "string" && data.passage_text) {
         setPassage(data.passage_text);
       }
+      previewLoadedRef.current = true;
     };
     loadSaved();
     return () => {
       cancelled = true;
     };
   }, [passageId]);
+
+  useEffect(() => {
+    latestPreviewStateRef.current = {
+      passage,
+      pdfTitle,
+      vocab,
+      synonyms,
+      summary,
+      examBlock,
+      previewCompleted,
+      baseResultsJson,
+    };
+  }, [passage, pdfTitle, vocab, synonyms, summary, examBlock, previewCompleted, baseResultsJson]);
+
+  const persistPreviewState = useCallback(async (): Promise<boolean> => {
+    if (!passageId || !previewLoadedRef.current) return false;
+    const latest = latestPreviewStateRef.current;
+    const mergedStore = mergePassageStore(latest.baseResultsJson, {
+      preview: {
+        passage: latest.passage,
+        pdfTitle: latest.pdfTitle,
+        vocab: latest.vocab,
+        synonyms: latest.synonyms,
+        summary: latest.summary,
+        examBlock: latest.examBlock || null,
+      },
+      completion: {
+        previewCompleted: latest.previewCompleted,
+        previewCompletedAt: latest.previewCompleted ? new Date().toISOString() : null,
+      },
+    });
+
+    const { error } = await supabase
+      .from("passages")
+      .update({
+        passage_text: latest.passage,
+        pdf_title: latest.pdfTitle,
+        results_json: mergedStore as any,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", passageId);
+
+    if (error) {
+      return false;
+    }
+
+    setBaseResultsJson(mergedStore);
+    latestPreviewStateRef.current = {
+      ...latestPreviewStateRef.current,
+      baseResultsJson: mergedStore,
+    };
+    return true;
+  }, [passageId]);
+
+  const schedulePreviewSave = useCallback(() => {
+    if (!passageId || !previewLoadedRef.current) return;
+    if (previewSaveTimerRef.current) clearTimeout(previewSaveTimerRef.current);
+    previewSaveTimerRef.current = setTimeout(() => {
+      void persistPreviewState();
+    }, 2000);
+  }, [passageId, persistPreviewState]);
+
+  const flushPreviewSave = useCallback(() => {
+    if (!passageId || !previewLoadedRef.current) return;
+    if (previewSaveTimerRef.current) {
+      clearTimeout(previewSaveTimerRef.current);
+      previewSaveTimerRef.current = null;
+    }
+    void persistPreviewState();
+  }, [passageId, persistPreviewState]);
+
+  useEffect(() => {
+    if (!previewLoadedRef.current) return;
+    schedulePreviewSave();
+    return () => {
+      if (previewSaveTimerRef.current) clearTimeout(previewSaveTimerRef.current);
+    };
+  }, [passage, pdfTitle, vocab, synonyms, summary, examBlock, schedulePreviewSave]);
+
+  useEffect(() => {
+    const handlePageHide = () => {
+      flushPreviewSave();
+    };
+    window.addEventListener("pagehide", handlePageHide);
+    return () => {
+      window.removeEventListener("pagehide", handlePageHide);
+      flushPreviewSave();
+    };
+  }, [flushPreviewSave]);
 
   const isGenerating = vocabStatus === "loading" || synonymsStatus === "loading" || previewStatus === "loading";
 
@@ -334,28 +445,20 @@ export default function Preview() {
     }
     const next = !previewCompleted;
     setPreviewCompleted(next);
-    const mergedStore = mergePassageStore(baseResultsJson, {
-      preview: { passage, pdfTitle, vocab, synonyms, summary, examBlock: examBlock || null },
-      completion: {
-        previewCompleted: next,
-        previewCompletedAt: next ? new Date().toISOString() : null,
-      },
-    });
-    const { error } = await supabase
-      .from("passages")
-      .update({
-        passage_text: passage,
-        pdf_title: pdfTitle,
-        results_json: mergedStore as any,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", passageId);
-    if (error) {
+    latestPreviewStateRef.current = {
+      ...latestPreviewStateRef.current,
+      previewCompleted: next,
+    };
+    const ok = await persistPreviewState();
+    if (!ok) {
       setPreviewCompleted(!next);
+      latestPreviewStateRef.current = {
+        ...latestPreviewStateRef.current,
+        previewCompleted: !next,
+      };
       toast.error("완료 상태 저장 실패");
       return;
     }
-    setBaseResultsJson(mergedStore);
     toast.success(next ? "프리뷰 완료로 표시됨" : "프리뷰 완료 표시 해제");
   };
 
