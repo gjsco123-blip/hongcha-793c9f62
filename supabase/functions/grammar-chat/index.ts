@@ -416,7 +416,7 @@ serve(async (req) => {
     } catch {}
 
     const aiMessages = [
-      { role: "system", content: systemPrompt + targetedSystemAddendum + pinnedBlock },
+      { role: "system", content: systemPrompt + targetedSystemAddendum + trustAddendum + pinnedBlock },
       {
         role: "system",
         content: `아래는 현재 작업 중인 문장과 구문분석 노트입니다:\n\n${contextBlock}`,
