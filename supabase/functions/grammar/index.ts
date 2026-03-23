@@ -410,7 +410,9 @@ function extractPinnedTemplateValues(raw: string, targetText?: string): string[]
 
 function materializePinnedPattern(template: string, raw: string, targetText?: string): string {
   const normalizedTemplate = stripLeadingTagLabel(oneLine(template));
-  if (!normalizedTemplate.includes("___")) return normalizedTemplate;
+  // Only server-enforce template-style pinned patterns. Concrete sentence-specific
+  // patterns without placeholders can leak unrelated words into new sentences.
+  if (!normalizedTemplate.includes("___")) return raw;
 
   const values = extractPinnedTemplateValues(raw, targetText);
   if (values.length === 0) return raw;
@@ -727,25 +729,9 @@ async function fetchPinnedPatterns(
 // Shared: fetch learning examples
 // -----------------------------
 async function fetchLearningBlock(userId: string | undefined, authHeader?: string | null): Promise<string> {
-  if (!userId) return "";
-  try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-    if (!supabaseUrl || (!serviceRoleKey && !anonKey)) return "";
-    const apiKey = serviceRoleKey || anonKey!;
-    const auth = serviceRoleKey ? `Bearer ${serviceRoleKey}` : (authHeader || "");
-    if (!auth) return "";
-    const url = `${supabaseUrl}/rest/v1/learning_examples?user_id=eq.${userId}&type=eq.syntax&order=created_at.desc&limit=5&select=sentence,ai_draft,final_version`;
-    const res = await fetch(url, { headers: { apikey: apiKey, Authorization: auth } });
-    if (!res.ok) return "";
-    const examples = await res.json();
-    if (examples.length === 0) return "";
-    const lines = examples.map((e: any) => `원문: ${e.sentence}\nAI초안: ${e.ai_draft}\n최종: ${e.final_version}`).join("\n---\n");
-    return `\n\n[사용자 선호 스타일 예시 — 아래 최종 버전의 톤·길이·표현 방식을 참고하여 작성하라]\n${lines}`;
-  } catch {
-    return "";
-  }
+  // Raw learning examples can leak unrelated words and structures from older
+  // sentences into the current sentence. Keep syntax generation sentence-local.
+  return "";
 }
 
 // -----------------------------

@@ -119,7 +119,9 @@ function chatExtractPinnedTemplateValues(raw: string): string[] {
 
 function chatMaterializePinnedPattern(template: string, raw: string, stripLeadingTagLabel: (line: string) => string): string {
   const normalizedTemplate = stripLeadingTagLabel(chatOneLine(template));
-  if (!normalizedTemplate.includes("___")) return normalizedTemplate;
+  // Only server-enforce template-style pinned patterns. Concrete sentence-specific
+  // patterns without placeholders can leak unrelated words into new sentences.
+  if (!normalizedTemplate.includes("___")) return raw;
   const values = chatExtractPinnedTemplateValues(raw);
   if (values.length === 0) return raw;
   let idx = 0;
@@ -203,8 +205,8 @@ serve(async (req) => {
 - 다른 포인트는 건드리지 않는다.`
       : "";
 
-    // Fetch learning examples + pinned patterns
-    let learningBlock = "";
+    // Fetch pinned patterns only. Raw learning examples leak unrelated words from
+    // older sentences into the current syntax note generation.
     let pinnedBlock = "";
     const pinnedByTag = new Map<string, string>();
     try {
@@ -215,22 +217,7 @@ serve(async (req) => {
           `${supabaseUrl}/rest/v1/syntax_patterns?is_global=eq.true&order=created_at.desc&select=tag,pinned_content`,
           { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } },
         );
-        const learningReq = userId
-          ? fetch(
-              `${supabaseUrl}/rest/v1/learning_examples?user_id=eq.${userId}&type=eq.syntax&order=created_at.desc&limit=3&select=sentence,ai_draft,final_version`,
-              { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } },
-            )
-          : Promise.resolve(null);
-
-        const [patternsRes, learningRes] = await Promise.all([patternsReq, learningReq]);
-
-        if (learningRes?.ok) {
-          const examples = await learningRes.json();
-          if (examples.length > 0) {
-            const lines = examples.map((e: any) => `원문: ${e.sentence}\nAI초안: ${e.ai_draft}\n최종: ${e.final_version}`).join("\n---\n");
-            learningBlock = `\n\n[사용자 선호 스타일 예시]\n${lines}`;
-          }
-        }
+        const patternsRes = await patternsReq;
         if (patternsRes.ok) {
           const patterns = await patternsRes.json();
           if (patterns.length > 0) {
@@ -253,7 +240,7 @@ serve(async (req) => {
     } catch {}
 
     const aiMessages = [
-      { role: "system", content: systemPrompt + targetedSystemAddendum + pinnedBlock + learningBlock },
+      { role: "system", content: systemPrompt + targetedSystemAddendum + pinnedBlock },
       {
         role: "system",
         content: `아래는 현재 작업 중인 문장과 구문분석 노트입니다:\n\n${contextBlock}`,
