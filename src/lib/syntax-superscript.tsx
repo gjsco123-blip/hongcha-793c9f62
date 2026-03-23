@@ -398,6 +398,14 @@ function chooseAnchorOffset(
     if (itToken) return itToken.start;
   }
 
+  if (/(가주어|진주어|it\s+as\s+가주어|it\s+as\s+진주어)/i.test(rawContent)) {
+    const itToken =
+      findTokenByPredicate(tokensInSpan, (tok) => normalizeAlphaWord(tok.word).startsWith("it")) ||
+      findTokenByPredicate(nearbyTokens, (tok) => normalizeAlphaWord(tok.word).startsWith("it")) ||
+      findTokenByPredicate(allTokens, (tok) => normalizeAlphaWord(tok.word).startsWith("it"));
+    if (itToken) return itToken.start;
+  }
+
   if (isTooToInfinitiveNote(rawContent)) {
     const tooToken =
       findTokenByPredicate(tokensInSpan, (tok) => normalizeAlphaWord(tok.word) === "too") ||
