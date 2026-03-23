@@ -801,33 +801,42 @@ async function fetchPinnedPatterns(
     if (allPatterns.length === 0) return { promptBlock: "", byTag: new Map() };
     const byTag = new Map<string, string>();
 
+    // 2-track pattern matching:
+    // Track 1: Grammar-tag patterns → always include by tag (no keyword matching needed)
+    // Track 2: Phrase/expression patterns (기타, 숙어/표현) → require keyword relevance
+    const GRAMMAR_TAGS = new Set([
+      "관계대명사", "관계부사", "분사구문", "분사 후치수식", "분사", "수동태", "조동사+수동",
+      "to부정사", "명사절", "가주어/진주어", "가목적어/진목적어", "5형식", "병렬구조",
+      "전치사+동명사", "비교구문", "수일치", "생략", "강조구문", "현재완료+수동",
+      "계속적용법 관계대명사", "대동사", "전치사+관계대명사", "지칭",
+    ]);
+
     let relevantPatterns: any[] = [];
     const sentenceLower = oneLine(sentence || "").toLowerCase();
 
-    if (sentenceLower) {
-      // Score each pattern and only keep those that pass strict relevance check
-      const scored = allPatterns
-        .map((p: any) => {
-          const content = String(p?.pinned_content ?? "");
-          const score = patternRelevanceScore(content, sentenceLower);
-          return { pattern: p, score };
-        })
-        .filter((s: any) => s.score > 0)
-        .sort((a: any, b: any) => b.score - a.score)
-        .slice(0, 8);
+    for (const p of allPatterns) {
+      const tag = String(p?.tag ?? "").trim();
+      const content = String(p?.pinned_content ?? "").trim();
+      if (!tag || !content) continue;
 
-      relevantPatterns = scored.map((s: any) => s.pattern);
+      const isGrammarTag = GRAMMAR_TAGS.has(tag);
 
-      // Log which patterns matched for debugging
-      if (relevantPatterns.length > 0) {
-        console.log(`[pinned-patterns] Sentence: "${sentenceLower.slice(0, 60)}..."`);
-        console.log(`[pinned-patterns] Matched ${relevantPatterns.length}/${allPatterns.length} patterns:`);
-        for (const s of scored) {
-          console.log(`  - [${String(s.pattern.tag)}] score=${s.score.toFixed(2)}: "${String(s.pattern.pinned_content).slice(0, 50)}..."`);
-        }
-      } else {
-        console.log(`[pinned-patterns] No patterns matched for: "${sentenceLower.slice(0, 60)}..."`);
+      if (isGrammarTag) {
+        // Track 1: Grammar tag → always include (no keyword check)
+        relevantPatterns.push(p);
+      } else if (sentenceLower) {
+        // Track 2: Expression/phrase tag → require keyword relevance
+        const score = patternRelevanceScore(content, sentenceLower);
+        if (score > 0) relevantPatterns.push(p);
       }
+    }
+
+    // Log for debugging
+    if (relevantPatterns.length > 0) {
+      console.log(`[pinned-patterns] Sentence: "${sentenceLower.slice(0, 60)}..."`);
+      console.log(`[pinned-patterns] Matched ${relevantPatterns.length}/${allPatterns.length} patterns (grammar-tag + phrase)`);
+    } else {
+      console.log(`[pinned-patterns] No patterns matched for: "${sentenceLower.slice(0, 60)}..."`);
     }
 
     if (relevantPatterns.length === 0) return { promptBlock: "", byTag };
