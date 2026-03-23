@@ -293,28 +293,29 @@ serve(async (req) => {
         const patternsRes = await patternsReq;
         if (patternsRes.ok) {
           const patterns = await patternsRes.json();
-          const sentenceLower = chatOneLine(sentence || "").toLowerCase();
-          const relevantPatterns = sentenceLower
+          const sentenceText = chatOneLine(sentence || "");
+          const relevantPatterns = sentenceText
             ? patterns
                 .filter((p: any) => {
-                  const keywords = chatExtractEnglishKeywords(String(p?.pinned_content ?? ""));
-                  return keywords.some((kw) => sentenceLower.includes(kw));
+                  const content = String(p?.pinned_content ?? "");
+                  return chatPatternRelevanceScore(content, sentenceText) >= 0.6;
                 })
                 .slice(0, 10)
-            : patterns;
+            : [];
           if (relevantPatterns.length > 0) {
             for (const p of relevantPatterns) {
               const tag = String(p?.tag ?? "").trim();
               const content = String(p?.pinned_content ?? "").trim();
-              if (!chatShouldForcePinnedTemplateForSentence(content, sentence)) continue;
               const key = chatNormalizeTagKey(tag);
               if (key && content && !pinnedByTag.has(key)) pinnedByTag.set(key, content);
             }
             const tagLines = relevantPatterns.map((p: any) => `- ${p.tag}: ${p.pinned_content}`).join("\n");
-            pinnedBlock = `\n\n[고정 패턴 — 최우선 규칙]\n` +
-              `아래 태그에 해당하는 포인트는 반드시 해당 패턴의 문장을 그대로 사용하라.\n` +
-              `___만 실제 단어로 교체하고, 그 외 단어·구조·어순은 절대 바꾸거나 추가하지 말 것.\n` +
-              `패턴에 없는 부가 설명, 슬래시(/) 뒤 추가 분석, 범위 표시 등을 덧붙이지 말 것.\n` +
+            pinnedBlock = `\n\n[필수 적용 규칙 — 고정 패턴]\n` +
+              `아래 패턴은 사용자가 직접 지정한 필수 설명 형식이다.\n` +
+              `해당 문법 요소가 문장에 존재하면, 반드시 아래 형식과 설명 스타일을 그대로 따라야 한다.\n` +
+              `너 자신의 설명 방식이나 표현을 사용하지 말고, 아래 패턴의 구조·어휘·종결 방식을 정확히 복제하라.\n` +
+              `___가 있으면 해당 문장의 실제 단어로 교체하라.\n` +
+              `문장에 해당 문법 요소가 없으면 이 패턴을 완전히 무시하라. 억지로 적용하지 말 것.\n` +
               `${tagLines}\n` +
               `출력에 태그명 접두어(예: 관계대명사:, 5형식:)를 붙이지 말 것.`;
           }
