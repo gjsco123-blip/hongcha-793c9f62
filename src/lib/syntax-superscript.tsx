@@ -4,6 +4,7 @@ export interface SyntaxNoteWithTarget {
   id: number;
   content: string;
   targetText?: string;
+  anchorLocked?: boolean;
 }
 
 type TextToken = { word: string; start: number; end: number };
@@ -643,7 +644,7 @@ export function computeSuperscriptPositions(
     if (!note.targetText) continue;
     const span = selectBestSpanForNote(originalText, note.targetText, note.content, allTokens);
     if (!span) continue;
-    let anchor = chooseAnchorOffset(originalText, span, note.content, allTokens);
+    let anchor = note.anchorLocked ? span.start : chooseAnchorOffset(originalText, span, note.content, allTokens);
 
     const existingSpans = anchorToSpans.get(anchor) || [];
     const hasDifferentSpanAtSameAnchor = existingSpans.some(

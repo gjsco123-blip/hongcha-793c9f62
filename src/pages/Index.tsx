@@ -54,6 +54,7 @@ export interface SyntaxNote {
   id: number; // 1~5
   content: string;
   targetText?: string; // 드래그한 원문 텍스트
+  anchorLocked?: boolean; // 수동 드래그 선택의 시작 위치에 위첨자 고정
 }
 
 interface SentenceResult {
@@ -521,7 +522,13 @@ export default function Index() {
           if (slotNumber) {
             // 특정 번호 슬롯에 저장
             const existingIdx = newNotes.findIndex((n) => n.id === slotNumber);
-            const noteEntry: SyntaxNote = { id: slotNumber, content: data.syntaxNotes, targetText: selectedText };
+            const prevNote = existingIdx >= 0 ? newNotes[existingIdx] : undefined;
+            const noteEntry: SyntaxNote = {
+              id: slotNumber,
+              content: data.syntaxNotes,
+              targetText: selectedText || prevNote?.targetText,
+              anchorLocked: selectedText ? true : prevNote?.anchorLocked,
+            };
             if (existingIdx >= 0) {
               newNotes[existingIdx] = noteEntry;
             } else {
