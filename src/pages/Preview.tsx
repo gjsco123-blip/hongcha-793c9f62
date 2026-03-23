@@ -33,7 +33,6 @@ async function invokeRetry(fn: string, body: any, maxRetries = 3) {
 }
 
 const STORAGE_KEY = "preview-state";
-const PREVIEW_DRAFT_KEY_PREFIX = "preview-draft:";
 
 function loadCached() {
   try {
@@ -74,8 +73,6 @@ export default function Preview() {
   const [loadingSavedState, setLoadingSavedState] = useState(false);
   const [baseResultsJson, setBaseResultsJson] = useState<unknown>(null);
   const previewSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const previewPersistInFlightRef = useRef(false);
-  const previewPersistQueuedRef = useRef(false);
   const previewLoadedRef = useRef(false);
   const latestPreviewStateRef = useRef<{
     passage: string;
@@ -110,7 +107,7 @@ export default function Preview() {
       setLoadingSavedState(true);
       const { data, error } = await supabase
         .from("passages")
-        .select("results_json, passage_text, pdf_title, name, updated_at")
+        .select("results_json, passage_text, pdf_title, name")
         .eq("id", passageId)
         .single();
       setLoadingSavedState(false);
@@ -120,45 +117,7 @@ export default function Preview() {
       const store = parsePassageStore(data.results_json);
       setPreviewCompleted(!!store.completion?.previewCompleted);
 
-      const draftKey = `${PREVIEW_DRAFT_KEY_PREFIX}${passageId}`;
-      let draftApplied = false;
-      try {
-        const rawDraft = localStorage.getItem(draftKey);
-        if (rawDraft) {
-          const draft = JSON.parse(rawDraft) as {
-            savedAt?: number;
-            passage?: string;
-            vocab?: VocabItem[];
-            synonyms?: SynAntItem[];
-            summary?: string;
-            examBlock?: ExamBlock | null;
-            previewCompleted?: boolean;
-          };
-          const dbUpdatedAt = Date.parse((data as any).updated_at || "");
-          const draftSavedAt = Number(draft?.savedAt || 0);
-          const hasNewerDraft = draftSavedAt > (Number.isFinite(dbUpdatedAt) ? dbUpdatedAt : 0);
-          if (hasNewerDraft) {
-            if (typeof draft.passage === "string") setPassage(draft.passage);
-            if (Array.isArray(draft.vocab)) setVocab(draft.vocab);
-            if (Array.isArray(draft.synonyms)) {
-              const draftPassage = typeof draft.passage === "string" ? draft.passage : (typeof data.passage_text === "string" ? data.passage_text : "");
-              setSynonyms(sanitizeSynonymItems(draft.synonyms, draftPassage));
-            }
-            if (typeof draft.summary === "string") setSummary(draft.summary);
-            if (typeof draft.examBlock === "object") setExamBlock(draft.examBlock || null);
-            if (typeof draft.previewCompleted === "boolean") setPreviewCompleted(draft.previewCompleted);
-
-            setVocabStatus(Array.isArray(draft.vocab) && draft.vocab.length > 0 ? "done" : "idle");
-            setSynonymsStatus(Array.isArray(draft.synonyms) && draft.synonyms.length > 0 ? "done" : "idle");
-            setPreviewStatus((draft.summary || draft.examBlock) ? "done" : "idle");
-            draftApplied = true;
-          }
-        }
-      } catch {
-        // ignore malformed local draft
-      }
-
-      if (!draftApplied && store.preview) {
+      if (store.preview) {
         if (typeof store.preview.passage === "string" && store.preview.passage) setPassage(store.preview.passage);
         const savedVocab = Array.isArray(store.preview.vocab) ? (store.preview.vocab as VocabItem[]) : [];
         const savedSynonyms = Array.isArray(store.preview.synonyms) ? (store.preview.synonyms as SynAntItem[]) : [];
@@ -176,7 +135,7 @@ export default function Preview() {
         setVocabStatus(savedVocab.length > 0 ? "done" : "idle");
         setSynonymsStatus(savedSynonyms.length > 0 ? "done" : "idle");
         setPreviewStatus(savedSummary || savedExam ? "done" : "idle");
-      } else if (!draftApplied && typeof data.passage_text === "string" && data.passage_text) {
+      } else if (typeof data.passage_text === "string" && data.passage_text) {
         setPassage(data.passage_text);
       }
       previewLoadedRef.current = true;
@@ -237,37 +196,16 @@ export default function Preview() {
       ...latestPreviewStateRef.current,
       baseResultsJson: mergedStore,
     };
-    localStorage.removeItem(`${PREVIEW_DRAFT_KEY_PREFIX}${passageId}`);
     return true;
   }, [passageId]);
-
-  const runPersistPreviewState = useCallback(async (): Promise<boolean> => {
-    if (previewPersistInFlightRef.current) {
-      previewPersistQueuedRef.current = true;
-      return false;
-    }
-
-    previewPersistInFlightRef.current = true;
-    try {
-      let lastOk = false;
-      do {
-        previewPersistQueuedRef.current = false;
-        lastOk = await persistPreviewState();
-      } while (previewPersistQueuedRef.current);
-      return lastOk;
-    } finally {
-      previewPersistInFlightRef.current = false;
-    }
-  }, [persistPreviewState]);
 
   const schedulePreviewSave = useCallback(() => {
     if (!passageId || !previewLoadedRef.current) return;
     if (previewSaveTimerRef.current) clearTimeout(previewSaveTimerRef.current);
     previewSaveTimerRef.current = setTimeout(() => {
-      previewSaveTimerRef.current = null;
-      void runPersistPreviewState();
+      void persistPreviewState();
     }, 2000);
-  }, [passageId, runPersistPreviewState]);
+  }, [passageId, persistPreviewState]);
 
   const flushPreviewSave = useCallback(() => {
     if (!passageId || !previewLoadedRef.current) return;
@@ -275,8 +213,8 @@ export default function Preview() {
       clearTimeout(previewSaveTimerRef.current);
       previewSaveTimerRef.current = null;
     }
-    void runPersistPreviewState();
-  }, [passageId, runPersistPreviewState]);
+    void persistPreviewState();
+  }, [passageId, persistPreviewState]);
 
   useEffect(() => {
     if (!previewLoadedRef.current) return;
@@ -285,20 +223,6 @@ export default function Preview() {
       if (previewSaveTimerRef.current) clearTimeout(previewSaveTimerRef.current);
     };
   }, [passage, pdfTitle, vocab, synonyms, summary, examBlock, schedulePreviewSave]);
-
-  useEffect(() => {
-    if (!passageId || !previewLoadedRef.current) return;
-    const payload = {
-      savedAt: Date.now(),
-      passage,
-      vocab,
-      synonyms,
-      summary,
-      examBlock,
-      previewCompleted,
-    };
-    localStorage.setItem(`${PREVIEW_DRAFT_KEY_PREFIX}${passageId}`, JSON.stringify(payload));
-  }, [passageId, passage, vocab, synonyms, summary, examBlock, previewCompleted]);
 
   useEffect(() => {
     const handlePageHide = () => {
@@ -525,7 +449,7 @@ export default function Preview() {
       ...latestPreviewStateRef.current,
       previewCompleted: next,
     };
-    const ok = await runPersistPreviewState();
+    const ok = await persistPreviewState();
     if (!ok) {
       setPreviewCompleted(!next);
       latestPreviewStateRef.current = {
@@ -577,7 +501,6 @@ export default function Preview() {
         <PreviewPassageInput
           passage={passage}
           setPassage={setPassage}
-          onPassageBlur={flushPreviewSave}
           isGenerating={isGenerating}
           onGenerate={handleGenerate}
           vocabReady={vocabStatus === "done"}

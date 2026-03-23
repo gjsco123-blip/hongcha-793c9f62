@@ -6,7 +6,6 @@ type SelectTarget = "vocab" | "synonym";
 interface Props {
   passage: string;
   setPassage: (v: string) => void;
-  onPassageBlur?: () => void;
   isGenerating: boolean;
   onGenerate: () => void;
   vocabReady: boolean;
@@ -18,7 +17,7 @@ interface Props {
 }
 
 export function PreviewPassageInput({
-  passage, setPassage, onPassageBlur, isGenerating, onGenerate, vocabReady,
+  passage, setPassage, isGenerating, onGenerate, vocabReady,
   onWordClick, addingWord,
   synonymSelectMode, onSynonymWordClick, addingSynonymWord,
 }: Props) {
@@ -137,7 +136,6 @@ export function PreviewPassageInput({
         <textarea
           value={passage}
           onChange={(e) => setPassage(e.target.value)}
-          onBlur={onPassageBlur}
           placeholder="영어 지문 전체를 붙여넣으세요."
           rows={6}
           className="w-full bg-card border border-border rounded-xl px-4 py-3 text-sm font-english leading-relaxed text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-foreground transition-colors resize-y"

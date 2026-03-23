@@ -166,21 +166,14 @@ export function useCategories() {
     return true;
   };
 
-  const updatePassage = async (
-    id: string,
-    updates: Partial<Pick<Passage, "passage_text" | "pdf_title" | "results_json" | "preset" | "name">>
-  ): Promise<boolean> => {
-    const nowIso = new Date().toISOString();
+  const updatePassage = async (id: string, updates: Partial<Pick<Passage, "passage_text" | "pdf_title" | "results_json" | "preset" | "name">>) => {
     const { error } = await supabase
       .from("passages")
-      .update({ ...updates, updated_at: nowIso })
+      .update({ ...updates, updated_at: new Date().toISOString() })
       .eq("id", id);
     if (error) {
       console.error("자동저장 실패:", error.message);
-      return false;
     }
-    setPassages((prev) => prev.map((p) => (p.id === id ? { ...p, ...updates, updated_at: nowIso } : p)));
-    return true;
   };
 
   const reorderPassages = async (reorderedIds: string[]) => {
