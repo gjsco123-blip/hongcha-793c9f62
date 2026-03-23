@@ -231,6 +231,17 @@ function chatApplyPinnedPattern(
     return chatMaterializePinnedPattern(pinned, raw, stripLeadingTagLabel);
   }
 
+  // Fallback: partial match
+  for (const candidate of candidates) {
+    const key = chatNormalizeTagKey(candidate);
+    if (!key) continue;
+    for (const [bKey, bVal] of pinnedByTag.entries()) {
+      if (bKey.includes(key) || key.includes(bKey)) {
+        return chatMaterializePinnedPattern(chatOneLine(bVal), raw, stripLeadingTagLabel);
+      }
+    }
+  }
+
   return raw;
 }
 

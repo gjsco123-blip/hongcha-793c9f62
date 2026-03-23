@@ -500,6 +500,17 @@ function applyPinnedPattern(
     return materializePinnedPattern(pinned, raw, targetText);
   }
 
+  // Fallback: partial match — if byTag key contains or is contained in candidate
+  for (const candidate of candidates) {
+    const key = normalizeTagKey(candidate);
+    if (!key) continue;
+    for (const [bKey, bVal] of pinnedByTag.entries()) {
+      if (bKey.includes(key) || key.includes(bKey)) {
+        return materializePinnedPattern(oneLine(bVal), raw, targetText);
+      }
+    }
+  }
+
   return raw;
 }
 
