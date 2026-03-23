@@ -157,6 +157,12 @@ function chatDetectUiTagFromContent(content: string): string {
   if (c.includes("수일치")) return "수일치";
   if (c.includes("생략")) return "생략";
   if (c.includes("숙어") || c.includes("구동사") || c.includes("표현")) return "숙어/표현";
+  if (c.includes("강조") && (c.includes("구문") || c.includes("it is") || c.includes("it was"))) return "강조구문";
+  if (c.includes("현재완료") && c.includes("수동")) return "현재완료+수동";
+  if (c.includes("계속적") && (c.includes("용법") || c.includes("관계"))) return "계속적용법 관계대명사";
+  if (c.includes("대동사")) return "대동사";
+  if (c.includes("분사") && !c.includes("분사구문") && !c.includes("후치")) return "분사";
+  if (c.includes("전치사") && c.includes("관계")) return "전치사+관계대명사";
   return "기타";
 }
 
@@ -223,6 +229,17 @@ function chatApplyPinnedPattern(
     const pinned = chatOneLine(String(pinnedByTag.get(key) ?? ""));
     if (!pinned) continue;
     return chatMaterializePinnedPattern(pinned, raw, stripLeadingTagLabel);
+  }
+
+  // Fallback: partial match
+  for (const candidate of candidates) {
+    const key = chatNormalizeTagKey(candidate);
+    if (!key) continue;
+    for (const [bKey, bVal] of pinnedByTag.entries()) {
+      if (bKey.includes(key) || key.includes(bKey)) {
+        return chatMaterializePinnedPattern(chatOneLine(bVal), raw, stripLeadingTagLabel);
+      }
+    }
   }
 
   return raw;

@@ -381,6 +381,12 @@ function detectUiTagFromContent(content: string): string {
   if (c.includes("비교") || c.includes("최상급")) return "비교구문";
   if (c.includes("수일치")) return "수일치";
   if (c.includes("생략")) return "생략";
+  if (c.includes("강조") && (c.includes("구문") || c.includes("it is") || c.includes("it was"))) return "강조구문";
+  if (c.includes("현재완료") && c.includes("수동")) return "현재완료+수동";
+  if (c.includes("계속적") && (c.includes("용법") || c.includes("관계"))) return "계속적용법 관계대명사";
+  if (c.includes("대동사")) return "대동사";
+  if (c.includes("분사") && !c.includes("분사구문") && !c.includes("후치")) return "분사";
+  if (c.includes("전치사") && c.includes("관계")) return "전치사+관계대명사";
   return "기타";
 }
 
@@ -404,6 +410,12 @@ function normalizeModelTagToUiTag(tag: string): string {
   if (t.includes("there_be")) return "기타";
   if (t.includes("comparison") || t.includes("비교")) return "비교구문";
   if (t.includes("omission") || t.includes("생략")) return "생략";
+  if (t.includes("강조") && (t.includes("구문") || t.includes("it"))) return "강조구문";
+  if (t.includes("현재완료") && t.includes("수동")) return "현재완료+수동";
+  if (t.includes("계속적") && (t.includes("용법") || t.includes("관계"))) return "계속적용법 관계대명사";
+  if (t.includes("대동사")) return "대동사";
+  if (t.includes("분사") && !t.includes("분사구문") && !t.includes("후치")) return "분사";
+  if (t.includes("전치사") && t.includes("관계")) return "전치사+관계대명사";
   return "";
 }
 
@@ -486,6 +498,17 @@ function applyPinnedPattern(
     const pinned = oneLine(String(pinnedByTag.get(key) ?? ""));
     if (!pinned) continue;
     return materializePinnedPattern(pinned, raw, targetText);
+  }
+
+  // Fallback: partial match — if byTag key contains or is contained in candidate
+  for (const candidate of candidates) {
+    const key = normalizeTagKey(candidate);
+    if (!key) continue;
+    for (const [bKey, bVal] of pinnedByTag.entries()) {
+      if (bKey.includes(key) || key.includes(bKey)) {
+        return materializePinnedPattern(oneLine(bVal), raw, targetText);
+      }
+    }
   }
 
   return raw;
@@ -809,12 +832,11 @@ async function fetchPinnedPatterns(
 
     if (relevantPatterns.length === 0) return { promptBlock: "", byTag };
 
-    // Build byTag map only from patterns that pass template-force check
+    // Build byTag map from all relevance-scored patterns (no double filter)
     for (const p of relevantPatterns) {
       const tag = String(p?.tag ?? "").trim();
       const content = String(p?.pinned_content ?? "").trim();
       if (!tag || !content) continue;
-      if (!shouldForcePinnedTemplateForSentence(content, sentence)) continue;
       const key = normalizeTagKey(tag);
       if (!byTag.has(key)) byTag.set(key, content);
     }
