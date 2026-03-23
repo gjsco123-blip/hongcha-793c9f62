@@ -410,6 +410,12 @@ function normalizeModelTagToUiTag(tag: string): string {
   if (t.includes("there_be")) return "기타";
   if (t.includes("comparison") || t.includes("비교")) return "비교구문";
   if (t.includes("omission") || t.includes("생략")) return "생략";
+  if (t.includes("강조") && (t.includes("구문") || t.includes("it"))) return "강조구문";
+  if (t.includes("현재완료") && t.includes("수동")) return "현재완료+수동";
+  if (t.includes("계속적") && (t.includes("용법") || t.includes("관계"))) return "계속적용법 관계대명사";
+  if (t.includes("대동사")) return "대동사";
+  if (t.includes("분사") && !t.includes("분사구문") && !t.includes("후치")) return "분사";
+  if (t.includes("전치사") && t.includes("관계")) return "전치사+관계대명사";
   return "";
 }
 
