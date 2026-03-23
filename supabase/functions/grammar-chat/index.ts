@@ -316,6 +316,7 @@ serve(async (req) => {
       out = out.replace(/표현으로\s*쓰(?=\s*(?:\/|$))/g, "표현으로 쓰임");
       out = out.replace(/구조로\s*쓰(?=\s*(?:\/|$))/g, "구조로 쓰임");
       out = out.replace(/용법으로\s*쓰(?=\s*(?:\/|$))/g, "용법으로 쓰임");
+      out = out.replace(/((?:[가-힣A-Za-z]+\s+){0,2}용법)으로\s*쓰(?=\s*(?:\/|$))/g, "$1으로 쓰임");
       out = out.replace(/\s{2,}/g, " ").trim();
       return out;
     }
