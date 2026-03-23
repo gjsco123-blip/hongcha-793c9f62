@@ -15,6 +15,12 @@ function hasEnglishLetterToken(word: string): boolean {
   return /[A-Za-z]/.test(word);
 }
 
+function normalizeEnglishContractionSpacing(text: string): string {
+  return String(text ?? "")
+    .replace(/\b([A-Za-z]+)\s+([Nn]['\u2019]t)\b/g, "$1$2")
+    .replace(/\b([A-Za-z]+)\s+(['\u2019](?:s|re|ve|d|ll|m))\b/g, "$1$2");
+}
+
 /** Parse <v>...</v> tags inside a chunk's text into segments */
 function parseVerbSegments(raw: string): ChunkSegment[] {
   const segments: ChunkSegment[] = [];
@@ -24,19 +30,19 @@ function parseVerbSegments(raw: string): ChunkSegment[] {
 
   while ((match = vRegex.exec(raw)) !== null) {
     if (match.index > lastIndex) {
-      segments.push({ text: raw.substring(lastIndex, match.index), isVerb: false });
+      segments.push({ text: normalizeEnglishContractionSpacing(raw.substring(lastIndex, match.index)), isVerb: false });
     }
-    segments.push({ text: match[1], isVerb: true });
+    segments.push({ text: normalizeEnglishContractionSpacing(match[1]), isVerb: true });
     lastIndex = vRegex.lastIndex;
   }
 
   if (lastIndex < raw.length) {
-    segments.push({ text: raw.substring(lastIndex), isVerb: false });
+    segments.push({ text: normalizeEnglishContractionSpacing(raw.substring(lastIndex)), isVerb: false });
   }
 
   // If no <v> tags found, return single non-verb segment
   if (segments.length === 0) {
-    segments.push({ text: raw, isVerb: false });
+    segments.push({ text: normalizeEnglishContractionSpacing(raw), isVerb: false });
   }
 
   return segments;
@@ -52,11 +58,14 @@ export function parseTagged(tagged: string): Chunk[] {
     matchedRanges.push({ start: match.index, end: regex.lastIndex });
     // Remove any residual <cN> or </cN> tags inside the chunk content
     const rawText = match[2].trim().replace(/<\/?c\d+>/g, "");
-    const cleanText = rawText.replace(/<\/?v>/g, "");
+    const cleanText = normalizeEnglishContractionSpacing(rawText.replace(/<\/?v>/g, ""));
     chunks.push({
       tag: parseInt(match[1]),
       text: cleanText,
-      segments: parseVerbSegments(rawText),
+      segments: parseVerbSegments(rawText).map((seg) => ({
+        ...seg,
+        text: normalizeEnglishContractionSpacing(seg.text),
+      })),
     });
   }
 
@@ -65,7 +74,9 @@ export function parseTagged(tagged: string): Chunk[] {
     let pos = 0;
     for (const range of matchedRanges) {
       if (range.start > pos) {
-        const orphan = tagged.substring(pos, range.start).replace(/<\/?c\d+>/g, "").replace(/<\/?v>/g, "").trim();
+        const orphan = normalizeEnglishContractionSpacing(
+          tagged.substring(pos, range.start).replace(/<\/?c\d+>/g, "").replace(/<\/?v>/g, "").trim()
+        );
         if (orphan) {
           // Find the chunk whose range starts at range.start (i.e. the next chunk)
           const idx = matchedRanges.indexOf(range);
@@ -84,7 +95,9 @@ export function parseTagged(tagged: string): Chunk[] {
     }
     // Check trailing text after last match
     if (pos < tagged.length) {
-      const trailing = tagged.substring(pos).replace(/<\/?c\d+>/g, "").replace(/<\/?v>/g, "").trim();
+      const trailing = normalizeEnglishContractionSpacing(
+        tagged.substring(pos).replace(/<\/?c\d+>/g, "").replace(/<\/?v>/g, "").trim()
+      );
       if (trailing) {
         const last = chunks[chunks.length - 1];
         last.text += " " + trailing;
@@ -101,7 +114,7 @@ export function chunksToTagged(chunks: Chunk[]): string {
   return chunks
     .map((c) => {
       const inner = c.segments
-        .map((s) => (s.isVerb ? `<v>${s.text}</v>` : s.text))
+        .map((s) => (s.isVerb ? `<v>${normalizeEnglishContractionSpacing(s.text)}</v>` : normalizeEnglishContractionSpacing(s.text)))
         .join("");
       return `<c${c.tag}>${inner}</c${c.tag}>`;
     })
@@ -109,7 +122,7 @@ export function chunksToTagged(chunks: Chunk[]): string {
 }
 
 export function chunksToSlash(chunks: Chunk[]): string {
-  return chunks.map((c) => c.text).join(" / ");
+  return chunks.map((c) => normalizeEnglishContractionSpacing(c.text)).join(" / ");
 }
 
 export const CHUNK_COLORS = [
@@ -152,10 +165,10 @@ export function wordsToSegments(words: { word: string; isVerb: boolean }[]): Chu
       current.text += " " + words[i].word;
     } else {
       // Add trailing space to non-last segments for proper spacing
-      segments.push({ text: current.text + " ", isVerb: current.isVerb });
+      segments.push({ text: normalizeEnglishContractionSpacing(current.text) + " ", isVerb: current.isVerb });
       current = { text: words[i].word, isVerb: words[i].isVerb };
     }
   }
-  segments.push(current);
+  segments.push({ ...current, text: normalizeEnglishContractionSpacing(current.text) });
   return segments;
 }
