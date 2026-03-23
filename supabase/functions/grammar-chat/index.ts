@@ -325,40 +325,73 @@ serve(async (req) => {
 - 다른 포인트는 건드리지 않는다.`
       : "";
 
-    // Fetch pinned patterns only. Raw learning examples leak unrelated words from
-    // older sentences into the current syntax note generation.
+    // ── Trust & Feedback addendum ──
+    const trustAddendum = `\n\n■ 현재 분석 신뢰 원칙
+- 현재 구문분석 노트의 문법 판단(동격/관계대명사/분사/수동태 등)은 선생님이 확인한 것이다.
+- 이 판단을 임의로 바꾸지 말고 그대로 유지한 채 표현·서술만 수정하라.
+- 사용자가 명시적으로 "이거 관계대명사 아니라 접속사야" 등 문법 분류 자체를 바꾸라고 하지 않는 한, 기존 문법 분류를 유지하라.
+
+■ 사용자 피드백 수용
+- 사용자가 "틀렸어", "아니야", "다시 해줘" 등으로 오류를 지적하면, 이전 답변을 그대로 반복하지 말 것.
+- 문장을 처음부터 다시 분석하여 새로운 답변을 제시하라.
+- 이전 대화에서 틀린 분석이 있었다면 그것을 참고하지 말고 무시하라.`;
+
+    // ── Fetch pinned patterns — SCOPED to current note tags only ──
     let pinnedBlock = "";
     const pinnedByTag = new Map<string, string>();
     try {
       const supabaseUrl = Deno.env.get("SUPABASE_URL");
       const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
       if (supabaseUrl && serviceRoleKey) {
-        const patternsReq = fetch(
+        const patternsRes = await fetch(
           `${supabaseUrl}/rest/v1/syntax_patterns?is_global=eq.true&order=created_at.desc&select=tag,pinned_content`,
           { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } },
         );
-        const patternsRes = await patternsReq;
         if (patternsRes.ok) {
-          const patterns = await patternsRes.json();
+          const allPatterns = await patternsRes.json();
+
+          // Detect tags from current notes to scope pattern injection
+          const activeTagKeys = new Set<string>();
+          if (isTargeted && targetNote) {
+            // Single-point mode: only the target note's tag
+            const tag = chatDetectUiTagFromContent(targetNote.content);
+            activeTagKeys.add(chatNormalizeTagKey(tag));
+          } else if (Array.isArray(currentNotes)) {
+            // Full mode: tags from all current notes
+            for (const n of currentNotes) {
+              const tag = chatDetectUiTagFromContent(n.content || "");
+              activeTagKeys.add(chatNormalizeTagKey(tag));
+            }
+          }
+          // Remove empty/기타 to avoid pulling unrelated patterns
+          activeTagKeys.delete("");
+          activeTagKeys.delete("기타");
+
           const sentenceText = chatOneLine(sentence || "");
-          // 2-track: grammar-tag patterns always included, phrase patterns need relevance
-          const GRAMMAR_TAGS = new Set([
-            "관계대명사", "관계부사", "분사구문", "분사 후치수식", "분사", "수동태", "조동사+수동",
-            "to부정사", "명사절", "가주어/진주어", "가목적어/진목적어", "5형식", "병렬구조",
-            "전치사+동명사", "비교구문", "수일치", "생략", "강조구문", "현재완료+수동",
-            "계속적용법 관계대명사", "대동사", "전치사+관계대명사", "지칭",
-          ]);
           const relevantPatterns: any[] = [];
-          for (const p of patterns) {
+          for (const p of allPatterns) {
             const tag = String(p?.tag ?? "").trim();
             const content = String(p?.pinned_content ?? "").trim();
             if (!tag || !content) continue;
-            if (GRAMMAR_TAGS.has(tag)) {
-              relevantPatterns.push(p);
-            } else if (sentenceText && chatPatternRelevanceScore(content, sentenceText) >= 0.6) {
-              relevantPatterns.push(p);
+            const tagKey = chatNormalizeTagKey(tag);
+
+            // Include pattern if its tag matches any active note tag
+            let matched = false;
+            for (const activeKey of activeTagKeys) {
+              if (tagKey === activeKey || tagKey.includes(activeKey) || activeKey.includes(tagKey)) {
+                matched = true;
+                break;
+              }
             }
+            // Also include phrase patterns with high relevance score
+            if (!matched && sentenceText && chatPatternRelevanceScore(content, sentenceText) >= 0.6) {
+              matched = true;
+            }
+            if (matched) relevantPatterns.push(p);
           }
+
+          console.log(`[grammar-chat] Active tags: [${[...activeTagKeys].join(", ")}], Matched ${relevantPatterns.length}/${allPatterns.length} patterns`);
+
           if (relevantPatterns.length > 0) {
             for (const p of relevantPatterns) {
               const tag = String(p?.tag ?? "").trim();
@@ -370,9 +403,9 @@ serve(async (req) => {
             pinnedBlock = `\n\n[필수 적용 규칙 — 고정 패턴]\n` +
               `아래 패턴은 사용자가 직접 지정한 필수 설명 형식이다.\n` +
               `해당 문법 요소가 문장에 존재하면, 반드시 아래 패턴의 설명 구조·말투·종결 방식을 그대로 따라야 한다.\n` +
+              `너 자신의 설명 방식이나 표현을 사용하지 말고, 아래 패턴의 구조·어휘·종결 방식을 정확히 복제하라.\n` +
               `단, 패턴에 포함된 영어 단어(예: what, important, built 등)는 절대 그대로 쓰지 말 것.\n` +
               `영어 단어와 구문 범위는 반드시 현재 문장의 실제 내용으로 교체하라.\n` +
-              `현재 문장에 없는 영어 단어가 출력에 포함되면 오류다.\n` +
               `___가 있으면 해당 문장의 실제 단어로 교체하라.\n` +
               `문장에 해당 문법 요소가 없으면 이 패턴을 완전히 무시하라. 억지로 적용하지 말 것.\n` +
               `${tagLines}\n` +
@@ -383,7 +416,7 @@ serve(async (req) => {
     } catch {}
 
     const aiMessages = [
-      { role: "system", content: systemPrompt + targetedSystemAddendum + pinnedBlock },
+      { role: "system", content: systemPrompt + targetedSystemAddendum + trustAddendum + pinnedBlock },
       {
         role: "system",
         content: `아래는 현재 작업 중인 문장과 구문분석 노트입니다:\n\n${contextBlock}`,
