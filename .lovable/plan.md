@@ -1,52 +1,54 @@
 
+지금 상태는 “모델이 갑자기 말 안 듣는 것”보다, 최근 구조 변경 때문에 **고정 패턴을 불러오는 조건이 너무 빡세져서 실제로는 거의 0개가 적용되는 상태**로 보입니다.
 
-# 고정 패턴 강제 적용 안 되는 근본 원인 수정
+핵심 근거:
+1. 서버 로그에 실제로 `[pinned-patterns] No patterns matched ...`가 반복해서 찍히고 있습니다.  
+   → 즉, 고정 패턴 관리에 저장은 돼 있어도 자동생성 시점에 대부분 선택조차 안 되고 있습니다.
+2. DB에 저장된 패턴들을 보면 `강조구문`, `전치사+관계대명사`, `분사`, `가목적어/진목적어`, `대동사`, `현재완료+수동`처럼 **태그 중심 설명 패턴**이 많습니다.  
+   → 예전엔 “이 문장이 그 문법이면 그 태그 패턴을 따라가는 방식”에 가까웠는데, 지금은 “문장 안 단어와 패턴 안 영어 단어가 얼마나 겹치냐” 위주로 바뀌어서 이런 패턴들이 거의 탈락합니다.
+3. 특히 지금 relevance 로직은 `rather than` 같은 오염을 막기엔 좋지만, 반대로 **한국어 설명형 문법 패턴**까지 같이 죽여버렸습니다.  
+   → 그래서 사용자가 느끼는 현상은 “전부 하나도 안 지킨다”가 맞습니다.
+4. 추가로 자동생성 경로에는 `pinnedByTag is not defined` 런타임 오류 로그도 있습니다.  
+   → 즉 자동생성 쪽은 후처리 강제 단계도 현재 불안정합니다.
 
-## 원인 분석
+정리하면 원인은 이겁니다:
 
-### 원인 1: `byTag` 맵 구축 시 이중 필터링
-- `fetchPinnedPatterns()` line 817: `shouldForcePinnedTemplateForSentence()` 체크
-- 이 함수는 `keywords.every(kw => sentenceText.includes(kw))` — 패턴의 **모든** 영어 키워드가 문장에 있어야 통과
-- 예: 패턴 `과거분사 built가 명사구를 수식` → "built"가 새 문장에 없으면 byTag에 안 들어감
-- 결과: 후처리 `applyPinnedPattern`이 빈 맵을 받아서 아무것도 교체 안 함
+- 예전 방식:  
+  `문법 태그가 맞으면 → 그 태그의 고정 패턴을 강제`
+- 지금 방식:  
+  `문장 텍스트와 패턴 텍스트가 충분히 겹쳐야 → 고정 패턴 후보로 채택`
+- 문제:  
+  선생님이 저장한 패턴 대부분은 “문장 문구 재사용용”이 아니라 “문법 설명 말투/양식 템플릿”이라서, 지금 필터와 철학이 안 맞습니다.
 
-### 원인 2: 비표준 태그 매칭 실패
-- DB에 `강조구문`, `분사`, `전치사+관계대명사`, `현재완료+수동`, `계속적용법 관계대명사`, `대동사` 등 비표준 태그 존재
-- `detectUiTagFromContent()`와 `normalizeModelTagToUiTag()`가 이 태그들을 인식 못 함
-- → byTag에 `분사` 키로 저장돼도, AI 출력에서 `분사 후치수식`으로 감지되면 매칭 안 됨
+그래서 수정 방향은 “고정 패턴을 다시 예전처럼 태그 중심으로 살리되, rather than 같은 오염은 표현 패턴에서만 막는 구조”가 맞습니다.
 
-## 수정 계획
+구현 계획:
+1. 자동생성/힌트/채팅 전체 경로에서 고정 패턴 선택 방식을 **2트랙**으로 분리
+   - 문법 태그 패턴: 문장 단어 겹침이 아니라 **태그 매칭으로 적용**
+   - 표현/숙어 패턴: 지금처럼 **구문/표현 일치가 있을 때만 적용**
+2. `기타`, `숙어/표현`, leading phrase가 있는 패턴(`rather than:` 등)만 엄격한 phrase relevance 유지
+   - 이렇게 해야 예전 문제였던 무관한 `rather than` 오염은 다시 안 생깁니다.
+3. `강조구문`, `분사`, `대동사`, `현재완료+수동`, `전치사+관계대명사` 같은 문법 태그는
+   - 해당 문법이 감지되면 바로 `byTag`에 연결되도록 복원
+4. 자동생성 경로의 런타임 오류(`pinnedByTag` 변수 참조 문제) 수정
+   - 지금은 후처리 강제 자체가 깨질 가능성이 있습니다.
+5. 프론트의 핀 저장 기본 태그 감지도 보강
+   - 현재 `SyntaxNotesSection.tsx`의 `autoDetectTag`는 커스텀 태그를 거의 못 잡아서 새 패턴 저장 시 잘못 `기타`로 들어갈 수 있습니다.
+6. 디버그 로그를 “왜 적용됐는지 / 왜 스킵됐는지”가 보이게 정리
+   - 예: `tag-match`, `phrase-match`, `skipped-no-tag`, `skipped-no-phrase`
 
-### 1. `shouldForcePinnedTemplateForSentence` 이중 필터 제거
-- `byTag` 맵 구축 시 `patternRelevanceScore`를 이미 통과한 패턴은 무조건 `byTag`에 넣기
-- line 817의 `if (!shouldForcePinnedTemplateForSentence(...)) continue;` 제거
+기대 결과:
+- 예전처럼 “이 문장이 그 문법이면 내 고정 패턴 말투를 따라가는” 동작이 다시 살아납니다.
+- 동시에 `rather than` 같은 표현형 오염은 계속 차단됩니다.
+- 즉, **문법 패턴은 다시 강하게 적용되고, 무관한 표현 패턴만 엄격히 걸러지는 구조**로 정리됩니다.
 
-### 2. 태그 매칭 확장 — 비표준 태그 인식
-- `detectUiTagFromContent()`에 누락된 키워드 추가:
-  - `강조` → `강조구문`
-  - `분사` (분사구문/후치수식 아닌 일반) → `분사`
-  - `전치사+관계대명사` → `전치사+관계대명사`
-  - `현재완료+수동`, `현재완료 수동` → `현재완료+수동`
-  - `계속적용법`, `계속적 용법` → `계속적용법 관계대명사`
-  - `대동사` → `대동사`
-- 같은 로직을 `grammar-chat`의 `chatDetectUiTagFromContent`에도 동기화
+수정 대상:
+- `supabase/functions/grammar/index.ts`
+- `supabase/functions/grammar-chat/index.ts`
+- `src/components/SyntaxNotesSection.tsx`
 
-### 3. `byTag` 조회 시 폴백 매칭 추가
-- `applyPinnedPattern`에서 정확히 일치하는 태그가 없으면, 부분 일치(contains) 폴백 시도
-- 예: AI 출력이 "분사 후치수식"이면 `분사후치수식` 키를 먼저 찾고, 없으면 `분사`를 포함하는 키도 체크
+제가 보기엔 지금 문제의 본질은 한 줄로 요약됩니다:
 
-### 4. `grammar-chat`도 동일하게 후처리 강제
-- 현재 `grammar-chat`에서 `chatApplyPinnedPattern`을 `suggestionNotes`에 적용하고 있지만, `pinnedByTag` 구축 시에도 같은 문제(관련성 점수 통과했는데 byTag에 안 넣는 등)가 없는지 확인 → 현재는 `pinnedByTag`에 조건 없이 넣고 있으므로 OK, 하지만 태그 매칭 확장은 필요
+`무관한 패턴 오염을 막으려고 “문장 단어 일치” 필터를 세게 걸었는데, 그 바람에 선생님이 저장한 “문법 태그 기반 설명 템플릿”까지 전부 같이 죽었다.`
 
-## 수정 파일
-
-| 파일 | 변경 |
-|------|------|
-| `supabase/functions/grammar/index.ts` | `shouldForcePinnedTemplateForSentence` 필터 제거, `detectUiTagFromContent` 확장, `applyPinnedPattern` 폴백 매칭 |
-| `supabase/functions/grammar-chat/index.ts` | `chatDetectUiTagFromContent` 확장 동기화 |
-
-## 기대 결과
-- `patternRelevanceScore`를 통과한 패턴은 반드시 후처리에서 강제 교체됨
-- `분사`, `강조구문`, `대동사` 등 비표준 태그도 정상 매칭
-- 프롬프트 의존도가 낮아져 고정 패턴 준수율 대폭 향상
-
+다음 구현은 이 구조를 정확히 되돌리되, `rather than`류 오염만 남겨서 차단하는 방향으로 가면 됩니다.
