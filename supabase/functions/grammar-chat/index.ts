@@ -227,9 +227,72 @@ function chatMaterializePinnedPattern(template: string, raw: string, stripLeadin
   return result;
 }
 
+// Pick the best pattern from multiple candidates by keyword overlap with raw content
+function chatPickBestPattern(candidates: string[], rawContent: string): string {
+  if (candidates.length <= 1) return candidates[0] || "";
+  const rawLower = chatOneLine(rawContent).toLowerCase();
+  const rawKeywords = new Set(
+    (rawLower.match(/[가-힣]{2,}|[a-z]{3,}/g) || [])
+  );
+
+  let best = candidates[0];
+  let bestScore = -1;
+  for (const candidate of candidates) {
+    const cLower = chatOneLine(candidate).toLowerCase();
+    const cKeywords = (cLower.match(/[가-힣]{2,}|[a-z]{3,}/g) || []);
+    let score = 0;
+    for (const kw of cKeywords) {
+      if (rawKeywords.has(kw)) score++;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      best = candidate;
+    }
+  }
+  return best;
+}
+
+// Detect if post-processing changed the grammar frame (e.g. 형용사절→명사절)
+function chatDetectGrammarFrame(text: string): string[] {
+  const c = chatOneLine(text).toLowerCase();
+  const frames: string[] = [];
+  if (c.includes("형용사절")) frames.push("형용사절");
+  if (c.includes("명사절")) frames.push("명사절");
+  if (c.includes("부사절")) frames.push("부사절");
+  if (c.includes("계속적")) frames.push("계속적");
+  if (c.includes("선행사를 포함") || c.includes("선행사 포함")) frames.push("선행사포함");
+  if (c.includes("what") && c.includes("명사절")) frames.push("what명사절");
+  if (c.includes("동격")) frames.push("동격");
+  if (c.includes("수동태")) frames.push("수동태");
+  if (c.includes("분사구문")) frames.push("분사구문");
+  if (c.includes("to부정사")) frames.push("to부정사");
+  return frames;
+}
+
+function chatFrameConflicts(rawFrames: string[], processedFrames: string[]): boolean {
+  // If raw has 형용사절 but processed has 명사절 (or vice versa), that's a conflict
+  const conflictPairs = [
+    ["형용사절", "명사절"],
+    ["형용사절", "what명사절"],
+    ["계속적", "선행사포함"],
+  ];
+  for (const [a, b] of conflictPairs) {
+    if ((rawFrames.includes(a) && processedFrames.includes(b)) ||
+        (rawFrames.includes(b) && processedFrames.includes(a))) {
+      return true;
+    }
+  }
+  // If raw had no 선행사포함/what명사절 but processed introduced it, conflict
+  if (!rawFrames.includes("선행사포함") && !rawFrames.includes("what명사절") &&
+      (processedFrames.includes("선행사포함") || processedFrames.includes("what명사절"))) {
+    return true;
+  }
+  return false;
+}
+
 function chatApplyPinnedPattern(
   content: string,
-  pinnedByTag: Map<string, string>,
+  pinnedByTag: Map<string, string[]>,
   stripLeadingTagLabel: (line: string) => string,
   explicitUiTag?: string,
 ): string {
@@ -245,9 +308,25 @@ function chatApplyPinnedPattern(
     const key = chatCanonicalTagKey(candidate);
     if (!key || seen.has(key)) continue;
     seen.add(key);
-    const pinned = chatOneLine(String(pinnedByTag.get(key) ?? ""));
+    const patterns = pinnedByTag.get(key);
+    if (!patterns || patterns.length === 0) continue;
+
+    // Pick the best matching pattern from all candidates for this tag
+    const bestPattern = chatPickBestPattern(patterns, raw);
+    const pinned = chatOneLine(bestPattern);
     if (!pinned) continue;
-    return chatMaterializePinnedPattern(pinned, raw, stripLeadingTagLabel);
+
+    const result = chatMaterializePinnedPattern(pinned, raw, stripLeadingTagLabel);
+
+    // ★ Frame validation: reject if post-processing changed the grammar frame
+    const rawFrames = chatDetectGrammarFrame(raw);
+    const resultFrames = chatDetectGrammarFrame(result);
+    if (chatFrameConflicts(rawFrames, resultFrames)) {
+      console.log(`[grammar-chat] Frame conflict detected: raw=[${rawFrames}] result=[${resultFrames}], keeping raw`);
+      return raw; // fail-closed: keep AI's original output
+    }
+
+    return result;
   }
 
   return raw;
