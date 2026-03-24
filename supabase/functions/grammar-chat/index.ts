@@ -478,13 +478,29 @@ serve(async (req) => {
       }
     } catch {}
 
+    // ★ History filtering: when reanalysis is requested, replace previous assistant messages
+    // with a marker so the model doesn't anchor to its own prior wrong output
+    let filteredMessages = [...messages];
+    if (allowReanalysis && filteredMessages.length >= 2) {
+      // Find the last assistant message before the final user message and replace it
+      for (let i = filteredMessages.length - 2; i >= 0; i--) {
+        if (filteredMessages[i]?.role === "assistant") {
+          filteredMessages[i] = {
+            role: "assistant",
+            content: "[이전 답변은 오류로 판정됨 — 이 내용을 참고하거나 반복하지 말 것. 문장을 처음부터 다시 분석하라.]",
+          };
+          break;
+        }
+      }
+    }
+
     const aiMessages = [
       { role: "system", content: systemPrompt + targetedSystemAddendum + trustAddendum + pinnedBlock },
       {
         role: "system",
         content: `아래는 현재 작업 중인 문장과 구문분석 노트입니다:\n\n${contextBlock}`,
       },
-      ...messages,
+      ...filteredMessages,
     ];
 
     async function callChatCompletion(extraSystemInstruction = ""): Promise<string> {
