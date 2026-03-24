@@ -1,60 +1,63 @@
 
 
-# 채팅 앵무새 반복 + 고정패턴 미적용 — 3가지 근본 원인 동시 수정
+# 그래머 챗 4방향 종합 개선
 
-## 현재 코드에서 확인된 문제
+## 문제 원인
 
-### 문제 1: `chatMaterializePinnedPattern` — `___` 없으면 패턴 완전 무시
+### 1. 수정안이 안 바뀌는 근본 원인
+프론트엔드 `SyntaxChat.tsx` line 80:
 ```
-Line 188-190:
-if (!template.includes("___")) {
-  return normalizedRaw;  // ← AI 출력 그대로 반환, 패턴 강제 없음
-}
+messages: newMessages.map((m) => ({ role: m.role, content: m.content }))
 ```
-DB의 고정 패턴 대부분은 `___`가 없음. 따라서 **후처리에서 패턴이 한 번도 적용되지 않음**.
+assistant 메시지의 `content`에는 AI의 전체 답변이 들어있고, 그 안에 `[수정안]...[/수정안]` 블록이 포함됨. 사용자가 "틀렸어"라고 해도, 히스토리에 이전 수정안 텍스트가 그대로 남아서 모델이 자기 이전 출력을 복사함.
 
-### 문제 2: 재분석 시 이전 틀린 답변이 히스토리에 그대로 남음
-```
-Line 443-449:
-const aiMessages = [
-  { role: "system", content: ... },
-  { role: "system", content: contextBlock },
-  ...messages,  // ← 이전 틀린 assistant 답변 포함
-];
-```
-`chatWantsReanalysis`가 true여도 시스템 프롬프트만 바뀌고, 이전 대화에서 틀린 assistant 메시지가 그대로 컨텍스트에 남아 모델이 앵커링됨.
+현재 서버 측 `allowReanalysis` 로직이 마지막 assistant 메시지 하나만 마스킹하지만, `[수정안]` 블록 자체가 히스토리에 그대로 들어가는 게 문제.
 
-### 문제 3: 태그당 패턴 수 제한 없음
-로그: `Matched 9/54 patterns` — 분사 태그 하나에 9개 패턴이 주입됨. 여전히 과부하.
+### 2. 모델 속도
+`google/gemini-3.1-pro-preview` 사용 중 → 느림. `google/gemini-3-flash-preview`로 변경.
+
+### 3. 고정패턴 후처리 실패
+`___` 없는 패턴에서 English swap이 불안정. 영어 세그먼트 개수가 안 맞으면 AI 원문 그대로 반환.
+
+### 4. 질문 답변 약함
+시스템 프롬프트가 "구문분석 수정" 역할에 집중 → 문법 질문에 대한 심층 분석 지시 부족.
 
 ## 수정 계획
 
-### 1. `chatMaterializePinnedPattern` — `___` 없어도 한국어 구조 강제
+### 파일 1: `supabase/functions/grammar-chat/index.ts`
 
-`___`가 없는 패턴일 때:
-- 템플릿에서 한국어 구조(설명 패턴, 종결어미)를 추출
-- AI 출력에서 영어 단어/구문을 추출
-- 템플릿의 영어 부분만 AI 출력의 영어로 교체하여 반환
-- 교체 실패 시(영어 추출 불가 등) AI 출력 그대로 반환 (안전 폴백)
+**A. 모델 변경** (line 517)
+- `google/gemini-3.1-pro-preview` → `google/gemini-3-flash-preview`
 
-### 2. 재분석 모드에서 이전 assistant 메시지 필터링
+**B. 히스토리에서 수정안 블록 제거** (line 497-503 부근)
+- `filteredMessages`를 구성할 때, 모든 assistant 메시지에서 `[수정안]...[/수정안]` 블록을 strip
+- 이렇게 하면 모델이 자기 이전 수정안 텍스트를 볼 수 없어 앵커링 차단
+- `allowReanalysis` 시에는 추가로 마지막 assistant 메시지 전체를 마스킹 (기존 로직 유지)
 
-`chatWantsReanalysis`가 true일 때:
-- `messages` 배열에서 마지막 user 메시지 직전의 assistant 메시지를 제거하거나, `[이전 답변은 오류로 판정됨 — 무시하라]`로 교체
-- 이렇게 하면 모델이 자기 이전 답변에 앵커링되지 않음
+**C. 고정패턴 후처리 강화** (`chatMaterializePinnedPattern`)
+- `___` 없는 패턴: English swap 실패 시 AI 원문 대신 **템플릿 자체를 반환**하되, AI 출력에서 영어 구문 1개를 추출해 템플릿의 첫 번째 영어 부분만 교체
+- 즉 "한국어 구조는 반드시 템플릿 따르기" 원칙 강제
 
-### 3. 태그당 패턴 최대 2개로 제한
+**D. 시스템 프롬프트 보강**
+- "■ 문법 질문 응답" 섹션 추가: "사용자가 문법 판별 질문을 하면, 해당 문장의 구체적 근거(어떤 단어가 어떤 역할)를 들어 판단 이유를 명확히 설명하라. 단순히 '맞습니다/아닙니다'로 끝내지 말고, 왜 그런지 문장 내 근거를 제시하라."
+- 수정안 규칙에 추가: "이전 대화에서 제공한 수정안과 동일한 내용을 반복하지 말 것. 사용자가 수정을 요청하면 반드시 이전과 다른 새로운 수정안을 제시하라."
 
-`relevantPatterns` 구성 시 같은 `tagKey`에 대해 최대 2개까지만 포함.
+### 파일 2: `src/components/SyntaxChat.tsx`
+
+**E. 히스토리 전송 시 수정안 블록 strip** (line 80)
+- 프론트엔드에서도 보험: assistant 메시지의 content에서 `[수정안]...[/수정안]` 부분을 제거한 뒤 서버로 전송
+- 이중 방어 (프론트 + 서버 양쪽에서 strip)
 
 ## 수정 파일
 
 | 파일 | 변경 |
 |------|------|
-| `supabase/functions/grammar-chat/index.ts` | 위 3가지 수정 모두 적용 |
+| `supabase/functions/grammar-chat/index.ts` | 모델 변경, 히스토리 수정안 strip, 패턴 후처리 강화, 프롬프트 보강 |
+| `src/components/SyntaxChat.tsx` | 히스토리 전송 시 수정안 블록 제거 |
 
 ## 기대 결과
-- 고정 패턴의 한국어 말투/구조가 실제로 출력에 강제됨
-- "틀렸어" 후 이전 오답이 컨텍스트에서 제거되어 새로운 분석 가능
-- 패턴 수 제한으로 모델 혼란 최소화
+- 응답 속도: Pro → Flash로 2~3배 빨라짐
+- 수정안 반복: 히스토리에서 이전 수정안이 제거되므로 모델이 새로운 수정안 생성
+- 고정패턴: 템플릿 구조가 더 강하게 강제됨
+- 질문 답변: 문법 근거를 구체적으로 제시하도록 프롬프트 보강
 
