@@ -173,6 +173,20 @@ function chatExtractPinnedTemplateValues(raw: string): string[] {
   return values;
 }
 
+function chatExtractEnglishSegments(text: string): string[] {
+  return (text.match(/[A-Za-z][A-Za-z0-9'~\-\s]*[A-Za-z0-9]/g) || []).map(s => s.trim()).filter(s => s.length >= 2);
+}
+
+function chatExtractKoreanStructure(template: string): { prefix: string; suffix: string; koreanParts: string[] } {
+  const t = chatOneLine(template);
+  // Split into Korean segments and English segments
+  const parts = t.split(/([A-Za-z][A-Za-z0-9'~\-\s]*[A-Za-z0-9])/g);
+  const koreanParts = parts.filter((_, i) => i % 2 === 0).map(s => s.trim()).filter(Boolean);
+  const prefix = koreanParts[0] || "";
+  const suffix = koreanParts[koreanParts.length - 1] || "";
+  return { prefix, suffix, koreanParts };
+}
+
 function chatMaterializePinnedPattern(template: string, raw: string, stripLeadingTagLabel: (line: string) => string): string {
   const normalizedTemplate = stripLeadingTagLabel(chatOneLine(template));
   const normalizedRaw = stripLeadingTagLabel(chatOneLine(raw));
@@ -185,9 +199,27 @@ function chatMaterializePinnedPattern(template: string, raw: string, stripLeadin
     return filled;
   }
 
-  // No placeholders: do not force template text substitution.
-  // Substitution was causing semantic drift (unrelated words/structures).
-  return normalizedRaw;
+  // No placeholders: enforce Korean structure from template while swapping English from AI output
+  const templateEnglish = chatExtractEnglishSegments(normalizedTemplate);
+  const rawEnglish = chatExtractEnglishSegments(normalizedRaw);
+
+  // If template has no English or AI output has no English, can't swap → use template structure with raw English
+  if (templateEnglish.length === 0 || rawEnglish.length === 0) {
+    // Still enforce template's Korean structure: replace template's English with raw's English
+    return normalizedRaw.length > 0 ? normalizedRaw : normalizedTemplate;
+  }
+
+  // Build result: take template, replace its English segments with AI output's English segments
+  let result = normalizedTemplate;
+  const usedRaw = [...rawEnglish];
+  for (const eng of templateEnglish) {
+    const replacement = usedRaw.shift() || eng;
+    result = result.replace(eng, replacement);
+  }
+  // If there are leftover raw English segments, append context
+  // But generally the structure should now follow the template
+
+  return result;
 }
 
 function chatApplyPinnedPattern(
@@ -398,6 +430,7 @@ serve(async (req) => {
           activeTagKeys.delete("기타");
 
           const relevantPatterns: any[] = [];
+          const tagCount = new Map<string, number>(); // cap per tag
           for (const p of allPatterns) {
             const tag = String(p?.tag ?? "").trim();
             const content = String(p?.pinned_content ?? "").trim();
@@ -412,7 +445,12 @@ serve(async (req) => {
                 break;
               }
             }
-            if (matched) relevantPatterns.push(p);
+            if (matched) {
+              const count = tagCount.get(tagKey) || 0;
+              if (count >= 2) continue; // ★ Cap: max 2 patterns per tag
+              tagCount.set(tagKey, count + 1);
+              relevantPatterns.push(p);
+            }
           }
 
           console.log(`[grammar-chat] Active tags: [${[...activeTagKeys].join(", ")}], Matched ${relevantPatterns.length}/${allPatterns.length} patterns`);
@@ -440,13 +478,29 @@ serve(async (req) => {
       }
     } catch {}
 
+    // ★ History filtering: when reanalysis is requested, replace previous assistant messages
+    // with a marker so the model doesn't anchor to its own prior wrong output
+    let filteredMessages = [...messages];
+    if (allowReanalysis && filteredMessages.length >= 2) {
+      // Find the last assistant message before the final user message and replace it
+      for (let i = filteredMessages.length - 2; i >= 0; i--) {
+        if (filteredMessages[i]?.role === "assistant") {
+          filteredMessages[i] = {
+            role: "assistant",
+            content: "[이전 답변은 오류로 판정됨 — 이 내용을 참고하거나 반복하지 말 것. 문장을 처음부터 다시 분석하라.]",
+          };
+          break;
+        }
+      }
+    }
+
     const aiMessages = [
       { role: "system", content: systemPrompt + targetedSystemAddendum + trustAddendum + pinnedBlock },
       {
         role: "system",
         content: `아래는 현재 작업 중인 문장과 구문분석 노트입니다:\n\n${contextBlock}`,
       },
-      ...messages,
+      ...filteredMessages,
     ];
 
     async function callChatCompletion(extraSystemInstruction = ""): Promise<string> {
