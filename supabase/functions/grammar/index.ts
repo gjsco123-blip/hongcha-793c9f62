@@ -318,19 +318,9 @@ function mapTagIdToUiTag(tagId: TagId): string {
 
 function detectUiTagFromContent(content: string): string {
   const c = oneLine(content).toLowerCase();
-  // ── Subtype-first: check specific subtypes BEFORE broad categories ──
   if (c.includes("동격") && (c.includes("접속사") || c.includes("that") || c.includes("동격접"))) return "동격접";
-  // 계속적 용법 — MUST come before broad 관계대명사
-  if (c.includes("계속적") && (c.includes("용법") || c.includes("관계"))) {
-    if (c.includes("부사")) return "계속적 용법 관계부사";
-    return "계속적용법 관계대명사";
-  }
-  // 전치사+관계대명사 — MUST come before broad 관계대명사
-  if (c.includes("전치사") && (c.includes("관계대명사") || c.includes("관계"))) return "전치사+관계대명사";
-  // what 명사절 (선행사 포함 관계대명사) — MUST come before broad 관계대명사
-  if ((c.includes("what") || c.includes("선행사를 포함") || c.includes("선행사 포함")) &&
-      (c.includes("관계대명사") || c.includes("명사절"))) return "명사절";
   if (c.includes("관계사")) {
+    if (c.includes("계속적") && (c.includes("용법") || c.includes("관계"))) return "계속적용법 관계대명사";
     if (c.includes("where") || c.includes("when") || c.includes("why") || c.includes("how")) return "관계부사";
     return "관계대명사";
   }
@@ -356,10 +346,14 @@ function detectUiTagFromContent(content: string): string {
   if (c.includes("비교") || c.includes("최상급")) return "비교구문";
   if (c.includes("수일치")) return "수일치";
   if (c.includes("생략")) return "생략";
-  if (c.includes("숙어") || c.includes("구동사") || c.includes("표현")) return "숙어/표현";
   if (c.includes("강조") && (c.includes("구문") || c.includes("it is") || c.includes("it was"))) return "강조구문";
+  if (c.includes("계속적") && (c.includes("용법") || c.includes("관계"))) {
+    if (c.includes("부사")) return "계속적 용법 관계부사";
+    return "계속적용법 관계대명사";
+  }
   if (c.includes("대동사")) return "대동사";
   if (c.includes("분사") && !c.includes("분사구문") && !c.includes("후치")) return "분사";
+  if (c.includes("전치사") && c.includes("관계")) return "전치사+관계대명사";
   if (c.includes("to be pp") || c.includes("to be p.p")) return "to be pp";
   return "기타";
 }
