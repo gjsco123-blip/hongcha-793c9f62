@@ -428,30 +428,58 @@ function extractPinnedTemplateValues(raw: string, targetText?: string): string[]
   return values;
 }
 
-/**
- * Materialize a pinned pattern as a "style template":
- * - Keep the Korean structure/tone/endings from the template
- * - Replace English words/phrases with those from AI output (raw)
- * 
- * This prevents patterns like "what이 이끄는 명사절(What~important)"
- * from injecting "what" into sentences that use "that".
- */
+function detectClauseFamily(text: string): string {
+  const t = oneLine(text).toLowerCase();
+  if (!t) return "";
+  if (t.includes("형용사절") || t.includes("관계절") || t.includes("관계대명사") || t.includes("관계부사")) return "형용사절";
+  if (t.includes("명사절") || t.includes("동격") || t.includes("간접의문문")) return "명사절";
+  if (t.includes("부사절")) return "부사절";
+  if (t.includes("강조구문") || t.includes("it is ~ that") || t.includes("it was ~ that")) return "강조구문";
+  return "";
+}
+
+function hasUnsafePatternEnglishTokens(template: string, raw: string, targetText?: string): boolean {
+  const allowed = buildTokenVariantSet([
+    ...extractEnglishTokens(raw),
+    ...extractEnglishTokens(targetText || ""),
+  ]);
+  const templateTokens = extractEnglishTokens(template)
+    .map(tokenStem)
+    .filter((token) => token.length >= 3 && !GRAMMAR_META_TOKENS.has(token));
+
+  if (templateTokens.length === 0) return false;
+
+  return templateTokens.some((token) => !allowed.has(token));
+}
+
 function materializePinnedPattern(template: string, raw: string, targetText?: string): string {
   const normalizedTemplate = stripLeadingTagLabel(oneLine(template));
   const normalizedRaw = stripLeadingTagLabel(oneLine(raw));
+  if (!normalizedTemplate) return normalizedRaw;
 
-  // If template has ___ placeholders, fill them with values extracted from AI output
-  if (normalizedTemplate.includes("___")) {
-    const values = extractPinnedTemplateValues(normalizedRaw, targetText);
-    if (values.length === 0) return normalizedTemplate;
-    let idx = 0;
-    const filled = normalizedTemplate.replace(/___/g, () => values[idx++] ?? values[values.length - 1] ?? "___");
-    return filled;
+  // Auto-generation must stay sentence-local. Templates without placeholders are
+  // treated as examples only and must not overwrite current content.
+  if (!normalizedTemplate.includes("___")) {
+    return normalizedRaw;
   }
 
-  // No placeholders: do not substitute semantics from template.
-  // Keeping raw avoids injecting unrelated words from older patterns.
-  return normalizedRaw;
+  const values = extractPinnedTemplateValues(normalizedRaw, targetText);
+  if (values.length === 0) return normalizedRaw;
+
+  let idx = 0;
+  const filled = normalizedTemplate.replace(/___/g, () => values[idx++] ?? values[values.length - 1] ?? "___");
+
+  const templateFamily = detectClauseFamily(filled);
+  const rawFamily = detectClauseFamily(normalizedRaw);
+  if (templateFamily && rawFamily && templateFamily !== rawFamily) {
+    return normalizedRaw;
+  }
+
+  if (hasUnsafePatternEnglishTokens(filled, normalizedRaw, targetText)) {
+    return normalizedRaw;
+  }
+
+  return finalizeSyntaxText(filled);
 }
 
 function applyPinnedPattern(
