@@ -212,10 +212,13 @@ function chatMaterializePinnedPattern(template: string, raw: string, stripLeadin
   const templateEnglish = chatExtractEnglishSegments(normalizedTemplate);
   const rawEnglish = chatExtractEnglishSegments(normalizedRaw);
 
-  // If template has no English or AI output has no English, can't swap → use template structure with raw English
-  if (templateEnglish.length === 0 || rawEnglish.length === 0) {
-    // Still enforce template's Korean structure: replace template's English with raw's English
-    return normalizedRaw.length > 0 ? normalizedRaw : normalizedTemplate;
+  // If template has no English, return template as-is (pure Korean pattern)
+  if (templateEnglish.length === 0) {
+    return normalizedTemplate;
+  }
+  // If AI output has no English, still use template structure
+  if (rawEnglish.length === 0) {
+    return normalizedTemplate;
   }
 
   // Build result: take template, replace its English segments with AI output's English segments
