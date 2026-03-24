@@ -4,9 +4,12 @@ export interface SyntaxNoteWithTarget {
   id: number;
   content: string;
   targetText?: string;
+  targetWordStart?: number;
+  targetWordEnd?: number;
 }
 
 type TextToken = { word: string; start: number; end: number };
+type SurfaceWordToken = { raw: string; start: number; end: number };
 
 const COMMON_ENGLISH_STOPWORDS = new Set([
   "a", "an", "and", "are", "as", "at", "be", "been", "being", "but", "by",
@@ -36,6 +39,33 @@ function tokenize(text: string): TextToken[] {
     tokens.push({ word: m[0].toLowerCase(), start: m.index, end: m.index + m[0].length });
   }
   return tokens;
+}
+
+function tokenizeSurfaceWords(text: string): SurfaceWordToken[] {
+  const tokens: SurfaceWordToken[] = [];
+  const re = /\S+/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    tokens.push({ raw: m[0], start: m.index, end: m.index + m[0].length });
+  }
+  return tokens;
+}
+
+function findSpanFromWordRange(
+  originalText: string,
+  wordStart?: number,
+  wordEnd?: number
+): { start: number; end: number } | null {
+  if (!Number.isFinite(wordStart) || !Number.isFinite(wordEnd)) return null;
+  const words = tokenizeSurfaceWords(originalText);
+  if (words.length === 0) return null;
+  const startIndex = Number(wordStart);
+  const endIndex = Number(wordEnd);
+  if (startIndex < 0 || endIndex < startIndex || endIndex >= words.length) return null;
+  return {
+    start: words[startIndex].start,
+    end: words[endIndex].end,
+  };
 }
 
 function uniqSpans(spans: { start: number; end: number }[]) {
@@ -597,10 +627,12 @@ export function computeSuperscriptPositions(
   const anchorToSpans = new Map<number, { start: number; end: number }[]>();
 
   for (const note of syntaxNotes) {
-    if (!note.targetText) continue;
-    const span = selectBestSpanForNote(originalText, note.targetText, note.content, allTokens);
+    const exactSpan = findSpanFromWordRange(originalText, note.targetWordStart, note.targetWordEnd);
+    const span =
+      exactSpan ||
+      (note.targetText ? selectBestSpanForNote(originalText, note.targetText, note.content, allTokens) : null);
     if (!span) continue;
-    let anchor = chooseAnchorOffset(originalText, span, note.content, allTokens);
+    let anchor = exactSpan ? exactSpan.start : chooseAnchorOffset(originalText, span, note.content, allTokens);
 
     const existingSpans = anchorToSpans.get(anchor) || [];
     const hasDifferentSpanAtSameAnchor = existingSpans.some(
@@ -676,7 +708,12 @@ export function reorderNotesByPosition<T extends { id: number; content: string; 
   const allTokens = tokenize(originalText);
 
   const withPos = notes.map((n) => {
-    const span = n.targetText ? selectBestSpanForNote(originalText, n.targetText, n.content, allTokens) : null;
+    const exactSpan = findSpanFromWordRange(
+      originalText,
+      (n as T & { targetWordStart?: number }).targetWordStart,
+      (n as T & { targetWordEnd?: number }).targetWordEnd
+    );
+    const span = exactSpan || (n.targetText ? selectBestSpanForNote(originalText, n.targetText, n.content, allTokens) : null);
     return { note: n, pos: span ? span.start : Infinity };
   });
   withPos.sort((a, b) => a.pos - b.pos);

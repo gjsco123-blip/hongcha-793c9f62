@@ -391,21 +391,120 @@ function extractEnglishTokens(text: string): string[] {
     .match(/[a-z]+(?:'[a-z]+)?/g) ?? [];
 }
 
-function isTargetTextInSentence(targetText: string, sentence: string): boolean {
-  const target = oneLine(targetText).toLowerCase();
-  const full = oneLine(sentence).toLowerCase();
-  return Boolean(target) && full.includes(target);
+type SurfaceWord = {
+  raw: string;
+  normalized: string;
+  index: number;
+};
+
+function normalizeSurfaceToken(text: string): string {
+  return String(text ?? "")
+    .toLowerCase()
+    .replace(/^[^a-z0-9']+/g, "")
+    .replace(/[^a-z0-9']+$/g, "")
+    .trim();
 }
 
-function isSelectionRelevantTarget(selectedText: string, targetText: string): boolean {
+function tokenizeSurfaceWords(text: string): SurfaceWord[] {
+  return String(text ?? "")
+    .trim()
+    .split(/\s+/)
+    .map((raw, index) => ({
+      raw,
+      normalized: normalizeSurfaceToken(raw),
+      index,
+    }))
+    .filter((word) => word.normalized);
+}
+
+function findTargetWordRanges(sentence: string, targetText: string): Array<{ wordStart: number; wordEnd: number }> {
+  const sentenceWords = tokenizeSurfaceWords(sentence);
+  const targetWords = tokenizeSurfaceWords(targetText).map((word) => word.normalized);
+  if (targetWords.length === 0 || sentenceWords.length === 0) return [];
+
+  const ranges: Array<{ wordStart: number; wordEnd: number }> = [];
+  for (let i = 0; i <= sentenceWords.length - targetWords.length; i += 1) {
+    let matches = true;
+    for (let j = 0; j < targetWords.length; j += 1) {
+      if (sentenceWords[i + j].normalized !== targetWords[j]) {
+        matches = false;
+        break;
+      }
+    }
+    if (matches) {
+      ranges.push({ wordStart: sentenceWords[i].index, wordEnd: sentenceWords[i + targetWords.length - 1].index });
+    }
+  }
+  return ranges;
+}
+
+function selectionContextTokens(text: string, edge: "before" | "after"): string[] {
+  const words = tokenizeSurfaceWords(text).map((word) => word.normalized);
+  if (words.length === 0) return [];
+  return edge === "before" ? words.slice(-3) : words.slice(0, 3);
+}
+
+function countTokenOverlap(a: string[], b: string[]): number {
+  if (a.length === 0 || b.length === 0) return 0;
+  const setB = new Set(b);
+  return a.reduce((count, token) => count + (setB.has(token) ? 1 : 0), 0);
+}
+
+function isTargetTextInSentence(targetText: string, sentence: string): boolean {
+  return findTargetWordRanges(sentence, targetText).length > 0;
+}
+
+function isSelectionRelevantTarget(
+  sentence: string,
+  selectedText: string,
+  targetText: string,
+  selectedWordStart?: number,
+  selectedWordEnd?: number,
+  selectedContextBefore?: string,
+  selectedContextAfter?: string,
+): boolean {
   const selected = oneLine(selectedText).toLowerCase();
   const target = oneLine(targetText).toLowerCase();
   if (!selected || !target) return false;
+
+  const selectedTokens = tokenizeSurfaceWords(selectedText);
+  const strictExactOccurrence = selectedTokens.length <= 1;
+  const hasExactSelection = Number.isInteger(selectedWordStart) && Number.isInteger(selectedWordEnd);
+  if (hasExactSelection) {
+    const ranges = findTargetWordRanges(sentence, targetText);
+    if (ranges.length === 0) return false;
+
+    const directHit = ranges.some(
+      (range) =>
+        range.wordStart <= (selectedWordEnd as number) &&
+        range.wordEnd >= (selectedWordStart as number),
+    );
+    if (directHit) return true;
+    if (strictExactOccurrence) return false;
+
+    const beforeTokens = selectionContextTokens(selectedContextBefore ?? "", "before");
+    const afterTokens = selectionContextTokens(selectedContextAfter ?? "", "after");
+    const sentenceWords = tokenizeSurfaceWords(sentence);
+    for (const range of ranges) {
+      const leftContext = sentenceWords
+        .slice(Math.max(0, range.wordStart - beforeTokens.length), range.wordStart)
+        .map((word) => word.normalized);
+      const rightContext = sentenceWords
+        .slice(range.wordEnd + 1, range.wordEnd + 1 + afterTokens.length)
+        .map((word) => word.normalized);
+      const score = countTokenOverlap(beforeTokens, leftContext) + countTokenOverlap(afterTokens, rightContext);
+      if (score > 0) return true;
+    }
+    return false;
+  }
+
   if (selected.includes(target) || target.includes(selected)) return true;
 
-  const selectedTokens = new Set(extractEnglishTokens(selected));
+  if (strictExactOccurrence) return false;
+
+  const selectedTokenSet = new Set(extractEnglishTokens(selected));
   const targetTokens = extractEnglishTokens(target);
-  return targetTokens.some((token) => selectedTokens.has(token));
+  return targetTokens.some((token) => selectedTokenSet.has(token));
 }
 
 // -----------------------------
@@ -553,6 +652,8 @@ function buildAutoSystemPrompt() {
   ❌ targetText: "its" (너무 짧아 오매칭 위험)
   ✅ targetText: "it is important" (주변 포함)
   ✅ targetText: "holds its breath" (주변 포함)
+- 단, 사용자가 드래그하여 자동생성한 경우에는 예외다. 사용자가 짧은 기능어(that, it, to, we 등) 1개만 선택했다면 targetText는 반드시 그 정확한 선택 토큰 자체 또는 그 토큰을 직접 포함한 최소 구간이어야 한다.
+- 드래그 자동생성에서는 같은 철자의 다른 occurrence로 바꾸지 말 것.
 
 [동일 대상 병합 규칙]
 - 같은 단어/구문에 대해 여러 포인트가 있으면(예: to부정사의 명사적 용법 + restrict A to B가 동일한 "to restrict"에 해당), 동일한 targetText를 공유하고 points 배열에서 연속 배치하라.
@@ -690,7 +791,12 @@ serve(async (req) => {
 
   try {
     const reqAuth = req.headers.get("authorization");
-    const { sentence, selectedText, userHint, hintTags, mode, userId } = await req.json();
+    const reqBody = await req.json();
+    const { sentence, selectedText, userHint, hintTags, mode, userId } = reqBody;
+    const selectedWordStart = Number.isInteger(reqBody?.selectedWordStart) ? Number(reqBody.selectedWordStart) : undefined;
+    const selectedWordEnd = Number.isInteger(reqBody?.selectedWordEnd) ? Number(reqBody.selectedWordEnd) : undefined;
+    const selectedContextBefore = oneLine(reqBody?.selectedContextBefore || "");
+    const selectedContextAfter = oneLine(reqBody?.selectedContextAfter || "");
 
     const full = oneLine(sentence || "");
     const selected = oneLine(selectedText || "")
@@ -722,10 +828,14 @@ serve(async (req) => {
       const userMessage = isSelectionAuto
         ? `문장: ${full}\n` +
           `선택 구문: ${selected}\n` +
+          `선택 위치(word index): ${selectedWordStart ?? "?"}~${selectedWordEnd ?? "?"}\n` +
+          `선택 앞 문맥: ${selectedContextBefore || "(없음)"}\n` +
+          `선택 뒤 문맥: ${selectedContextAfter || "(없음)"}\n` +
           `선택 구문과 직접 관련된 핵심 문법 포인트를 정확히 1개만 찾아서 points로 작성하라.\n` +
           `반드시 선택 구문 자체 또는 선택 구문이 포함된 핵심 문법 요소만 설명하라.\n` +
+          `선택 구문이 문장에 여러 번 나올 수 있으면, 반드시 위 위치와 앞뒤 문맥에 해당하는 선택된 occurrence만 분석하라.\n` +
           `다른 절, 다른 문법 요소, 다른 문장 설명은 절대 추가하지 말라.\n` +
-          `targetText는 반드시 선택 구문과 겹치거나 선택 구문을 포함하는 원문 구간으로 반환하라.\n` +
+          `targetText는 반드시 선택된 occurrence 자체를 포함하거나, 최소한 그 occurrence와 직접 겹치는 원문 구간으로 반환하라.\n` +
           `고정 패턴과 태그가 매칭되면 해당 패턴의 형식/말투를 최우선으로 따르되, 현재 문장에 없는 영어 단어와 다른 문장의 예시는 절대 넣지 말라.`
         : `문장: ${full}\n` +
           `이 문장에서 수능에 출제될 수 있는 핵심 문법 포인트를 찾아서 points로 작성하라.\n` +
@@ -842,7 +952,15 @@ serve(async (req) => {
 
       autoPoints = autoPoints
         .filter((p) => isTargetTextInSentence(p.targetText, full))
-        .filter((p) => !isSelectionAuto || isSelectionRelevantTarget(selected, p.targetText))
+        .filter((p) => !isSelectionAuto || isSelectionRelevantTarget(
+          full,
+          selected,
+          p.targetText,
+          selectedWordStart,
+          selectedWordEnd,
+          selectedContextBefore,
+          selectedContextAfter,
+        ))
         .slice(0, isSelectionAuto ? 1 : 5)
         .map((p) => ({
           text: p.text,
