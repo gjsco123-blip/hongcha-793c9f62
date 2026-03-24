@@ -3,13 +3,12 @@ import { Chunk, segmentsToWords, wordsToSegments } from "@/lib/chunk-utils";
 import { Sparkles, Check, X, Pencil, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { SyntaxNote } from "@/pages/Index";
-import type { SyntaxSelection } from "@/lib/syntax-selection";
 
 interface ChunkEditorProps {
   chunks: Chunk[];
   onChange: (chunks: Chunk[]) => void;
   disabled?: boolean;
-  onAnalyzeSelection?: (selection: SyntaxSelection, userHint?: string, slotNumber?: number) => void;
+  onAnalyzeSelection?: (selectedText: string, userHint?: string, slotNumber?: number) => void;
   usedSlots?: number[];
   syntaxNotes?: SyntaxNote[];
 }
@@ -17,7 +16,7 @@ interface ChunkEditorProps {
 export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, usedSlots = [], syntaxNotes = [] }: ChunkEditorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [draftChunks, setDraftChunks] = useState<Chunk[]>([]);
-  const [selectedSelection, setSelectedSelection] = useState<SyntaxSelection | null>(null);
+  const [selectedText, setSelectedText] = useState("");
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
   const [showHintInput, setShowHintInput] = useState(false);
   const [hintText, setHintText] = useState("");
@@ -25,61 +24,6 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
   const containerRef = useRef<HTMLDivElement>(null);
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hintInputRef = useRef<HTMLTextAreaElement>(null);
-
-  const buildSelectionFromRange = useCallback((range: Range, text: string): SyntaxSelection | null => {
-    if (!containerRef.current) return null;
-
-    const wordNodes = Array.from(
-      containerRef.current.querySelectorAll<HTMLElement>("[data-word-index]")
-    );
-    const selectedNodes = wordNodes.filter((node) => {
-      try {
-        return range.intersectsNode(node);
-      } catch {
-        return false;
-      }
-    });
-
-    if (selectedNodes.length === 0) {
-      return { text };
-    }
-
-    const indices = selectedNodes
-      .map((node) => Number(node.dataset.wordIndex))
-      .filter((n) => Number.isFinite(n))
-      .sort((a, b) => a - b);
-
-    if (indices.length === 0) {
-      return { text };
-    }
-
-    const words = wordNodes
-      .map((node) => ({
-        index: Number(node.dataset.wordIndex),
-        text: String(node.dataset.wordText || "").trim(),
-      }))
-      .filter((item) => Number.isFinite(item.index))
-      .sort((a, b) => a.index - b.index);
-
-    const wordStart = indices[0];
-    const wordEnd = indices[indices.length - 1];
-    const contextBefore = words
-      .filter((item) => item.index >= Math.max(0, wordStart - 3) && item.index < wordStart)
-      .map((item) => item.text)
-      .join(" ");
-    const contextAfter = words
-      .filter((item) => item.index > wordEnd && item.index <= wordEnd + 3)
-      .map((item) => item.text)
-      .join(" ");
-
-    return {
-      text,
-      wordStart,
-      wordEnd,
-      contextBefore,
-      contextAfter,
-    };
-  }, []);
 
   const handleMouseUp = useCallback(() => {
     if (!onAnalyzeSelection) return;
@@ -94,16 +38,16 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
       const range = selection!.getRangeAt(0);
       const rect = range.getBoundingClientRect();
       const containerRect = containerRef.current!.getBoundingClientRect();
-      setSelectedSelection(buildSelectionFromRange(range, text));
+      setSelectedText(text);
       setTooltipPos({
         x: rect.left - containerRect.left + rect.width / 2,
         y: rect.top - containerRect.top - 8,
       });
     } else {
-      setSelectedSelection(null);
+      setSelectedText("");
       setTooltipPos(null);
     }
-  }, [buildSelectionFromRange, onAnalyzeSelection, showHintInput]);
+  }, [onAnalyzeSelection, showHintInput]);
 
   const handleAnalyzeClick = () => {
     setShowHintInput(true);
@@ -115,21 +59,21 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
   };
 
   const handleSubmitWithHint = () => {
-    if (selectedSelection && onAnalyzeSelection) {
-      onAnalyzeSelection(selectedSelection, hintText.trim() || undefined, selectedSlot);
+    if (selectedText && onAnalyzeSelection) {
+      onAnalyzeSelection(selectedText, hintText.trim() || undefined, selectedSlot);
     }
     resetSelection();
   };
 
   const handleSubmitAuto = () => {
-    if (selectedSelection && onAnalyzeSelection) {
-      onAnalyzeSelection(selectedSelection, undefined, selectedSlot);
+    if (selectedText && onAnalyzeSelection) {
+      onAnalyzeSelection(selectedText, undefined, selectedSlot);
     }
     resetSelection();
   };
 
   const resetSelection = () => {
-    setSelectedSelection(null);
+    setSelectedText("");
     setTooltipPos(null);
     setShowHintInput(false);
     setHintText("");
@@ -268,7 +212,7 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
 
       <div ref={containerRef} onMouseUp={handleMouseUp} className="relative flex flex-wrap items-center gap-1.5">
         {/* Selection tooltip - 기본 버튼 */}
-        {tooltipPos && selectedSelection?.text && !showHintInput && (
+        {tooltipPos && selectedText && !showHintInput && (
           <button
             onClick={handleAnalyzeClick}
             className="absolute z-20 flex items-center gap-1 px-2 py-1 text-[10px] font-medium bg-foreground text-background rounded shadow-lg whitespace-nowrap -translate-x-1/2 -translate-y-full"
@@ -280,7 +224,7 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
         )}
 
         {/* 힌트 입력 팝업 */}
-        {tooltipPos && selectedSelection?.text && showHintInput && (
+        {tooltipPos && selectedText && showHintInput && (
           <div
             className="absolute z-30 bg-card border border-border rounded-lg shadow-xl p-3 w-72 -translate-x-1/2"
             style={{ left: tooltipPos.x, top: tooltipPos.y - 8 }}
@@ -309,7 +253,7 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
               )}
             </div>
             <div className="text-[10px] text-muted-foreground mb-1.5 truncate">
-              선택: <span className="font-english font-medium text-foreground">"{selectedSelection.text}"</span>
+              선택: <span className="font-english font-medium text-foreground">"{selectedText}"</span>
             </div>
             <textarea
               ref={hintInputRef}
@@ -357,21 +301,15 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
           </div>
         )}
 
-        {(() => {
-          let globalWordIndex = 0;
-          return displayChunks.map((chunk, i) => {
+        {displayChunks.map((chunk, i) => {
           const words = segmentsToWords(chunk.segments);
 
           return (
           <div key={`${chunk.tag}-${i}`} className="flex items-center gap-1 max-w-full">
             <span className="inline px-2 py-1 text-xs font-english border border-border rounded-md bg-background text-foreground break-words max-w-full">
-              {words.map((w, wi) => {
-                const wordIndex = globalWordIndex++;
-                return (
+              {words.map((w, wi) => (
                 <span key={wi}>
                   <span
-                    data-word-index={wordIndex}
-                    data-word-text={w.word}
                     onClick={isEditing ? () => handleWordInteraction(i, wi) : undefined}
                     onDoubleClick={isEditing ? () => handleWordDoubleClick(i, wi) : undefined}
                     className={`${w.isVerb && /[A-Za-z]/.test(w.word) ? "underline decoration-foreground decoration-2 underline-offset-[3px]" : ""}
@@ -382,8 +320,7 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
                   </span>
                   {wi < words.length - 1 ? " " : ""}
                 </span>
-                );
-              })}
+              ))}
             </span>
             {i < displayChunks.length - 1 && isEditing && (
               <button
@@ -399,8 +336,7 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
             )}
           </div>
           );
-          });
-        })()}
+        })}
       </div>
     </div>
   );

@@ -11,7 +11,6 @@ import { usePdfExport } from "@/hooks/usePdfExport";
 import { useTeacherLabel } from "@/hooks/useTeacherLabel";
 import { useCategories } from "@/hooks/useCategories";
 import { renderWithSuperscripts, reorderNotesByPosition } from "@/lib/syntax-superscript";
-import type { SyntaxSelection } from "@/lib/syntax-selection";
 import { paginateResults } from "@/lib/pdf-pagination";
 import { mergePassageStore, parsePassageStore } from "@/lib/passage-store";
 import { toast } from "sonner";
@@ -55,8 +54,6 @@ export interface SyntaxNote {
   id: number; // 1~5
   content: string;
   targetText?: string; // 드래그한 원문 텍스트
-  targetWordStart?: number;
-  targetWordEnd?: number;
 }
 
 interface SentenceResult {
@@ -451,31 +448,15 @@ export default function Index() {
     }
   };
 
-  const handleGenerateSyntax = async (
-    sentenceId: number,
-    original: string,
-    selection?: SyntaxSelection,
-    userHint?: string,
-    slotNumber?: number
-  ) => {
+  const handleGenerateSyntax = async (sentenceId: number, original: string, selectedText?: string, userHint?: string, slotNumber?: number) => {
     setResults((prev) =>
       prev.map((r) => (r.id === sentenceId ? { ...r, generatingSyntax: true } : r))
     );
 
     try {
-      const isAuto = !userHint;
+      const isAuto = !selectedText && !userHint;
       const { data, error } = await supabase.functions.invoke("grammar", {
-        body: {
-          sentence: original,
-          selectedText: selection?.text,
-          selectedWordStart: selection?.wordStart,
-          selectedWordEnd: selection?.wordEnd,
-          selectedContextBefore: selection?.contextBefore,
-          selectedContextAfter: selection?.contextAfter,
-          userHint,
-          mode: isAuto ? "auto" : undefined,
-          userId: user?.id,
-        },
+        body: { sentence: original, selectedText, userHint, mode: isAuto ? "auto" : undefined, userId: user?.id },
       });
 
       if (error) throw error;
@@ -490,13 +471,7 @@ export default function Index() {
           if (slotNumber) {
             // 특정 번호 슬롯에 저장
             const existingIdx = newNotes.findIndex((n) => n.id === slotNumber);
-            const noteEntry: SyntaxNote = {
-              id: slotNumber,
-              content: data.syntaxNotes,
-              targetText: selection?.text,
-              targetWordStart: selection?.wordStart,
-              targetWordEnd: selection?.wordEnd,
-            };
+            const noteEntry: SyntaxNote = { id: slotNumber, content: data.syntaxNotes, targetText: selectedText };
             if (existingIdx >= 0) {
               newNotes[existingIdx] = noteEntry;
             } else {
@@ -524,9 +499,7 @@ export default function Index() {
               newNotes = merged.map((m, idx) => ({
                 id: idx + 1,
                 content: m.content,
-                targetText: selection?.text || m.targetText,
-                targetWordStart: selection?.wordStart,
-                targetWordEnd: selection?.wordEnd,
+                targetText: m.targetText,
               }));
             } else {
               const lines = (data.syntaxNotes as string).split("\n").filter((l: string) => l.trim());
@@ -890,7 +863,7 @@ export default function Index() {
                         chunks={result.englishChunks}
                         onChange={(chunks) => handleChunkChange(result.id, chunks)}
                         disabled={result.regenerating}
-                        onAnalyzeSelection={(selection, hint, slotNumber) => handleGenerateSyntax(result.id, result.original, selection, hint, slotNumber)}
+                        onAnalyzeSelection={(text, hint, slotNumber) => handleGenerateSyntax(result.id, result.original, text, hint, slotNumber)}
                         usedSlots={(result.syntaxNotes || []).map(n => n.id)}
                         syntaxNotes={result.syntaxNotes || []}
                       />
