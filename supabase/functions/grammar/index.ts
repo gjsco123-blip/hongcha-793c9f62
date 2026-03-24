@@ -460,23 +460,29 @@ function applyPinnedPattern(
   pinnedByTag: Map<string, string>,
   explicitUiTag?: string,
   targetText?: string,
+  options?: { allowInference?: boolean },
 ): string {
   const raw = oneLine(content);
   if (!raw) return raw;
   if (!pinnedByTag || pinnedByTag.size === 0) return raw;
+  const allowInference = options?.allowInference ?? true;
 
   const candidates: string[] = [];
   if (explicitUiTag) candidates.push(explicitUiTag);
 
-  const leadingTag = detectLeadingTagLabel(content);
-  if (leadingTag) candidates.push(leadingTag);
+  if (allowInference) {
+    const leadingTag = detectLeadingTagLabel(content);
+    if (leadingTag) candidates.push(leadingTag);
+  }
 
   for (const t of hintTags || []) {
     candidates.push(mapTagIdToUiTag(t));
   }
 
-  const inferredUiTag = detectUiTagFromContent(raw);
-  if (inferredUiTag) candidates.push(inferredUiTag);
+  if (allowInference) {
+    const inferredUiTag = detectUiTagFromContent(raw);
+    if (inferredUiTag) candidates.push(inferredUiTag);
+  }
 
   const seen = new Set<string>();
   for (const candidate of candidates) {
@@ -547,8 +553,24 @@ function isGroundedToSentence(text: string, sentence: string): boolean {
   for (const tk of tokens) {
     if (!sentenceSet.has(tk)) unknown += 1;
   }
-  // Allow at most one outlier token to avoid false positives from minor inflections.
-  return unknown <= 1;
+  return unknown === 0;
+}
+
+function hasSelectionRelevance(
+  text: string,
+  targetText: string | undefined,
+  selectedText: string,
+): boolean {
+  if (!selectedText) return true;
+  if (targetText && hasSelectedAnchor(targetText, selectedText)) return true;
+  return hasSelectedAnchor(text, selectedText);
+}
+
+function normalizeAutoPointTag(tag: string): string {
+  const normalized = normalizeModelTagToUiTag(tag);
+  if (normalized) return normalized;
+  const inferred = detectUiTagFromContent(tag);
+  return inferred === "기타" ? "" : inferred;
 }
 
 function pickGroundedSyntaxText(
@@ -878,6 +900,7 @@ serve(async (req) => {
     }
 
     let textToAnalyze = selected || full;
+    const isSelectionAuto = isAutoMode && !!selected;
 
     // ── 자동 생성 모드: 태그 필터 없이 자유 추출 ──
     if (isAutoMode) {
@@ -888,10 +911,18 @@ serve(async (req) => {
         fetchLearningBlock(userId, reqAuth),
         fetchPinnedPatterns(userId, reqAuth, textToAnalyze || full, []),
       ]);
-      const userMessage = `문장: ${full}\n` +
-        `이 문장에서 수능에 출제될 수 있는 핵심 문법 포인트를 찾아서 points로 작성하라.\n` +
-        `각 포인트마다 원문에서 해당 문법이 적용되는 핵심 구문(2~5단어)을 targetText로 함께 반환하라.\n` +
-        `고정 패턴과 태그가 매칭되면 해당 패턴을 최우선으로 따르라.`;
+      const userMessage = isSelectionAuto
+        ? `문장: ${full}\n` +
+          `선택 구문: ${selected}\n` +
+          `반드시 선택 구문 자체와 직접 관련된 문법 포인트만 1개 작성하라.\n` +
+          `선택 구문 밖의 다른 문법 요소, 다른 절, 다른 표현은 절대 설명하지 말 것.\n` +
+          `각 포인트마다 원문에서 해당 문법이 적용되는 핵심 구문(2~5단어)을 targetText로 함께 반환하라.\n` +
+          `targetText는 반드시 선택 구문을 포함하거나 선택 구문에서 시작해야 한다.\n` +
+          `고정 패턴과 태그가 매칭되면 해당 패턴을 최우선으로 따르라.`
+        : `문장: ${full}\n` +
+          `이 문장에서 수능에 출제될 수 있는 핵심 문법 포인트를 찾아서 points로 작성하라.\n` +
+          `각 포인트마다 원문에서 해당 문법이 적용되는 핵심 구문(2~5단어)을 targetText로 함께 반환하라.\n` +
+          `고정 패턴과 태그가 매칭되면 해당 패턴을 최우선으로 따르라.`;
 
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -981,10 +1012,10 @@ serve(async (req) => {
         .map((p) => ({
           text: finalizeSyntaxText(stripJsonArtifacts(p.text)),
           targetText: oneLine(p.targetText),
-          tag: oneLine(String(p.tag ?? "")),
+          tag: normalizeAutoPointTag(String(p.tag ?? "")),
         }))
         .filter((p) => p.text);
-      autoPoints = autoPoints.slice(0, 5).map((p) => ({
+      autoPoints = autoPoints.slice(0, isSelectionAuto ? 1 : 5).map((p) => ({
         text: p.text,
         targetText: p.targetText,
         tag: p.tag,
@@ -996,15 +1027,18 @@ serve(async (req) => {
           ...p,
           text: pickGroundedSyntaxText(
             p.text,
-            applyPinnedPattern(
-              p.text,
-              [],
-              pinnedData.byTag,
-              p.tag || undefined,
-              p.targetText || sentence,
-            ),
+            p.tag
+              ? applyPinnedPattern(
+                  p.text,
+                  [],
+                  pinnedData.byTag,
+                  p.tag,
+                  p.targetText || selected || sentence,
+                  { allowInference: false },
+                )
+              : p.text,
             full,
-            p.targetText || undefined,
+            isSelectionAuto ? selected : (p.targetText || undefined),
           ),
         }));
       } else {
@@ -1014,13 +1048,15 @@ serve(async (req) => {
             p.text,
             p.text,
             full,
-            p.targetText || undefined,
+            isSelectionAuto ? selected : (p.targetText || undefined),
           ),
         }));
       }
 
       autoPoints = autoPoints
         .filter((p) => isGroundedToSentence(p.text, full))
+        .filter((p) => !p.targetText || isGroundedToSentence(p.targetText, full))
+        .filter((p) => !isSelectionAuto || hasSelectionRelevance(p.text, p.targetText, selected))
         .map((p) => ({
           ...p,
           text: finalizeSyntaxText(p.text),
@@ -1030,7 +1066,9 @@ serve(async (req) => {
         autoPoints = autoPoints.map((p) => ({
           ...p,
           text: p.text,
-          targetText: p.targetText && hasSelectedAnchor(full, p.targetText) ? p.targetText : "",
+          targetText: p.targetText && hasSelectedAnchor(full, p.targetText)
+            ? p.targetText
+            : (isSelectionAuto && hasSelectionRelevance(p.text, p.targetText, selected) ? selected : ""),
         }));
       }
 
