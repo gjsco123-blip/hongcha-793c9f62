@@ -771,6 +771,25 @@ serve(async (req) => {
       }
     }
 
+    // ★ Reply-vs-Suggestion consistency check
+    // If the explanation (reply) mentions specific grammar info that contradicts the suggestion, reject the suggestion
+    if (suggestionNotes && suggestionNotes.length > 0 && suggestion) {
+      const replyWithoutSuggestion = content.replace(/\[수정안\][\s\S]*?\[\/수정안\]/, "").trim().toLowerCase();
+      const suggestionLower = suggestionNotes.join(" ").toLowerCase();
+
+      // Check for contradictions: reply says 형용사절 but suggestion says 명사절 (or vice versa)
+      const replyFrames = chatDetectGrammarFrame(replyWithoutSuggestion);
+      const suggFrames = chatDetectGrammarFrame(suggestionLower);
+      if (chatFrameConflicts(replyFrames, suggFrames)) {
+        console.log(`[grammar-chat] Reply-vs-suggestion inconsistency: reply=[${replyFrames}] suggestion=[${suggFrames}], extracting raw suggestion`);
+        // Re-parse suggestion WITHOUT pinned pattern post-processing
+        suggestionNotes = suggestion
+          .split("\n")
+          .map((line: string) => finalizeSyntaxText(line))
+          .filter((line: string) => line.length > 0);
+      }
+    }
+
     return new Response(
       JSON.stringify({ reply: content, suggestion, suggestionNotes }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
