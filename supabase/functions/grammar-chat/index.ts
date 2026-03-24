@@ -544,7 +544,11 @@ serve(async (req) => {
               const tag = String(p?.tag ?? "").trim();
               const content = String(p?.pinned_content ?? "").trim();
               const key = chatCanonicalTagKey(tag);
-              if (key && content && !pinnedByTag.has(key)) pinnedByTag.set(key, content);
+              if (key && content) {
+                const arr = pinnedByTag.get(key) || [];
+                arr.push(content);
+                pinnedByTag.set(key, arr);
+              }
             }
             const tagLines = relevantPatterns.map((p: any) => `- ${p.tag}: ${p.pinned_content}`).join("\n");
             pinnedBlock = `\n\n[필수 적용 규칙 — 고정 패턴]\n` +
