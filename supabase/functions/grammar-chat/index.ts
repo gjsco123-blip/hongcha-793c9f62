@@ -487,11 +487,17 @@ serve(async (req) => {
       }
     } catch {}
 
-    // ★ History filtering: when reanalysis is requested, replace previous assistant messages
-    // with a marker so the model doesn't anchor to its own prior wrong output
-    let filteredMessages = [...messages];
+    // ★ History filtering: strip [수정안] blocks from ALL assistant messages to prevent anchoring
+    let filteredMessages = messages.map((m: any) => {
+      if (m?.role === "assistant" && typeof m.content === "string") {
+        const stripped = m.content.replace(/\[수정안\][\s\S]*?\[\/수정안\]/g, "").trim();
+        return { ...m, content: stripped || "(수정안 제거됨)" };
+      }
+      return m;
+    });
+
+    // Additionally, when reanalysis is requested, mask the last assistant message entirely
     if (allowReanalysis && filteredMessages.length >= 2) {
-      // Find the last assistant message before the final user message and replace it
       for (let i = filteredMessages.length - 2; i >= 0; i--) {
         if (filteredMessages[i]?.role === "assistant") {
           filteredMessages[i] = {
