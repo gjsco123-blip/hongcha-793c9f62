@@ -484,7 +484,7 @@ serve(async (req) => {
 
     // ── Fetch pinned patterns — SCOPED to current note tags only ──
     let pinnedBlock = "";
-    const pinnedByTag = new Map<string, string>();
+    const pinnedByTag = new Map<string, string[]>();
     try {
       const supabaseUrl = Deno.env.get("SUPABASE_URL");
       const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
