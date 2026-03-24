@@ -267,6 +267,35 @@ function chatLooksUnrelatedToSentence(
   return unknown.size >= 3;
 }
 
+function chatExtractRequiredGrammarFrames(note: string): string[] {
+  const text = chatOneLine(note);
+  const frames = [
+    "형용사절",
+    "명사절",
+    "부사절",
+    "관계대명사",
+    "관계부사",
+    "동격",
+    "수동태",
+    "분사구문",
+    "to부정사",
+    "가주어",
+    "가목적어",
+    "강조구문",
+    "병렬",
+    "수일치",
+    "5형식",
+  ];
+  return frames.filter((f) => text.includes(f));
+}
+
+function chatPreservesGrammarFrames(originalNote: string, newNote: string): boolean {
+  const required = chatExtractRequiredGrammarFrames(originalNote);
+  if (required.length === 0) return true;
+  const next = chatOneLine(newNote);
+  return required.every((f) => next.includes(f));
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -579,6 +608,25 @@ serve(async (req) => {
       suggestionMatch = content.match(/\[수정안\]([\s\S]*?)\[\/수정안\]/);
       suggestion = suggestionMatch ? suggestionMatch[1].trim() : null;
       suggestionNotes = parseSuggestionNotes(suggestion);
+    }
+
+    // Guard rail: in targeted-edit mode, keep original grammar frame unless user requested reanalysis.
+    if (isTargeted && targetNote && !allowReanalysis && suggestionNotes && suggestionNotes.length > 0) {
+      const first = suggestionNotes[0];
+      if (!chatPreservesGrammarFrames(String(targetNote.content ?? ""), first)) {
+        const keepFrameInstruction = `현재는 포인트 표현 수정 모드다.
+수정 대상 포인트의 기존 문법 프레임(예: 형용사절/명사절/관계대명사/수동태 등)은 절대 바꾸지 말고 유지하라.
+기존 포인트의 문법 프레임 키워드를 그대로 포함한 1줄 [수정안]만 반환하라.`;
+        content = await callChatCompletion(keepFrameInstruction);
+        suggestionMatch = content.match(/\[수정안\]([\s\S]*?)\[\/수정안\]/);
+        suggestion = suggestionMatch ? suggestionMatch[1].trim() : null;
+        suggestionNotes = parseSuggestionNotes(suggestion);
+
+        // If it still breaks the frame, fail closed to avoid writing wrong analysis.
+        if (!suggestionNotes || suggestionNotes.length === 0 || !chatPreservesGrammarFrames(String(targetNote.content ?? ""), suggestionNotes[0])) {
+          suggestionNotes = [finalizeSyntaxText(String(targetNote.content ?? ""))];
+        }
+      }
     }
 
     return new Response(

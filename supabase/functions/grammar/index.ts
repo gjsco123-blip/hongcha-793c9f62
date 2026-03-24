@@ -38,17 +38,6 @@ type PinnedPatternsData = {
   byTag: Map<string, string>;
 };
 
-function shouldForcePinnedTemplateForSentence(template: string, sentence?: string): boolean {
-  const templateText = oneLine(template || "");
-  const sentenceText = oneLine(sentence || "").toLowerCase();
-  if (!templateText || !sentenceText) return false;
-
-  const keywords = extractEnglishKeywords(templateText);
-  if (keywords.length === 0) return false;
-
-  return keywords.every((kw) => sentenceText.includes(kw));
-}
-
 function oneLine(s: string) {
   return String(s ?? "")
     .replace(/\s*\n+\s*/g, " ")
@@ -58,38 +47,6 @@ function oneLine(s: string) {
 
 function countWords(text: string) {
   return oneLine(text).split(" ").filter(Boolean).length;
-}
-
-function extractEnglishKeywords(content: string): string[] {
-  const matches = content.match(/[A-Za-z][A-Za-z'\-]{1,}/g) || [];
-  const stopWords = new Set([
-    // articles & determiners
-    "the", "a", "an", "this", "that", "these", "those", "some", "any", "such",
-    // be verbs
-    "is", "are", "was", "were", "be", "been", "being", "am",
-    // prepositions
-    "to", "of", "in", "for", "on", "at", "by", "with", "from", "into", "about",
-    "between", "through", "during", "before", "after", "above", "below", "over", "under",
-    // conjunctions & connectors
-    "and", "or", "but", "nor", "so", "yet", "if", "when", "while", "because",
-    // pronouns
-    "it", "its", "he", "she", "they", "them", "their", "we", "us", "our", "you", "your",
-    "him", "her", "his", "my", "me", "who", "whom", "whose", "which",
-    // common verbs
-    "do", "does", "did", "has", "had", "have", "can", "may", "will", "would",
-    "could", "should", "might", "must", "shall",
-    // adverbs & misc high-frequency
-    "not", "no", "up", "out", "also", "just", "very", "much", "more", "most",
-    "even", "still", "only", "rather", "than", "too", "well", "then", "now",
-    "here", "there", "where", "how", "what", "why", "all", "each", "every",
-    "both", "either", "neither", "other", "another", "own", "same",
-    // common adjectives
-    "new", "old", "good", "bad", "great", "first", "last", "long", "little", "big",
-  ]);
-
-  return matches
-    .map((m) => m.toLowerCase())
-    .filter((m) => m.length >= 3 && !stopWords.has(m));
 }
 
 function safeJsonParse(raw: string): any {
@@ -492,49 +449,9 @@ function materializePinnedPattern(template: string, raw: string, targetText?: st
     return filled;
   }
 
-  // No ___ placeholders: use template as STYLE guide, swap English parts from AI output
-  // Extract English segments from both template and AI output
-  const templateEnglish = extractEnglishSegments(normalizedTemplate);
-  const rawEnglish = extractEnglishSegments(normalizedRaw);
-
-  if (templateEnglish.length === 0 || rawEnglish.length === 0) {
-    // No English to swap — return template as-is (pure Korean style pattern)
-    return normalizedTemplate;
-  }
-
-  // Replace English segments in template with corresponding ones from AI output
-  let result = normalizedTemplate;
-  let rawIdx = 0;
-  for (const tplSeg of templateEnglish) {
-    if (rawIdx >= rawEnglish.length) break;
-    // Replace the template's English segment with the AI's English segment
-    result = result.replace(tplSeg, rawEnglish[rawIdx]);
-    rawIdx++;
-  }
-  return result;
-}
-
-/**
- * Extract English word/phrase segments from a syntax note.
- * Captures things like: "what", "What~important", "that~them", "the project", 
- * parenthesized English like "(What~important)", standalone words like "who"
- */
-function extractEnglishSegments(text: string): string[] {
-  const segments: string[] = [];
-  // Match parenthesized English: (What~important), (that~them)
-  const parenMatches = text.match(/\([A-Za-z][A-Za-z'~\- ]*\)/g) || [];
-  for (const m of parenMatches) segments.push(m);
-  
-  // Match English words/phrases outside parens: "what이", "that이", "who가" etc.
-  // Pattern: English word(s) followed by Korean particle or at word boundary
-  const wordMatches = text.match(/[A-Za-z][A-Za-z'~\-]*(?:\s+[A-Za-z][A-Za-z'~\-]*)*/g) || [];
-  for (const m of wordMatches) {
-    // Skip if already captured inside a paren segment
-    if (!parenMatches.some(p => p.includes(m))) {
-      if (m.length >= 2) segments.push(m);
-    }
-  }
-  return segments;
+  // No placeholders: do not substitute semantics from template.
+  // Keeping raw avoids injecting unrelated words from older patterns.
+  return normalizedRaw;
 }
 
 function applyPinnedPattern(
@@ -571,17 +488,86 @@ function applyPinnedPattern(
     return materializePinnedPattern(pinned, raw, targetText);
   }
 
-  // Fallback: partial match — if byTag key contains or is contained in candidate
-  for (const candidate of candidates) {
-    const key = normalizeTagKey(candidate);
-    if (!key) continue;
-    for (const [bKey, bVal] of pinnedByTag.entries()) {
-      if (bKey.includes(key) || key.includes(bKey)) {
-        return materializePinnedPattern(oneLine(bVal), raw, targetText);
-      }
-    }
-  }
+  return raw;
+}
 
+function extractEnglishTokens(text: string): string[] {
+  return (String(text ?? "").match(/[A-Za-z][A-Za-z0-9'\-]*/g) || []).map((w) => w.toLowerCase());
+}
+
+function tokenStem(token: string): string {
+  const t = String(token ?? "").toLowerCase();
+  if (t.length <= 3) return t;
+  if (t.endsWith("ing") && t.length > 5) return t.slice(0, -3);
+  if (t.endsWith("ied") && t.length > 5) return t.slice(0, -3) + "y";
+  if (t.endsWith("ed") && t.length > 4) return t.slice(0, -2);
+  if (t.endsWith("es") && t.length > 4) return t.slice(0, -2);
+  if (t.endsWith("s") && t.length > 3) return t.slice(0, -1);
+  return t;
+}
+
+function buildTokenVariantSet(tokens: string[]): Set<string> {
+  const set = new Set<string>();
+  for (const tk of tokens) {
+    const t = tokenStem(tk);
+    if (!t) continue;
+    set.add(t);
+    if (t.endsWith("y")) set.add(t.slice(0, -1) + "ies");
+    set.add(t + "s");
+    set.add(t + "ed");
+    set.add(t + "ing");
+  }
+  return set;
+}
+
+const GRAMMAR_META_TOKENS = new Set([
+  "that", "which", "who", "whom", "whose", "when", "where", "why", "how",
+  "it", "be", "is", "are", "was", "were", "am", "been", "being",
+  "to", "for", "as", "if", "than", "not", "only", "both", "either", "neither",
+  "v", "n", "adj", "adv", "pp", "oc", "ing",
+  "subject", "object", "complement", "clause", "phrase", "passive", "active",
+  "relative", "noun", "verb", "participle", "gerund", "infinitive",
+]);
+
+function hasSelectedAnchor(text: string, selectedText: string): boolean {
+  const selectedTokens = extractEnglishTokens(selectedText);
+  if (selectedTokens.length === 0) return true;
+  const textVariants = buildTokenVariantSet(extractEnglishTokens(text));
+  return selectedTokens.some((t) => textVariants.has(tokenStem(t)));
+}
+
+function isGroundedToSentence(text: string, sentence: string): boolean {
+  const sentenceSet = buildTokenVariantSet(extractEnglishTokens(sentence));
+  const tokens = extractEnglishTokens(text)
+    .map(tokenStem)
+    .filter((t) => t.length >= 4 && !GRAMMAR_META_TOKENS.has(t));
+
+  if (tokens.length === 0) return true;
+  let unknown = 0;
+  for (const tk of tokens) {
+    if (!sentenceSet.has(tk)) unknown += 1;
+  }
+  // Allow at most one outlier token to avoid false positives from minor inflections.
+  return unknown <= 1;
+}
+
+function pickGroundedSyntaxText(
+  rawText: string,
+  styledText: string,
+  sentence: string,
+  selectedText?: string,
+): string {
+  const raw = finalizeSyntaxText(rawText);
+  const styled = finalizeSyntaxText(styledText);
+
+  const rawGrounded = isGroundedToSentence(raw, sentence);
+  const styledGrounded = isGroundedToSentence(styled, sentence);
+  const needAnchor = !!selectedText;
+  const rawAnchored = needAnchor ? hasSelectedAnchor(raw, selectedText!) : true;
+  const styledAnchored = needAnchor ? hasSelectedAnchor(styled, selectedText!) : true;
+
+  if (styledGrounded && styledAnchored) return styled;
+  if (rawGrounded && rawAnchored) return raw;
   return raw;
 }
 
@@ -789,73 +775,11 @@ const autoTools = [
 // -----------------------------
 // Shared: fetch pinned patterns
 // -----------------------------
-/**
- * Extract a leading phrase before a colon in pinned_content.
- * e.g. "rather than: ~라기보다는" → "rather than"
- * e.g. "as ~ as possible 구조로" → null (no colon pattern)
- */
-function extractLeadingPhrase(content: string): string | null {
-  const match = content.match(/^([A-Za-z][A-Za-z\s~]+?)(?:\s*:)/);
-  if (match) {
-    const phrase = match[1].trim().toLowerCase().replace(/\s+/g, " ");
-    if (phrase.length >= 3) return phrase;
-  }
-  return null;
-}
-
-/**
- * Check if a pattern is a reusable template (has ___ placeholders)
- * vs a sentence-specific example (references specific words from one sentence).
- */
-function isReusableTemplate(content: string): boolean {
-  return content.includes("___");
-}
-
-/**
- * Strict relevance scoring for a pattern against a sentence.
- * Returns a score 0-1. Higher = more relevant.
- */
-function patternRelevanceScore(patternContent: string, sentenceLower: string): number {
-  if (!sentenceLower) return 0;
-
-  // 1) Check for leading phrase match (e.g., "rather than:", "as ~ as")
-  const phrase = extractLeadingPhrase(patternContent);
-  if (phrase) {
-    // For phrase patterns, the phrase itself must appear in the sentence
-    const normalizedPhrase = phrase.replace(/\s*~\s*/g, " ").trim();
-    if (sentenceLower.includes(normalizedPhrase)) return 1.0;
-    // Also handle tilde-separated patterns like "as ~ as" → check both parts
-    if (phrase.includes("~")) {
-      const parts = phrase.split("~").map(p => p.trim()).filter(p => p.length >= 2);
-      const allPresent = parts.every(p => sentenceLower.includes(p));
-      if (allPresent) return 0.9;
-    }
-    return 0; // Phrase pattern but phrase not in sentence → not relevant
-  }
-
-  // 2) For template patterns (with ___), use keyword ratio matching
-  const keywords = extractEnglishKeywords(patternContent);
-  if (keywords.length === 0) return 0;
-
-  // Deduplicate keywords
-  const uniqueKeywords = Array.from(new Set(keywords));
-  const matchCount = uniqueKeywords.filter(kw => sentenceLower.includes(kw)).length;
-  const ratio = matchCount / uniqueKeywords.length;
-
-  // For reusable templates, require lower threshold since blanks won't match
-  if (isReusableTemplate(patternContent)) {
-    return ratio >= 0.3 ? ratio : 0;
-  }
-
-  // For sentence-specific examples, require high match ratio
-  // because most keywords should be present if it's truly relevant
-  return ratio >= 0.6 ? ratio : 0;
-}
-
 async function fetchPinnedPatterns(
   _userId: string | undefined,
   authHeader?: string | null,
-  sentence?: string,
+  _sentence?: string,
+  activeUiTags?: string[],
 ): Promise<PinnedPatternsData> {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -871,61 +795,29 @@ async function fetchPinnedPatterns(
     const allPatterns = await res.json();
     if (allPatterns.length === 0) return { promptBlock: "", byTag: new Map() };
     const byTag = new Map<string, string>();
-
-    // 2-track pattern matching:
-    // Track 1: Grammar-tag patterns → always include by tag (no keyword matching needed)
-    // Track 2: Phrase/expression patterns (기타, 숙어/표현) → require keyword relevance
-    const GRAMMAR_TAGS = new Set([
-      "관계대명사", "관계부사", "분사구문", "분사 후치수식", "분사", "수동태", "조동사+수동",
-      "to부정사", "명사절", "가주어/진주어", "가목적어/진목적어", "5형식", "4형식", "병렬구조",
-      "전치사+동명사", "비교구문", "수일치", "생략", "강조구문", "현재완료+수동",
-      "계속적용법 관계대명사", "계속적 용법 관계부사", "대동사", "전치사+관계대명사", "지칭",
-      "동격접", "동명사주어", "as 형부 as", "so~that", "to be pp", "too~to",
-    ]);
-
-    let relevantPatterns: any[] = [];
-    const sentenceLower = oneLine(sentence || "").toLowerCase();
-
     for (const p of allPatterns) {
-      const tag = String(p?.tag ?? "").trim();
-      const content = String(p?.pinned_content ?? "").trim();
-      if (!tag || !content) continue;
-
-      const isGrammarTag = GRAMMAR_TAGS.has(tag);
-
-      if (isGrammarTag) {
-        // Track 1: Grammar tag → always include (no keyword check)
-        relevantPatterns.push(p);
-      } else if (sentenceLower) {
-        // Track 2: Expression/phrase tag → require keyword relevance
-        const score = patternRelevanceScore(content, sentenceLower);
-        if (score > 0) relevantPatterns.push(p);
-      }
-    }
-
-    // Log for debugging
-    if (relevantPatterns.length > 0) {
-      console.log(`[pinned-patterns] Sentence: "${sentenceLower.slice(0, 60)}..."`);
-      console.log(`[pinned-patterns] Matched ${relevantPatterns.length}/${allPatterns.length} patterns (grammar-tag + phrase)`);
-    } else {
-      console.log(`[pinned-patterns] No patterns matched for: "${sentenceLower.slice(0, 60)}..."`);
-    }
-
-    if (relevantPatterns.length === 0) return { promptBlock: "", byTag };
-
-    // Build byTag map from all relevance-scored patterns (no double filter)
-    for (const p of relevantPatterns) {
       const tag = String(p?.tag ?? "").trim();
       const content = String(p?.pinned_content ?? "").trim();
       if (!tag || !content) continue;
       const key = normalizeTagKey(tag);
       if (!byTag.has(key)) byTag.set(key, content);
     }
+    if (byTag.size === 0) return { promptBlock: "", byTag };
 
-    // Inject all relevance-scored patterns (no template-only filter)
-    if (relevantPatterns.length === 0) return { promptBlock: "", byTag };
+    const requestedTagKeys = new Set((activeUiTags || []).map((t) => normalizeTagKey(t)).filter(Boolean));
+    if (requestedTagKeys.size === 0) {
+      // Avoid injecting all global patterns into prompt.
+      return { promptBlock: "", byTag };
+    }
 
-    const tagLines = relevantPatterns
+    const promptPatterns = allPatterns.filter((p: any) => {
+      const tag = String(p?.tag ?? "").trim();
+      const key = normalizeTagKey(tag);
+      return requestedTagKeys.has(key);
+    });
+    if (promptPatterns.length === 0) return { promptBlock: "", byTag };
+
+    const tagLines = promptPatterns
       .map((p: any) => {
         const tag = String(p?.tag ?? "").trim();
         const content = String(p?.pinned_content ?? "").trim();
@@ -937,6 +829,7 @@ async function fetchPinnedPatterns(
       `\n\n[필수 적용 규칙 — 고정 패턴]\n` +
       `아래 패턴은 사용자가 직접 지정한 필수 설명 형식이다.\n` +
       `해당 문법 요소가 문장에 존재하면, 반드시 아래 패턴의 설명 구조·말투·종결 방식을 그대로 따라야 한다.\n` +
+      `단, 내용(문법 판단/근거 구문)은 반드시 현재 문장 기준으로 작성하고 패턴은 형식만 따른다.\n` +
       `단, 패턴에 포함된 영어 단어(예: what, important, built 등)는 절대 그대로 쓰지 말 것.\n` +
       `영어 단어와 구문 범위는 반드시 현재 문장의 실제 내용으로 교체하라.\n` +
       `현재 문장에 없는 영어 단어가 출력에 포함되면 오류다.\n` +
@@ -993,7 +886,7 @@ serve(async (req) => {
 
       const [learningBlock, pinnedData] = await Promise.all([
         fetchLearningBlock(userId, reqAuth),
-        fetchPinnedPatterns(userId, reqAuth, textToAnalyze || full),
+        fetchPinnedPatterns(userId, reqAuth, textToAnalyze || full, []),
       ]);
       const userMessage = `문장: ${full}\n` +
         `이 문장에서 수능에 출제될 수 있는 핵심 문법 포인트를 찾아서 points로 작성하라.\n` +
@@ -1101,13 +994,43 @@ serve(async (req) => {
       if (pinnedData.byTag && pinnedData.byTag.size > 0) {
         autoPoints = autoPoints.map((p) => ({
           ...p,
-          text: applyPinnedPattern(
+          text: pickGroundedSyntaxText(
             p.text,
-            [],
-            pinnedData.byTag,
-            p.tag || undefined,
-            p.targetText || sentence,
+            applyPinnedPattern(
+              p.text,
+              [],
+              pinnedData.byTag,
+              p.tag || undefined,
+              p.targetText || sentence,
+            ),
+            full,
+            p.targetText || undefined,
           ),
+        }));
+      } else {
+        autoPoints = autoPoints.map((p) => ({
+          ...p,
+          text: pickGroundedSyntaxText(
+            p.text,
+            p.text,
+            full,
+            p.targetText || undefined,
+          ),
+        }));
+      }
+
+      autoPoints = autoPoints
+        .filter((p) => isGroundedToSentence(p.text, full))
+        .map((p) => ({
+          ...p,
+          text: finalizeSyntaxText(p.text),
+        }));
+
+      if (autoPoints.length > 0) {
+        autoPoints = autoPoints.map((p) => ({
+          ...p,
+          text: p.text,
+          targetText: p.targetText && hasSelectedAnchor(full, p.targetText) ? p.targetText : "",
         }));
       }
 
@@ -1141,10 +1064,12 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
+    const activeUiTagsForPrompt = useFreestyle ? [] : tags.map((t) => mapTagIdToUiTag(t));
+
     // Fetch learning examples + pinned patterns for hint mode too
     const [learningBlock, pinnedData] = await Promise.all([
       fetchLearningBlock(userId, reqAuth),
-      fetchPinnedPatterns(userId, reqAuth, textToAnalyze || full),
+      fetchPinnedPatterns(userId, reqAuth, textToAnalyze || full, activeUiTagsForPrompt),
     ]);
 
     const userMessage = useFreestyle
@@ -1231,10 +1156,15 @@ serve(async (req) => {
       }
     }
 
-    points = points
-      .map(finalizeSyntaxText)
-      .filter(Boolean)
-      .map((p) => useFreestyle ? finalizeSyntaxText(p) : finalizeSyntaxText(applyPinnedPattern(p, tags, pinnedData.byTag)));
+    const normalizedPoints = points.map(finalizeSyntaxText).filter(Boolean);
+    points = normalizedPoints.map((rawPoint) => {
+      const styled = useFreestyle
+        ? finalizeSyntaxText(rawPoint)
+        : finalizeSyntaxText(applyPinnedPattern(rawPoint, tags, pinnedData.byTag, undefined, selected || undefined));
+      return pickGroundedSyntaxText(rawPoint, styled, full, selected || undefined);
+    })
+    .filter((p) => isGroundedToSentence(p, full))
+    .filter((p) => !selected || hasSelectedAnchor(p, selected));
 
     if (points.length === 0) {
       points = useFreestyle
