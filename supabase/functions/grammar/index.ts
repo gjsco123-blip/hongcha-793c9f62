@@ -83,7 +83,6 @@ function repairTruncatedSyntaxPhrases(text: string): string {
   out = out.replace(/표현으로\s*쓰(?=\s*(?:\/|$))/g, "표현으로 쓰임");
   out = out.replace(/구조로\s*쓰(?=\s*(?:\/|$))/g, "구조로 쓰임");
   out = out.replace(/용법으로\s*쓰(?=\s*(?:\/|$))/g, "용법으로 쓰임");
-  out = out.replace(/((?:[가-힣A-Za-z]+\s+){0,2}용법)으로\s*쓰(?=\s*(?:\/|$))/g, "$1으로 쓰임");
   out = out.replace(/\s{2,}/g, " ").trim();
   return out;
 }
@@ -163,28 +162,11 @@ function detectLeadingTagLabel(line: string): string {
   return "";
 }
 
-function finalizeSyntaxText(text: string): string {
-  let out = oneLine(text);
-  for (let i = 0; i < 3; i += 1) {
-    const next = stripLeadingTagLabel(
-      stripTrailingFieldLabel(
-        repairTruncatedSyntaxPhrases(
-          sanitizeEndings(
-            stripLeadingBullets(out)
-          )
-        )
-      )
-    );
-    if (next === out) break;
-    out = next;
-  }
-  return out;
-}
-
 function formatAsLines(points: string[], maxLines: number) {
   const cleaned = points
-    .map(finalizeSyntaxText)
-    .filter(Boolean);
+    .map((p) => oneLine(p))
+    .filter(Boolean)
+    .map(stripLeadingBullets);
 
   return cleaned.slice(0, maxLines).join("\n");
 }
@@ -318,9 +300,7 @@ function mapTagIdToUiTag(tagId: TagId): string {
 
 function detectUiTagFromContent(content: string): string {
   const c = oneLine(content).toLowerCase();
-  if (c.includes("동격") && (c.includes("접속사") || c.includes("that") || c.includes("동격접"))) return "동격접";
   if (c.includes("관계사")) {
-    if (c.includes("계속적") && (c.includes("용법") || c.includes("관계"))) return "계속적용법 관계대명사";
     if (c.includes("where") || c.includes("when") || c.includes("why") || c.includes("how")) return "관계부사";
     return "관계대명사";
   }
@@ -329,157 +309,41 @@ function detectUiTagFromContent(content: string): string {
   if (c.includes("분사구문")) return "분사구문";
   if (c.includes("후치수식") || c.includes("후치")) return "분사 후치수식";
   if (c.includes("조동사") && c.includes("수동")) return "조동사+수동";
-  if (c.includes("현재완료") && c.includes("수동")) return "현재완료+수동";
-  if (c.includes("수동태") || c.includes("be p.p") || c.includes("to be pp") || c.includes("to be p.p")) return "수동태";
+  if (c.includes("수동태") || c.includes("be p.p")) return "수동태";
   if (c.includes("to부정사") || c.includes("to-v")) return "to부정사";
   if (c.includes("명사절")) return "명사절";
   if (c.includes("가주어") || c.includes("진주어")) return "가주어/진주어";
   if (c.includes("가목적어") || c.includes("진목적어")) return "가목적어/진목적어";
-  if (c.includes("동명사") && c.includes("주어")) return "동명사주어";
   if (c.includes("5형식") || c.includes("목적격보어")) return "5형식";
-  if (c.includes("4형식")) return "4형식";
   if (c.includes("병렬")) return "병렬구조";
   if (c.includes("전치사") && c.includes("동명사")) return "전치사+동명사";
-  if (c.includes("so") && c.includes("that") && (c.includes("~") || c.includes("구문") || c.includes("결과"))) return "so~that";
-  if (c.includes("too") && c.includes("to") && (c.includes("~") || c.includes("구문"))) return "too~to";
-  if (c.includes("as") && c.includes("as") && (c.includes("형") || c.includes("부") || c.includes("원급"))) return "as 형부 as";
   if (c.includes("비교") || c.includes("최상급")) return "비교구문";
   if (c.includes("수일치")) return "수일치";
   if (c.includes("생략")) return "생략";
-  if (c.includes("강조") && (c.includes("구문") || c.includes("it is") || c.includes("it was"))) return "강조구문";
-  if (c.includes("계속적") && (c.includes("용법") || c.includes("관계"))) {
-    if (c.includes("부사")) return "계속적 용법 관계부사";
-    return "계속적용법 관계대명사";
-  }
-  if (c.includes("대동사")) return "대동사";
-  if (c.includes("분사") && !c.includes("분사구문") && !c.includes("후치")) return "분사";
-  if (c.includes("전치사") && c.includes("관계")) return "전치사+관계대명사";
-  if (c.includes("to be pp") || c.includes("to be p.p")) return "to be pp";
   return "기타";
 }
 
 function normalizeModelTagToUiTag(tag: string): string {
   const t = oneLine(tag).toLowerCase();
   if (!t) return "";
-  if (t.includes("동격") || t.includes("동격접")) return "동격접";
   if (t.includes("rel_subj") || t.includes("rel_obj_omit") || t.includes("관계대명사") || t.includes("주관대") || t.includes("목관대")) return "관계대명사";
   if (t.includes("rel_adv") || t.includes("관계부사")) return "관계부사";
   if (t.includes("agreement") || t.includes("수일치")) return "수일치";
   if (t.includes("noun_clause") || t.includes("명사절")) return "명사절";
   if (t.includes("it_dummy_subj") || t.includes("가주어") || t.includes("진주어")) return "가주어/진주어";
   if (t.includes("it_dummy_obj") || t.includes("가목적어") || t.includes("진목적어")) return "가목적어/진목적어";
-  if (t.includes("동명사") && t.includes("주어")) return "동명사주어";
   if (t.includes("five_pattern") || t.includes("5형식")) return "5형식";
-  if (t.includes("4형식")) return "4형식";
   if (t.includes("to_inf") || t.includes("to부정사")) return "to부정사";
   if (t.includes("participle_post") || t.includes("후치수식")) return "분사 후치수식";
   if (t.includes("participle_clause") || t.includes("분사구문")) return "분사구문";
   if (t.includes("modal_passive") || t.includes("조동사+수동")) return "조동사+수동";
-  if (t.includes("현재완료") && t.includes("수동")) return "현재완료+수동";
   if (t.includes("passive") || t.includes("수동태")) return "수동태";
   if (t.includes("parallel") || t.includes("병렬")) return "병렬구조";
   if (t.includes("prep_gerund") || (t.includes("전치사") && t.includes("동명사"))) return "전치사+동명사";
   if (t.includes("there_be")) return "기타";
-  if (t.includes("so") && t.includes("that")) return "so~that";
-  if (t.includes("too") && t.includes("to")) return "too~to";
-  if ((t.includes("as") && t.includes("원급")) || t.includes("as 형부 as") || t.includes("as~as")) return "as 형부 as";
   if (t.includes("comparison") || t.includes("비교")) return "비교구문";
   if (t.includes("omission") || t.includes("생략")) return "생략";
-  if (t.includes("강조") && (t.includes("구문") || t.includes("it"))) return "강조구문";
-  if (t.includes("계속적") && (t.includes("용법") || t.includes("관계"))) {
-    if (t.includes("부사")) return "계속적 용법 관계부사";
-    return "계속적용법 관계대명사";
-  }
-  if (t.includes("대동사")) return "대동사";
-  if (t.includes("분사") && !t.includes("분사구문") && !t.includes("후치")) return "분사";
-  if (t.includes("전치사") && t.includes("관계")) return "전치사+관계대명사";
-  if (t.includes("to be pp") || t.includes("to be p.p")) return "to be pp";
   return "";
-}
-
-function extractPinnedTemplateValues(raw: string, targetText?: string): string[] {
-  const values: string[] = [];
-  const push = (value?: string) => {
-    const normalized = oneLine(String(value ?? "")).replace(/^[()]+|[()]+$/g, "").trim();
-    if (!normalized) return;
-    if (!values.includes(normalized)) values.push(normalized);
-  };
-
-  push(targetText);
-
-  const patterns = [
-    /관계(?:사|대명사|부사)\s+([A-Za-z][A-Za-z' -]*)/g,
-    /형용사절\(([^)]+)\)/g,
-    /명사절\(([^)]+)\)/g,
-    /부사절\(([^)]+)\)/g,
-    /선행사\s+([A-Za-z][A-Za-z' -]*)/g,
-    /동사\s+([A-Za-z][A-Za-z' -]*)/g,
-    /목적어\(?([A-Za-z][A-Za-z' -]*)\)?/g,
-    /보어\(?([A-Za-z][A-Za-z' -]*)\)?/g,
-    /\(([A-Za-z][A-Za-z' -]*~[A-Za-z][A-Za-z' -]*)\)/g,
-  ];
-
-  for (const re of patterns) {
-    for (const match of raw.matchAll(re)) {
-      push(match[1]);
-    }
-  }
-
-  return values;
-}
-
-function detectClauseFamily(text: string): string {
-  const t = oneLine(text).toLowerCase();
-  if (!t) return "";
-  if (t.includes("형용사절") || t.includes("관계절") || t.includes("관계대명사") || t.includes("관계부사")) return "형용사절";
-  if (t.includes("명사절") || t.includes("동격") || t.includes("간접의문문")) return "명사절";
-  if (t.includes("부사절")) return "부사절";
-  if (t.includes("강조구문") || t.includes("it is ~ that") || t.includes("it was ~ that")) return "강조구문";
-  return "";
-}
-
-function hasUnsafePatternEnglishTokens(template: string, raw: string, targetText?: string): boolean {
-  const allowed = buildTokenVariantSet([
-    ...extractEnglishTokens(raw),
-    ...extractEnglishTokens(targetText || ""),
-  ]);
-  const templateTokens = extractEnglishTokens(template)
-    .map(tokenStem)
-    .filter((token) => token.length >= 3 && !GRAMMAR_META_TOKENS.has(token));
-
-  if (templateTokens.length === 0) return false;
-
-  return templateTokens.some((token) => !allowed.has(token));
-}
-
-function materializePinnedPattern(template: string, raw: string, targetText?: string): string {
-  const normalizedTemplate = stripLeadingTagLabel(oneLine(template));
-  const normalizedRaw = stripLeadingTagLabel(oneLine(raw));
-  if (!normalizedTemplate) return normalizedRaw;
-
-  // Auto-generation must stay sentence-local. Templates without placeholders are
-  // treated as examples only and must not overwrite current content.
-  if (!normalizedTemplate.includes("___")) {
-    return normalizedRaw;
-  }
-
-  const values = extractPinnedTemplateValues(normalizedRaw, targetText);
-  if (values.length === 0) return normalizedRaw;
-
-  let idx = 0;
-  const filled = normalizedTemplate.replace(/___/g, () => values[idx++] ?? values[values.length - 1] ?? "___");
-
-  const templateFamily = detectClauseFamily(filled);
-  const rawFamily = detectClauseFamily(normalizedRaw);
-  if (templateFamily && rawFamily && templateFamily !== rawFamily) {
-    return normalizedRaw;
-  }
-
-  if (hasUnsafePatternEnglishTokens(filled, normalizedRaw, targetText)) {
-    return normalizedRaw;
-  }
-
-  return finalizeSyntaxText(filled);
 }
 
 function applyPinnedPattern(
@@ -487,30 +351,22 @@ function applyPinnedPattern(
   hintTags: TagId[],
   pinnedByTag: Map<string, string>,
   explicitUiTag?: string,
-  targetText?: string,
-  options?: { allowInference?: boolean },
 ): string {
   const raw = oneLine(content);
   if (!raw) return raw;
   if (!pinnedByTag || pinnedByTag.size === 0) return raw;
-  const allowInference = options?.allowInference ?? true;
 
   const candidates: string[] = [];
   if (explicitUiTag) candidates.push(explicitUiTag);
 
-  if (allowInference) {
-    const leadingTag = detectLeadingTagLabel(content);
-    if (leadingTag) candidates.push(leadingTag);
-  }
+  const leadingTag = detectLeadingTagLabel(content);
+  if (leadingTag) candidates.push(leadingTag);
 
   for (const t of hintTags || []) {
     candidates.push(mapTagIdToUiTag(t));
   }
 
-  if (allowInference) {
-    const inferredUiTag = detectUiTagFromContent(raw);
-    if (inferredUiTag) candidates.push(inferredUiTag);
-  }
+  candidates.push(detectUiTagFromContent(raw));
 
   const seen = new Set<string>();
   for (const candidate of candidates) {
@@ -519,105 +375,13 @@ function applyPinnedPattern(
     seen.add(key);
     const pinned = oneLine(String(pinnedByTag.get(key) ?? ""));
     if (!pinned) continue;
-    return materializePinnedPattern(pinned, raw, targetText);
+
+    const normalizedPinned = stripLeadingTagLabel(pinned);
+    // Keep model output if the pattern is still a template.
+    if (normalizedPinned.includes("___")) return raw;
+    return normalizedPinned;
   }
 
-  return raw;
-}
-
-function extractEnglishTokens(text: string): string[] {
-  return (String(text ?? "").match(/[A-Za-z][A-Za-z0-9'\-]*/g) || []).map((w) => w.toLowerCase());
-}
-
-function tokenStem(token: string): string {
-  const t = String(token ?? "").toLowerCase();
-  if (t.length <= 3) return t;
-  if (t.endsWith("ing") && t.length > 5) return t.slice(0, -3);
-  if (t.endsWith("ied") && t.length > 5) return t.slice(0, -3) + "y";
-  if (t.endsWith("ed") && t.length > 4) return t.slice(0, -2);
-  if (t.endsWith("es") && t.length > 4) return t.slice(0, -2);
-  if (t.endsWith("s") && t.length > 3) return t.slice(0, -1);
-  return t;
-}
-
-function buildTokenVariantSet(tokens: string[]): Set<string> {
-  const set = new Set<string>();
-  for (const tk of tokens) {
-    const t = tokenStem(tk);
-    if (!t) continue;
-    set.add(t);
-    if (t.endsWith("y")) set.add(t.slice(0, -1) + "ies");
-    set.add(t + "s");
-    set.add(t + "ed");
-    set.add(t + "ing");
-  }
-  return set;
-}
-
-const GRAMMAR_META_TOKENS = new Set([
-  "that", "which", "who", "whom", "whose", "when", "where", "why", "how",
-  "it", "be", "is", "are", "was", "were", "am", "been", "being",
-  "to", "for", "as", "if", "than", "not", "only", "both", "either", "neither",
-  "v", "n", "adj", "adv", "pp", "oc", "ing",
-  "subject", "object", "complement", "clause", "phrase", "passive", "active",
-  "relative", "noun", "verb", "participle", "gerund", "infinitive",
-]);
-
-function hasSelectedAnchor(text: string, selectedText: string): boolean {
-  const selectedTokens = extractEnglishTokens(selectedText);
-  if (selectedTokens.length === 0) return true;
-  const textVariants = buildTokenVariantSet(extractEnglishTokens(text));
-  return selectedTokens.some((t) => textVariants.has(tokenStem(t)));
-}
-
-function isGroundedToSentence(text: string, sentence: string): boolean {
-  const sentenceSet = buildTokenVariantSet(extractEnglishTokens(sentence));
-  const tokens = extractEnglishTokens(text)
-    .map(tokenStem)
-    .filter((t) => t.length >= 4 && !GRAMMAR_META_TOKENS.has(t));
-
-  if (tokens.length === 0) return true;
-  let unknown = 0;
-  for (const tk of tokens) {
-    if (!sentenceSet.has(tk)) unknown += 1;
-  }
-  return unknown === 0;
-}
-
-function hasSelectionRelevance(
-  text: string,
-  targetText: string | undefined,
-  selectedText: string,
-): boolean {
-  if (!selectedText) return true;
-  if (targetText && hasSelectedAnchor(targetText, selectedText)) return true;
-  return hasSelectedAnchor(text, selectedText);
-}
-
-function normalizeAutoPointTag(tag: string): string {
-  const normalized = normalizeModelTagToUiTag(tag);
-  if (normalized) return normalized;
-  const inferred = detectUiTagFromContent(tag);
-  return inferred === "기타" ? "" : inferred;
-}
-
-function pickGroundedSyntaxText(
-  rawText: string,
-  styledText: string,
-  sentence: string,
-  selectedText?: string,
-): string {
-  const raw = finalizeSyntaxText(rawText);
-  const styled = finalizeSyntaxText(styledText);
-
-  const rawGrounded = isGroundedToSentence(raw, sentence);
-  const styledGrounded = isGroundedToSentence(styled, sentence);
-  const needAnchor = !!selectedText;
-  const rawAnchored = needAnchor ? hasSelectedAnchor(raw, selectedText!) : true;
-  const styledAnchored = needAnchor ? hasSelectedAnchor(styled, selectedText!) : true;
-
-  if (styledGrounded && styledAnchored) return styled;
-  if (rawGrounded && rawAnchored) return raw;
   return raw;
 }
 
@@ -825,12 +589,7 @@ const autoTools = [
 // -----------------------------
 // Shared: fetch pinned patterns
 // -----------------------------
-async function fetchPinnedPatterns(
-  _userId: string | undefined,
-  authHeader?: string | null,
-  _sentence?: string,
-  activeUiTags?: string[],
-): Promise<PinnedPatternsData> {
+async function fetchPinnedPatterns(_userId: string | undefined, authHeader?: string | null): Promise<PinnedPatternsData> {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -842,32 +601,19 @@ async function fetchPinnedPatterns(
     const url = `${supabaseUrl}/rest/v1/syntax_patterns?is_global=eq.true&order=created_at.desc&select=tag,pinned_content`;
     const res = await fetch(url, { headers: { apikey: apiKey, Authorization: auth } });
     if (!res.ok) return { promptBlock: "", byTag: new Map() };
-    const allPatterns = await res.json();
-    if (allPatterns.length === 0) return { promptBlock: "", byTag: new Map() };
+    const patterns = await res.json();
+    if (patterns.length === 0) return { promptBlock: "", byTag: new Map() };
+
     const byTag = new Map<string, string>();
-    for (const p of allPatterns) {
+    for (const p of patterns) {
       const tag = String(p?.tag ?? "").trim();
       const content = String(p?.pinned_content ?? "").trim();
       if (!tag || !content) continue;
       const key = normalizeTagKey(tag);
       if (!byTag.has(key)) byTag.set(key, content);
     }
-    if (byTag.size === 0) return { promptBlock: "", byTag };
 
-    const requestedTagKeys = new Set((activeUiTags || []).map((t) => normalizeTagKey(t)).filter(Boolean));
-    if (requestedTagKeys.size === 0) {
-      // Avoid injecting all global patterns into prompt.
-      return { promptBlock: "", byTag };
-    }
-
-    const promptPatterns = allPatterns.filter((p: any) => {
-      const tag = String(p?.tag ?? "").trim();
-      const key = normalizeTagKey(tag);
-      return requestedTagKeys.has(key);
-    });
-    if (promptPatterns.length === 0) return { promptBlock: "", byTag };
-
-    const tagLines = promptPatterns
+    const tagLines = patterns
       .map((p: any) => {
         const tag = String(p?.tag ?? "").trim();
         const content = String(p?.pinned_content ?? "").trim();
@@ -876,20 +622,14 @@ async function fetchPinnedPatterns(
       .filter(Boolean)
       .join("\n");
     const promptBlock =
-      `\n\n[필수 적용 규칙 — 고정 패턴]\n` +
-      `아래 패턴은 사용자가 직접 지정한 필수 설명 형식이다.\n` +
-      `해당 문법 요소가 문장에 존재하면, 반드시 아래 패턴의 설명 구조·말투·종결 방식을 그대로 따라야 한다.\n` +
-      `단, 내용(문법 판단/근거 구문)은 반드시 현재 문장 기준으로 작성하고 패턴은 형식만 따른다.\n` +
-      `단, 패턴에 포함된 영어 단어(예: what, important, built 등)는 절대 그대로 쓰지 말 것.\n` +
-      `영어 단어와 구문 범위는 반드시 현재 문장의 실제 내용으로 교체하라.\n` +
-      `현재 문장에 없는 영어 단어가 출력에 포함되면 오류다.\n` +
-      `___가 있으면 해당 문장의 실제 단어로 교체하라.\n` +
-      `문장에 해당 문법 요소가 없으면 이 패턴을 완전히 무시하라. 억지로 적용하지 말 것.\n` +
+      `\n\n[고정 패턴 — 최우선 규칙]\n` +
+      `아래 태그에 해당하는 포인트는 반드시 해당 패턴의 문장을 그대로 사용하라.\n` +
+      `___만 실제 단어로 교체하고, 그 외 단어·구조·어순은 절대 바꾸거나 추가하지 말 것.\n` +
+      `패턴에 없는 부가 설명, 슬래시(/) 뒤 추가 분석, 범위 표시 등을 덧붙이지 말 것.\n` +
       `${tagLines}\n` +
       `출력에 태그명 접두어(예: 관계대명사:, 5형식:)를 붙이지 말 것.`;
     return { promptBlock, byTag };
-  } catch (e) {
-    console.error("[pinned-patterns] Error fetching patterns:", e);
+  } catch {
     return { promptBlock: "", byTag: new Map() };
   }
 }
@@ -898,9 +638,25 @@ async function fetchPinnedPatterns(
 // Shared: fetch learning examples
 // -----------------------------
 async function fetchLearningBlock(userId: string | undefined, authHeader?: string | null): Promise<string> {
-  // Raw learning examples can leak unrelated words and structures from older
-  // sentences into the current sentence. Keep syntax generation sentence-local.
-  return "";
+  if (!userId) return "";
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    if (!supabaseUrl || (!serviceRoleKey && !anonKey)) return "";
+    const apiKey = serviceRoleKey || anonKey!;
+    const auth = serviceRoleKey ? `Bearer ${serviceRoleKey}` : (authHeader || "");
+    if (!auth) return "";
+    const url = `${supabaseUrl}/rest/v1/learning_examples?user_id=eq.${userId}&type=eq.syntax&order=created_at.desc&limit=5&select=sentence,ai_draft,final_version`;
+    const res = await fetch(url, { headers: { apikey: apiKey, Authorization: auth } });
+    if (!res.ok) return "";
+    const examples = await res.json();
+    if (examples.length === 0) return "";
+    const lines = examples.map((e: any) => `원문: ${e.sentence}\nAI초안: ${e.ai_draft}\n최종: ${e.final_version}`).join("\n---\n");
+    return `\n\n[사용자 선호 스타일 예시 — 아래 최종 버전의 톤·길이·표현 방식을 참고하여 작성하라]\n${lines}`;
+  } catch {
+    return "";
+  }
 }
 
 // -----------------------------
@@ -928,7 +684,7 @@ serve(async (req) => {
     }
 
     let textToAnalyze = selected || full;
-    const isSelectionAuto = isAutoMode && !!selected;
+    if (selected && countWords(selected) < 3 && full) textToAnalyze = full;
 
     // ── 자동 생성 모드: 태그 필터 없이 자유 추출 ──
     if (isAutoMode) {
@@ -937,20 +693,12 @@ serve(async (req) => {
 
       const [learningBlock, pinnedData] = await Promise.all([
         fetchLearningBlock(userId, reqAuth),
-        fetchPinnedPatterns(userId, reqAuth, textToAnalyze || full, []),
+        fetchPinnedPatterns(userId, reqAuth),
       ]);
-      const userMessage = isSelectionAuto
-        ? `문장: ${full}\n` +
-          `선택 구문: ${selected}\n` +
-          `반드시 선택 구문 자체와 직접 관련된 문법 포인트만 1개 작성하라.\n` +
-          `선택 구문 밖의 다른 문법 요소, 다른 절, 다른 표현은 절대 설명하지 말 것.\n` +
-          `각 포인트마다 원문에서 해당 문법이 적용되는 핵심 구문(2~5단어)을 targetText로 함께 반환하라.\n` +
-          `targetText는 반드시 선택 구문을 포함하거나 선택 구문에서 시작해야 한다.\n` +
-          `고정 패턴과 태그가 매칭되면 해당 패턴을 최우선으로 따르라.`
-        : `문장: ${full}\n` +
-          `이 문장에서 수능에 출제될 수 있는 핵심 문법 포인트를 찾아서 points로 작성하라.\n` +
-          `각 포인트마다 원문에서 해당 문법이 적용되는 핵심 구문(2~5단어)을 targetText로 함께 반환하라.\n` +
-          `고정 패턴과 태그가 매칭되면 해당 패턴을 최우선으로 따르라.`;
+      const userMessage = `문장: ${full}\n` +
+        `이 문장에서 수능에 출제될 수 있는 핵심 문법 포인트를 찾아서 points로 작성하라.\n` +
+        `각 포인트마다 원문에서 해당 문법이 적용되는 핵심 구문(2~5단어)을 targetText로 함께 반환하라.\n` +
+        `고정 패턴과 태그가 매칭되면 해당 패턴을 최우선으로 따르라.`;
 
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -1038,67 +786,27 @@ serve(async (req) => {
 
       autoPoints = autoPoints
         .map((p) => ({
-          text: finalizeSyntaxText(stripJsonArtifacts(p.text)),
+          text: applyPinnedPattern(
+            stripTrailingFieldLabel(
+              stripLeadingTagLabel(
+                repairTruncatedSyntaxPhrases(
+                  sanitizeEndings(oneLine(stripLeadingBullets(stripJsonArtifacts(p.text))))
+                )
+              )
+            ),
+            [],
+            pinnedData.byTag,
+            normalizeModelTagToUiTag(String(p.tag ?? "")),
+          ),
           targetText: oneLine(p.targetText),
-          tag: normalizeAutoPointTag(String(p.tag ?? "")),
+          tag: oneLine(String(p.tag ?? "")),
         }))
         .filter((p) => p.text);
-      autoPoints = autoPoints.slice(0, isSelectionAuto ? 1 : 5).map((p) => ({
+      autoPoints = autoPoints.slice(0, 5).map((p) => ({
         text: p.text,
         targetText: p.targetText,
         tag: p.tag,
       }));
-
-      // Post-processing: force pinned pattern replacement on auto-generated points
-      if (pinnedData.byTag && pinnedData.byTag.size > 0) {
-        autoPoints = autoPoints.map((p) => ({
-          ...p,
-          text: pickGroundedSyntaxText(
-            p.text,
-            p.tag
-              ? applyPinnedPattern(
-                  p.text,
-                  [],
-                  pinnedData.byTag,
-                  p.tag,
-                  p.targetText || selected || sentence,
-                  { allowInference: false },
-                )
-              : p.text,
-            full,
-            isSelectionAuto ? selected : (p.targetText || undefined),
-          ),
-        }));
-      } else {
-        autoPoints = autoPoints.map((p) => ({
-          ...p,
-          text: pickGroundedSyntaxText(
-            p.text,
-            p.text,
-            full,
-            isSelectionAuto ? selected : (p.targetText || undefined),
-          ),
-        }));
-      }
-
-      autoPoints = autoPoints
-        .filter((p) => isGroundedToSentence(p.text, full))
-        .filter((p) => !p.targetText || isGroundedToSentence(p.targetText, full))
-        .filter((p) => !isSelectionAuto || hasSelectionRelevance(p.text, p.targetText, selected))
-        .map((p) => ({
-          ...p,
-          text: finalizeSyntaxText(p.text),
-        }));
-
-      if (autoPoints.length > 0) {
-        autoPoints = autoPoints.map((p) => ({
-          ...p,
-          text: p.text,
-          targetText: p.targetText && hasSelectedAnchor(full, p.targetText)
-            ? p.targetText
-            : (isSelectionAuto && hasSelectionRelevance(p.text, p.targetText, selected) ? selected : ""),
-        }));
-      }
 
       if (autoPoints.length === 0) {
         autoPoints = [{ text: "(이 문장에서 주요 문법 포인트를 찾지 못했습니다)", targetText: "", tag: "" }];
@@ -1130,12 +838,10 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const activeUiTagsForPrompt = useFreestyle ? [] : tags.map((t) => mapTagIdToUiTag(t));
-
     // Fetch learning examples + pinned patterns for hint mode too
     const [learningBlock, pinnedData] = await Promise.all([
       fetchLearningBlock(userId, reqAuth),
-      fetchPinnedPatterns(userId, reqAuth, textToAnalyze || full, activeUiTagsForPrompt),
+      fetchPinnedPatterns(userId, reqAuth),
     ]);
 
     const userMessage = useFreestyle
@@ -1222,15 +928,16 @@ serve(async (req) => {
       }
     }
 
-    const normalizedPoints = points.map(finalizeSyntaxText).filter(Boolean);
-    points = normalizedPoints.map((rawPoint) => {
-      const styled = useFreestyle
-        ? finalizeSyntaxText(rawPoint)
-        : finalizeSyntaxText(applyPinnedPattern(rawPoint, tags, pinnedData.byTag, undefined, selected || undefined));
-      return pickGroundedSyntaxText(rawPoint, styled, full, selected || undefined);
-    })
-    .filter((p) => isGroundedToSentence(p, full))
-    .filter((p) => !selected || hasSelectedAnchor(p, selected));
+    points = points
+      .map(oneLine)
+      .filter(Boolean)
+      .map(stripLeadingBullets)
+      .map(stripLeadingTagLabel)
+      .map(sanitizeEndings)
+      .map(repairTruncatedSyntaxPhrases)
+      .map(stripLeadingTagLabel)
+      .map(stripTrailingFieldLabel)
+      .map((p) => applyPinnedPattern(p, tags, pinnedData.byTag));
 
     if (points.length === 0) {
       points = useFreestyle

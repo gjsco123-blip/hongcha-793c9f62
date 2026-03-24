@@ -19,7 +19,7 @@ describe("sanitizeSynonymItems", () => {
     expect(out[0].antonym).toBe("neglect (방치하다), ignore (무시하다)");
   });
 
-  it("preserves user punctuation when Korean gloss has no comma", () => {
+  it("normalizes phrasal verbs and fixes missing Korean separators", () => {
     const out = sanitizeSynonymItems(
       [
         {
@@ -31,7 +31,7 @@ describe("sanitizeSynonymItems", () => {
       "A difficult time after her mom passed away."
     );
 
-    expect(out[0].word).toBe("pass away (세상을 떠나다 사망하다)");
+    expect(out[0].word).toBe("pass away (세상을 떠나다, 사망하다)");
     expect(out[0].synonym).toBe("die (죽었다)");
     expect(out[0].antonym).toBe("survive (살아남았다)");
   });

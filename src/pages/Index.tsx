@@ -54,7 +54,6 @@ export interface SyntaxNote {
   id: number; // 1~5
   content: string;
   targetText?: string; // 드래그한 원문 텍스트
-  anchorLocked?: boolean; // 수동 드래그 선택의 시작 위치에 위첨자 고정
 }
 
 interface SentenceResult {
@@ -120,19 +119,6 @@ export default function Index() {
   const { teacherLabel, setTeacherLabel } = useTeacherLabel();
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const dataLoadedRef = useRef(false);
-  const latestPersistRef = useRef<{
-    passage: string;
-    pdfTitle: string;
-    preset: Preset;
-    results: SentenceResult[];
-    syntaxCompleted: boolean;
-  }>({
-    passage: "",
-    pdfTitle: "SYNTAX",
-    preset: "수능",
-    results: [],
-    syntaxCompleted: false,
-  });
   
   // Track AI-generated drafts for learning_examples auto-save
   const aiDraftMapRef = useRef<Record<number, string>>({});
@@ -218,36 +204,6 @@ export default function Index() {
     prevResultsRef.current = results;
   }, [results]);
 
-  useEffect(() => {
-    latestPersistRef.current = {
-      passage,
-      pdfTitle,
-      preset,
-      results,
-      syntaxCompleted,
-    };
-  }, [passage, pdfTitle, preset, results, syntaxCompleted]);
-
-  const persistIndexState = useCallback(async () => {
-    if (!categories.selectedPassageId || !dataLoadedRef.current) return;
-    const { passage: latestPassage, pdfTitle: latestPdfTitle, preset: latestPreset, results: latestResults, syntaxCompleted: latestSyntaxCompleted } = latestPersistRef.current;
-    const hasTransientWork = latestResults.some((r) => r.generatingSyntax || r.generatingHongT || r.regenerating);
-    if (hasTransientWork) return;
-
-    const sanitizedResults = latestResults.map(({ generatingSyntax, generatingHongT, regenerating, ...rest }) => rest);
-    const mergedStore = mergePassageStore(categories.selectedPassage?.results_json, {
-      syntaxResults: sanitizedResults.length > 0 ? sanitizedResults : [],
-      completion: { syntaxCompleted: latestSyntaxCompleted },
-    });
-
-    await categories.updatePassage(categories.selectedPassageId, {
-      passage_text: latestPassage,
-      pdf_title: latestPdfTitle,
-      preset: latestPreset,
-      results_json: mergedStore,
-    });
-  }, [categories]);
-
   // Auto-save with debounce
   const autoSave = useCallback(() => {
     if (!categories.selectedPassageId || !dataLoadedRef.current) return;
@@ -255,34 +211,27 @@ export default function Index() {
     if (hasTransientWork) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
-      void persistIndexState();
+      const stillHasTransientWork = results.some((r) => r.generatingSyntax || r.generatingHongT || r.regenerating);
+      if (stillHasTransientWork) return;
+      // Strip transient UI flags before persisting
+      const sanitizedResults = results.map(({ generatingSyntax, generatingHongT, regenerating, ...rest }) => rest);
+      const mergedStore = mergePassageStore(categories.selectedPassage?.results_json, {
+        syntaxResults: sanitizedResults.length > 0 ? sanitizedResults : [],
+        completion: { syntaxCompleted },
+      });
+      categories.updatePassage(categories.selectedPassageId!, {
+        passage_text: passage,
+        pdf_title: pdfTitle,
+        preset,
+        results_json: mergedStore,
+      });
     }, 2000);
-  }, [categories.selectedPassageId, results, persistIndexState]);
-
-  const flushAutoSave = useCallback(() => {
-    if (!categories.selectedPassageId || !dataLoadedRef.current) return;
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
-    void persistIndexState();
-  }, [categories.selectedPassageId, persistIndexState]);
+  }, [categories.selectedPassageId, categories.selectedPassage?.results_json, passage, pdfTitle, preset, results, syntaxCompleted]);
 
   useEffect(() => {
     autoSave();
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
   }, [autoSave]);
-
-  useEffect(() => {
-    const handlePageHide = () => {
-      flushAutoSave();
-    };
-    window.addEventListener("pagehide", handlePageHide);
-    return () => {
-      window.removeEventListener("pagehide", handlePageHide);
-      flushAutoSave();
-    };
-  }, [flushAutoSave]);
 
   useEffect(() => {
     if (!categories.selectedPassageId) return;
@@ -505,7 +454,7 @@ export default function Index() {
     );
 
     try {
-      const isAuto = !userHint;
+      const isAuto = !selectedText && !userHint;
       const { data, error } = await supabase.functions.invoke("grammar", {
         body: { sentence: original, selectedText, userHint, mode: isAuto ? "auto" : undefined, userId: user?.id },
       });
@@ -522,13 +471,7 @@ export default function Index() {
           if (slotNumber) {
             // 특정 번호 슬롯에 저장
             const existingIdx = newNotes.findIndex((n) => n.id === slotNumber);
-            const prevNote = existingIdx >= 0 ? newNotes[existingIdx] : undefined;
-            const noteEntry: SyntaxNote = {
-              id: slotNumber,
-              content: data.syntaxNotes,
-              targetText: selectedText || prevNote?.targetText,
-              anchorLocked: selectedText ? true : prevNote?.anchorLocked,
-            };
+            const noteEntry: SyntaxNote = { id: slotNumber, content: data.syntaxNotes, targetText: selectedText };
             if (existingIdx >= 0) {
               newNotes[existingIdx] = noteEntry;
             } else {
@@ -1133,21 +1076,12 @@ export default function Index() {
                           const allSentences = results.map((r) => r.original);
                           generateHongT(result.id, allSentences);
                         }}
-                        onHide={() => setResults(prev => prev.map(r => r.id === result.id ? { ...r, hideHongT: true } : r))}
+                        onDelete={() => setResults(prev => prev.map(r => r.id === result.id ? { ...r, hideHongT: true } : r))}
                         sentence={result.original}
                         fullPassage={results.map((r) => r.original).join(" ")}
                         preset={preset}
                         teacherLabel={teacherLabel}
                       />
-                    )}
-                    {result.hideHongT && (
-                      <button
-                        onClick={() => setResults(prev => prev.map(r => r.id === result.id ? { ...r, hideHongT: false } : r))}
-                        className="flex items-center gap-1 text-[10px] text-muted-foreground/60 hover:text-foreground transition-colors py-1"
-                      >
-                        <Eye className="w-3 h-3" />
-                        <span>{teacherLabel} 보기</span>
-                      </button>
                     )}
 
                     {/* 구문분석 */}

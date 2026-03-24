@@ -4,7 +4,6 @@ export interface SyntaxNoteWithTarget {
   id: number;
   content: string;
   targetText?: string;
-  anchorLocked?: boolean;
 }
 
 type TextToken = { word: string; start: number; end: number };
@@ -20,24 +19,6 @@ const COMMON_ENGLISH_STOPWORDS = new Set([
 
 const LEADING_CONJUNCTIONS = new Set(["and", "but", "or", "so", "yet", "for", "nor"]);
 const MODAL_WORDS = new Set(["can", "could", "may", "might", "must", "should", "will", "would"]);
-const FIVE_FORM_CONTROL_VERBS = new Set([
-  "allow",
-  "enable",
-  "cause",
-  "help",
-  "let",
-  "make",
-  "have",
-  "get",
-  "force",
-  "encourage",
-  "permit",
-  "persuade",
-  "ask",
-  "tell",
-  "order",
-  "advise",
-]);
 const AUXILIARY_WORDS = new Set([
   "am", "is", "are", "was", "were", "be", "been", "being",
   "do", "does", "did", "have", "has", "had",
@@ -417,31 +398,12 @@ function chooseAnchorOffset(
     if (itToken) return itToken.start;
   }
 
-  if (/(가주어|진주어|it\s+as\s+가주어|it\s+as\s+진주어)/i.test(rawContent)) {
-    const itToken =
-      findTokenByPredicate(tokensInSpan, (tok) => normalizeAlphaWord(tok.word).startsWith("it")) ||
-      findTokenByPredicate(nearbyTokens, (tok) => normalizeAlphaWord(tok.word).startsWith("it")) ||
-      findTokenByPredicate(allTokens, (tok) => normalizeAlphaWord(tok.word).startsWith("it"));
-    if (itToken) return itToken.start;
-  }
-
   if (isTooToInfinitiveNote(rawContent)) {
     const tooToken =
       findTokenByPredicate(tokensInSpan, (tok) => normalizeAlphaWord(tok.word) === "too") ||
       findTokenByPredicate(nearbyTokens, (tok) => normalizeAlphaWord(tok.word) === "too") ||
       findTokenByPredicate(allTokens, (tok) => normalizeAlphaWord(tok.word) === "too");
     if (tooToken) return tooToken.start;
-  }
-
-  const looksLikeFiveForm =
-    /(5형식|목적격\s*보어|목적어\s*\+.*to\s*v|allow\s*\+|enable\s*\+|make\s*\+|have\s*\+|get\s*\+|let\s*\+|cause\s*\+|help\s*\+)/i.test(rawContent) ||
-    hints.some((hint) => FIVE_FORM_CONTROL_VERBS.has(normalizeAlphaWord(hint)));
-  if (looksLikeFiveForm) {
-    const controlVerbToken =
-      findTokenByPredicate(tokensInSpan, (tok) => FIVE_FORM_CONTROL_VERBS.has(normalizeAlphaWord(tok.word))) ||
-      findTokenByPredicate(nearbyTokens, (tok) => FIVE_FORM_CONTROL_VERBS.has(normalizeAlphaWord(tok.word))) ||
-      findTokenByPredicate(allTokens, (tok) => FIVE_FORM_CONTROL_VERBS.has(normalizeAlphaWord(tok.word)));
-    if (controlVerbToken) return controlVerbToken.start;
   }
 
   if (isBeGoingToNote(rawContent)) {
@@ -459,12 +421,6 @@ function chooseAnchorOffset(
       findTokenByPredicate(nearbyTokens, (tok) => normalizeAlphaWord(tok.word) === "to") ||
       findTokenByPredicate(allTokens, (tok) => normalizeAlphaWord(tok.word) === "to");
     if (toToken) return toToken.start;
-  }
-
-  // If the selected span is a single token, keep the direct selection unless a
-  // stronger syntax-specific rule above already anchored it elsewhere.
-  if (tokensInSpan.length === 1) {
-    return tokensInSpan[0].start;
   }
 
   if ((contentLower.includes("조동사") && contentLower.includes("수동")) || /be\s*p\.?p|be\s+pp/i.test(rawContent)) {
@@ -644,7 +600,7 @@ export function computeSuperscriptPositions(
     if (!note.targetText) continue;
     const span = selectBestSpanForNote(originalText, note.targetText, note.content, allTokens);
     if (!span) continue;
-    let anchor = note.anchorLocked ? span.start : chooseAnchorOffset(originalText, span, note.content, allTokens);
+    let anchor = chooseAnchorOffset(originalText, span, note.content, allTokens);
 
     const existingSpans = anchorToSpans.get(anchor) || [];
     const hasDifferentSpanAtSameAnchor = existingSpans.some(

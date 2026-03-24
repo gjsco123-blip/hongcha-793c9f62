@@ -6,103 +6,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-function safeJsonParse(raw: string): any {
-  const cleaned = String(raw ?? "")
-    .replace(/```json\s*/gi, "")
-    .replace(/```\s*/g, "")
-    .trim();
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    const start = cleaned.indexOf("{");
-    const end = cleaned.lastIndexOf("}");
-    if (start !== -1 && end !== -1 && end > start) {
-      return JSON.parse(cleaned.slice(start, end + 1));
-    }
-    throw new Error("Failed to parse JSON");
-  }
-}
-
-function normalizeRowText(raw: string): string {
-  return String(raw ?? "")
-    .replace(/\(\(/g, "(")
-    .replace(/\)\)/g, ")")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function hasGloss(item: string): boolean {
-  return /\([^()]+\)/.test(String(item ?? ""));
-}
-
-function splitChipItems(raw: string): string[] {
-  return String(raw ?? "")
-    .split(",")
-    .map((s) => normalizeRowText(s))
-    .filter(Boolean);
-}
-
-function joinGlossedChipItems(raw: string): string {
-  return splitChipItems(raw).filter(hasGloss).join(", ");
-}
-
-async function fillMissingChipGlossesWithAI(
-  raw: string,
-  passage: string,
-  apiKey: string,
-  fieldLabel: "synonym" | "antonym",
-): Promise<string> {
-  const items = splitChipItems(raw);
-  if (!items.length || items.every(hasGloss)) return items.join(", ");
-
-  const systemPrompt = `You are fixing EN-KO vocabulary chips for Korean high-school exam materials.
-
-Task:
-- Every item must be returned in the exact format: english (한국어뜻)
-- Keep the original English chip text exactly if possible.
-- Only fill in missing Korean glosses.
-- If an item is low-quality or cannot be reliably glossed, drop it.
-- Output ONLY JSON: {"items":["chip1(뜻)","chip2(뜻)"]}`;
-
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-3-flash-preview",
-      temperature: 0.05,
-      max_tokens: 500,
-      messages: [
-        { role: "system", content: systemPrompt },
-        {
-          role: "user",
-          content: JSON.stringify({
-            field: fieldLabel,
-            passage,
-            items,
-          }),
-        },
-      ],
-    }),
-  });
-
-  if (!response.ok) return joinGlossedChipItems(raw);
-
-  try {
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content ?? "";
-    const parsed = safeJsonParse(content);
-    const fixed = Array.isArray(parsed?.items)
-      ? parsed.items.map((x: any) => normalizeRowText(String(x ?? ""))).filter(Boolean)
-      : [];
-    const glossed = fixed.filter(hasGloss);
-    return glossed.length ? glossed.join(", ") : joinGlossedChipItems(raw);
-  } catch {
-    return joinGlossedChipItems(raw);
-  }
-}
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -172,14 +75,15 @@ ${trimmedPassage ? `\nPassage context:\n${trimmedPassage}` : ""}`;
     const content = data.choices?.[0]?.message?.content;
     if (!content) throw new Error("No content in response");
 
-    const result = safeJsonParse(content);
-    const synonyms = await fillMissingChipGlossesWithAI(result.synonyms || "", trimmedPassage, LOVABLE_API_KEY, "synonym");
-    const antonyms = await fillMissingChipGlossesWithAI(result.antonyms || "", trimmedPassage, LOVABLE_API_KEY, "antonym");
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("Failed to parse JSON from response");
+
+    const result = JSON.parse(jsonMatch[0]);
 
     return new Response(JSON.stringify({
-      word_ko: normalizeRowText(result.word_ko || ""),
-      synonyms,
-      antonyms,
+      word_ko: result.word_ko || "",
+      synonyms: result.synonyms || "",
+      antonyms: result.antonyms || "",
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

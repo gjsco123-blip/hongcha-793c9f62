@@ -77,12 +77,7 @@ export function SyntaxChat({
       const { data: { session } } = await supabase.auth.getSession();
       const { data, error } = await supabase.functions.invoke("grammar-chat", {
         body: {
-          messages: newMessages.map((m) => ({
-            role: m.role,
-            content: m.role === "assistant"
-              ? (m.content || "").replace(/\[수정안\][\s\S]*?\[\/수정안\]/g, "").trim()
-              : m.content,
-          })),
+          messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
           sentence,
           currentNotes,
           fullPassage,

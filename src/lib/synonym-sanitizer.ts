@@ -116,6 +116,13 @@ const splitKoreanPhrases = (text: string) => {
   const cleaned = normalizeSpaces(text);
   if (!cleaned) return [];
   if (cleaned.includes(",")) return cleaned.split(",").map((p) => p.trim()).filter(Boolean);
+
+  // Handle model outputs like "세상을 떠나다 사망하다" (missing comma).
+  const phrases = cleaned.match(/[^,]+?다(?=\s|$)/g)?.map((p) => p.trim()).filter(Boolean) || [];
+  if (phrases.length >= 2) {
+    const recomposed = normalizeSpaces(phrases.join(" "));
+    if (recomposed === cleaned) return phrases;
+  }
   return [cleaned];
 };
 
@@ -138,7 +145,6 @@ const splitEntry = (raw: string) => {
 };
 
 const joinEntry = (en: string, ko: string) => (ko ? `${en} (${ko})` : en);
-const hasGloss = (raw: string) => /\([^()]+\)/.test(normalizeSpaces(raw));
 
 const hasDoubleFinalConsonant = (word: string) => {
   if (word.length < 2) return false;
@@ -245,7 +251,6 @@ const normalizeChipField = (raw: string, wordKo: string) => {
     .split(",")
     .map((c) => c.trim())
     .filter(Boolean)
-    .filter(hasGloss)
     .map((chip) => {
       const { en, ko } = splitEntry(chip);
       const normalizedEn = isVerbContext
