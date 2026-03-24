@@ -106,9 +106,19 @@ function chatCanonicalTagKey(raw: string): string {
 
 function chatDetectUiTagFromContent(content: string): string {
   const c = chatOneLine(content).toLowerCase();
+  // ── Subtype-first: check specific subtypes BEFORE broad categories ──
   if (c.includes("동격") && (c.includes("접속사") || c.includes("that") || c.includes("동격접"))) return "동격접";
+  // 계속적 용법 — MUST come before broad 관계대명사
+  if (c.includes("계속적") && (c.includes("용법") || c.includes("관계"))) {
+    if (c.includes("부사")) return "계속적 용법 관계부사";
+    return "계속적용법 관계대명사";
+  }
+  // 전치사+관계대명사 — MUST come before broad 관계대명사
+  if (c.includes("전치사") && (c.includes("관계대명사") || c.includes("관계"))) return "전치사+관계대명사";
+  // what 명사절 (선행사 포함 관계대명사) — MUST come before broad 관계대명사
+  if ((c.includes("what") || c.includes("선행사를 포함") || c.includes("선행사 포함")) &&
+      (c.includes("관계대명사") || c.includes("명사절"))) return "명사절";
   if (c.includes("관계사")) {
-    if (c.includes("계속적") && (c.includes("용법") || c.includes("관계"))) return "계속적용법 관계대명사";
     if (c.includes("where") || c.includes("when") || c.includes("why") || c.includes("how")) return "관계부사";
     return "관계대명사";
   }
@@ -136,13 +146,8 @@ function chatDetectUiTagFromContent(content: string): string {
   if (c.includes("생략")) return "생략";
   if (c.includes("숙어") || c.includes("구동사") || c.includes("표현")) return "숙어/표현";
   if (c.includes("강조") && (c.includes("구문") || c.includes("it is") || c.includes("it was"))) return "강조구문";
-  if (c.includes("계속적") && (c.includes("용법") || c.includes("관계"))) {
-    if (c.includes("부사")) return "계속적 용법 관계부사";
-    return "계속적용법 관계대명사";
-  }
   if (c.includes("대동사")) return "대동사";
   if (c.includes("분사") && !c.includes("분사구문") && !c.includes("후치")) return "분사";
-  if (c.includes("전치사") && c.includes("관계")) return "전치사+관계대명사";
   if (c.includes("to be pp") || c.includes("to be p.p")) return "to be pp";
   return "기타";
 }
@@ -222,9 +227,72 @@ function chatMaterializePinnedPattern(template: string, raw: string, stripLeadin
   return result;
 }
 
+// Pick the best pattern from multiple candidates by keyword overlap with raw content
+function chatPickBestPattern(candidates: string[], rawContent: string): string {
+  if (candidates.length <= 1) return candidates[0] || "";
+  const rawLower = chatOneLine(rawContent).toLowerCase();
+  const rawKeywords = new Set(
+    (rawLower.match(/[가-힣]{2,}|[a-z]{3,}/g) || [])
+  );
+
+  let best = candidates[0];
+  let bestScore = -1;
+  for (const candidate of candidates) {
+    const cLower = chatOneLine(candidate).toLowerCase();
+    const cKeywords = (cLower.match(/[가-힣]{2,}|[a-z]{3,}/g) || []);
+    let score = 0;
+    for (const kw of cKeywords) {
+      if (rawKeywords.has(kw)) score++;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      best = candidate;
+    }
+  }
+  return best;
+}
+
+// Detect if post-processing changed the grammar frame (e.g. 형용사절→명사절)
+function chatDetectGrammarFrame(text: string): string[] {
+  const c = chatOneLine(text).toLowerCase();
+  const frames: string[] = [];
+  if (c.includes("형용사절")) frames.push("형용사절");
+  if (c.includes("명사절")) frames.push("명사절");
+  if (c.includes("부사절")) frames.push("부사절");
+  if (c.includes("계속적")) frames.push("계속적");
+  if (c.includes("선행사를 포함") || c.includes("선행사 포함")) frames.push("선행사포함");
+  if (c.includes("what") && c.includes("명사절")) frames.push("what명사절");
+  if (c.includes("동격")) frames.push("동격");
+  if (c.includes("수동태")) frames.push("수동태");
+  if (c.includes("분사구문")) frames.push("분사구문");
+  if (c.includes("to부정사")) frames.push("to부정사");
+  return frames;
+}
+
+function chatFrameConflicts(rawFrames: string[], processedFrames: string[]): boolean {
+  // If raw has 형용사절 but processed has 명사절 (or vice versa), that's a conflict
+  const conflictPairs = [
+    ["형용사절", "명사절"],
+    ["형용사절", "what명사절"],
+    ["계속적", "선행사포함"],
+  ];
+  for (const [a, b] of conflictPairs) {
+    if ((rawFrames.includes(a) && processedFrames.includes(b)) ||
+        (rawFrames.includes(b) && processedFrames.includes(a))) {
+      return true;
+    }
+  }
+  // If raw had no 선행사포함/what명사절 but processed introduced it, conflict
+  if (!rawFrames.includes("선행사포함") && !rawFrames.includes("what명사절") &&
+      (processedFrames.includes("선행사포함") || processedFrames.includes("what명사절"))) {
+    return true;
+  }
+  return false;
+}
+
 function chatApplyPinnedPattern(
   content: string,
-  pinnedByTag: Map<string, string>,
+  pinnedByTag: Map<string, string[]>,
   stripLeadingTagLabel: (line: string) => string,
   explicitUiTag?: string,
 ): string {
@@ -240,9 +308,25 @@ function chatApplyPinnedPattern(
     const key = chatCanonicalTagKey(candidate);
     if (!key || seen.has(key)) continue;
     seen.add(key);
-    const pinned = chatOneLine(String(pinnedByTag.get(key) ?? ""));
+    const patterns = pinnedByTag.get(key);
+    if (!patterns || patterns.length === 0) continue;
+
+    // Pick the best matching pattern from all candidates for this tag
+    const bestPattern = chatPickBestPattern(patterns, raw);
+    const pinned = chatOneLine(bestPattern);
     if (!pinned) continue;
-    return chatMaterializePinnedPattern(pinned, raw, stripLeadingTagLabel);
+
+    const result = chatMaterializePinnedPattern(pinned, raw, stripLeadingTagLabel);
+
+    // ★ Frame validation: reject if post-processing changed the grammar frame
+    const rawFrames = chatDetectGrammarFrame(raw);
+    const resultFrames = chatDetectGrammarFrame(result);
+    if (chatFrameConflicts(rawFrames, resultFrames)) {
+      console.log(`[grammar-chat] Frame conflict detected: raw=[${rawFrames}] result=[${resultFrames}], keeping raw`);
+      return raw; // fail-closed: keep AI's original output
+    }
+
+    return result;
   }
 
   return raw;
@@ -400,7 +484,7 @@ serve(async (req) => {
 
     // ── Fetch pinned patterns — SCOPED to current note tags only ──
     let pinnedBlock = "";
-    const pinnedByTag = new Map<string, string>();
+    const pinnedByTag = new Map<string, string[]>();
     try {
       const supabaseUrl = Deno.env.get("SUPABASE_URL");
       const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -460,7 +544,11 @@ serve(async (req) => {
               const tag = String(p?.tag ?? "").trim();
               const content = String(p?.pinned_content ?? "").trim();
               const key = chatCanonicalTagKey(tag);
-              if (key && content && !pinnedByTag.has(key)) pinnedByTag.set(key, content);
+              if (key && content) {
+                const arr = pinnedByTag.get(key) || [];
+                arr.push(content);
+                pinnedByTag.set(key, arr);
+              }
             }
             const tagLines = relevantPatterns.map((p: any) => `- ${p.tag}: ${p.pinned_content}`).join("\n");
             pinnedBlock = `\n\n[필수 적용 규칙 — 고정 패턴]\n` +
@@ -680,6 +768,25 @@ serve(async (req) => {
         if (!suggestionNotes || suggestionNotes.length === 0 || !chatPreservesGrammarFrames(String(targetNote.content ?? ""), suggestionNotes[0])) {
           suggestionNotes = [finalizeSyntaxText(String(targetNote.content ?? ""))];
         }
+      }
+    }
+
+    // ★ Reply-vs-Suggestion consistency check
+    // If the explanation (reply) mentions specific grammar info that contradicts the suggestion, reject the suggestion
+    if (suggestionNotes && suggestionNotes.length > 0 && suggestion) {
+      const replyWithoutSuggestion = content.replace(/\[수정안\][\s\S]*?\[\/수정안\]/, "").trim().toLowerCase();
+      const suggestionLower = suggestionNotes.join(" ").toLowerCase();
+
+      // Check for contradictions: reply says 형용사절 but suggestion says 명사절 (or vice versa)
+      const replyFrames = chatDetectGrammarFrame(replyWithoutSuggestion);
+      const suggFrames = chatDetectGrammarFrame(suggestionLower);
+      if (chatFrameConflicts(replyFrames, suggFrames)) {
+        console.log(`[grammar-chat] Reply-vs-suggestion inconsistency: reply=[${replyFrames}] suggestion=[${suggFrames}], extracting raw suggestion`);
+        // Re-parse suggestion WITHOUT pinned pattern post-processing
+        suggestionNotes = suggestion
+          .split("\n")
+          .map((line: string) => finalizeSyntaxText(line))
+          .filter((line: string) => line.length > 0);
       }
     }
 
