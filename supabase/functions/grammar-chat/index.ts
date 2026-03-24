@@ -430,6 +430,7 @@ serve(async (req) => {
           activeTagKeys.delete("기타");
 
           const relevantPatterns: any[] = [];
+          const tagCount = new Map<string, number>(); // cap per tag
           for (const p of allPatterns) {
             const tag = String(p?.tag ?? "").trim();
             const content = String(p?.pinned_content ?? "").trim();
@@ -444,7 +445,12 @@ serve(async (req) => {
                 break;
               }
             }
-            if (matched) relevantPatterns.push(p);
+            if (matched) {
+              const count = tagCount.get(tagKey) || 0;
+              if (count >= 2) continue; // ★ Cap: max 2 patterns per tag
+              tagCount.set(tagKey, count + 1);
+              relevantPatterns.push(p);
+            }
           }
 
           console.log(`[grammar-chat] Active tags: [${[...activeTagKeys].join(", ")}], Matched ${relevantPatterns.length}/${allPatterns.length} patterns`);
