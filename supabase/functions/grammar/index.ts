@@ -385,6 +385,29 @@ function applyPinnedPattern(
   return raw;
 }
 
+function extractEnglishTokens(text: string): string[] {
+  return oneLine(text)
+    .toLowerCase()
+    .match(/[a-z]+(?:'[a-z]+)?/g) ?? [];
+}
+
+function isTargetTextInSentence(targetText: string, sentence: string): boolean {
+  const target = oneLine(targetText).toLowerCase();
+  const full = oneLine(sentence).toLowerCase();
+  return Boolean(target) && full.includes(target);
+}
+
+function isSelectionRelevantTarget(selectedText: string, targetText: string): boolean {
+  const selected = oneLine(selectedText).toLowerCase();
+  const target = oneLine(targetText).toLowerCase();
+  if (!selected || !target) return false;
+  if (selected.includes(target) || target.includes(selected)) return true;
+
+  const selectedTokens = new Set(extractEnglishTokens(selected));
+  const targetTokens = extractEnglishTokens(target);
+  return targetTokens.some((token) => selectedTokens.has(token));
+}
+
 // -----------------------------
 // Prompts
 // -----------------------------
@@ -675,6 +698,7 @@ serve(async (req) => {
       .trim();
     const rawHint = oneLine(userHint || "");
     const isAutoMode = mode === "auto";
+    const isSelectionAuto = isAutoMode && Boolean(selected);
 
     if (!full && !selected) {
       return new Response(JSON.stringify({ error: "Missing sentence or selectedText" }), {
@@ -695,10 +719,18 @@ serve(async (req) => {
         fetchLearningBlock(userId, reqAuth),
         fetchPinnedPatterns(userId, reqAuth),
       ]);
-      const userMessage = `문장: ${full}\n` +
-        `이 문장에서 수능에 출제될 수 있는 핵심 문법 포인트를 찾아서 points로 작성하라.\n` +
-        `각 포인트마다 원문에서 해당 문법이 적용되는 핵심 구문(2~5단어)을 targetText로 함께 반환하라.\n` +
-        `고정 패턴과 태그가 매칭되면 해당 패턴을 최우선으로 따르라.`;
+      const userMessage = isSelectionAuto
+        ? `문장: ${full}\n` +
+          `선택 구문: ${selected}\n` +
+          `선택 구문과 직접 관련된 핵심 문법 포인트를 정확히 1개만 찾아서 points로 작성하라.\n` +
+          `반드시 선택 구문 자체 또는 선택 구문이 포함된 핵심 문법 요소만 설명하라.\n` +
+          `다른 절, 다른 문법 요소, 다른 문장 설명은 절대 추가하지 말라.\n` +
+          `targetText는 반드시 선택 구문과 겹치거나 선택 구문을 포함하는 원문 구간으로 반환하라.\n` +
+          `고정 패턴과 태그가 매칭되면 해당 패턴의 형식/말투를 최우선으로 따르되, 현재 문장에 없는 영어 단어와 다른 문장의 예시는 절대 넣지 말라.`
+        : `문장: ${full}\n` +
+          `이 문장에서 수능에 출제될 수 있는 핵심 문법 포인트를 찾아서 points로 작성하라.\n` +
+          `각 포인트마다 원문에서 해당 문법이 적용되는 핵심 구문(2~5단어)을 targetText로 함께 반환하라.\n` +
+          `고정 패턴과 태그가 매칭되면 해당 패턴의 형식/말투를 최우선으로 따르되, 현재 문장에 없는 영어 단어와 다른 문장의 예시는 절대 넣지 말라.`;
 
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -711,7 +743,17 @@ serve(async (req) => {
           temperature: 0.2,
           max_tokens: 1500,
           messages: [
-            { role: "system", content: buildAutoSystemPrompt() + pinnedData.promptBlock + learningBlock },
+            {
+              role: "system",
+              content:
+                buildAutoSystemPrompt() +
+                pinnedData.promptBlock +
+                `\n\n[자동생성 추가 규칙]\n` +
+                `- 고정 패턴은 태그가 맞을 때 형식/말투를 맞추는 용도로만 사용하라.\n` +
+                `- 현재 문장에 없는 영어 단어, 다른 문장의 예시, 다른 문법 포인트를 끌어오지 말 것.\n` +
+                `- 선택 구문이 있으면 선택 구문과 직접 연결된 포인트만 작성할 것.\n` +
+                learningBlock,
+            },
             { role: "user", content: userMessage },
           ],
           tools: autoTools,
@@ -786,30 +828,36 @@ serve(async (req) => {
 
       autoPoints = autoPoints
         .map((p) => ({
-          text: applyPinnedPattern(
-            stripTrailingFieldLabel(
-              stripLeadingTagLabel(
-                repairTruncatedSyntaxPhrases(
-                  sanitizeEndings(oneLine(stripLeadingBullets(stripJsonArtifacts(p.text))))
-                )
+          text: stripTrailingFieldLabel(
+            stripLeadingTagLabel(
+              repairTruncatedSyntaxPhrases(
+                sanitizeEndings(oneLine(stripLeadingBullets(stripJsonArtifacts(p.text))))
               )
-            ),
-            [],
-            pinnedData.byTag,
-            normalizeModelTagToUiTag(String(p.tag ?? "")),
+            )
           ),
           targetText: oneLine(p.targetText),
-          tag: oneLine(String(p.tag ?? "")),
+          tag: normalizeModelTagToUiTag(String(p.tag ?? "")) || detectUiTagFromContent(String(p.text ?? "")),
         }))
         .filter((p) => p.text);
-      autoPoints = autoPoints.slice(0, 5).map((p) => ({
-        text: p.text,
-        targetText: p.targetText,
-        tag: p.tag,
-      }));
+
+      autoPoints = autoPoints
+        .filter((p) => isTargetTextInSentence(p.targetText, full))
+        .filter((p) => !isSelectionAuto || isSelectionRelevantTarget(selected, p.targetText))
+        .slice(0, isSelectionAuto ? 1 : 5)
+        .map((p) => ({
+          text: p.text,
+          targetText: p.targetText || (isSelectionAuto ? selected : ""),
+          tag: p.tag,
+        }));
 
       if (autoPoints.length === 0) {
-        autoPoints = [{ text: "(이 문장에서 주요 문법 포인트를 찾지 못했습니다)", targetText: "", tag: "" }];
+        autoPoints = [{
+          text: isSelectionAuto
+            ? "(선택 구문과 직접 연결된 문법 포인트를 찾지 못했습니다)"
+            : "(이 문장에서 주요 문법 포인트를 찾지 못했습니다)",
+          targetText: isSelectionAuto ? selected : "",
+          tag: "",
+        }];
       }
 
       const syntaxNotes = autoPoints.map((p) => p.text).join("\n");
