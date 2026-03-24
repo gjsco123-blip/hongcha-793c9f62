@@ -216,6 +216,57 @@ function chatApplyPinnedPattern(
   return raw;
 }
 
+type ChatReqMessage = { role?: string; content?: string };
+
+function chatLatestUserText(messages: ChatReqMessage[]): string {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    if (messages[i]?.role === "user") return chatOneLine(messages[i]?.content ?? "");
+  }
+  return "";
+}
+
+function chatWantsReanalysis(userText: string): boolean {
+  const t = chatOneLine(userText).toLowerCase();
+  if (!t) return false;
+  return /틀렸|아니|다시|재분석|처음부터|문법\s*바꿔|분류\s*바꿔|전혀\s*관련|엉뚱|무관|다시\s*봐/.test(t);
+}
+
+function chatExtractEnglishTokens(text: string): string[] {
+  return (String(text ?? "").match(/[A-Za-z][A-Za-z0-9'\-]*/g) || []).map((w) => w.toLowerCase());
+}
+
+function chatLooksUnrelatedToSentence(
+  suggestionNotes: string[] | null,
+  sentence: string,
+  currentNotes: any[],
+): boolean {
+  if (!suggestionNotes || suggestionNotes.length === 0) return false;
+
+  const grammarMeta = new Set([
+    "that", "which", "who", "whom", "whose", "when", "where", "why", "how",
+    "it", "be", "is", "are", "was", "were", "am", "been", "being",
+    "to", "for", "as", "if", "than", "not", "only", "both", "either", "neither",
+    "v", "n", "adj", "adv", "pp", "oc", "ing",
+    "subject", "object", "complement", "clause", "phrase", "passive", "active",
+    "relative", "noun", "verb", "participle", "gerund", "infinitive",
+  ]);
+  const sentenceSet = new Set(chatExtractEnglishTokens(sentence).filter((w) => w.length >= 2));
+  const noteText = Array.isArray(currentNotes) ? currentNotes.map((n: any) => String(n?.content ?? "")).join(" ") : "";
+  const noteSet = new Set(chatExtractEnglishTokens(noteText).filter((w) => w.length >= 2));
+
+  const unknown = new Set<string>();
+  for (const line of suggestionNotes) {
+    for (const token of chatExtractEnglishTokens(line)) {
+      if (token.length < 5) continue;
+      if (grammarMeta.has(token)) continue;
+      if (sentenceSet.has(token)) continue;
+      if (noteSet.has(token)) continue;
+      unknown.add(token);
+    }
+  }
+  return unknown.size >= 3;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -267,7 +318,16 @@ serve(async (req) => {
       : "";
 
     // ── Trust & Feedback addendum ──
-    const trustAddendum = `\n\n■ 현재 분석 신뢰 원칙
+    const latestUserText = chatLatestUserText(messages);
+    const allowReanalysis = chatWantsReanalysis(latestUserText);
+
+    const trustAddendum = allowReanalysis
+      ? `\n\n■ 재분석 모드
+- 사용자가 기존 분석 오류를 지적했으므로, 현재 문장을 기준으로 해당 포인트를 다시 판단하라.
+- 기존 포인트의 문법 분류가 틀렸다면 수정 가능.
+- 단, 수정안은 반드시 현재 문장에 실제 존재하는 근거(단어/구문)로만 작성하라.
+- 현재 문장과 무관한 예시 단어·고유명사·다른 지문 내용은 절대 쓰지 말 것.`
+      : `\n\n■ 현재 분석 신뢰 원칙
 - 현재 구문분석 노트의 문법 판단(동격/관계대명사/분사/수동태 등)은 선생님이 확인한 것이다.
 - 이 판단을 임의로 바꾸지 말고 그대로 유지한 채 표현·서술만 수정하라.
 - 사용자가 명시적으로 "이거 관계대명사 아니라 접속사야" 등 문법 분류 자체를 바꾸라고 하지 않는 한, 기존 문법 분류를 유지하라.
@@ -360,43 +420,44 @@ serve(async (req) => {
       ...messages,
     ];
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: aiMessages,
-        temperature: 0.3,
-      }),
-    });
+    async function callChatCompletion(extraSystemInstruction = ""): Promise<string> {
+      const callMessages = extraSystemInstruction
+        ? [{ role: "system", content: extraSystemInstruction }, ...aiMessages]
+        : aiMessages;
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3.1-pro-preview",
+          messages: callMessages,
+          temperature: 0.2,
+        }),
+      });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("AI gateway error:", response.status, errText);
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("AI gateway error:", response.status, errText);
+        if (response.status === 429) {
+          throw Object.assign(new Error("요청이 너무 많습니다. 잠시 후 다시 시도해주세요."), { status: 429 });
+        }
+        if (response.status === 402) {
+          throw Object.assign(new Error("크레딧이 부족합니다."), { status: 402 });
+        }
+        throw new Error(`AI error: ${response.status}`);
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "크레딧이 부족합니다." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      throw new Error(`AI error: ${response.status}`);
+
+      const data = await response.json();
+      return String(data.choices?.[0]?.message?.content ?? "").trim();
     }
 
-    const data = await response.json();
-    const content = (data.choices?.[0]?.message?.content ?? "").trim();
+    let content = await callChatCompletion();
 
     // Extract suggestion if present
-    const suggestionMatch = content.match(/\[수정안\]([\s\S]*?)\[\/수정안\]/);
-    const suggestion = suggestionMatch ? suggestionMatch[1].trim() : null;
+    let suggestionMatch = content.match(/\[수정안\]([\s\S]*?)\[\/수정안\]/);
+    let suggestion = suggestionMatch ? suggestionMatch[1].trim() : null;
 
     // Sanitize forbidden endings without truncating valid words like "쓰임/보임/취함"
     function sanitizeEndings(text: string): string {
@@ -490,8 +551,9 @@ serve(async (req) => {
 
     // Parse suggestion into array of note strings
     let suggestionNotes: string[] | null = null;
-    if (suggestion) {
-      suggestionNotes = suggestion
+    const parseSuggestionNotes = (rawSuggestion: string | null): string[] | null => {
+      if (!rawSuggestion) return null;
+      return rawSuggestion
         .split("\n")
         .map((line: string) =>
           finalizeSyntaxText(
@@ -504,6 +566,19 @@ serve(async (req) => {
           )
         )
         .filter((line: string) => line.length > 0);
+    };
+
+    suggestionNotes = parseSuggestionNotes(suggestion);
+
+    // Safety gate: reject clearly unrelated edits and retry once with stricter constraint.
+    if (chatLooksUnrelatedToSentence(suggestionNotes, sentence, currentNotes)) {
+      const strictInstruction = `이전 수정안은 현재 문장과 무관한 영어 어휘가 섞여 오류였다.
+반드시 현재 문장에 실제 존재하는 영어 단어/구문을 근거로만 수정하라.
+다른 문장의 단어(예: 고유명사, 다른 예문 어휘) 절대 사용 금지.`;
+      content = await callChatCompletion(strictInstruction);
+      suggestionMatch = content.match(/\[수정안\]([\s\S]*?)\[\/수정안\]/);
+      suggestion = suggestionMatch ? suggestionMatch[1].trim() : null;
+      suggestionNotes = parseSuggestionNotes(suggestion);
     }
 
     return new Response(
