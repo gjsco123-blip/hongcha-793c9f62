@@ -84,14 +84,15 @@ serve(async (req) => {
       .filter(Boolean)
       .join("\n\n");
 
-    // Fetch learning examples
+    // Fetch learning examples (always admin)
     let learningBlock = "";
-    if (userId) {
+    {
       try {
         const supabaseUrl = Deno.env.get("SUPABASE_URL");
         const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-        if (supabaseUrl && serviceRoleKey) {
-          const url = `${supabaseUrl}/rest/v1/learning_examples?user_id=eq.${userId}&type=eq.hongt&order=created_at.desc&limit=3&select=sentence,ai_draft,final_version`;
+        const adminUid = await getAdminUserId();
+        if (supabaseUrl && serviceRoleKey && adminUid) {
+          const url = `${supabaseUrl}/rest/v1/learning_examples?user_id=eq.${adminUid}&type=eq.hongt&order=created_at.desc&limit=3&select=sentence,ai_draft,final_version`;
           const res = await fetch(url, { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } });
           if (res.ok) {
             const examples = await res.json();

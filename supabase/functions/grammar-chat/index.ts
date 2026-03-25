@@ -6,6 +6,26 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Admin user ID cache for learning examples
+let cachedAdminUid: string | null = null;
+async function getAdminUserId(): Promise<string | null> {
+  if (cachedAdminUid) return cachedAdminUid;
+  const url = Deno.env.get("SUPABASE_URL");
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !key) return null;
+  try {
+    const res = await fetch(
+      `${url}/auth/v1/admin/users?page=1&per_page=50`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` } }
+    );
+    if (!res.ok) return null;
+    const { users } = await res.json();
+    const admin = users.find((u: any) => u.email?.toLowerCase() === "co500123@naver.com");
+    if (admin) cachedAdminUid = admin.id;
+    return cachedAdminUid;
+  } catch { return null; }
+}
+
 const systemPrompt = `역할: 한국 중3·고1 내신 영어 시험 대비 구문분석 전문 어시스턴트.
 목표: 선생님(사용자)과 대화하며 구문분석 노트를 함께 다듬는다.
 
