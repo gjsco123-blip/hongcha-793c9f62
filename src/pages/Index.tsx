@@ -54,6 +54,7 @@ export interface SyntaxNote {
   id: number; // 1~5
   content: string;
   targetText?: string; // 드래그한 원문 텍스트
+  anchorMode?: "heuristic" | "selection-start";
 }
 
 interface SentenceResult {
@@ -471,7 +472,7 @@ export default function Index() {
           if (slotNumber) {
             // 특정 번호 슬롯에 저장
             const existingIdx = newNotes.findIndex((n) => n.id === slotNumber);
-            const noteEntry: SyntaxNote = { id: slotNumber, content: data.syntaxNotes, targetText: selectedText };
+            const noteEntry: SyntaxNote = { id: slotNumber, content: data.syntaxNotes, targetText: selectedText, anchorMode: selectedText ? "selection-start" : "heuristic" };
             if (existingIdx >= 0) {
               newNotes[existingIdx] = noteEntry;
             } else {
