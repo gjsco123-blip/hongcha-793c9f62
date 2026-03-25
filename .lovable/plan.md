@@ -1,34 +1,66 @@
 
 
-# splitKoreanPhrases 과도한 분리 수정
+# 모든 계정에서 관리자 Few-shot 데이터 공유 구현
 
-## 문제
-`"~보다 더 중요하다"`는 하나의 의미 단위인데, `splitKoreanPhrases`의 정규식 `/[^,]+?다(?=\s|$)/g`가 `"~보다"`와 `"더 중요하다"`를 별도 구문으로 인식하여 콤마를 자동 삽입함.
+## 요약
+3개 Edge Function에서 `learning_examples` 조회 시, 요청한 사용자의 `userId` 대신 **관리자 계정(co500123@naver.com)의 UUID**를 사용하도록 변경. DB 마이그레이션 불필요, 프론트엔드 변경 없음.
 
-## 원인
-`normalizeKoreanMeaning` → `splitKoreanPhrases`가 `다`로 끝나는 모든 토큰을 개별 구문으로 간주.
+## 변경 파일 및 내용
 
-## 수정 방안 — `src/lib/synonym-sanitizer.ts`
+### 1. `supabase/functions/grammar/index.ts`
 
-`splitKoreanPhrases` 함수의 자동 분리 조건을 강화:
-- 현재: `다`로 끝나는 모든 구간을 분리
-- 수정: **콤마가 명시적으로 있을 때만 분리**하고, 콤마 없는 텍스트는 하나의 구문으로 유지
+**관리자 UUID 조회 헬퍼 추가** (함수 상단, 모듈 레벨):
+- `getAdminUserId()` — `SUPABASE_SERVICE_ROLE_KEY`로 `auth/v1/admin/users` API 호출, `co500123@naver.com` 이메일의 UUID 반환
+- 모듈 레벨 캐싱으로 중복 호출 방지
 
-구체적으로 122~126행의 정규식 기반 자동 분리 로직을 제거하고, 콤마 기반 분리만 남김:
+**`fetchLearningBlock` 수정** (640~660행):
+- `userId` 파라미터 무시, 대신 `await getAdminUserId()`로 관리자 UUID 획득
+- 해당 UUID로 `learning_examples` 조회
+- 관리자 UUID를 못 가져오면 빈 문자열 반환 (기존과 동일한 안전 폴백)
+
+### 2. `supabase/functions/grammar-chat/index.ts`
+
+**관리자 UUID 조회 헬퍼 추가** (동일 로직)
+
+**학습 예시 조회 부분 수정** (161~165행):
+- `user_id=eq.${userId}` → `user_id=eq.${adminUid}`
+
+### 3. `supabase/functions/hongt-chat/index.ts`
+
+**관리자 UUID 조회 헬퍼 추가** (동일 로직)
+
+**학습 예시 조회 부분 수정** (74행):
+- `user_id=eq.${userId}` → `user_id=eq.${adminUid}`
+
+## 공통 헬퍼 코드
 
 ```typescript
-const splitKoreanPhrases = (text: string) => {
-  const cleaned = normalizeSpaces(text);
-  if (!cleaned) return [];
-  if (cleaned.includes(",")) 
-    return cleaned.split(",").map((p) => p.trim()).filter(Boolean);
-  return [cleaned];
-};
+let cachedAdminUid: string | null = null;
+async function getAdminUserId(): Promise<string | null> {
+  if (cachedAdminUid) return cachedAdminUid;
+  const url = Deno.env.get("SUPABASE_URL");
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !key) return null;
+  try {
+    const res = await fetch(
+      `${url}/auth/v1/admin/users?page=1&per_page=50`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` } }
+    );
+    if (!res.ok) return null;
+    const { users } = await res.json();
+    const admin = users.find((u: any) =>
+      u.email?.toLowerCase() === "co500123@naver.com"
+    );
+    if (admin) cachedAdminUid = admin.id;
+    return cachedAdminUid;
+  } catch { return null; }
+}
 ```
 
-이렇게 하면 사용자가 콤마를 지우면 하나의 구문으로 유지되고, 콤마로 구분한 경우에만 분리됨.
-
 ## 영향 범위
-- `normalizeKoreanMeaning` → `splitEntry`의 한국어 부분 정규화에만 영향
-- 모델이 콤마 없이 여러 뜻을 반환하는 경우 자동 분리가 안 될 수 있으나, 실제로 모델 출력은 대부분 콤마로 구분되어 있어 영향 미미
+- 프론트엔드 코드: **변경 없음**
+- DB 마이그레이션: **불필요**
+- 관리자 계정 동작: **변경 없음** (관리자가 수정하면 자기 데이터가 저장되고, 모든 계정이 그 데이터를 참조)
+- 다른 계정의 저장 로직: **그대로 유지** (저장은 되지만 조회에 사용되지 않음)
+- 오류 가능성: **없음** (service_role_key로 RLS 우회, 관리자 못 찾으면 빈 문자열 폴백)
 
