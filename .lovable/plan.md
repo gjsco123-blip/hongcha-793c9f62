@@ -1,27 +1,25 @@
 
 
-# 드래그 선택 시 위첨자를 선택 영역 첫 단어에 고정
+# Preview 페이지 자동저장 추가
 
-## 문제
-"we do"를 드래그하면 위첨자가 "we"에 붙어야 하지만, `chooseAnchorOffset`의 휴리스틱이 "we"를 stopword로 건너뛰고 문법 설명 내 힌트 단어("work")에 매칭하여 엉뚱한 위치에 위첨자를 배치함.
+## 개요
+Index 페이지와 동일한 2초 디바운스 패턴으로 Preview 페이지에서도 vocab, synonyms, summary, examBlock 수정 시 자동으로 DB에 저장.
 
-## 변경 사항
+## 변경 파일: `src/pages/Preview.tsx`
 
-### 1. `SyntaxNote` 인터페이스에 `anchorMode` 추가
-- **파일**: `src/pages/Index.tsx` (line 53-57)
-- `anchorMode?: "heuristic" | "selection-start"` 필드 추가
+### 1. 자동저장 로직 추가
+- `useRef`로 `saveTimerRef` 생성
+- `autoSave` 콜백: `passageId`가 있고, 생성 중(`isGenerating`)이 아닐 때만 동작
+- `mergePassageStore`로 preview 스냅샷(`passage, pdfTitle, vocab, synonyms, summary, examBlock`)을 기존 `baseResultsJson`에 병합
+- `categories.updatePassage` 대신 직접 `supabase.from("passages").update(...)` 호출 (Preview는 useCategories 미사용)
+- 저장 후 `baseResultsJson` 갱신
 
-### 2. 드래그 분석 시 `anchorMode` 설정
-- **파일**: `src/pages/Index.tsx` (line 474 부근)
-- `selectedText`가 있는 경우(드래그 분석) → `anchorMode: "selection-start"` 저장
-- 자동 생성 → `anchorMode: "heuristic"` (기본값)
+### 2. 디바운스 트리거
+- `useEffect`에서 `passage, vocab, synonyms, summary, examBlock` 변경 시 `autoSave()` 호출
+- 타이머 2초, cleanup에서 clearTimeout
 
-### 3. `computeSuperscriptPositions`에서 `anchorMode` 반영
-- **파일**: `src/lib/syntax-superscript.tsx`
-- `SyntaxNoteWithTarget` 인터페이스에 `anchorMode` 추가
-- `computeSuperscriptPositions` 내에서 `note.anchorMode === "selection-start"`이면 `chooseAnchorOffset` 호출을 건너뛰고, `span.start`를 anchor로 직접 사용
-
-### 수정 파일 요약
-- `src/pages/Index.tsx` — 인터페이스 + 노트 생성 시 anchorMode 설정
-- `src/lib/syntax-superscript.tsx` — anchorMode 지원, selection-start 시 span.start 사용
+### 3. 기존 `handleTogglePreviewCompleted`와 충돌 방지
+- 완료 토글은 즉시 저장이므로 그대로 유지
+- 자동저장은 `passageId`가 없으면 skip (새 지문 직접 입력 시)
+- DB 저장된 데이터 로드 완료 전(`loadingSavedState`)에는 자동저장 skip
 
