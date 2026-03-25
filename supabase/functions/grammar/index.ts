@@ -635,20 +635,39 @@ async function fetchPinnedPatterns(_userId: string | undefined, authHeader?: str
 }
 
 // -----------------------------
-// Shared: fetch learning examples
+// Shared: resolve admin user ID (cached)
 // -----------------------------
-async function fetchLearningBlock(userId: string | undefined, authHeader?: string | null): Promise<string> {
-  if (!userId) return "";
+let cachedAdminUid: string | null = null;
+async function getAdminUserId(): Promise<string | null> {
+  if (cachedAdminUid) return cachedAdminUid;
+  const url = Deno.env.get("SUPABASE_URL");
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !key) return null;
   try {
+    const res = await fetch(
+      `${url}/auth/v1/admin/users?page=1&per_page=50`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` } }
+    );
+    if (!res.ok) return null;
+    const { users } = await res.json();
+    const admin = users.find((u: any) => u.email?.toLowerCase() === "co500123@naver.com");
+    if (admin) cachedAdminUid = admin.id;
+    return cachedAdminUid;
+  } catch { return null; }
+}
+
+// -----------------------------
+// Shared: fetch learning examples (always uses admin data)
+// -----------------------------
+async function fetchLearningBlock(_userId?: string, _authHeader?: string | null): Promise<string> {
+  try {
+    const adminUid = await getAdminUserId();
+    if (!adminUid) return "";
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-    if (!supabaseUrl || (!serviceRoleKey && !anonKey)) return "";
-    const apiKey = serviceRoleKey || anonKey!;
-    const auth = serviceRoleKey ? `Bearer ${serviceRoleKey}` : (authHeader || "");
-    if (!auth) return "";
-    const url = `${supabaseUrl}/rest/v1/learning_examples?user_id=eq.${userId}&type=eq.syntax&order=created_at.desc&limit=5&select=sentence,ai_draft,final_version`;
-    const res = await fetch(url, { headers: { apikey: apiKey, Authorization: auth } });
+    if (!supabaseUrl || !serviceRoleKey) return "";
+    const url = `${supabaseUrl}/rest/v1/learning_examples?user_id=eq.${adminUid}&type=eq.syntax&order=created_at.desc&limit=5&select=sentence,ai_draft,final_version`;
+    const res = await fetch(url, { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } });
     if (!res.ok) return "";
     const examples = await res.json();
     if (examples.length === 0) return "";

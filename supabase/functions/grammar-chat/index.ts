@@ -6,6 +6,26 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Admin user ID cache for learning examples
+let cachedAdminUid: string | null = null;
+async function getAdminUserId(): Promise<string | null> {
+  if (cachedAdminUid) return cachedAdminUid;
+  const url = Deno.env.get("SUPABASE_URL");
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !key) return null;
+  try {
+    const res = await fetch(
+      `${url}/auth/v1/admin/users?page=1&per_page=50`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` } }
+    );
+    if (!res.ok) return null;
+    const { users } = await res.json();
+    const admin = users.find((u: any) => u.email?.toLowerCase() === "co500123@naver.com");
+    if (admin) cachedAdminUid = admin.id;
+    return cachedAdminUid;
+  } catch { return null; }
+}
+
 const systemPrompt = `역할: 한국 중3·고1 내신 영어 시험 대비 구문분석 전문 어시스턴트.
 목표: 선생님(사용자)과 대화하며 구문분석 노트를 함께 다듬는다.
 
@@ -147,20 +167,21 @@ serve(async (req) => {
 - 다른 포인트는 건드리지 않는다.`
       : "";
 
-    // Fetch learning examples + pinned patterns
+    // Fetch learning examples (always admin) + pinned patterns
     let learningBlock = "";
     let pinnedBlock = "";
     try {
       const supabaseUrl = Deno.env.get("SUPABASE_URL");
       const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
       if (supabaseUrl && serviceRoleKey) {
+        const adminUid = await getAdminUserId();
         const patternsReq = fetch(
           `${supabaseUrl}/rest/v1/syntax_patterns?is_global=eq.true&order=created_at.desc&select=tag,pinned_content`,
           { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } },
         );
-        const learningReq = userId
+        const learningReq = adminUid
           ? fetch(
-              `${supabaseUrl}/rest/v1/learning_examples?user_id=eq.${userId}&type=eq.syntax&order=created_at.desc&limit=3&select=sentence,ai_draft,final_version`,
+              `${supabaseUrl}/rest/v1/learning_examples?user_id=eq.${adminUid}&type=eq.syntax&order=created_at.desc&limit=3&select=sentence,ai_draft,final_version`,
               { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } },
             )
           : Promise.resolve(null);

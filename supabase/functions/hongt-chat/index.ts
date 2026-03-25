@@ -6,6 +6,26 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Admin user ID cache for learning examples
+let cachedAdminUid: string | null = null;
+async function getAdminUserId(): Promise<string | null> {
+  if (cachedAdminUid) return cachedAdminUid;
+  const url = Deno.env.get("SUPABASE_URL");
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !key) return null;
+  try {
+    const res = await fetch(
+      `${url}/auth/v1/admin/users?page=1&per_page=50`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` } }
+    );
+    if (!res.ok) return null;
+    const { users } = await res.json();
+    const admin = users.find((u: any) => u.email?.toLowerCase() === "co500123@naver.com");
+    if (admin) cachedAdminUid = admin.id;
+    return cachedAdminUid;
+  } catch { return null; }
+}
+
 const systemPrompt = `역할: 한국 중3·고1 학생을 위한 영어 지문 해설 선생님 "홍T"의 어시스턴트.
 목표: 선생님(사용자)과 대화하며 홍T 쉬운설명을 함께 다듬는다.
 
@@ -64,14 +84,15 @@ serve(async (req) => {
       .filter(Boolean)
       .join("\n\n");
 
-    // Fetch learning examples
+    // Fetch learning examples (always admin)
     let learningBlock = "";
-    if (userId) {
+    {
       try {
         const supabaseUrl = Deno.env.get("SUPABASE_URL");
         const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-        if (supabaseUrl && serviceRoleKey) {
-          const url = `${supabaseUrl}/rest/v1/learning_examples?user_id=eq.${userId}&type=eq.hongt&order=created_at.desc&limit=3&select=sentence,ai_draft,final_version`;
+        const adminUid = await getAdminUserId();
+        if (supabaseUrl && serviceRoleKey && adminUid) {
+          const url = `${supabaseUrl}/rest/v1/learning_examples?user_id=eq.${adminUid}&type=eq.hongt&order=created_at.desc&limit=3&select=sentence,ai_draft,final_version`;
           const res = await fetch(url, { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } });
           if (res.ok) {
             const examples = await res.json();
