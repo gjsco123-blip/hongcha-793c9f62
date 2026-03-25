@@ -4,6 +4,7 @@ export interface SyntaxNoteWithTarget {
   id: number;
   content: string;
   targetText?: string;
+  anchorMode?: "heuristic" | "selection-start";
 }
 
 type TextToken = { word: string; start: number; end: number };
