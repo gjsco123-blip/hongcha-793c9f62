@@ -126,6 +126,46 @@ export default function Preview() {
 
   const isGenerating = vocabStatus === "loading" || synonymsStatus === "loading" || previewStatus === "loading";
 
+  // --- Auto-save (2s debounce) ---
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initialLoadDone = useRef(false);
+
+  // Mark initial load as done after first DB load completes
+  useEffect(() => {
+    if (!loadingSavedState && passageId) {
+      // Small delay to skip the initial state hydration triggers
+      const t = setTimeout(() => { initialLoadDone.current = true; }, 500);
+      return () => clearTimeout(t);
+    }
+  }, [loadingSavedState, passageId]);
+
+  useEffect(() => {
+    if (!passageId || !initialLoadDone.current || isGenerating || loadingSavedState) return;
+
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      const mergedStore = mergePassageStore(baseResultsJson, {
+        preview: { passage, pdfTitle, vocab, synonyms, summary, examBlock: examBlock || undefined },
+      });
+      const { error } = await supabase
+        .from("passages")
+        .update({
+          passage_text: passage,
+          pdf_title: pdfTitle,
+          results_json: mergedStore as any,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", passageId);
+      if (!error) {
+        setBaseResultsJson(mergedStore);
+      }
+    }, 2000);
+
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, [passage, vocab, synonyms, summary, examBlock, passageId, isGenerating, loadingSavedState, pdfTitle]);
+
   const handleGenerate = async () => {
     if (!passage.trim() || isGenerating) return;
     setVocabStatus("loading");
