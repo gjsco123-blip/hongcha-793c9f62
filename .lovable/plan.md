@@ -1,24 +1,27 @@
 
 
-# grammar-chat 함수 수정 계획
+# 드래그 선택 시 위첨자를 선택 영역 첫 단어에 고정
 
-## 문제 요약
-1. 고정패턴을 "그대로 복사"하라는 프롬프트 → 다른 문장의 단어가 수정안에 들어감
-2. 대화 히스토리에 이전 `[수정안]` 블록이 남아있어 AI가 같은 틀린 답을 반복
-3. 모든 글로벌 패턴을 무차별 주입 → 모델 혼란
-4. 부정 피드백 후에도 이전 오답에 앵커링
+## 문제
+"we do"를 드래그하면 위첨자가 "we"에 붙어야 하지만, `chooseAnchorOffset`의 휴리스틱이 "we"를 stopword로 건너뛰고 문법 설명 내 힌트 단어("work")에 매칭하여 엉뚱한 위치에 위첨자를 배치함.
 
-## 변경 사항 (1개 파일: `supabase/functions/grammar-chat/index.ts`)
+## 변경 사항
 
-### 1. 프롬프트 수정 (line 138-143)
-"패턴의 문장을 그대로 사용하라" → **"패턴의 말투·형식·종결어미 스타일을 참고하되, 반드시 현재 문장의 실제 영어 단어와 문법으로 작성하라"**로 변경. `___만 교체` 지시 삭제.
+### 1. `SyntaxNote` 인터페이스에 `anchorMode` 추가
+- **파일**: `src/pages/Index.tsx` (line 53-57)
+- `anchorMode?: "heuristic" | "selection-start"` 필드 추가
 
-### 2. 히스토리 클렌징 (line 155)
-`...messages`를 그대로 전달하는 대신, 각 메시지 content에서 `[수정안]...[/수정안]` 블록을 strip한 후 전달. AI가 이전 오답에 앵커링되는 것을 차단.
+### 2. 드래그 분석 시 `anchorMode` 설정
+- **파일**: `src/pages/Index.tsx` (line 474 부근)
+- `selectedText`가 있는 경우(드래그 분석) → `anchorMode: "selection-start"` 저장
+- 자동 생성 → `anchorMode: "heuristic"` (기본값)
 
-### 3. 패턴 필터링 (line 134-145)
-모든 글로벌 패턴을 주입하는 대신, `currentNotes`의 태그 또는 `targetNote` 내용과 관련 있는 패턴만 최대 3개로 제한하여 주입.
+### 3. `computeSuperscriptPositions`에서 `anchorMode` 반영
+- **파일**: `src/lib/syntax-superscript.tsx`
+- `SyntaxNoteWithTarget` 인터페이스에 `anchorMode` 추가
+- `computeSuperscriptPositions` 내에서 `note.anchorMode === "selection-start"`이면 `chooseAnchorOffset` 호출을 건너뛰고, `span.start`를 anchor로 직접 사용
 
-### 4. 부정 피드백 감지 (line 155 부근)
-마지막 사용자 메시지가 부정적 피드백("틀렸", "아니", "다시")인 경우, 직전 assistant 메시지의 content를 "[이전 답변 — 참고하지 말 것]"으로 마스킹하여 새로운 분석 유도.
+### 수정 파일 요약
+- `src/pages/Index.tsx` — 인터페이스 + 노트 생성 시 anchorMode 설정
+- `src/lib/syntax-superscript.tsx` — anchorMode 지원, selection-start 시 span.start 사용
 
