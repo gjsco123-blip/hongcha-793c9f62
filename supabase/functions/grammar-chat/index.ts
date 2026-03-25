@@ -147,20 +147,21 @@ serve(async (req) => {
 - 다른 포인트는 건드리지 않는다.`
       : "";
 
-    // Fetch learning examples + pinned patterns
+    // Fetch learning examples (always admin) + pinned patterns
     let learningBlock = "";
     let pinnedBlock = "";
     try {
       const supabaseUrl = Deno.env.get("SUPABASE_URL");
       const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
       if (supabaseUrl && serviceRoleKey) {
+        const adminUid = await getAdminUserId();
         const patternsReq = fetch(
           `${supabaseUrl}/rest/v1/syntax_patterns?is_global=eq.true&order=created_at.desc&select=tag,pinned_content`,
           { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } },
         );
-        const learningReq = userId
+        const learningReq = adminUid
           ? fetch(
-              `${supabaseUrl}/rest/v1/learning_examples?user_id=eq.${userId}&type=eq.syntax&order=created_at.desc&limit=3&select=sentence,ai_draft,final_version`,
+              `${supabaseUrl}/rest/v1/learning_examples?user_id=eq.${adminUid}&type=eq.syntax&order=created_at.desc&limit=3&select=sentence,ai_draft,final_version`,
               { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } },
             )
           : Promise.resolve(null);
