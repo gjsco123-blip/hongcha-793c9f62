@@ -376,10 +376,10 @@ function applyPinnedPattern(
     const pinned = oneLine(String(pinnedByTag.get(key) ?? ""));
     if (!pinned) continue;
 
-    const normalizedPinned = stripLeadingTagLabel(pinned);
-    // Keep model output if the pattern is still a template.
-    if (normalizedPinned.includes("___")) return raw;
-    return normalizedPinned;
+    // Pattern matched — but do NOT overwrite AI result.
+    // The prompt already instructs the model to follow the pattern's style.
+    // Just return the AI's own analysis untouched.
+    return raw;
   }
 
   return raw;
