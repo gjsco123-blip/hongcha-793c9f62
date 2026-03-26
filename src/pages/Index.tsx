@@ -14,7 +14,7 @@ import { renderWithSuperscripts, reorderNotesByPosition } from "@/lib/syntax-sup
 import { paginateResults } from "@/lib/pdf-pagination";
 import { mergePassageStore, parsePassageStore } from "@/lib/passage-store";
 import { toast } from "sonner";
-import { FileDown, RotateCw, X, Scissors, RefreshCw, Eye, Loader2, Settings2 } from "lucide-react";
+import { FileDown, RotateCw, X, Scissors, RefreshCw, Eye, Loader2, Settings2, Sparkles } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -115,6 +115,7 @@ export default function Index() {
   const [pdfTitle, setPdfTitle] = useState("SYNTAX");
   
   const [editedSentences, setEditedSentences] = useState<string[]>([]);
+  const [batchHongTProgress, setBatchHongTProgress] = useState<{ current: number; total: number } | null>(null);
 
   const categories = useCategories();
   const { teacherLabel, setTeacherLabel } = useTeacherLabel();
@@ -306,6 +307,38 @@ export default function Index() {
       setResults((prev) =>
         prev.map((r) => (r.id === sentenceId ? { ...r, generatingHongT: false } : r))
       );
+    }
+  };
+
+  const generateAllHongT = async () => {
+    const allSentences = results.map((r) => r.original);
+    const targets = results.filter((r) => !r.hongTNotes?.trim() && !r.hideHongT);
+    if (targets.length === 0) {
+      toast.info("모든 문장에 홍T 해설이 이미 있습니다.");
+      return;
+    }
+
+    setBatchHongTProgress({ current: 0, total: targets.length });
+    let successCount = 0;
+
+    for (let i = 0; i < targets.length; i++) {
+      setBatchHongTProgress({ current: i + 1, total: targets.length });
+      try {
+        await generateHongT(targets[i].id, allSentences);
+        successCount++;
+      } catch (e) {
+        console.error(`홍T 일괄 생성 실패 (문장 ${targets[i].id + 1}):`, e);
+      }
+      if (i < targets.length - 1) {
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    }
+
+    setBatchHongTProgress(null);
+    if (successCount === targets.length) {
+      toast.success(`홍T 생성 완료: ${successCount}/${targets.length} 성공`);
+    } else {
+      toast.warning(`홍T 생성 완료: ${successCount}/${targets.length} 성공`);
     }
   };
 
@@ -743,6 +776,16 @@ export default function Index() {
             <div className="flex gap-2 items-center">
               {results.length > 0 && (
                 <>
+                  <button
+                    onClick={generateAllHongT}
+                    disabled={!!batchHongTProgress || loading}
+                    className="px-3 py-1 rounded-full border border-foreground text-foreground text-[11px] font-medium hover:bg-foreground hover:text-background transition-colors disabled:opacity-50 flex items-center gap-1"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    {batchHongTProgress
+                      ? `홍T ${batchHongTProgress.current}/${batchHongTProgress.total}...`
+                      : "홍T 일괄 생성"}
+                  </button>
                   <button
                     onClick={handlePreviewPdf}
                     disabled={pdfGenerating}
