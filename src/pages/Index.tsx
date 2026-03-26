@@ -1106,7 +1106,7 @@ export default function Index() {
 
                     {/* 홍T */}
                     {!result.hideHongT && (
-                    <HongTSection
+                      <HongTSection
                         value={result.hongTNotes ?? ""}
                         onChange={(val) =>
                           setResults((prev) =>
@@ -1126,6 +1126,15 @@ export default function Index() {
                         preset={preset}
                         teacherLabel={teacherLabel}
                       />
+                    )}
+                    {result.hideHongT && (
+                      <button
+                        onClick={() => setResults(prev => prev.map(r => r.id === result.id ? { ...r, hideHongT: false } : r))}
+                        className="flex items-center gap-1 text-[10px] text-muted-foreground/60 hover:text-foreground transition-colors py-1"
+                      >
+                        <Eye className="w-3 h-3" />
+                        <span>홍T 보기</span>
+                      </button>
                     )}
 
                     {/* 구문분석 */}
