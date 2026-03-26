@@ -310,6 +310,38 @@ export default function Index() {
     }
   };
 
+  const generateAllHongT = async () => {
+    const allSentences = results.map((r) => r.original);
+    const targets = results.filter((r) => !r.hongTNotes?.trim() && !r.hideHongT);
+    if (targets.length === 0) {
+      toast.info("모든 문장에 홍T 해설이 이미 있습니다.");
+      return;
+    }
+
+    setBatchHongTProgress({ current: 0, total: targets.length });
+    let successCount = 0;
+
+    for (let i = 0; i < targets.length; i++) {
+      setBatchHongTProgress({ current: i + 1, total: targets.length });
+      try {
+        await generateHongT(targets[i].id, allSentences);
+        successCount++;
+      } catch (e) {
+        console.error(`홍T 일괄 생성 실패 (문장 ${targets[i].id + 1}):`, e);
+      }
+      if (i < targets.length - 1) {
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    }
+
+    setBatchHongTProgress(null);
+    if (successCount === targets.length) {
+      toast.success(`홍T 생성 완료: ${successCount}/${targets.length} 성공`);
+    } else {
+      toast.warning(`홍T 생성 완료: ${successCount}/${targets.length} 성공`);
+    }
+  };
+
   const handleAnalyze = async () => {
     const sentences = editedSentences.filter((s) => s.trim().length > 0);
     if (sentences.length === 0) return;
