@@ -777,6 +777,16 @@ export default function Index() {
               {results.length > 0 && (
                 <>
                   <button
+                    onClick={generateAllHongT}
+                    disabled={!!batchHongTProgress || loading}
+                    className="px-3 py-1 rounded-full border border-foreground text-foreground text-[11px] font-medium hover:bg-foreground hover:text-background transition-colors disabled:opacity-50 flex items-center gap-1"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    {batchHongTProgress
+                      ? `홍T ${batchHongTProgress.current}/${batchHongTProgress.total}...`
+                      : "홍T 일괄 생성"}
+                  </button>
+                  <button
                     onClick={handlePreviewPdf}
                     disabled={pdfGenerating}
                     className="px-3 py-1 rounded-full border border-foreground text-foreground text-[11px] font-medium hover:bg-foreground hover:text-background transition-colors disabled:opacity-50"
