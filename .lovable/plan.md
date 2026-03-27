@@ -1,45 +1,26 @@
 
 
-# 엔진 내부 동사 태깅 자동 검증 통합
+# 동사 태깅 프롬프트 — 분사구문/축약절 규칙 추가
 
-## 핵심 아이디어
-별도 버튼 없이, **engine 함수 자체에 동사 검증 단계를 추가**하여 분석 결과가 나올 때마다 자동으로 `<v>` 태그를 검증·수정합니다.
+## 문제
+"when asked", "once completed", "if given" 등 축약된 부사절(reduced adverbial clause)의 과거분사가 서술어(finite verb)로 잘못 태깅됨. 현재 프롬프트에 이 케이스가 명시되어 있지 않음.
 
-## 현재 구조
-engine 함수는 이미 최대 3회 재시도 루프가 있음 (청크 개수 불일치 시). 이 루프 이후에 동사 검증 단계를 추가합니다.
+## 변경 파일: `supabase/functions/engine/index.ts`
 
-## 변경 파일
+### 메인 프롬프트 + 검증 프롬프트 모두 수정
 
-### `supabase/functions/engine/index.ts`
+"What MUST NOT have `<v>` tags" 목록에 **6번 규칙** 추가:
 
-검증 통과 후(line 281~284), 최종 결과를 반환하기 전에 **2차 AI 호출**을 추가:
-
-1. **동사 검증 프롬프트**: 기존 `english_tagged` 결과를 입력으로, `<cN>` 구조는 유지하면서 `<v>` 태그만 검증·수정하도록 요청
-2. **경량 호출**: 같은 모델(`gemini-3-flash-preview`)을 사용하되, 프롬프트가 짧고 작업이 단순하므로 토큰 소모 최소화
-3. **변경 없으면 스킵**: AI가 수정 불필요로 판단하면 원본 그대로 사용
-
-```text
-기존 흐름:
-  sentence → AI 분석 (최대 3회) → 청크 검증 → 반환
-
-변경 후 흐름:
-  sentence → AI 분석 (최대 3회) → 청크 검증 → 동사 태그 검증 (1회 AI 호출) → 반환
+```
+6. **Reduced adverbial clauses (분사구문/축약절)**: Past participles after conjunctions like "when", "once", "if", "while", "although", "though", "unless" where "subject + be" is omitted.
+   - "when asked" = "when [they are] asked" → "asked" is a participle, NOT a finite verb → NO <v>
+   - "once completed" = "once [it is] completed" → NO <v>
+   - "if given the chance" → NO <v> on "given"
+   - "while surrounded by" → NO <v> on "surrounded"
+   - CORRECT: when asked to recall → NO <v> on "asked"
+   - WRONG: when <v>asked</v> to recall
+   - **Test**: Can you insert "[subject] + [be verb]" between the conjunction and participle? If YES → it's a reduced clause → NO <v>.
 ```
 
-### 동사 검증 프롬프트 핵심 내용
-- 입력: `english_tagged` 문자열
-- 지시: "아래 영어 문장의 `<v>` 태그만 검증하라. `<cN>` 구조와 텍스트는 절대 변경 금지."
-- 기존 engine 프롬프트의 VERB TAGGING 규칙을 그대로 포함
-- 출력: 수정된 `english_tagged` 문자열 (변경 없으면 동일하게 반환)
-
-### 추가 안전장치
-- 검증 후 `extractText()`로 원문 일치 재확인 — 텍스트가 변경됐으면 검증 결과를 버리고 원본 사용
-- 검증 AI 호출 실패 시에도 원본 결과 그대로 반환 (기능 저하 없음)
-- `korean_literal_tagged`의 `<v>` 태그도 검증 결과에 맞춰 동기화
-
-## 장단점
-
-- **장점**: 별도 버튼/UI 불필요, 모든 분석에 자동 적용, 사용자 추가 작업 없음
-- **단점**: 분석당 AI 호출 1회 추가 (약 0.3~0.5초 지연), 토큰 소모 소폭 증가
-- **실패 시 영향**: 없음 (원본 결과 그대로 사용)
+두 프롬프트(시스템 프롬프트 ~line 130, 검증 프롬프트 ~line 324)에 동일하게 추가.
 
