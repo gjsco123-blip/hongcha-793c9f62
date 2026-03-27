@@ -139,9 +139,10 @@ export function usePdfExport() {
     async (
       results: SentenceResult[],
       title: string,
+      examBlock?: ExamBlock | null,
       filename: string = "workbook.pdf",
     ) => {
-      const workbookDocument = createElement(WorkbookPdfDocument, { results, title });
+      const workbookDocument = createElement(WorkbookPdfDocument, { results, title, examBlock });
       const blob = await pdf(workbookDocument).toBlob();
       triggerDownload(blob, filename);
     },

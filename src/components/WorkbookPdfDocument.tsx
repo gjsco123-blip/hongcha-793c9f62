@@ -25,9 +25,16 @@ interface SentenceResult {
   original: string;
 }
 
+interface ExamBlock {
+  topic?: string;
+  title?: string;
+  one_sentence_summary?: string;
+}
+
 interface WorkbookPdfDocumentProps {
   results: SentenceResult[];
   title: string;
+  examBlock?: ExamBlock | null;
 }
 
 const styles = StyleSheet.create({
@@ -71,14 +78,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: 7,
-    marginTop: 3,
+    marginTop: 1,
     flexShrink: 0,
   },
   badgeText: {
     color: "#fff",
     fontSize: 6.8,
     fontWeight: 700,
-    lineHeight: 1,
+    lineHeight: 1.1,
   },
   sentenceText: {
     flex: 1,
@@ -87,9 +94,43 @@ const styles = StyleSheet.create({
     color: "#111",
     lineHeight: 2.5,
   },
+  analysisSection: {
+    marginTop: 10,
+    borderTopWidth: 0.8,
+    borderTopColor: "#111",
+    paddingTop: 8,
+  },
+  analysisHeader: {
+    fontSize: 8.5,
+    fontWeight: 700,
+    letterSpacing: 0.5,
+    color: "#666",
+    marginBottom: 6,
+  },
+  analysisItem: {
+    marginBottom: 5,
+  },
+  analysisLabel: {
+    fontSize: 7.5,
+    fontWeight: 700,
+    color: "#666",
+    letterSpacing: 0.3,
+    marginBottom: 2,
+  },
+  analysisText: {
+    fontSize: 8.5,
+    fontWeight: 400,
+    color: "#111",
+    lineHeight: 1.5,
+  },
 });
 
-export function WorkbookPdfDocument({ results, title }: WorkbookPdfDocumentProps) {
+export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDocumentProps) {
+  const topic = (examBlock?.topic || "").trim();
+  const heading = (examBlock?.title || "").trim();
+  const summary = (examBlock?.one_sentence_summary || "").trim();
+  const hasAnalysis = Boolean(topic || heading || summary);
+
   return (
     <Document>
       <Page size="A4" style={styles.page} wrap>
@@ -106,6 +147,30 @@ export function WorkbookPdfDocument({ results, title }: WorkbookPdfDocumentProps
             <Text style={styles.sentenceText}>{result.original}</Text>
           </View>
         ))}
+
+        {hasAnalysis && (
+          <View style={styles.analysisSection}>
+            <Text style={styles.analysisHeader}>TOPIC / TITLE / SUMMARY</Text>
+            {topic ? (
+              <View style={styles.analysisItem}>
+                <Text style={styles.analysisLabel}>TOPIC</Text>
+                <Text style={styles.analysisText}>{topic}</Text>
+              </View>
+            ) : null}
+            {heading ? (
+              <View style={styles.analysisItem}>
+                <Text style={styles.analysisLabel}>TITLE</Text>
+                <Text style={styles.analysisText}>{heading}</Text>
+              </View>
+            ) : null}
+            {summary ? (
+              <View style={styles.analysisItem}>
+                <Text style={styles.analysisLabel}>SUMMARY</Text>
+                <Text style={styles.analysisText}>{summary}</Text>
+              </View>
+            ) : null}
+          </View>
+        )}
       </Page>
     </Document>
   );

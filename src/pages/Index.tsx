@@ -702,7 +702,9 @@ export default function Index() {
     if (workbookPdfGenerating) return;
     setWorkbookPdfGenerating(true);
     try {
-      await exportWorkbookPdf(results, pdfTitle, `${pdfTitle}+Workbook.pdf`);
+      const store = parsePassageStore(categories.selectedPassage?.results_json);
+      const examBlock = (store.preview?.examBlock as any) || null;
+      await exportWorkbookPdf(results, pdfTitle, examBlock, `${pdfTitle}+Workbook.pdf`);
       toast.success("워크북 PDF 다운로드가 시작되었습니다.");
     } catch (err: any) {
       toast.error(`워크북 PDF 저장 실패: ${err.message}`);
