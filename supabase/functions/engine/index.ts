@@ -301,6 +301,77 @@ You MUST respond by calling the "analysis_result" function with the structured o
       }
     }
 
+    // === Verb tag verification pass ===
+    try {
+      const verbVerifyPrompt = `You are a precise English grammar verb-tagging verifier.
+
+Given an English sentence that has been chunked with <c1>...</c1>, <c2>...</c2> tags and verb-tagged with <v>...</v> tags, your job is to VERIFY and CORRECT ONLY the <v> tags.
+
+## ABSOLUTE RULES:
+1. DO NOT change the <cN>...</cN> structure in any way — same tags, same boundaries, same text.
+2. DO NOT change the text content at all — no word additions, removals, or reordering.
+3. ONLY add, remove, or adjust <v>...</v> tags.
+
+## What MUST have <v> tags (finite verbs only):
+- Simple finite verbs: <v>discovered</v>, <v>is</v>, <v>runs</v>
+- Auxiliary + main verb: <v>has been working</v>, <v>were conducted</v>
+- Modal + verb: <v>can affect</v>, <v>should consider</v>
+- Multi-word verbs: <v>sought out</v>, <v>turned off</v>
+- Contracted verbs: 's (= is/has), 're (= are), 've (= have), 'd (= would/had), 'll (= will)
+  - CORRECT: there<v>'s</v> no reason
+  - EXCEPTION: "let's" = "let us" → 's is NOT a verb. Tag: <v>let</v>'s
+
+## What MUST NOT have <v> tags:
+1. To-infinitives: "to cause", "to achieve" → NO <v>
+2. Gerunds as nouns: "Swimming is fun" → "Swimming" = noun
+3. Participles as adjectives: "the broken window", "an interesting book"
+4. Prepositions/conjunctions: such as, as well as, rather than, according to, due to, because of, in order to, as opposed to, in addition to, regardless of, in terms of, based on, depending on
+5. Adjective complements after linking verbs: In "X is effective", only "is" gets <v>. "effective" does NOT.
+   - CORRECT: <v>is</v> sometimes effective
+   - WRONG: <v>is</v> sometimes <v>effective</v>
+
+## Quick test: "Does this word have a SUBJECT performing it RIGHT HERE in this clause?" If NO → no <v>.
+
+Return ONLY the corrected english_tagged string. Nothing else.`;
+
+      const verifyResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [
+            { role: "system", content: verbVerifyPrompt },
+            { role: "user", content: lastResult!.english_tagged },
+          ],
+        }),
+      });
+
+      if (verifyResponse.ok) {
+        const verifyData = await verifyResponse.json();
+        const verified = verifyData.choices?.[0]?.message?.content?.trim();
+        if (verified) {
+          // Safety check: ensure text content is unchanged
+          const verifiedText = normalize(extractText(verified));
+          const originalText = normalize(extractText(lastResult!.english_tagged));
+          if (verifiedText === originalText) {
+            if (verified !== lastResult!.english_tagged) {
+              console.log("Verb verification: corrected <v> tags");
+              lastResult!.english_tagged = verified;
+            } else {
+              console.log("Verb verification: no changes needed");
+            }
+          } else {
+            console.warn("Verb verification: text content changed, discarding correction");
+          }
+        }
+      }
+    } catch (verifyErr) {
+      console.warn("Verb verification failed, using original:", verifyErr);
+    }
+
     const toSlash = (tagged: string) =>
       tagged.replace(/<c\d+>/g, "").replace(/<\/c\d+>/g, " / ").replace(/ \/ $/, "").trim();
 
