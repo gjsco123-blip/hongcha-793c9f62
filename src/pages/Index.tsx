@@ -267,9 +267,10 @@ export default function Index() {
     setEditedSentences(autoSentences);
   }
 
-  const { exportToPdf, previewPdf, exportCombinedPdf } = usePdfExport();
+  const { exportToPdf, previewPdf, exportCombinedPdf, exportWorkbookPdf } = usePdfExport();
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [combinedPdfGenerating, setCombinedPdfGenerating] = useState(false);
+  const [workbookPdfGenerating, setWorkbookPdfGenerating] = useState(false);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
 
   // PDF 페이지 구분선 계산 — 공용 페이지네이션 로직 사용 (PDF와 100% 동일)
@@ -697,6 +698,19 @@ export default function Index() {
     toast.success(next ? "구문분석 완료로 표시됨" : "구문분석 완료 표시 해제");
   };
 
+  const handleExportWorkbookPdf = async () => {
+    if (workbookPdfGenerating) return;
+    setWorkbookPdfGenerating(true);
+    try {
+      await exportWorkbookPdf(results, pdfTitle, `${pdfTitle}+Workbook.pdf`);
+      toast.success("워크북 PDF 다운로드가 시작되었습니다.");
+    } catch (err: any) {
+      toast.error(`워크북 PDF 저장 실패: ${err.message}`);
+    } finally {
+      setWorkbookPdfGenerating(false);
+    }
+  };
+
   const categoryProps = {
     schools: categories.schools,
     passages: categories.passages,
@@ -808,6 +822,13 @@ export default function Index() {
                       {combinedPdfGenerating ? "통합 중..." : "통합 PDF 저장"}
                     </button>
                   )}
+                  <button
+                    onClick={handleExportWorkbookPdf}
+                    disabled={workbookPdfGenerating}
+                    className="px-3 py-1 rounded-full border border-foreground text-foreground text-[11px] font-medium hover:bg-foreground hover:text-background transition-colors disabled:opacity-50"
+                  >
+                    {workbookPdfGenerating ? "생성 중..." : "워크북 저장"}
+                  </button>
                 </>
               )}
               {failedResults.length > 0 && !loading && (

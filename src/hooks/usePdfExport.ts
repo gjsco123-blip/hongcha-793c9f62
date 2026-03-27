@@ -3,6 +3,7 @@ import { pdf } from "@react-pdf/renderer";
 import { PDFDocument } from "pdf-lib";
 import { PdfDocument } from "@/components/PdfDocument";
 import { PreviewPdf } from "@/components/PreviewPdf";
+import { WorkbookPdfDocument } from "@/components/WorkbookPdfDocument";
 import { Chunk } from "@/lib/chunk-utils";
 
 interface SyntaxNote {
@@ -134,5 +135,18 @@ export function usePdfExport() {
     []
   );
 
-  return { exportToPdf, previewPdf, exportCombinedPdf };
+  const exportWorkbookPdf = useCallback(
+    async (
+      results: SentenceResult[],
+      title: string,
+      filename: string = "workbook.pdf",
+    ) => {
+      const workbookDocument = createElement(WorkbookPdfDocument, { results, title });
+      const blob = await pdf(workbookDocument).toBlob();
+      triggerDownload(blob, filename);
+    },
+    []
+  );
+
+  return { exportToPdf, previewPdf, exportCombinedPdf, exportWorkbookPdf };
 }
