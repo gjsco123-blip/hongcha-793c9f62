@@ -44,6 +44,10 @@ const styles = StyleSheet.create({
     paddingLeft: 30,
     paddingRight: 30,
     fontFamily: "Pretendard",
+    flexDirection: "column",
+  },
+  body: {
+    flexGrow: 1,
   },
   header: {
     flexDirection: "row",
@@ -68,7 +72,7 @@ const styles = StyleSheet.create({
   sentenceRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    marginBottom: 14,
+    marginBottom: 15,
   },
   badge: {
     width: 14,
@@ -78,7 +82,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: 7,
-    marginTop: 0,
+    marginTop: -1,
     flexShrink: 0,
   },
   badgeText: {
@@ -92,20 +96,28 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     fontWeight: 600,
     color: "#111",
-    lineHeight: 3,
+    lineHeight: 3.5,
   },
   analysisSection: {
-    marginTop: 10,
+    marginTop: "auto",
     paddingTop: 6,
   },
   analysisItem: {
     flexDirection: "row",
     alignItems: "flex-start",
-    marginBottom: 12,
+    marginBottom: 13.5,
   },
   analysisBar: {
     width: 2,
     height: 18,
+    backgroundColor: "#bfbfbf",
+    marginRight: 7,
+    marginTop: 2,
+    flexShrink: 0,
+  },
+  analysisBarTall: {
+    width: 2,
+    height: 30,
     backgroundColor: "#bfbfbf",
     marginRight: 7,
     marginTop: 2,
@@ -142,47 +154,48 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.workbookLabel}>Workbook</Text>
         </View>
-
-        {results.map((result, index) => (
-          <View key={result.id} style={styles.sentenceRow} wrap={false}>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{String(index + 1).padStart(2, "0")}</Text>
+        <View style={styles.body}>
+          {results.map((result, index) => (
+            <View key={result.id} style={styles.sentenceRow} wrap={false}>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{String(index + 1).padStart(2, "0")}</Text>
+              </View>
+              <Text style={styles.sentenceText}>{result.original}</Text>
             </View>
-            <Text style={styles.sentenceText}>{result.original}</Text>
-          </View>
-        ))}
+          ))}
 
-        {hasAnalysis && (
-          <View style={styles.analysisSection}>
-            {topic ? (
-              <View style={styles.analysisItem}>
-                <View style={styles.analysisBar} />
-                <View style={styles.analysisContentWrap}>
-                  <Text style={styles.analysisLabel}>TOPIC</Text>
-                  <Text style={styles.analysisText}>{topic}</Text>
+          {hasAnalysis && (
+            <View style={styles.analysisSection}>
+              {topic ? (
+                <View style={styles.analysisItem}>
+                  <View style={styles.analysisBar} />
+                  <View style={styles.analysisContentWrap}>
+                    <Text style={styles.analysisLabel}>TOPIC</Text>
+                    <Text style={styles.analysisText}>{topic}</Text>
+                  </View>
                 </View>
-              </View>
-            ) : null}
-            {heading ? (
-              <View style={styles.analysisItem}>
-                <View style={styles.analysisBar} />
-                <View style={styles.analysisContentWrap}>
-                  <Text style={styles.analysisLabel}>TITLE</Text>
-                  <Text style={styles.analysisText}>{heading}</Text>
+              ) : null}
+              {heading ? (
+                <View style={styles.analysisItem}>
+                  <View style={styles.analysisBar} />
+                  <View style={styles.analysisContentWrap}>
+                    <Text style={styles.analysisLabel}>TITLE</Text>
+                    <Text style={styles.analysisText}>{heading}</Text>
+                  </View>
                 </View>
-              </View>
-            ) : null}
-            {summary ? (
-              <View style={styles.analysisItem}>
-                <View style={styles.analysisBar} />
-                <View style={styles.analysisContentWrap}>
-                  <Text style={styles.analysisLabel}>SUMMARY</Text>
-                  <Text style={styles.analysisText}>{summary}</Text>
+              ) : null}
+              {summary ? (
+                <View style={styles.analysisItem}>
+                  <View style={styles.analysisBarTall} />
+                  <View style={styles.analysisContentWrap}>
+                    <Text style={styles.analysisLabel}>SUMMARY</Text>
+                    <Text style={styles.analysisText}>{summary}</Text>
+                  </View>
                 </View>
-              </View>
-            ) : null}
-          </View>
-        )}
+              ) : null}
+            </View>
+          )}
+        </View>
       </Page>
     </Document>
   );
