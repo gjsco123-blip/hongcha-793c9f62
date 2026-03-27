@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
   sentenceRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    marginBottom: 12,
+    marginBottom: 14,
   },
   badge: {
     width: 14,
@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: 7,
-    marginTop: 1,
+    marginTop: 0,
     flexShrink: 0,
   },
   badgeText: {
@@ -92,23 +92,27 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     fontWeight: 600,
     color: "#111",
-    lineHeight: 2.5,
+    lineHeight: 3,
   },
   analysisSection: {
     marginTop: 10,
-    borderTopWidth: 0.8,
-    borderTopColor: "#111",
-    paddingTop: 8,
-  },
-  analysisHeader: {
-    fontSize: 8.5,
-    fontWeight: 700,
-    letterSpacing: 0.5,
-    color: "#666",
-    marginBottom: 6,
+    paddingTop: 6,
   },
   analysisItem: {
-    marginBottom: 5,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 12,
+  },
+  analysisBar: {
+    width: 2,
+    height: 18,
+    backgroundColor: "#bfbfbf",
+    marginRight: 7,
+    marginTop: 2,
+    flexShrink: 0,
+  },
+  analysisContentWrap: {
+    flex: 1,
   },
   analysisLabel: {
     fontSize: 7.5,
@@ -118,10 +122,10 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   analysisText: {
-    fontSize: 8.5,
+    fontSize: 9.5,
     fontWeight: 400,
     color: "#111",
-    lineHeight: 1.5,
+    lineHeight: 1.7,
   },
 });
 
@@ -150,23 +154,31 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
 
         {hasAnalysis && (
           <View style={styles.analysisSection}>
-            <Text style={styles.analysisHeader}>TOPIC / TITLE / SUMMARY</Text>
             {topic ? (
               <View style={styles.analysisItem}>
-                <Text style={styles.analysisLabel}>TOPIC</Text>
-                <Text style={styles.analysisText}>{topic}</Text>
+                <View style={styles.analysisBar} />
+                <View style={styles.analysisContentWrap}>
+                  <Text style={styles.analysisLabel}>TOPIC</Text>
+                  <Text style={styles.analysisText}>{topic}</Text>
+                </View>
               </View>
             ) : null}
             {heading ? (
               <View style={styles.analysisItem}>
-                <Text style={styles.analysisLabel}>TITLE</Text>
-                <Text style={styles.analysisText}>{heading}</Text>
+                <View style={styles.analysisBar} />
+                <View style={styles.analysisContentWrap}>
+                  <Text style={styles.analysisLabel}>TITLE</Text>
+                  <Text style={styles.analysisText}>{heading}</Text>
+                </View>
               </View>
             ) : null}
             {summary ? (
               <View style={styles.analysisItem}>
-                <Text style={styles.analysisLabel}>SUMMARY</Text>
-                <Text style={styles.analysisText}>{summary}</Text>
+                <View style={styles.analysisBar} />
+                <View style={styles.analysisContentWrap}>
+                  <Text style={styles.analysisLabel}>SUMMARY</Text>
+                  <Text style={styles.analysisText}>{summary}</Text>
+                </View>
               </View>
             ) : null}
           </View>
