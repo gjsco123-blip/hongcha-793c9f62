@@ -111,23 +111,14 @@ const styles = StyleSheet.create({
   },
   analysisItem: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "stretch",
     marginBottom: 13.5,
   },
   analysisBar: {
     width: 2,
-    height: 18,
+    height: "100%",
     backgroundColor: "#bfbfbf",
     marginRight: 7,
-    marginTop: 2,
-    flexShrink: 0,
-  },
-  analysisBarTall: {
-    width: 2,
-    height: 30,
-    backgroundColor: "#bfbfbf",
-    marginRight: 7,
-    marginTop: 2,
     flexShrink: 0,
   },
   analysisContentWrap: {
@@ -211,7 +202,7 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
               ) : null}
               {summary ? (
                 <View style={styles.analysisItem}>
-                  <View style={styles.analysisBarTall} />
+                  <View style={styles.analysisBar} />
                   <View style={styles.analysisContentWrap}>
                     <Text style={styles.analysisLabel}>SUMMARY</Text>
                     <Text style={styles.analysisText}>{summary}</Text>
