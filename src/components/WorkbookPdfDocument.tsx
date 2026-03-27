@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.8,
     borderBottomColor: "#111",
     paddingBottom: 6,
-    marginBottom: 10,
+    marginBottom: 15,
   },
   title: {
     fontSize: 14,
@@ -73,6 +73,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     marginBottom: 15,
+  },
+  sentenceRowCompact: {
+    marginBottom: 11,
   },
   badge: {
     width: 14,
@@ -97,6 +100,10 @@ const styles = StyleSheet.create({
     fontWeight: 600,
     color: "#111",
     lineHeight: 3.5,
+  },
+  sentenceTextCompact: {
+    fontSize: 9.2,
+    lineHeight: 3.0,
   },
   analysisSection: {
     marginTop: "auto",
@@ -146,6 +153,10 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
   const heading = (examBlock?.title || "").trim();
   const summary = (examBlock?.one_sentence_summary || "").trim();
   const hasAnalysis = Boolean(topic || heading || summary);
+  const totalChars = results.reduce((acc, cur) => acc + (cur.original?.length || 0), 0);
+  // Keep the requested default (3.5/15), but compact automatically on dense pages
+  // so the bottom analysis block is less likely to move to the next page.
+  const useCompactSentenceLayout = hasAnalysis && (results.length >= 9 || totalChars > 980);
 
   return (
     <Document>
@@ -156,11 +167,25 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
         </View>
         <View style={styles.body}>
           {results.map((result, index) => (
-            <View key={result.id} style={styles.sentenceRow} wrap={false}>
+            <View
+              key={result.id}
+              style={[
+                styles.sentenceRow,
+                useCompactSentenceLayout ? styles.sentenceRowCompact : null,
+              ]}
+              wrap={false}
+            >
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{String(index + 1).padStart(2, "0")}</Text>
               </View>
-              <Text style={styles.sentenceText}>{result.original}</Text>
+              <Text
+                style={[
+                  styles.sentenceText,
+                  useCompactSentenceLayout ? styles.sentenceTextCompact : null,
+                ]}
+              >
+                {result.original}
+              </Text>
             </View>
           ))}
 
