@@ -131,6 +131,14 @@ ONLY finite verbs — verbs that serve as the predicate of a clause with a subje
    - WRONG: control <v>is</v> sometimes <v>effective</v> → "effective" is NOT a verb
    - CORRECT: it <v>is</v> important to note → only "is" gets <v>
    - WRONG: it <v>is</v> <v>important</v> to note
+6. **Reduced adverbial clauses (분사구문/축약절)**: Past participles after conjunctions like "when", "once", "if", "while", "although", "though", "unless" where "subject + be" is omitted.
+   - "when asked" = "when [they are] asked" → "asked" is a participle, NOT a finite verb → NO <v>
+   - "once completed" = "once [it is] completed" → NO <v>
+   - "if given the chance" → NO <v> on "given"
+   - "while surrounded by" → NO <v> on "surrounded"
+   - CORRECT: when asked to recall → NO <v> on "asked"
+   - WRONG: when <v>asked</v> to recall
+   - **Test**: Can you insert "[subject] + [be verb]" between the conjunction and participle? If YES → it's a reduced clause → NO <v>.
 
 ### Examples:
 - CORRECT: <c1>The ability to cause harm</c1> → "to cause" has NO <v> tag
@@ -329,6 +337,11 @@ Given an English sentence that has been chunked with <c1>...</c1>, <c2>...</c2> 
 5. Adjective complements after linking verbs: In "X is effective", only "is" gets <v>. "effective" does NOT.
    - CORRECT: <v>is</v> sometimes effective
    - WRONG: <v>is</v> sometimes <v>effective</v>
+6. Reduced adverbial clauses (분사구문/축약절): Past participles after conjunctions like "when", "once", "if", "while", "although", "though", "unless" where "subject + be" is omitted.
+   - "when asked" = "when [they are] asked" → NO <v> on "asked"
+   - "once completed" = "once [it is] completed" → NO <v>
+   - CORRECT: when asked to recall → NO <v> on "asked"
+   - WRONG: when <v>asked</v> to recall
 
 ## Quick test: "Does this word have a SUBJECT performing it RIGHT HERE in this clause?" If NO → no <v>.
 
