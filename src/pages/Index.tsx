@@ -209,10 +209,6 @@ export default function Index() {
     }
   }, [categories.selectedPassageId, categories.selectedPassage]);
 
-  // Keep prevResultsRef in sync
-  useEffect(() => {
-    prevResultsRef.current = results;
-  }, [results]);
 
   // Auto-save with debounce
   const autoSave = useCallback(() => {
