@@ -115,7 +115,7 @@ export default function Index() {
   const [pdfTitle, setPdfTitle] = useState("SYNTAX");
   
   const [editedSentences, setEditedSentences] = useState<string[]>([]);
-  const [batchHongTProgress, setBatchHongTProgress] = useState<{ current: number; total: number } | null>(null);
+  const [hongTPhase, setHongTPhase] = useState<{ current: number; total: number } | null>(null);
 
   const categories = useCategories();
   const { teacherLabel, setTeacherLabel } = useTeacherLabel();
