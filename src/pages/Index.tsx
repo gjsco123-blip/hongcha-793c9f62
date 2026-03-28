@@ -776,6 +776,7 @@ export default function Index() {
                 {editedSentences.length}개 문장
               </span>
             </div>
+            <div className="flex gap-2 items-center">
               {results.length > 0 && (
                 <>
                   <button
