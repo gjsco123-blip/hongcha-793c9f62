@@ -107,7 +107,15 @@ export default function Index() {
   const { user } = useAuth();
   const [passage, setPassage] = useState("");
   const [preset, setPreset] = useState<Preset>("수능");
-  const [results, setResults] = useState<SentenceResult[]>([]);
+  const [results, setResultsRaw] = useState<SentenceResult[]>([]);
+  const resultsRef = useRef<SentenceResult[]>([]);
+  const updateResults = useCallback((updater: React.SetStateAction<SentenceResult[]>) => {
+    setResultsRaw((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      resultsRef.current = next;
+      return next;
+    });
+  }, []);
   const [syntaxCompleted, setSyntaxCompleted] = useState(false);
   const [previewCompleted, setPreviewCompleted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -162,12 +170,12 @@ export default function Index() {
 
   // Load passage data when a passage is selected
   const prevPassageIdRef = useRef<string | null>(null);
-  const prevResultsRef = useRef<SentenceResult[]>([]);
+  
 
   useEffect(() => {
     // Save learning examples from previous passage before loading new one
     if (prevPassageIdRef.current && prevPassageIdRef.current !== categories.selectedPassageId) {
-      saveSyntaxLearningExamples(prevResultsRef.current);
+      saveSyntaxLearningExamples(resultsRef.current);
       aiDraftMapRef.current = {};
     }
     prevPassageIdRef.current = categories.selectedPassageId || null;
@@ -191,9 +199,9 @@ export default function Index() {
           generatingHongT: false,
           regenerating: false,
         }));
-        setResults(loaded);
+        updateResults(loaded);
       } else {
-        setResults([]);
+        updateResults([]);
       }
       dataLoadedRef.current = true;
     } else {
@@ -201,10 +209,6 @@ export default function Index() {
     }
   }, [categories.selectedPassageId, categories.selectedPassage]);
 
-  // Keep prevResultsRef in sync
-  useEffect(() => {
-    prevResultsRef.current = results;
-  }, [results]);
 
   // Auto-save with debounce
   const autoSave = useCallback(() => {
@@ -284,7 +288,7 @@ export default function Index() {
 
 
   const generateHongT = async (sentenceId: number, allSentences: string[]) => {
-    setResults((prev) =>
+    updateResults((prev) =>
       prev.map((r) => (r.id === sentenceId ? { ...r, generatingHongT: true } : r))
     );
 
@@ -296,7 +300,7 @@ export default function Index() {
       if (error) throw error;
       if (data.error) throw new Error(data.error);
 
-      setResults((prev) =>
+      updateResults((prev) =>
         prev.map((r) =>
           r.id === sentenceId
             ? { ...r, hongTNotes: data.explanation, generatingHongT: false }
@@ -305,7 +309,7 @@ export default function Index() {
       );
     } catch (e: any) {
       console.error(`홍T 생성 실패 (문장 ${sentenceId + 1}):`, e.message);
-      setResults((prev) =>
+      updateResults((prev) =>
         prev.map((r) => (r.id === sentenceId ? { ...r, generatingHongT: false } : r))
       );
     }
@@ -317,7 +321,7 @@ export default function Index() {
     if (sentences.length === 0) return;
 
     setLoading(true);
-    setResults([]);
+    updateResults([]);
     setProgress({ current: 0, total: sentences.length });
 
     const newResults: SentenceResult[] = [];
@@ -357,7 +361,7 @@ export default function Index() {
       }
 
       setProgress({ current: Math.min(batch + CONCURRENCY, sentences.length), total: sentences.length });
-      setResults([...newResults]);
+      updateResults([...newResults]);
     }
 
     // 구문분석 완료 후 홍T 순차 생성
@@ -382,8 +386,8 @@ export default function Index() {
 
     // 홍T 생성 완료 후 즉시 강제 저장 (debounce 우회)
     if (categories.selectedPassageId) {
-      // prevResultsRef는 useEffect로 항상 최신 results와 동기화됨
-      const latestResults = prevResultsRef.current;
+      // resultsRef는 updateResults로 항상 최신 results와 동기화됨
+      const latestResults = resultsRef.current;
       const sanitized = latestResults.map(({ generatingSyntax, generatingHongT, regenerating, ...rest }: any) => rest);
       const mergedStore = mergePassageStore(categories.selectedPassage?.results_json, {
         syntaxResults: sanitized.length > 0 ? sanitized : [],
@@ -423,7 +427,7 @@ export default function Index() {
 
       for (const { id, original, data, error } of batchResults) {
         if (!error && data && !data.error) {
-          setResults((prev) =>
+          updateResults((prev) =>
             prev.map((r) =>
               r.id === id
                 ? {
@@ -451,7 +455,7 @@ export default function Index() {
   const handleChunkChange = async (sentenceId: number, newChunks: Chunk[]) => {
     const newTagged = chunksToTagged(newChunks);
 
-    setResults((prev) =>
+    updateResults((prev) =>
       prev.map((r) =>
         r.id === sentenceId
           ? { ...r, englishChunks: newChunks, englishTagged: newTagged, regenerating: true }
@@ -467,7 +471,7 @@ export default function Index() {
       if (error) throw error;
       if (data.error) throw new Error(data.error);
 
-      setResults((prev) =>
+      updateResults((prev) =>
         prev.map((r) =>
           r.id === sentenceId
             ? {
@@ -481,14 +485,14 @@ export default function Index() {
       );
     } catch (e: any) {
       toast.error(`재생성 실패: ${e.message}`);
-      setResults((prev) =>
+      updateResults((prev) =>
         prev.map((r) => (r.id === sentenceId ? { ...r, regenerating: false } : r))
       );
     }
   };
 
   const handleGenerateSyntax = async (sentenceId: number, original: string, selectedText?: string, userHint?: string, slotNumber?: number) => {
-    setResults((prev) =>
+    updateResults((prev) =>
       prev.map((r) => (r.id === sentenceId ? { ...r, generatingSyntax: true } : r))
     );
 
@@ -501,7 +505,7 @@ export default function Index() {
       if (error) throw error;
       if (data.error) throw new Error(data.error);
 
-      setResults((prev) =>
+      updateResults((prev) =>
         prev.map((r) => {
           if (r.id !== sentenceId) return r;
 
@@ -558,7 +562,7 @@ export default function Index() {
       );
     } catch (e: any) {
       toast.error(`구문분석 생성 실패: ${e.message}`);
-      setResults((prev) =>
+      updateResults((prev) =>
         prev.map((r) => (r.id === sentenceId ? { ...r, generatingSyntax: false } : r))
       );
     }
@@ -568,7 +572,7 @@ export default function Index() {
     const target = results.find((r) => r.id === sentenceId);
     if (!target) return;
 
-    setResults((prev) =>
+    updateResults((prev) =>
       prev.map((r) => (r.id === sentenceId ? { ...r, regenerating: true } : r))
     );
 
@@ -580,7 +584,7 @@ export default function Index() {
       if (error) throw error;
       if (data.error) throw new Error(data.error);
 
-      setResults((prev) =>
+      updateResults((prev) =>
         prev.map((r) =>
           r.id === sentenceId
             ? {
@@ -598,7 +602,7 @@ export default function Index() {
       toast.success(`문장 ${sentenceId + 1} 재분석 완료`);
     } catch (e: any) {
       toast.error(`재분석 실패: ${e.message}`);
-      setResults((prev) =>
+      updateResults((prev) =>
         prev.map((r) => (r.id === sentenceId ? { ...r, regenerating: false } : r))
       );
     }
@@ -943,7 +947,7 @@ export default function Index() {
                           </div>
                         )}
                         <button
-                          onClick={() => setResults(prev => prev.map(r => r.id === result.id ? { ...r, hideLiteral: true } : r))}
+                          onClick={() => updateResults(prev => prev.map(r => r.id === result.id ? { ...r, hideLiteral: true } : r))}
                           className="absolute top-1.5 right-1.5 p-0.5 text-muted-foreground/50 hover:text-destructive opacity-0 group-hover/literal:opacity-100 transition-opacity"
                           title="직역 삭제"
                         >
@@ -951,7 +955,7 @@ export default function Index() {
                         </button>
                         <button
                           onClick={async () => {
-                            setResults(prev => prev.map(r => r.id === result.id ? { ...r, regeneratingLiteral: true } as any : r));
+                            updateResults(prev => prev.map(r => r.id === result.id ? { ...r, regeneratingLiteral: true } as any : r));
                             try {
                               const { data, error } = await supabase.functions.invoke("regenerate", {
                                 body: { english_tagged: result.englishTagged },
@@ -963,13 +967,13 @@ export default function Index() {
                               const newText = newChunks.map(c => c.text).join(" / ");
                               if (oldText === newText) {
                                 toast.info("동일한 결과입니다.");
-                                setResults(prev => prev.map(r => r.id === result.id ? { ...r, regeneratingLiteral: false } as any : r));
+                                updateResults(prev => prev.map(r => r.id === result.id ? { ...r, regeneratingLiteral: false } as any : r));
                                 return;
                               }
-                              setResults(prev => prev.map(r => r.id === result.id ? { ...r, pendingLiteralChunks: newChunks, pendingLiteralTagged: newTagged, regeneratingLiteral: false } as any : r));
+                              updateResults(prev => prev.map(r => r.id === result.id ? { ...r, pendingLiteralChunks: newChunks, pendingLiteralTagged: newTagged, regeneratingLiteral: false } as any : r));
                             } catch (e: any) {
                               toast.error(`직역 재생성 실패: ${e.message}`);
-                              setResults(prev => prev.map(r => r.id === result.id ? { ...r, regeneratingLiteral: false } as any : r));
+                              updateResults(prev => prev.map(r => r.id === result.id ? { ...r, regeneratingLiteral: false } as any : r));
                             }
                           }}
                           disabled={(result as any).regeneratingLiteral}
@@ -996,11 +1000,11 @@ export default function Index() {
                             </div>
                             <div className="flex gap-2 justify-end">
                               <button
-                                onClick={() => setResults(prev => prev.map(r => r.id === result.id ? { ...r, pendingLiteralChunks: undefined, pendingLiteralTagged: undefined } as any : r))}
+                                onClick={() => updateResults(prev => prev.map(r => r.id === result.id ? { ...r, pendingLiteralChunks: undefined, pendingLiteralTagged: undefined } as any : r))}
                                 className="text-[10px] px-3 py-1 rounded-full border border-border text-muted-foreground hover:text-foreground transition-colors"
                               >유지</button>
                               <button
-                                onClick={() => setResults(prev => prev.map(r => r.id === result.id ? {
+                                onClick={() => updateResults(prev => prev.map(r => r.id === result.id ? {
                                   ...r,
                                   koreanLiteralChunks: (r as any).pendingLiteralChunks,
                                   koreanLiteralTagged: (r as any).pendingLiteralTagged,
@@ -1017,7 +1021,7 @@ export default function Index() {
                             chunks={result.koreanLiteralChunks}
                             isKorean
                             onChunkTextChange={(idx, newText) => {
-                              setResults(prev => prev.map(r => {
+                              updateResults(prev => prev.map(r => {
                                 if (r.id !== result.id) return r;
                                 const updated = [...r.koreanLiteralChunks];
                                 updated[idx] = { ...updated[idx], text: newText };
@@ -1030,7 +1034,7 @@ export default function Index() {
                     )}
                     {result.hideLiteral && (
                       <button
-                        onClick={() => setResults(prev => prev.map(r => r.id === result.id ? { ...r, hideLiteral: false } : r))}
+                        onClick={() => updateResults(prev => prev.map(r => r.id === result.id ? { ...r, hideLiteral: false } : r))}
                         className="flex items-center gap-1 text-[10px] text-muted-foreground/60 hover:text-foreground transition-colors py-1"
                       >
                         <Eye className="w-3 h-3" />
@@ -1042,7 +1046,7 @@ export default function Index() {
                     {!result.hideNatural && (
                       <div className="bg-muted/50 border border-border rounded-xl p-3 relative group/natural">
                         <button
-                          onClick={() => setResults(prev => prev.map(r => r.id === result.id ? { ...r, hideNatural: true } : r))}
+                          onClick={() => updateResults(prev => prev.map(r => r.id === result.id ? { ...r, hideNatural: true } : r))}
                           className="absolute top-1.5 right-1.5 p-0.5 text-muted-foreground/50 hover:text-destructive opacity-0 group-hover/natural:opacity-100 transition-opacity"
                           title="의역 삭제"
                         >
@@ -1050,7 +1054,7 @@ export default function Index() {
                         </button>
                         <button
                           onClick={async () => {
-                            setResults(prev => prev.map(r => r.id === result.id ? { ...r, regeneratingNatural: true } as any : r));
+                            updateResults(prev => prev.map(r => r.id === result.id ? { ...r, regeneratingNatural: true } as any : r));
                             try {
                               const { data, error } = await supabase.functions.invoke("engine", {
                                 body: { sentence: result.original, preset },
@@ -1059,13 +1063,13 @@ export default function Index() {
                               const newNatural = data.korean_natural;
                               if (newNatural === result.koreanNatural) {
                                 toast.info("동일한 결과입니다.");
-                                setResults(prev => prev.map(r => r.id === result.id ? { ...r, regeneratingNatural: false } as any : r));
+                                updateResults(prev => prev.map(r => r.id === result.id ? { ...r, regeneratingNatural: false } as any : r));
                                 return;
                               }
-                              setResults(prev => prev.map(r => r.id === result.id ? { ...r, pendingNatural: newNatural, regeneratingNatural: false } as any : r));
+                              updateResults(prev => prev.map(r => r.id === result.id ? { ...r, pendingNatural: newNatural, regeneratingNatural: false } as any : r));
                             } catch (e: any) {
                               toast.error(`의역 재생성 실패: ${e.message}`);
-                              setResults(prev => prev.map(r => r.id === result.id ? { ...r, regeneratingNatural: false } as any : r));
+                              updateResults(prev => prev.map(r => r.id === result.id ? { ...r, regeneratingNatural: false } as any : r));
                             }
                           }}
                           disabled={(result as any).regeneratingNatural}
@@ -1092,11 +1096,11 @@ export default function Index() {
                             </div>
                             <div className="flex gap-2 justify-end">
                               <button
-                                onClick={() => setResults(prev => prev.map(r => r.id === result.id ? { ...r, pendingNatural: undefined } as any : r))}
+                                onClick={() => updateResults(prev => prev.map(r => r.id === result.id ? { ...r, pendingNatural: undefined } as any : r))}
                                 className="text-[10px] px-3 py-1 rounded-full border border-border text-muted-foreground hover:text-foreground transition-colors"
                               >유지</button>
                               <button
-                                onClick={() => setResults(prev => prev.map(r => r.id === result.id ? { ...r, koreanNatural: (r as any).pendingNatural, pendingNatural: undefined } as any : r))}
+                                onClick={() => updateResults(prev => prev.map(r => r.id === result.id ? { ...r, koreanNatural: (r as any).pendingNatural, pendingNatural: undefined } as any : r))}
                                 className="text-[10px] px-3 py-1 rounded-full bg-foreground text-background hover:opacity-90 transition-opacity"
                               >적용</button>
                             </div>
@@ -1107,7 +1111,7 @@ export default function Index() {
                             text={result.koreanNatural}
                             isKorean
                             onTextChange={(newText) => {
-                              setResults(prev => prev.map(r => r.id === result.id ? { ...r, koreanNatural: newText } : r));
+                              updateResults(prev => prev.map(r => r.id === result.id ? { ...r, koreanNatural: newText } : r));
                             }}
                           />
                         )}
@@ -1115,7 +1119,7 @@ export default function Index() {
                     )}
                     {result.hideNatural && (
                       <button
-                        onClick={() => setResults(prev => prev.map(r => r.id === result.id ? { ...r, hideNatural: false } : r))}
+                        onClick={() => updateResults(prev => prev.map(r => r.id === result.id ? { ...r, hideNatural: false } : r))}
                         className="flex items-center gap-1 text-[10px] text-muted-foreground/60 hover:text-foreground transition-colors py-1"
                       >
                         <Eye className="w-3 h-3" />
@@ -1128,7 +1132,7 @@ export default function Index() {
                       <HongTSection
                         value={result.hongTNotes ?? ""}
                         onChange={(val) =>
-                          setResults((prev) =>
+                          updateResults((prev) =>
                             prev.map((r) =>
                               r.id === result.id ? { ...r, hongTNotes: val } : r
                             )
@@ -1139,7 +1143,7 @@ export default function Index() {
                           const allSentences = results.map((r) => r.original);
                           generateHongT(result.id, allSentences);
                         }}
-                        onDelete={() => setResults(prev => prev.map(r => r.id === result.id ? { ...r, hideHongT: true } : r))}
+                        onDelete={() => updateResults(prev => prev.map(r => r.id === result.id ? { ...r, hideHongT: true } : r))}
                         sentence={result.original}
                         fullPassage={results.map((r) => r.original).join(" ")}
                         preset={preset}
@@ -1148,7 +1152,7 @@ export default function Index() {
                     )}
                     {result.hideHongT && (
                       <button
-                        onClick={() => setResults(prev => prev.map(r => r.id === result.id ? { ...r, hideHongT: false } : r))}
+                        onClick={() => updateResults(prev => prev.map(r => r.id === result.id ? { ...r, hideHongT: false } : r))}
                         className="flex items-center gap-1 text-[10px] text-muted-foreground/60 hover:text-foreground transition-colors py-1"
                       >
                         <Eye className="w-3 h-3" />
@@ -1160,7 +1164,7 @@ export default function Index() {
                     <SyntaxNotesSection
                       notes={result.syntaxNotes || []}
                       onChange={(notes) =>
-                        setResults((prev) =>
+                        updateResults((prev) =>
                           prev.map((r) =>
                             r.id === result.id ? { ...r, syntaxNotes: notes } : r
                           )
