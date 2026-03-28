@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   analysisBar: {
     width: 2,
     height: "100%",
-    backgroundColor: "#bfbfbf",
+    backgroundColor: "#111",
     marginRight: 7,
     flexShrink: 0,
   },
@@ -126,8 +126,8 @@ const styles = StyleSheet.create({
   },
   analysisLabel: {
     fontSize: 7.5,
-    fontWeight: 700,
-    color: "#666",
+    fontWeight: 800,
+    color: "#111",
     letterSpacing: 0.3,
     marginBottom: 2,
   },
