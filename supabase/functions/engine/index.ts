@@ -410,10 +410,10 @@ Return ONLY the corrected english_tagged string. Nothing else.`;
     return new Response(
       JSON.stringify({
         english_tagged: lastResult!.english_tagged,
-        korean_literal_tagged: lastResult!.korean_literal_tagged,
+        korean_literal_tagged: sanitizeKorean(lastResult!.korean_literal_tagged),
         english_slash: toSlash(lastResult!.english_tagged),
-        korean_literal_slash: toSlash(lastResult!.korean_literal_tagged),
-        korean_natural: lastResult!.korean_natural,
+        korean_literal_slash: toSlash(sanitizeKorean(lastResult!.korean_literal_tagged)),
+        korean_natural: sanitizeKorean(lastResult!.korean_natural),
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

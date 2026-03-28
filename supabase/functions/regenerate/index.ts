@@ -115,8 +115,8 @@ You MUST respond by calling the "regenerate_result" function.`;
 
     return new Response(
       JSON.stringify({
-        korean_literal_tagged: result.korean_literal_tagged,
-        korean_literal_slash: toSlash(result.korean_literal_tagged),
+        korean_literal_tagged: sanitizeKorean(result.korean_literal_tagged),
+        korean_literal_slash: toSlash(sanitizeKorean(result.korean_literal_tagged)),
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
