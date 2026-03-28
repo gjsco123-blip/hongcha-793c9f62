@@ -360,7 +360,25 @@ export default function Index() {
       setResults([...newResults]);
     }
 
-    // 홍T는 사용자가 버튼 클릭 시에만 생성
+    // 구문분석 완료 후 홍T 순차 생성
+    const allSentences = newResults.map((r) => r.original);
+    const hongTTargets = newResults.filter((r) => !r.hongTNotes?.trim() && r.koreanNatural !== "분석 실패" && !r.hideHongT);
+
+    if (hongTTargets.length > 0) {
+      setHongTPhase({ current: 0, total: hongTTargets.length });
+      for (let i = 0; i < hongTTargets.length; i++) {
+        setHongTPhase({ current: i + 1, total: hongTTargets.length });
+        try {
+          await generateHongT(hongTTargets[i].id, allSentences);
+        } catch (e) {
+          console.error(`홍T 생성 실패 (문장 ${hongTTargets[i].id + 1}):`, e);
+        }
+        if (i < hongTTargets.length - 1) {
+          await new Promise((r) => setTimeout(r, 500));
+        }
+      }
+      setHongTPhase(null);
+    }
 
     setLoading(false);
   };
