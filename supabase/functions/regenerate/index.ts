@@ -1,5 +1,24 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
+function sanitizeKorean(text: string): string {
+  return text
+    .replace(/했습니다/g, '했다')
+    .replace(/됩니다/g, '된다')
+    .replace(/되었습니다/g, '되었다')
+    .replace(/됐습니다/g, '됐다')
+    .replace(/있습니다/g, '있다')
+    .replace(/없습니다/g, '없다')
+    .replace(/갑니다/g, '간다')
+    .replace(/옵니다/g, '온다')
+    .replace(/줍니다/g, '준다')
+    .replace(/봅니다/g, '본다')
+    .replace(/납니다/g, '난다')
+    .replace(/겁니다/g, '것이다')
+    .replace(/습니까/g, '는가')
+    .replace(/합니다/g, '한다')
+    .replace(/입니다/g, '이다');
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -29,6 +48,7 @@ Your job:
 1. Translate each tagged chunk literally into Korean, keeping the EXACT same tag structure.
 2. The number and order of tags must be preserved exactly.
 3. Each <cN>...</cN> in Korean must correspond to the same <cN>...</cN> in English.
+4. CRITICAL: Use INFORMAL Korean endings (반말). Use ~했다, ~이다, ~한다, ~였다, ~된다. NEVER use polite endings like ~합니다, ~입니다, ~했습니다, ~됩니다.
 
 You MUST respond by calling the "regenerate_result" function.`;
 
@@ -95,8 +115,8 @@ You MUST respond by calling the "regenerate_result" function.`;
 
     return new Response(
       JSON.stringify({
-        korean_literal_tagged: result.korean_literal_tagged,
-        korean_literal_slash: toSlash(result.korean_literal_tagged),
+        korean_literal_tagged: sanitizeKorean(result.korean_literal_tagged),
+        korean_literal_slash: toSlash(sanitizeKorean(result.korean_literal_tagged)),
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
