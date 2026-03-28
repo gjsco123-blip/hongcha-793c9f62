@@ -170,7 +170,7 @@ export default function Index() {
 
   // Load passage data when a passage is selected
   const prevPassageIdRef = useRef<string | null>(null);
-  const prevResultsRef = useRef<SentenceResult[]>([]);
+  const prevPassageResultsRef = useRef<SentenceResult[]>([]);
 
   useEffect(() => {
     // Save learning examples from previous passage before loading new one
