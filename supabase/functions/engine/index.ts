@@ -6,6 +6,25 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function sanitizeKorean(text: string): string {
+  return text
+    .replace(/했습니다/g, '했다')
+    .replace(/됩니다/g, '된다')
+    .replace(/되었습니다/g, '되었다')
+    .replace(/됐습니다/g, '됐다')
+    .replace(/있습니다/g, '있다')
+    .replace(/없습니다/g, '없다')
+    .replace(/갑니다/g, '간다')
+    .replace(/옵니다/g, '온다')
+    .replace(/줍니다/g, '준다')
+    .replace(/봅니다/g, '본다')
+    .replace(/납니다/g, '난다')
+    .replace(/겁니다/g, '것이다')
+    .replace(/습니까/g, '는가')
+    .replace(/합니다/g, '한다')
+    .replace(/입니다/g, '이다');
+}
+
 function countTags(tagged: string): number {
   return (tagged.match(/<c\d+>/g) || []).length;
 }
