@@ -107,7 +107,15 @@ export default function Index() {
   const { user } = useAuth();
   const [passage, setPassage] = useState("");
   const [preset, setPreset] = useState<Preset>("수능");
-  const [results, setResults] = useState<SentenceResult[]>([]);
+  const [results, setResultsRaw] = useState<SentenceResult[]>([]);
+  const resultsRef = useRef<SentenceResult[]>([]);
+  const updateResults = useCallback((updater: React.SetStateAction<SentenceResult[]>) => {
+    setResultsRaw((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      resultsRef.current = next;
+      return next;
+    });
+  }, []);
   const [syntaxCompleted, setSyntaxCompleted] = useState(false);
   const [previewCompleted, setPreviewCompleted] = useState(false);
   const [loading, setLoading] = useState(false);
