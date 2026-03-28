@@ -175,7 +175,7 @@ export default function Index() {
   useEffect(() => {
     // Save learning examples from previous passage before loading new one
     if (prevPassageIdRef.current && prevPassageIdRef.current !== categories.selectedPassageId) {
-      saveSyntaxLearningExamples(prevResultsRef.current);
+      saveSyntaxLearningExamples(resultsRef.current);
       aiDraftMapRef.current = {};
     }
     prevPassageIdRef.current = categories.selectedPassageId || null;
