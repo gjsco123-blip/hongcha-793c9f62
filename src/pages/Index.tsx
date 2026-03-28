@@ -838,7 +838,9 @@ export default function Index() {
                 className="px-4 py-1.5 rounded-full bg-foreground text-background text-[11px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
               >
                 {loading
-                  ? `분석 중... (${progress.current}/${progress.total})`
+                  ? hongTPhase
+                    ? `${teacherLabel} 생성 중... (${hongTPhase.current}/${hongTPhase.total})`
+                    : `분석 중... (${progress.current}/${progress.total})`
                   : "분석하기"}
               </button>
             </div>
