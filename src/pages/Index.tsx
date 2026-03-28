@@ -230,6 +230,32 @@ export default function Index() {
     }, 2000);
   }, [categories.selectedPassageId, categories.selectedPassage?.results_json, passage, pdfTitle, preset, results, syntaxCompleted]);
 
+  const persistSyntaxResultsNow = useCallback(
+    async (nextResults: SentenceResult[]) => {
+      if (!categories.selectedPassageId || !dataLoadedRef.current) return;
+      const sanitizedResults = nextResults.map(({ generatingSyntax, generatingHongT, regenerating, ...rest }) => rest);
+      const mergedStore = mergePassageStore(categories.selectedPassage?.results_json, {
+        syntaxResults: sanitizedResults.length > 0 ? sanitizedResults : [],
+        completion: { syntaxCompleted },
+      });
+      await categories.updatePassage(categories.selectedPassageId, {
+        passage_text: passage,
+        pdf_title: pdfTitle,
+        preset,
+        results_json: mergedStore,
+      });
+    },
+    [
+      categories,
+      categories.selectedPassage?.results_json,
+      categories.selectedPassageId,
+      passage,
+      pdfTitle,
+      preset,
+      syntaxCompleted,
+    ]
+  );
+
   useEffect(() => {
     autoSave();
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
@@ -296,18 +322,22 @@ export default function Index() {
       if (error) throw error;
       if (data.error) throw new Error(data.error);
 
+      let nextResultsForSave: SentenceResult[] = [];
       setResults((prev) =>
-        prev.map((r) =>
+        (nextResultsForSave = prev.map((r) =>
           r.id === sentenceId
             ? { ...r, hongTNotes: data.explanation, generatingHongT: false }
             : r
-        )
+        ))
       );
+      await persistSyntaxResultsNow(nextResultsForSave);
+      return true;
     } catch (e: any) {
       console.error(`홍T 생성 실패 (문장 ${sentenceId + 1}):`, e.message);
       setResults((prev) =>
         prev.map((r) => (r.id === sentenceId ? { ...r, generatingHongT: false } : r))
       );
+      return false;
     }
   };
 
@@ -324,11 +354,11 @@ export default function Index() {
 
     for (let i = 0; i < targets.length; i++) {
       setBatchHongTProgress({ current: i + 1, total: targets.length });
-      try {
-        await generateHongT(targets[i].id, allSentences);
+      const ok = await generateHongT(targets[i].id, allSentences);
+      if (ok) {
         successCount++;
-      } catch (e) {
-        console.error(`홍T 일괄 생성 실패 (문장 ${targets[i].id + 1}):`, e);
+      } else {
+        console.error(`홍T 일괄 생성 실패 (문장 ${targets[i].id + 1})`);
       }
       if (i < targets.length - 1) {
         await new Promise((r) => setTimeout(r, 500));
