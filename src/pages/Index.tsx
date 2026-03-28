@@ -115,7 +115,7 @@ export default function Index() {
   const [pdfTitle, setPdfTitle] = useState("SYNTAX");
   
   const [editedSentences, setEditedSentences] = useState<string[]>([]);
-  const [batchHongTProgress, setBatchHongTProgress] = useState<{ current: number; total: number } | null>(null);
+  const [hongTPhase, setHongTPhase] = useState<{ current: number; total: number } | null>(null);
 
   const categories = useCategories();
   const { teacherLabel, setTeacherLabel } = useTeacherLabel();
@@ -311,37 +311,6 @@ export default function Index() {
     }
   };
 
-  const generateAllHongT = async () => {
-    const allSentences = results.map((r) => r.original);
-    const targets = results.filter((r) => !r.hongTNotes?.trim() && !r.hideHongT);
-    if (targets.length === 0) {
-      toast.info("모든 문장에 홍T 해설이 이미 있습니다.");
-      return;
-    }
-
-    setBatchHongTProgress({ current: 0, total: targets.length });
-    let successCount = 0;
-
-    for (let i = 0; i < targets.length; i++) {
-      setBatchHongTProgress({ current: i + 1, total: targets.length });
-      try {
-        await generateHongT(targets[i].id, allSentences);
-        successCount++;
-      } catch (e) {
-        console.error(`홍T 일괄 생성 실패 (문장 ${targets[i].id + 1}):`, e);
-      }
-      if (i < targets.length - 1) {
-        await new Promise((r) => setTimeout(r, 500));
-      }
-    }
-
-    setBatchHongTProgress(null);
-    if (successCount === targets.length) {
-      toast.success(`홍T 생성 완료: ${successCount}/${targets.length} 성공`);
-    } else {
-      toast.warning(`홍T 생성 완료: ${successCount}/${targets.length} 성공`);
-    }
-  };
 
   const handleAnalyze = async () => {
     const sentences = editedSentences.filter((s) => s.trim().length > 0);
@@ -391,7 +360,25 @@ export default function Index() {
       setResults([...newResults]);
     }
 
-    // 홍T는 사용자가 버튼 클릭 시에만 생성
+    // 구문분석 완료 후 홍T 순차 생성
+    const allSentences = newResults.map((r) => r.original);
+    const hongTTargets = newResults.filter((r) => !r.hongTNotes?.trim() && r.koreanNatural !== "분석 실패" && !r.hideHongT);
+
+    if (hongTTargets.length > 0) {
+      setHongTPhase({ current: 0, total: hongTTargets.length });
+      for (let i = 0; i < hongTTargets.length; i++) {
+        setHongTPhase({ current: i + 1, total: hongTTargets.length });
+        try {
+          await generateHongT(hongTTargets[i].id, allSentences);
+        } catch (e) {
+          console.error(`홍T 생성 실패 (문장 ${hongTTargets[i].id + 1}):`, e);
+        }
+        if (i < hongTTargets.length - 1) {
+          await new Promise((r) => setTimeout(r, 500));
+        }
+      }
+      setHongTPhase(null);
+    }
 
     setLoading(false);
   };
@@ -793,16 +780,6 @@ export default function Index() {
               {results.length > 0 && (
                 <>
                   <button
-                    onClick={generateAllHongT}
-                    disabled={!!batchHongTProgress || loading}
-                    className="px-3 py-1 rounded-full border border-foreground text-foreground text-[11px] font-medium hover:bg-foreground hover:text-background transition-colors disabled:opacity-50 flex items-center gap-1"
-                  >
-                    <Sparkles className="w-3 h-3" />
-                    {batchHongTProgress
-                      ? `홍T ${batchHongTProgress.current}/${batchHongTProgress.total}...`
-                      : "홍T 일괄 생성"}
-                  </button>
-                  <button
                     onClick={handlePreviewPdf}
                     disabled={pdfGenerating}
                     className="px-3 py-1 rounded-full border border-foreground text-foreground text-[11px] font-medium hover:bg-foreground hover:text-background transition-colors disabled:opacity-50"
@@ -863,7 +840,9 @@ export default function Index() {
                 className="px-4 py-1.5 rounded-full bg-foreground text-background text-[11px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
               >
                 {loading
-                  ? `분석 중... (${progress.current}/${progress.total})`
+                  ? hongTPhase
+                    ? `${teacherLabel} 생성 중... (${hongTPhase.current}/${hongTPhase.total})`
+                    : `분석 중... (${progress.current}/${progress.total})`
                   : "분석하기"}
               </button>
             </div>
