@@ -380,6 +380,23 @@ export default function Index() {
       setHongTPhase(null);
     }
 
+    // 홍T 생성 완료 후 즉시 강제 저장 (debounce 우회)
+    if (categories.selectedPassageId) {
+      // prevResultsRef는 useEffect로 항상 최신 results와 동기화됨
+      const latestResults = prevResultsRef.current;
+      const sanitized = latestResults.map(({ generatingSyntax, generatingHongT, regenerating, ...rest }: any) => rest);
+      const mergedStore = mergePassageStore(categories.selectedPassage?.results_json, {
+        syntaxResults: sanitized.length > 0 ? sanitized : [],
+        completion: { syntaxCompleted: true },
+      });
+      await categories.updatePassage(categories.selectedPassageId, {
+        passage_text: passage,
+        pdf_title: pdfTitle,
+        preset,
+        results_json: mergedStore,
+      });
+    }
+
     setLoading(false);
   };
 
