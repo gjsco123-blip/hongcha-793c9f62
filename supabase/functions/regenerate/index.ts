@@ -48,6 +48,7 @@ Your job:
 1. Translate each tagged chunk literally into Korean, keeping the EXACT same tag structure.
 2. The number and order of tags must be preserved exactly.
 3. Each <cN>...</cN> in Korean must correspond to the same <cN>...</cN> in English.
+4. CRITICAL: Use INFORMAL Korean endings (반말). Use ~했다, ~이다, ~한다, ~였다, ~된다. NEVER use polite endings like ~합니다, ~입니다, ~했습니다, ~됩니다.
 
 You MUST respond by calling the "regenerate_result" function.`;
 
