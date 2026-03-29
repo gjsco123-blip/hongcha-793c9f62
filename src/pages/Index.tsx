@@ -222,23 +222,26 @@ export default function Index() {
     const hasTransientWork = results.some((r) => r.generatingSyntax || r.generatingHongT || r.regenerating);
     if (hasTransientWork) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
+    saveTimerRef.current = setTimeout(async () => {
       const stillHasTransientWork = results.some((r) => r.generatingSyntax || r.generatingHongT || r.regenerating);
       if (stillHasTransientWork) return;
       // Strip transient UI flags before persisting
       const sanitizedResults = results.map(({ generatingSyntax, generatingHongT, regenerating, ...rest }) => rest);
-      const mergedStore = mergePassageStore(categories.selectedPassage?.results_json, {
+      const mergedStore = mergePassageStore(baseResultsJsonRef.current, {
         syntaxResults: sanitizedResults.length > 0 ? sanitizedResults : [],
         completion: { syntaxCompleted },
       });
-      categories.updatePassage(categories.selectedPassageId!, {
+      const updated = await categories.updatePassage(categories.selectedPassageId!, {
         passage_text: passage,
         pdf_title: pdfTitle,
         preset,
         results_json: mergedStore,
       });
+      if (updated) {
+        baseResultsJsonRef.current = updated.results_json;
+      }
     }, 2000);
-  }, [categories.selectedPassageId, categories.selectedPassage?.results_json, passage, pdfTitle, preset, results, syntaxCompleted]);
+  }, [categories.selectedPassageId, passage, pdfTitle, preset, results, syntaxCompleted]);
 
   useEffect(() => {
     autoSave();
