@@ -110,19 +110,19 @@ const styles = StyleSheet.create({
     paddingTop: 6,
   },
   analysisItem: {
-    flexDirection: "row",
-    alignItems: "stretch",
     marginBottom: 13.5,
   },
   analysisBar: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
     width: 2,
-    height: "100%",
     backgroundColor: "#111",
-    marginRight: 7,
-    flexShrink: 0,
   },
   analysisContentWrap: {
-    flex: 1,
+    position: "relative",
+    paddingLeft: 9,
   },
   analysisLabel: {
     fontSize: 7.5,
@@ -184,8 +184,8 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
             <View style={styles.analysisSection}>
               {topic ? (
                 <View style={styles.analysisItem}>
-                  <View style={styles.analysisBar} />
                   <View style={styles.analysisContentWrap}>
+                    <View style={styles.analysisBar} />
                     <Text style={styles.analysisLabel}>TOPIC</Text>
                     <Text style={styles.analysisText}>{topic}</Text>
                   </View>
@@ -193,8 +193,8 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
               ) : null}
               {heading ? (
                 <View style={styles.analysisItem}>
-                  <View style={styles.analysisBar} />
                   <View style={styles.analysisContentWrap}>
+                    <View style={styles.analysisBar} />
                     <Text style={styles.analysisLabel}>TITLE</Text>
                     <Text style={styles.analysisText}>{heading}</Text>
                   </View>
@@ -202,8 +202,8 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
               ) : null}
               {summary ? (
                 <View style={styles.analysisItem}>
-                  <View style={styles.analysisBar} />
                   <View style={styles.analysisContentWrap}>
+                    <View style={styles.analysisBar} />
                     <Text style={styles.analysisLabel}>SUMMARY</Text>
                     <Text style={styles.analysisText}>{summary}</Text>
                   </View>
