@@ -129,6 +129,7 @@ export default function Index() {
   const { teacherLabel, setTeacherLabel } = useTeacherLabel();
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const dataLoadedRef = useRef(false);
+  const baseResultsJsonRef = useRef<unknown>(null); // last-known DB results_json for merge base
   
   // Track AI-generated drafts for learning_examples auto-save
   const aiDraftMapRef = useRef<Record<number, string>>({});
