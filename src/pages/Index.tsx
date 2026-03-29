@@ -701,19 +701,23 @@ export default function Index() {
     if (!categories.selectedPassageId) return;
     const next = !syntaxCompleted;
     setSyntaxCompleted(next);
-    const mergedStore = mergePassageStore(categories.selectedPassage?.results_json, {
-      syntaxResults: results.length > 0 ? results : [],
+    const sanitizedResults = results.map(({ generatingSyntax, generatingHongT, regenerating, ...rest }) => rest);
+    const mergedStore = mergePassageStore(baseResultsJsonRef.current, {
+      syntaxResults: sanitizedResults.length > 0 ? sanitizedResults : [],
       completion: {
         syntaxCompleted: next,
         syntaxCompletedAt: next ? new Date().toISOString() : null,
       },
     });
-    categories.updatePassage(categories.selectedPassageId, {
+    const updated = await categories.updatePassage(categories.selectedPassageId, {
       passage_text: passage,
       pdf_title: pdfTitle,
       preset,
       results_json: mergedStore,
     });
+    if (updated) {
+      baseResultsJsonRef.current = updated.results_json;
+    }
     toast.success(next ? "구문분석 완료로 표시됨" : "구문분석 완료 표시 해제");
   };
 
