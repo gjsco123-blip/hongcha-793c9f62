@@ -115,8 +115,9 @@ const styles = StyleSheet.create({
   analysisBar: {
     position: "absolute",
     left: 0,
-    top: 0,
-    bottom: 0,
+    // Trim line-box padding so the bar visually aligns to text top/bottom.
+    top: 1.5,
+    bottom: 1.5,
     width: 2,
     backgroundColor: "#111",
   },
@@ -129,13 +130,14 @@ const styles = StyleSheet.create({
     fontWeight: 800,
     color: "#111",
     letterSpacing: 0.3,
-    marginBottom: 2,
+    lineHeight: 1.2,
+    marginBottom: 1.5,
   },
   analysisText: {
     fontSize: 9.5,
     fontWeight: 400,
     color: "#111",
-    lineHeight: 1.7,
+    lineHeight: 1.6,
   },
 });
 
