@@ -181,9 +181,13 @@ export default function Index() {
     }
     prevPassageIdRef.current = categories.selectedPassageId || null;
 
+    // Block auto-save until fresh data is loaded
+    dataLoadedRef.current = false;
+
     const p = categories.selectedPassage;
     if (p) {
       const store = parsePassageStore(p.results_json);
+      baseResultsJsonRef.current = p.results_json; // capture fresh merge base
       setPassage(p.passage_text || "");
       setPdfTitle(p.pdf_title || p.name || "SYNTAX");
       setPreset((p.preset as Preset) || "수능");
@@ -204,6 +208,7 @@ export default function Index() {
       } else {
         updateResults([]);
       }
+      // Allow auto-save only after fresh data is fully loaded
       dataLoadedRef.current = true;
     } else {
       setPreviewCompleted(false);
