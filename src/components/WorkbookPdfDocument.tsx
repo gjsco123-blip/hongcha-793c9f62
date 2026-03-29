@@ -59,12 +59,12 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   title: {
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: 700,
     color: "#111",
   },
   workbookLabel: {
-    fontSize: 9,
+    fontSize: 8.5,
     fontWeight: 600,
     color: "#111",
     letterSpacing: 0.6,
@@ -90,19 +90,19 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: "#fff",
-    fontSize: 6.8,
+    fontSize: 6.3,
     fontWeight: 700,
     lineHeight: 1.1,
   },
   sentenceText: {
     flex: 1,
-    fontSize: 9.5,
+    fontSize: 9.0,
     fontWeight: 600,
     color: "#111",
     lineHeight: 3.5,
   },
   sentenceTextCompact: {
-    fontSize: 9.2,
+    fontSize: 8.7,
     lineHeight: 3.0,
   },
   analysisSection: {
@@ -125,14 +125,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   analysisLabel: {
-    fontSize: 7.5,
+    fontSize: 7.0,
     fontWeight: 800,
     color: "#111",
     letterSpacing: 0.3,
     marginBottom: 2,
   },
   analysisText: {
-    fontSize: 9.5,
+    fontSize: 9.0,
     fontWeight: 400,
     color: "#111",
     lineHeight: 1.7,
@@ -153,8 +153,8 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
     <Document>
       <Page size="A4" style={styles.page} wrap>
         <View style={styles.header} fixed>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.workbookLabel}>Workbook</Text>
+          <Text style={styles.title}>{title.toUpperCase()}</Text>
+          <Text style={styles.workbookLabel}>WORKBOOK</Text>
         </View>
         <View style={styles.body}>
           {results.map((result, index) => (
@@ -175,7 +175,7 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
                   useCompactSentenceLayout ? styles.sentenceTextCompact : null,
                 ]}
               >
-                {result.original}
+                {result.original.toUpperCase()}
               </Text>
             </View>
           ))}
@@ -187,7 +187,7 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
                   <View style={styles.analysisBar} />
                   <View style={styles.analysisContentWrap}>
                     <Text style={styles.analysisLabel}>TOPIC</Text>
-                    <Text style={styles.analysisText}>{topic}</Text>
+                    <Text style={styles.analysisText}>{topic.toUpperCase()}</Text>
                   </View>
                 </View>
               ) : null}
@@ -196,7 +196,7 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
                   <View style={styles.analysisBar} />
                   <View style={styles.analysisContentWrap}>
                     <Text style={styles.analysisLabel}>TITLE</Text>
-                    <Text style={styles.analysisText}>{heading}</Text>
+                    <Text style={styles.analysisText}>{heading.toUpperCase()}</Text>
                   </View>
                 </View>
               ) : null}
@@ -205,7 +205,7 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
                   <View style={styles.analysisBar} />
                   <View style={styles.analysisContentWrap}>
                     <Text style={styles.analysisLabel}>SUMMARY</Text>
-                    <Text style={styles.analysisText}>{summary}</Text>
+                    <Text style={styles.analysisText}>{summary.toUpperCase()}</Text>
                   </View>
                 </View>
               ) : null}
