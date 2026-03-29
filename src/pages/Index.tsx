@@ -395,19 +395,21 @@ export default function Index() {
 
     // 홍T 생성 완료 후 즉시 강제 저장 (debounce 우회)
     if (categories.selectedPassageId) {
-      // resultsRef는 updateResults로 항상 최신 results와 동기화됨
       const latestResults = resultsRef.current;
       const sanitized = latestResults.map(({ generatingSyntax, generatingHongT, regenerating, ...rest }: any) => rest);
-      const mergedStore = mergePassageStore(categories.selectedPassage?.results_json, {
+      const mergedStore = mergePassageStore(baseResultsJsonRef.current, {
         syntaxResults: sanitized.length > 0 ? sanitized : [],
         completion: { syntaxCompleted: true },
       });
-      await categories.updatePassage(categories.selectedPassageId, {
+      const updated = await categories.updatePassage(categories.selectedPassageId, {
         passage_text: passage,
         pdf_title: pdfTitle,
         preset,
         results_json: mergedStore,
       });
+      if (updated) {
+        baseResultsJsonRef.current = updated.results_json;
+      }
     }
 
     setLoading(false);
