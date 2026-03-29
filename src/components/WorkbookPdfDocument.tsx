@@ -78,9 +78,9 @@ const styles = StyleSheet.create({
     marginBottom: 11,
   },
   badge: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+    width: 13,
+    height: 13,
+    borderRadius: 6.5,
     backgroundColor: "#111",
     alignItems: "center",
     justifyContent: "center",
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: "#fff",
-    fontSize: 6.8,
+    fontSize: 6.5,
     fontWeight: 700,
     lineHeight: 1.1,
   },
