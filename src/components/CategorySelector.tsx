@@ -225,6 +225,41 @@ export function CategoryFullScreen({
     setPassageHighlightIdx(-1);
   }, [newName]);
 
+  // Reset selection when school changes
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [selectedSchoolId]);
+
+  const toggleSelection = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selectedIds.size === passages.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(passages.map((p) => p.id)));
+    }
+  };
+
+  const handleBatchExport = async (type: "syntax" | "preview" | "combined" | "workbook") => {
+    if (selectedIds.size === 0 || !selectedSchool) return;
+    setExporting(true);
+    try {
+      if (type === "syntax") await batchExportSyntax(passages, selectedIds, selectedSchool.name, teacherLabel);
+      else if (type === "preview") await batchExportPreview(passages, selectedIds, selectedSchool.name);
+      else if (type === "combined") await batchExportCombined(passages, selectedIds, selectedSchool.name, teacherLabel);
+      else if (type === "workbook") await batchExportWorkbook(passages, selectedIds, selectedSchool.name);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Top bar */}
