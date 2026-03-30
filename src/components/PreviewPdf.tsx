@@ -71,7 +71,7 @@ const T = {
   black: "#000000",
   g70: "#000000",
   g50: "#000000",
-  g30: "#bbb",
+  g30: "#000000",
   g30text: "#666",
   g10: "#f0f0f0",
   g05: "#f8f8f8",
@@ -93,7 +93,7 @@ const s = StyleSheet.create({
   },
   secTitle: {
     fontSize: 7.5,
-    fontWeight: 700,
+    fontWeight: 800,
     letterSpacing: 0.6,
     textTransform: "uppercase" as const,
     color: T.g50,
@@ -184,7 +184,7 @@ const s = StyleSheet.create({
   },
   synHdrText: {
     fontSize: 7.5,
-    fontWeight: 700,
+    fontWeight: 800,
     color: T.g50,
     textTransform: "uppercase" as const,
     letterSpacing: 0.6,
@@ -194,7 +194,7 @@ const s = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 7.5,
-    fontWeight: 700,
+    fontWeight: 800,
     letterSpacing: 0.6,
     textTransform: "uppercase" as const,
     color: T.g50,
