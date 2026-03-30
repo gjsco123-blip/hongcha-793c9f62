@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   passageSectionTitle: {
-    fontSize: 7,
+    fontSize: 7.5,
     fontWeight: 800,
     letterSpacing: 1.2,
     color: "#000000",
