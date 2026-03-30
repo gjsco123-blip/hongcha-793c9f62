@@ -117,6 +117,8 @@ export function CategoryFullScreen({
   onReorderPassages,
 }: CategorySelectorProps) {
   const { signOut, user } = useAuth();
+  const { teacherLabel } = useTeacherLabel();
+  const { batchExportSyntax, batchExportPreview, batchExportCombined, batchExportWorkbook } = useBatchPdfExport();
   const [addingSchool, setAddingSchool] = useState(false);
   const [addingPassage, setAddingPassage] = useState(false);
   const [newName, setNewName] = useState("");
@@ -125,10 +127,8 @@ export function CategoryFullScreen({
   const [editingPassageName, setEditingPassageName] = useState("");
   const [savingPassageId, setSavingPassageId] = useState<string | null>(null);
   const [passageHighlightIdx, setPassageHighlightIdx] = useState(-1);
-
-  // Drag state
-  const [dragIdx, setDragIdx] = useState<number | null>(null);
-  const [overIdx, setOverIdx] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [exporting, setExporting] = useState(false);
 
   const selectedSchool = schools.find((s) => s.id === selectedSchoolId);
   const passageSuggestions = useMemo(() => {
