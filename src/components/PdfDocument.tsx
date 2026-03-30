@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
   memoLabel: {
     fontSize: 6,
     fontWeight: 700,
-    color: "#222",
+    color: "#000000",
     letterSpacing: 1,
     marginBottom: 4,
     textAlign: "right",
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
   },
   passageTextBox: {
     borderWidth: 0.5,
-    borderColor: "#ccc",
+    borderColor: "#000000",
     borderRadius: 4,
     padding: 14,
     paddingTop: 12,
