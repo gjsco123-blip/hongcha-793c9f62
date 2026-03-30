@@ -160,23 +160,23 @@ const styles = StyleSheet.create({
   translationBar: {
     width: 2,
     height: 6,
-    backgroundColor: "#777",
+    backgroundColor: "#000000",
     marginRight: 2,
     marginTop: 1,
     flexShrink: 0,
   },
   translationLabel: {
-    fontWeight: 600,
+    fontWeight: 700,
     fontSize: 6.5,
     width: 17,
     flexShrink: 0,
     lineHeight: 1.8,
-    color: "#777",
+    color: "#000000",
   },
   translationContent: {
     flex: 1,
     fontSize: 6.5,
-    color: "#222",
+    color: "#000000",
     lineHeight: 1.8,
   },
   passageSection: {
@@ -186,9 +186,9 @@ const styles = StyleSheet.create({
   },
   passageSectionTitle: {
     fontSize: 7,
-    fontWeight: 700,
+    fontWeight: 800,
     letterSpacing: 1.2,
-    color: "#666",
+    color: "#000000",
     marginBottom: 3,
   },
   passageTextBox: {
@@ -246,7 +246,12 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
     superscriptMap.set(key, arr);
   };
 
-  const chunkOffsets: { ci: number; start: number; end: number; segOffsets: { si: number; start: number; end: number }[] }[] = [];
+  const chunkOffsets: {
+    ci: number;
+    start: number;
+    end: number;
+    segOffsets: { si: number; start: number; end: number }[];
+  }[] = [];
   {
     const fullTextLower = fullText.toLowerCase();
     let cursor = 0;
@@ -390,7 +395,17 @@ function renderChunksSlashPlain(chunks: Chunk[]): string {
 
 // Height estimation & pagination now live in src/lib/pdf-pagination.ts
 
-function SentenceBlock({ result, index, isLast, teacherLabel = "홍T" }: { result: SentenceResult; index: number; isLast: boolean; teacherLabel?: string }) {
+function SentenceBlock({
+  result,
+  index,
+  isLast,
+  teacherLabel = "홍T",
+}: {
+  result: SentenceResult;
+  index: number;
+  isLast: boolean;
+  teacherLabel?: string;
+}) {
   return (
     <View
       key={result.id}
@@ -496,7 +511,13 @@ export function PdfDocument({ results, title, subtitle, teacherLabel = "홍T" }:
                 {pageResults.map((result, idx) => {
                   const isLastInPage = idx === pageResults.length - 1;
                   return (
-                    <SentenceBlock key={result.id} result={result} index={pageStartIndex + idx} isLast={isLastInPage} teacherLabel={teacherLabel} />
+                    <SentenceBlock
+                      key={result.id}
+                      result={result}
+                      index={pageStartIndex + idx}
+                      isLast={isLastInPage}
+                      teacherLabel={teacherLabel}
+                    />
                   );
                 })}
               </View>
