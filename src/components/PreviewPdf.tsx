@@ -68,9 +68,9 @@ interface Props {
 const T = {
   ko: "Pretendard",
   en: "Pretendard",
-  black: "#1a1a1a",
-  g70: "#555",
-  g50: "#666",
+  black: "#000000",
+  g70: "#000000",
+  g50: "#000000",
   g30: "#bbb",
   g30text: "#666",
   g10: "#f0f0f0",
