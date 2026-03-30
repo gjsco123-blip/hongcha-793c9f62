@@ -353,6 +353,37 @@ export function CategoryFullScreen({
               </div>
               <p className="text-sm text-muted-foreground mb-4">지문을 선택하세요</p>
 
+              {/* PDF Batch Export Toolbar */}
+              {passages.length > 0 && (
+                <div className="mb-4 p-3 border border-border rounded-lg bg-muted/30 space-y-2">
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      checked={passages.length > 0 && selectedIds.size === passages.length}
+                      onCheckedChange={toggleAll}
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {selectedIds.size > 0 ? `${selectedIds.size}개 선택됨` : "전체 선택"}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(["syntax", "preview", "combined", "workbook"] as const).map((type) => {
+                      const labels = { syntax: "구문분석", preview: "Preview", combined: "통합", workbook: "워크북" };
+                      return (
+                        <button
+                          key={type}
+                          onClick={() => handleBatchExport(type)}
+                          disabled={selectedIds.size === 0 || exporting}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium bg-background border border-border text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <Download className="w-3 h-3" />
+                          {labels[type]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-1">
                 {passages.map((p, idx) => (
                   <div
