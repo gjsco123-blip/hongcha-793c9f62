@@ -130,7 +130,7 @@ const s = StyleSheet.create({
   vNum: { width: 14, marginRight: 4, fontSize: 6.5, color: T.g30text, textAlign: "center" as const, lineHeight: 1 },
   vWord: { width: 56, fontSize: 7, fontWeight: 600, lineHeight: 1 },
   vPos: { width: 18, fontSize: 6, color: T.g50, textAlign: "center" as const, lineHeight: 1, marginRight: 4 },
-  vMeaning: { flex: 1, fontSize: 6.5, lineHeight: 1.3 },
+  vMeaning: { flex: 1, fontSize: 6.5, lineHeight: 1 },
   vHdrText: { fontSize: 6, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.4 },
   summaryBox: { borderLeftWidth: 2, borderLeftColor: T.g30, paddingLeft: 10, paddingVertical: 3 },
   summaryText: { fontSize: 7, lineHeight: 1.7 },
