@@ -1,7 +1,10 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Plus, Trash2, LogOut, ChevronRight, BookOpen, School as SchoolIcon, GripVertical, Pencil, Check, X } from "lucide-react";
+import { Plus, Trash2, LogOut, ChevronRight, BookOpen, School as SchoolIcon, GripVertical, Pencil, Check, X, Download } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { School, Passage } from "@/hooks/useCategories";
+import { useBatchPdfExport } from "@/hooks/useBatchPdfExport";
+import { useTeacherLabel } from "@/hooks/useTeacherLabel";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface CategorySelectorProps {
   schools: School[];
@@ -114,6 +117,8 @@ export function CategoryFullScreen({
   onReorderPassages,
 }: CategorySelectorProps) {
   const { signOut, user } = useAuth();
+  const { teacherLabel } = useTeacherLabel();
+  const { batchExportSyntax, batchExportPreview, batchExportCombined, batchExportWorkbook } = useBatchPdfExport();
   const [addingSchool, setAddingSchool] = useState(false);
   const [addingPassage, setAddingPassage] = useState(false);
   const [newName, setNewName] = useState("");
@@ -122,6 +127,8 @@ export function CategoryFullScreen({
   const [editingPassageName, setEditingPassageName] = useState("");
   const [savingPassageId, setSavingPassageId] = useState<string | null>(null);
   const [passageHighlightIdx, setPassageHighlightIdx] = useState(-1);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [exporting, setExporting] = useState(false);
 
   // Drag state
   const [dragIdx, setDragIdx] = useState<number | null>(null);
@@ -218,6 +225,41 @@ export function CategoryFullScreen({
     setPassageHighlightIdx(-1);
   }, [newName]);
 
+  // Reset selection when school changes
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [selectedSchoolId]);
+
+  const toggleSelection = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selectedIds.size === passages.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(passages.map((p) => p.id)));
+    }
+  };
+
+  const handleBatchExport = async (type: "syntax" | "preview" | "combined" | "workbook") => {
+    if (selectedIds.size === 0 || !selectedSchool) return;
+    setExporting(true);
+    try {
+      if (type === "syntax") await batchExportSyntax(passages, selectedIds, selectedSchool.name, teacherLabel);
+      else if (type === "preview") await batchExportPreview(passages, selectedIds, selectedSchool.name);
+      else if (type === "combined") await batchExportCombined(passages, selectedIds, selectedSchool.name, teacherLabel);
+      else if (type === "workbook") await batchExportWorkbook(passages, selectedIds, selectedSchool.name);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Top bar */}
@@ -311,6 +353,37 @@ export function CategoryFullScreen({
               </div>
               <p className="text-sm text-muted-foreground mb-4">지문을 선택하세요</p>
 
+              {/* PDF Batch Export Toolbar */}
+              {passages.length > 0 && (
+                <div className="mb-4 p-3 border border-border rounded-lg bg-muted/30 space-y-2">
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      checked={passages.length > 0 && selectedIds.size === passages.length}
+                      onCheckedChange={toggleAll}
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {selectedIds.size > 0 ? `${selectedIds.size}개 선택됨` : "전체 선택"}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(["syntax", "preview", "combined", "workbook"] as const).map((type) => {
+                      const labels = { syntax: "구문분석", preview: "Preview", combined: "통합", workbook: "워크북" };
+                      return (
+                        <button
+                          key={type}
+                          onClick={() => handleBatchExport(type)}
+                          disabled={selectedIds.size === 0 || exporting}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium bg-background border border-border text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <Download className="w-3 h-3" />
+                          {labels[type]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-1">
                 {passages.map((p, idx) => (
                   <div
@@ -322,6 +395,12 @@ export function CategoryFullScreen({
                     onDragEnd={() => { setDragIdx(null); setOverIdx(null); }}
                     onDrop={(e) => { e.preventDefault(); handleDrop(idx); }}
                   >
+                    <span className="p-1.5 flex items-center" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedIds.has(p.id)}
+                        onCheckedChange={() => toggleSelection(p.id)}
+                      />
+                    </span>
                     <span className="p-1.5 cursor-grab text-muted-foreground/30 hover:text-muted-foreground transition-colors">
                       <GripVertical className="w-3.5 h-3.5" />
                     </span>

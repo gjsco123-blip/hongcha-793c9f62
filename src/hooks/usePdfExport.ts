@@ -66,7 +66,7 @@ function triggerDownload(blob: Blob, filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-async function mergePdfBlobs(blobs: Blob[]): Promise<Blob> {
+export async function mergePdfBlobs(blobs: Blob[]): Promise<Blob> {
   const merged = await PDFDocument.create();
   for (const b of blobs) {
     const bytes = new Uint8Array(await b.arrayBuffer());
