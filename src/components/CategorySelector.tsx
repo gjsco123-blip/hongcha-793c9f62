@@ -395,6 +395,12 @@ export function CategoryFullScreen({
                     onDragEnd={() => { setDragIdx(null); setOverIdx(null); }}
                     onDrop={(e) => { e.preventDefault(); handleDrop(idx); }}
                   >
+                    <span className="p-1.5 flex items-center" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedIds.has(p.id)}
+                        onCheckedChange={() => toggleSelection(p.id)}
+                      />
+                    </span>
                     <span className="p-1.5 cursor-grab text-muted-foreground/30 hover:text-muted-foreground transition-colors">
                       <GripVertical className="w-3.5 h-3.5" />
                     </span>
