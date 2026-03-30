@@ -130,6 +130,10 @@ export function CategoryFullScreen({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exporting, setExporting] = useState(false);
 
+  // Drag state
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [overIdx, setOverIdx] = useState<number | null>(null);
+
   const selectedSchool = schools.find((s) => s.id === selectedSchoolId);
   const passageSuggestions = useMemo(() => {
     const seen = new Set<string>();
