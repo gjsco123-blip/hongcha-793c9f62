@@ -1,7 +1,10 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Plus, Trash2, LogOut, ChevronRight, BookOpen, School as SchoolIcon, GripVertical, Pencil, Check, X } from "lucide-react";
+import { Plus, Trash2, LogOut, ChevronRight, BookOpen, School as SchoolIcon, GripVertical, Pencil, Check, X, Download } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { School, Passage } from "@/hooks/useCategories";
+import { useBatchPdfExport } from "@/hooks/useBatchPdfExport";
+import { useTeacherLabel } from "@/hooks/useTeacherLabel";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface CategorySelectorProps {
   schools: School[];
