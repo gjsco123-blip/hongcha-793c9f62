@@ -1,78 +1,133 @@
 
+# 8/8까지 갔는데 row가 사라지는 문제 — 원인과 수정 방향
 
-# 일괄 PDF 다운로드 기능 추가
+## 결론
+이건 엔진이 8문장 중 6문장만 분석해서가 아닙니다.  
+`handleAnalyze`는 실제로 마지막 배치까지 기다리고 있고, 그래서 진행률도 `8/8`까지 갑니다.
 
-## 요약
-학교 선택 후 지문 목록 화면(`CategoryFullScreen`)에서 체크박스로 지문을 선택하고, 상단 툴바에서 구문분석/Preview/통합/워크북 PDF를 일괄 다운로드하는 기능.
+진짜 원인은 **분석 도중 중간 결과가 자동저장되고, 그 저장본이 다시 현재 화면을 덮어쓰는 race condition** 입니다.
 
-## 확정된 정책
-- **경고 후 차단**: 선택한 지문 중 하나라도 필요 데이터가 없으면, "어떤 지문에 무엇이 없는지" 구체적으로 경고 후 다운로드 중단
-- **선택 없으면 버튼 비활성화**
-- **PDF 순서**: sort_order 기준
-- **통합 PDF 순서**: Preview → 구문분석 (지문별)
-- **파일명**: `{학교이름}_구문분석.pdf`, `{학교이름}_Preview.pdf`, `{학교이름}_통합.pdf`, `{학교이름}_워크북.pdf`
+## 왜 이런 일이 생기나
+### 1) 분석은 3개씩 배치로 나뉘어 화면에 쌓임
+`src/pages/Index.tsx`
+- `CONCURRENCY = 3`
+- 배치 1 끝나면 3개 row 저장
+- 배치 2 끝나면 6개 row 저장
+- 배치 3 끝나면 8개 row 저장
 
-## 구현 계획
+### 2) 그런데 auto-save가 “분석 중간 상태”도 저장 가능함
+현재 auto-save는:
+- `loading` 자체를 막는 조건으로 안 쓰고
+- 초기 분석 배치 결과에는 `generatingSyntax / generatingHongT / regenerating` 플래그도 없음
 
-### 1. `useBatchPdfExport` 훅 생성 (새 파일)
-`src/hooks/useBatchPdfExport.ts`
+즉, **6개까지만 나온 상태도 정상 상태로 오인**해서 2초 뒤 저장할 수 있습니다.
 
-- 기존 `usePdfExport`의 단일 PDF 로직은 건드리지 않음
-- `passages` 배열과 `selectedIds`를 받아서:
-  - `results_json`에서 `parsePassageStore`로 데이터 추출
-  - 데이터 누락 검증 → 누락 시 구체적 에러 메시지 반환
-  - 검증 통과 시 순차적으로 PDF blob 생성 → `mergePdfBlobs`로 합침
-- 4개 함수 export:
-  - `batchExportSyntax(passages, selectedIds, schoolName, teacherLabel)`
-  - `batchExportPreview(passages, selectedIds, schoolName)`
-  - `batchExportCombined(passages, selectedIds, schoolName, teacherLabel)`
-  - `batchExportWorkbook(passages, selectedIds, schoolName)`
+### 3) 최근 수정 때문에 이 저장본이 즉시 화면에 다시 반영됨
+최근에 바뀐 구조:
+- `useCategories.updatePassage()`가 저장 후 local `passages` state도 즉시 갱신
+- `Index`는 `categories.selectedPassage` 변경 시 다시 hydrate
 
-### 2. `CategoryFullScreen` UI 수정
-`src/components/CategorySelector.tsx`
+그래서 예전엔 “중간 저장이 돼도 현재 메모리 화면은 계속 유지”되던 게,
+지금은 **DB에 6개가 저장되면 그 6개짜리 snapshot이 현재 화면으로 다시 들어와서 row가 사라져 보이는 상태**가 됩니다.
 
-- 지문 목록 위에 **PDF 툴바** 추가 (학교 선택 후에만 표시)
-  - 전체 선택 / 해제 체크박스
-  - `N개 선택됨` 텍스트
-  - 구문분석 PDF / Preview PDF / 통합 PDF / 워크북 PDF 버튼 4개
-  - 선택 없으면 버튼 disabled
-- 각 지문 row 왼쪽에 체크박스 추가 (GripVertical 앞)
-- 선택 상태: `useState<Set<string>>`
-
-### 3. 데이터 검증 로직
-각 PDF 타입별 필요 데이터:
-- **구문분석**: `syntaxResults` 존재 + 길이 > 0
-- **Preview**: `preview.vocab` 또는 `preview.synonyms` 또는 `preview.summary` 존재
-- **통합**: 구문분석 + Preview 둘 다 필요
-- **워크북**: `syntaxResults` 존재 (original 필드 사용)
-
-누락 시 경고 예시:
-```
-다음 지문에 데이터가 없습니다:
-- "1과 본문": 구문분석 결과 없음
-- "3과 본문": Preview 데이터 없음
-해당 지문의 데이터를 먼저 생성해주세요.
+즉, “갑자기” 심해진 이유는:
+```text
+기존부터 있던 중간 auto-save 가능성
++ 최근 same-passage rehydrate 구조
+= 분석 완료 직후/홍T 직전에 row 누락이 눈에 보이게 됨
 ```
 
-### 4. props 전달 흐름
-`CategoryFullScreen` → `useBatchPdfExport` 훅 사용
-- `CategorySelectorProps`에 `schoolName` 추가 (또는 내부에서 `schools`+`selectedSchoolId`로 계산)
-- `teacherLabel`은 `useTeacherLabel` 훅으로 가져옴
+## 왜 다시 분석하면 제대로 되나
+두 번째 시도에서는
+- 응답 타이밍이 달라지거나
+- 마지막 배치까지 간 뒤 저장이 덮어써져서
+우연히 완성본이 남는 경우가 생깁니다.
 
-### 5. 메모리 안전
-- PDF를 **순차 생성** (한 번에 하나씩 blob 만들고 merge)
-- 지문 10개 이상이면 진행률 표시 (선택사항)
+즉, 지금은 **정상 동작이 아니라 타이밍 운**에 의존하는 상태입니다.
 
-## 기존 기능 영향
-- `usePdfExport.ts`: 변경 없음 (기존 단일 export 유지)
-- `Index.tsx` / `Preview.tsx`: 변경 없음
-- `mergePdfBlobs`를 재사용하므로 `usePdfExport.ts`에서 export 추가 필요
-- `CategorySelector.tsx`만 UI 변경
+## 이 문제에서 중요한 판단
+### 원인이 아닌 것
+- 엔진 자체가 8개 중 일부만 반환하는 문제
+- 홍T가 분석을 강제로 끊는 문제
+- 단순 렌더링 누락 문제
 
-## 파일 변경 목록
-| 파일 | 변경 |
-|------|------|
-| `src/hooks/useBatchPdfExport.ts` | **새 파일** — 일괄 export 로직 |
-| `src/hooks/usePdfExport.ts` | `mergePdfBlobs` export 추가 |
-| `src/components/CategorySelector.tsx` | 체크박스 + PDF 툴바 UI 추가 |
+### 실제 원인
+- **분석 파이프라인 중간 상태 auto-save**
+- **같은 passage에 대한 즉시 rehydrate**
+- **debounce callback이 최신 상태가 아니라 당시 closure 값을 보는 구조**
 
+## 수정 방향
+### 1) 분석/홍T 전체 파이프라인 동안 auto-save 완전 차단
+`src/pages/Index.tsx`
+- `handleAnalyze` 시작 시 저장 타이머 즉시 clear
+- `loading` 또는 별도 `analysisPipelineActiveRef`를 기준으로 auto-save 금지
+- `handleRetryFailed`도 동일하게 묶기
+
+핵심은:
+```text
+문장 분석 시작 ~ 홍T 자동생성 끝 ~ 최종 강제저장 완료
+이 구간에는 debounce save가 절대 끼어들면 안 됨
+```
+
+### 2) auto-save 콜백이 stale closure를 보지 않게 변경
+지금 timeout 내부는 과거 `results`를 보고 판단할 수 있습니다.  
+그래서 다음 값들을 ref 기반으로 읽도록 바꾸는 게 안전합니다.
+
+- `resultsRef.current`
+- `loadingRef.current` 또는 `analysisPipelineActiveRef.current`
+- 필요하면 `passageRef`, `pdfTitleRef`, `presetRef`, `syntaxCompletedRef`
+
+이렇게 해야
+- “2초 전에 잡힌 6개 결과”
+- “지금은 이미 8개인데 예전 상태 저장”
+같은 일이 재발하지 않습니다.
+
+### 3) 같은 passage 저장 후 즉시 전체 hydrate하는 구조 분리
+현재는 `selectedPassage` 객체가 바뀌면 같은 passage라도 전체 state를 다시 로드합니다.  
+이걸 다음처럼 분리하는 게 맞습니다.
+
+- **passage ID가 바뀔 때만** 전체 hydrate
+- 같은 passage의 저장 결과가 돌아온 경우에는
+  - `baseResultsJsonRef`만 최신화
+  - 현재 편집 중인 `results/passage/pdfTitle`는 덮어쓰지 않음
+- 특히 분석/홍T 중에는 절대 rehydrate 금지
+
+이게 이번 문제의 “화면에서 row가 사라지는” 직접 원인을 막습니다.
+
+## 다른 기능에 미치는 영향
+### 좋은 영향
+- 8문장은 항상 8문장 다 보인 뒤 홍T로 넘어감
+- “다시 분석하기”를 눌러야 맞는 상태가 되는 현상 제거
+- 저장/복원 안정성 증가
+- 이후 Preview/완료 토글 쪽도 덜 흔들림
+
+### 주의할 점
+- auto-save가 분석 중에는 잠깐 멈춤
+- 하지만 이건 오히려 맞는 동작이고, 마지막 강제 저장이 있으므로 데이터 유실 위험은 더 줄어듦
+
+### 영향 적은 영역
+- 엔진 프롬프트/AI 품질
+- PDF 생성
+- 학교/지문 선택 UI
+- batch PDF 기능
+
+## 구현 플랜
+1. `Index.tsx`에 분석 파이프라인 전용 active ref/state 추가
+2. `handleAnalyze`/`handleRetryFailed` 시작 시 기존 save timer clear
+3. auto-save에서 `loading/analysis active`일 때 스케줄 자체 금지
+4. timeout 내부도 ref 기반 최신값만 읽도록 변경
+5. 같은 passage 업데이트 시 전체 hydrate하지 않고, passage 전환시에만 hydrate하도록 effect 분리
+6. 최종 저장은 홍T 완료 후 1회만 확정 저장
+
+## 검증 포인트
+```text
+A. 8문장 입력 → 응답이 느린 문장 섞여도 8개 row 전부 먼저 렌더
+B. 8/8 이후에만 홍T 시작
+C. 중간에 3개/6개만 남는 현상 없음
+D. 다시 나갔다 들어와도 8개 유지
+E. 실패 재시도/개별 재분석/완료 토글 저장 동작 유지
+```
+
+## 한 줄 요약
+이번 건은 “분석이 덜 된 것”이 아니라, **분석 중간 snapshot이 저장되고 최근 hydrate 구조가 그 snapshot을 다시 현재 화면에 덮어써서 생기는 문제**입니다.  
+해결은 **분석~홍T 전체 구간의 저장 차단 + stale timeout 제거 + same-passage rehydrate 분리**가 맞습니다.
