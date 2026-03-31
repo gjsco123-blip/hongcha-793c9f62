@@ -488,6 +488,7 @@ export default function Index() {
       done += chunk.length;
       setProgress({ current: done, total: failedResults.length });
     }
+    analysisPipelineActiveRef.current = false;
     setLoading(false);
   };
 
