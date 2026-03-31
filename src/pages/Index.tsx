@@ -222,24 +222,39 @@ export default function Index() {
 
 
   // Auto-save with debounce
+  // Refs for auto-save timeout to always read latest values (prevent stale closure)
+  const passageRef = useRef(passage);
+  passageRef.current = passage;
+  const pdfTitleRef = useRef(pdfTitle);
+  pdfTitleRef.current = pdfTitle;
+  const presetRef = useRef(preset);
+  presetRef.current = preset;
+  const syntaxCompletedRef = useRef(syntaxCompleted);
+  syntaxCompletedRef.current = syntaxCompleted;
+
   const autoSave = useCallback(() => {
     if (!categories.selectedPassageId || !dataLoadedRef.current) return;
-    const hasTransientWork = results.some((r) => r.generatingSyntax || r.generatingHongT || r.regenerating);
+    // Block auto-save entirely during analysis/hongT pipeline
+    if (analysisPipelineActiveRef.current) return;
+    const hasTransientWork = resultsRef.current.some((r) => r.generatingSyntax || r.generatingHongT || r.regenerating);
     if (hasTransientWork) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(async () => {
-      const stillHasTransientWork = results.some((r) => r.generatingSyntax || r.generatingHongT || r.regenerating);
+      // Re-check inside timeout using refs (not stale closure)
+      if (analysisPipelineActiveRef.current) return;
+      const latestResults = resultsRef.current;
+      const stillHasTransientWork = latestResults.some((r) => r.generatingSyntax || r.generatingHongT || r.regenerating);
       if (stillHasTransientWork) return;
       // Strip transient UI flags before persisting
-      const sanitizedResults = results.map(({ generatingSyntax, generatingHongT, regenerating, ...rest }) => rest);
+      const sanitizedResults = latestResults.map(({ generatingSyntax, generatingHongT, regenerating, ...rest }) => rest);
       const mergedStore = mergePassageStore(baseResultsJsonRef.current, {
         syntaxResults: sanitizedResults.length > 0 ? sanitizedResults : [],
-        completion: { syntaxCompleted },
+        completion: { syntaxCompleted: syntaxCompletedRef.current },
       });
       const updated = await categories.updatePassage(categories.selectedPassageId!, {
-        passage_text: passage,
-        pdf_title: pdfTitle,
-        preset,
+        passage_text: passageRef.current,
+        pdf_title: pdfTitleRef.current,
+        preset: presetRef.current,
         results_json: mergedStore,
       });
       if (updated) {
