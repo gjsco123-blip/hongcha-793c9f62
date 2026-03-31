@@ -448,6 +448,8 @@ export default function Index() {
 
   const handleRetryFailed = async () => {
     if (loading || failedResults.length === 0) return;
+    analysisPipelineActiveRef.current = true;
+    if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
     setLoading(true);
     setProgress({ current: 0, total: failedResults.length });
 
