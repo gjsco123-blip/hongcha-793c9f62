@@ -130,6 +130,8 @@ export default function Index() {
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const dataLoadedRef = useRef(false);
   const baseResultsJsonRef = useRef<unknown>(null); // last-known DB results_json for merge base
+  const analysisPipelineActiveRef = useRef(false); // true during analyze/hongT pipeline
+  const lastHydratedIdRef = useRef<string | null>(null); // prevent same-passage rehydrate
   
   // Track AI-generated drafts for learning_examples auto-save
   const aiDraftMapRef = useRef<Record<number, string>>({});
