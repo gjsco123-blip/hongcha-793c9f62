@@ -436,6 +436,8 @@ export default function Index() {
       }
     }
 
+    // Deactivate pipeline guard — auto-save can resume
+    analysisPipelineActiveRef.current = false;
     setLoading(false);
   };
 
