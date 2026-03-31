@@ -130,6 +130,8 @@ export default function Index() {
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const dataLoadedRef = useRef(false);
   const baseResultsJsonRef = useRef<unknown>(null); // last-known DB results_json for merge base
+  const analysisPipelineActiveRef = useRef(false); // true during analyze/hongT pipeline
+  const lastHydratedIdRef = useRef<string | null>(null); // prevent same-passage rehydrate
   
   // Track AI-generated drafts for learning_examples auto-save
   const aiDraftMapRef = useRef<Record<number, string>>({});
@@ -174,20 +176,24 @@ export default function Index() {
   
 
   useEffect(() => {
+    const id = categories.selectedPassageId;
+    const p = categories.selectedPassage;
+
     // Save learning examples from previous passage before loading new one
-    if (prevPassageIdRef.current && prevPassageIdRef.current !== categories.selectedPassageId) {
+    if (prevPassageIdRef.current && prevPassageIdRef.current !== id) {
       saveSyntaxLearningExamples(resultsRef.current);
       aiDraftMapRef.current = {};
     }
-    prevPassageIdRef.current = categories.selectedPassageId || null;
+    prevPassageIdRef.current = id || null;
 
-    // Block auto-save until fresh data is loaded
-    dataLoadedRef.current = false;
+    // Only hydrate when passage ID actually changes AND data is available
+    // This prevents same-passage rehydrate after auto-save overwrites local state
+    if (id && p && id !== lastHydratedIdRef.current) {
+      lastHydratedIdRef.current = id;
+      dataLoadedRef.current = false;
 
-    const p = categories.selectedPassage;
-    if (p) {
       const store = parsePassageStore(p.results_json);
-      baseResultsJsonRef.current = p.results_json; // capture fresh merge base
+      baseResultsJsonRef.current = p.results_json;
       setPassage(p.passage_text || "");
       setPdfTitle(p.pdf_title || p.name || "SYNTAX");
       setPreset((p.preset as Preset) || "수능");
@@ -199,7 +205,6 @@ export default function Index() {
           englishChunks: r.englishChunks || [],
           koreanLiteralChunks: r.koreanLiteralChunks || [],
           syntaxNotes: r.syntaxNotes || [],
-          // Force-reset transient UI flags (may have been saved by older versions)
           generatingSyntax: false,
           generatingHongT: false,
           regenerating: false,
@@ -208,33 +213,48 @@ export default function Index() {
       } else {
         updateResults([]);
       }
-      // Allow auto-save only after fresh data is fully loaded
       dataLoadedRef.current = true;
-    } else {
+    } else if (!id) {
+      lastHydratedIdRef.current = null;
       setPreviewCompleted(false);
     }
   }, [categories.selectedPassageId, categories.selectedPassage]);
 
 
   // Auto-save with debounce
+  // Refs for auto-save timeout to always read latest values (prevent stale closure)
+  const passageRef = useRef(passage);
+  passageRef.current = passage;
+  const pdfTitleRef = useRef(pdfTitle);
+  pdfTitleRef.current = pdfTitle;
+  const presetRef = useRef(preset);
+  presetRef.current = preset;
+  const syntaxCompletedRef = useRef(syntaxCompleted);
+  syntaxCompletedRef.current = syntaxCompleted;
+
   const autoSave = useCallback(() => {
     if (!categories.selectedPassageId || !dataLoadedRef.current) return;
-    const hasTransientWork = results.some((r) => r.generatingSyntax || r.generatingHongT || r.regenerating);
+    // Block auto-save entirely during analysis/hongT pipeline
+    if (analysisPipelineActiveRef.current) return;
+    const hasTransientWork = resultsRef.current.some((r) => r.generatingSyntax || r.generatingHongT || r.regenerating);
     if (hasTransientWork) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(async () => {
-      const stillHasTransientWork = results.some((r) => r.generatingSyntax || r.generatingHongT || r.regenerating);
+      // Re-check inside timeout using refs (not stale closure)
+      if (analysisPipelineActiveRef.current) return;
+      const latestResults = resultsRef.current;
+      const stillHasTransientWork = latestResults.some((r) => r.generatingSyntax || r.generatingHongT || r.regenerating);
       if (stillHasTransientWork) return;
       // Strip transient UI flags before persisting
-      const sanitizedResults = results.map(({ generatingSyntax, generatingHongT, regenerating, ...rest }) => rest);
+      const sanitizedResults = latestResults.map(({ generatingSyntax, generatingHongT, regenerating, ...rest }) => rest);
       const mergedStore = mergePassageStore(baseResultsJsonRef.current, {
         syntaxResults: sanitizedResults.length > 0 ? sanitizedResults : [],
-        completion: { syntaxCompleted },
+        completion: { syntaxCompleted: syntaxCompletedRef.current },
       });
       const updated = await categories.updatePassage(categories.selectedPassageId!, {
-        passage_text: passage,
-        pdf_title: pdfTitle,
-        preset,
+        passage_text: passageRef.current,
+        pdf_title: pdfTitleRef.current,
+        preset: presetRef.current,
         results_json: mergedStore,
       });
       if (updated) {
@@ -329,6 +349,10 @@ export default function Index() {
     const sentences = editedSentences.filter((s) => s.trim().length > 0);
     if (sentences.length === 0) return;
 
+    // Activate pipeline guard — blocks auto-save & rehydration
+    analysisPipelineActiveRef.current = true;
+    if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
+
     setLoading(true);
     updateResults([]);
     setProgress({ current: 0, total: sentences.length });
@@ -412,6 +436,8 @@ export default function Index() {
       }
     }
 
+    // Deactivate pipeline guard — auto-save can resume
+    analysisPipelineActiveRef.current = false;
     setLoading(false);
   };
 
@@ -422,6 +448,8 @@ export default function Index() {
 
   const handleRetryFailed = async () => {
     if (loading || failedResults.length === 0) return;
+    analysisPipelineActiveRef.current = true;
+    if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
     setLoading(true);
     setProgress({ current: 0, total: failedResults.length });
 
@@ -460,6 +488,7 @@ export default function Index() {
       done += chunk.length;
       setProgress({ current: done, total: failedResults.length });
     }
+    analysisPipelineActiveRef.current = false;
     setLoading(false);
   };
 
