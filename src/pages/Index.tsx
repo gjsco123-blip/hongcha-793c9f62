@@ -176,20 +176,24 @@ export default function Index() {
   
 
   useEffect(() => {
+    const id = categories.selectedPassageId;
+    const p = categories.selectedPassage;
+
     // Save learning examples from previous passage before loading new one
-    if (prevPassageIdRef.current && prevPassageIdRef.current !== categories.selectedPassageId) {
+    if (prevPassageIdRef.current && prevPassageIdRef.current !== id) {
       saveSyntaxLearningExamples(resultsRef.current);
       aiDraftMapRef.current = {};
     }
-    prevPassageIdRef.current = categories.selectedPassageId || null;
+    prevPassageIdRef.current = id || null;
 
-    // Block auto-save until fresh data is loaded
-    dataLoadedRef.current = false;
+    // Only hydrate when passage ID actually changes AND data is available
+    // This prevents same-passage rehydrate after auto-save overwrites local state
+    if (id && p && id !== lastHydratedIdRef.current) {
+      lastHydratedIdRef.current = id;
+      dataLoadedRef.current = false;
 
-    const p = categories.selectedPassage;
-    if (p) {
       const store = parsePassageStore(p.results_json);
-      baseResultsJsonRef.current = p.results_json; // capture fresh merge base
+      baseResultsJsonRef.current = p.results_json;
       setPassage(p.passage_text || "");
       setPdfTitle(p.pdf_title || p.name || "SYNTAX");
       setPreset((p.preset as Preset) || "수능");
@@ -201,7 +205,6 @@ export default function Index() {
           englishChunks: r.englishChunks || [],
           koreanLiteralChunks: r.koreanLiteralChunks || [],
           syntaxNotes: r.syntaxNotes || [],
-          // Force-reset transient UI flags (may have been saved by older versions)
           generatingSyntax: false,
           generatingHongT: false,
           regenerating: false,
@@ -210,9 +213,9 @@ export default function Index() {
       } else {
         updateResults([]);
       }
-      // Allow auto-save only after fresh data is fully loaded
       dataLoadedRef.current = true;
-    } else {
+    } else if (!id) {
+      lastHydratedIdRef.current = null;
       setPreviewCompleted(false);
     }
   }, [categories.selectedPassageId, categories.selectedPassage]);
