@@ -349,6 +349,10 @@ export default function Index() {
     const sentences = editedSentences.filter((s) => s.trim().length > 0);
     if (sentences.length === 0) return;
 
+    // Activate pipeline guard — blocks auto-save & rehydration
+    analysisPipelineActiveRef.current = true;
+    if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
+
     setLoading(true);
     updateResults([]);
     setProgress({ current: 0, total: sentences.length });
