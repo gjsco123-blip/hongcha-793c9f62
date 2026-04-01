@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChunkEditor } from "@/components/ChunkEditor";
 import { ResultDisplay } from "@/components/ResultDisplay";
@@ -14,7 +14,7 @@ import { renderWithSuperscripts, reorderNotesByPosition } from "@/lib/syntax-sup
 import { paginateResults } from "@/lib/pdf-pagination";
 import { mergePassageStore, parsePassageStore } from "@/lib/passage-store";
 import { toast } from "sonner";
-import { FileDown, RotateCw, X, Scissors, RefreshCw, Eye, Loader2, Settings2, Sparkles } from "lucide-react";
+import { FileDown, RotateCw, X, Scissors, RefreshCw, Eye, Loader2, Settings2, Sparkles, Merge } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -124,6 +124,9 @@ export default function Index() {
   
   const [editedSentences, setEditedSentences] = useState<string[]>([]);
   const [hongTPhase, setHongTPhase] = useState<{ current: number; total: number } | null>(null);
+  const [resultEditingIndex, setResultEditingIndex] = useState<number | null>(null);
+  const [resultEditValue, setResultEditValue] = useState("");
+  const resultEditRef = useRef<HTMLTextAreaElement>(null);
 
   const categories = useCategories();
   const { teacherLabel, setTeacherLabel } = useTeacherLabel();
@@ -648,6 +651,96 @@ export default function Index() {
     }
   };
 
+  // Re-analyze a single sentence text and return the result
+  const reanalyzeSingle = async (sentence: string, id: number): Promise<SentenceResult> => {
+    const { data, error } = await invokeWithRetry(sentence, preset);
+    if (error || !data || data.error) {
+      return {
+        id, original: sentence,
+        englishChunks: [], koreanLiteralChunks: [],
+        koreanNatural: "분석 실패", englishTagged: "", koreanLiteralTagged: "",
+        syntaxNotes: [], hongTNotes: "",
+      };
+    }
+    return {
+      id, original: sentence,
+      englishChunks: parseTagged(data.english_tagged),
+      koreanLiteralChunks: parseTagged(data.korean_literal_tagged),
+      koreanNatural: data.korean_natural,
+      englishTagged: data.english_tagged,
+      koreanLiteralTagged: data.korean_literal_tagged,
+      syntaxNotes: [], hongTNotes: "",
+    };
+  };
+
+  const handleMergeResult = async (index: number) => {
+    if (index >= results.length - 1 || loading) return;
+    const merged = results[index].original + " " + results[index + 1].original;
+
+    const newResults = results.filter((_, i) => i !== index + 1).map((r, i) => ({
+      ...r,
+      id: i,
+      ...(i === index ? { original: merged, regenerating: true, englishChunks: [] as Chunk[], koreanLiteralChunks: [] as Chunk[], koreanNatural: "", syntaxNotes: [] as SyntaxNote[], hongTNotes: "" } : {}),
+    }));
+    updateResults(newResults);
+    setResultEditingIndex(null);
+
+    try {
+      const reanalyzed = await reanalyzeSingle(merged, index);
+      updateResults(prev => prev.map(r => r.id === index ? { ...reanalyzed, regenerating: false } : r));
+      const allSentences = resultsRef.current.map(r => r.original);
+      await generateHongT(index, allSentences);
+      toast.success(`문장 ${index + 1}~${index + 2} 합치기 완료`);
+    } catch (e: any) {
+      toast.error(`합치기 재분석 실패: ${e.message}`);
+      updateResults(prev => prev.map(r => r.id === index ? { ...r, regenerating: false } : r));
+    }
+  };
+
+  const handleSplitResult = async (index: number) => {
+    if (!resultEditRef.current) return;
+    const pos = resultEditRef.current.selectionStart;
+    const text = resultEditValue;
+    if (pos <= 0 || pos >= text.length) return;
+
+    const left = text.slice(0, pos).trim();
+    const right = text.slice(pos).trim();
+    if (!left || !right) return;
+
+    const newResults: SentenceResult[] = [];
+    for (let i = 0; i < results.length; i++) {
+      if (i === index) {
+        newResults.push({ ...results[i], id: newResults.length, original: left, regenerating: true, englishChunks: [], koreanLiteralChunks: [], koreanNatural: "", syntaxNotes: [], hongTNotes: "" });
+        newResults.push({ ...results[i], id: newResults.length, original: right, regenerating: true, englishChunks: [], koreanLiteralChunks: [], koreanNatural: "", syntaxNotes: [], hongTNotes: "" });
+      } else {
+        newResults.push({ ...results[i], id: newResults.length });
+      }
+    }
+    updateResults(newResults);
+    setResultEditingIndex(null);
+
+    try {
+      const leftIdx = index;
+      const rightIdx = index + 1;
+      const [leftResult, rightResult] = await Promise.all([
+        reanalyzeSingle(left, leftIdx),
+        reanalyzeSingle(right, rightIdx),
+      ]);
+      updateResults(prev => prev.map(r => {
+        if (r.id === leftIdx) return { ...leftResult, regenerating: false };
+        if (r.id === rightIdx) return { ...rightResult, regenerating: false };
+        return r;
+      }));
+      const allSentences = resultsRef.current.map(r => r.original);
+      await generateHongT(leftIdx, allSentences);
+      await generateHongT(rightIdx, allSentences);
+      toast.success(`문장 ${index + 1} 나누기 완료`);
+    } catch (e: any) {
+      toast.error(`나누기 재분석 실패: ${e.message}`);
+      updateResults(prev => prev.map(r => (r.id === index || r.id === index + 1) ? { ...r, regenerating: false } : r));
+    }
+  };
+
   const handleExportPdf = async () => {
     try {
       await exportToPdf(results, pdfTitle, "", `${pdfTitle}+구문분석.pdf`, teacherLabel);
@@ -928,7 +1021,8 @@ export default function Index() {
         {results.length > 0 && (
           <div className="space-y-0 border-t border-border">
             {results.map((result, index) => (
-              <div key={result.id}>
+              <React.Fragment key={result.id}>
+              <div>
                 {/* 페이지 구분선 */}
                 {index > 0 && index === pageBreakInfo.page1EndIndex + 1 && (
                   <div className="flex items-center gap-2 py-2 my-1">
@@ -945,9 +1039,50 @@ export default function Index() {
                   <span className="text-sm font-semibold shrink-0 w-6">
                     {String(index + 1).padStart(2, "0")}
                   </span>
-                  <p className="font-sans font-semibold text-base leading-relaxed text-foreground flex-1">
-                    {renderWithSuperscripts(result.original, result.syntaxNotes || [])}
-                  </p>
+                  {resultEditingIndex === index ? (
+                    <div className="flex-1 flex flex-col gap-1.5">
+                      <textarea
+                        ref={resultEditRef}
+                        autoFocus
+                        value={resultEditValue}
+                        onChange={(e) => setResultEditValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") setResultEditingIndex(null);
+                        }}
+                        rows={2}
+                        className="w-full bg-background border border-foreground px-2 py-1.5 text-sm font-english text-foreground outline-none resize-none"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleSplitResult(index)}
+                          className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                          title="커서 위치에서 나누기"
+                        >
+                          <Scissors className="w-3 h-3" />
+                          커서에서 나누기
+                        </button>
+                        <button
+                          onClick={() => setResultEditingIndex(null)}
+                          className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          취소 (Esc)
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p
+                      onDoubleClick={() => {
+                        if (!result.regenerating) {
+                          setResultEditingIndex(index);
+                          setResultEditValue(result.original);
+                        }
+                      }}
+                      className="font-sans font-semibold text-base leading-relaxed text-foreground flex-1 cursor-pointer hover:bg-muted/50 px-1 py-0.5 -mx-1 transition-colors"
+                      title="더블클릭으로 나누기"
+                    >
+                      {renderWithSuperscripts(result.original, result.syntaxNotes || [])}
+                    </p>
+                  )}
                   <button
                     onClick={() => handleReanalyze(result.id)}
                     disabled={result.regenerating}
@@ -1222,10 +1357,32 @@ export default function Index() {
                     />
                   </div>
                 ) : (
-                  <div className="ml-9 text-xs text-destructive">분석 실패</div>
+                  result.regenerating ? (
+                    <div className="ml-9 flex items-center gap-2 text-xs text-muted-foreground animate-pulse">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      재분석 중...
+                    </div>
+                  ) : (
+                    <div className="ml-9 text-xs text-destructive">분석 실패</div>
+                  )
                 )}
               </div>
               </div>
+              {/* 합치기 버튼 */}
+              {index < results.length - 1 && (
+                <div className="flex justify-center -my-px">
+                  <button
+                    onClick={() => handleMergeResult(index)}
+                    disabled={loading || result.regenerating}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted transition-colors opacity-40 hover:opacity-100 disabled:opacity-20"
+                    title="아래 문장과 합치기"
+                  >
+                    <Merge className="w-3 h-3" />
+                    합치기
+                  </button>
+                </div>
+              )}
+              </React.Fragment>
             ))}
             {/* 페이지 상태 표시 */}
             {pageBreakInfo.totalPages > 0 && (
