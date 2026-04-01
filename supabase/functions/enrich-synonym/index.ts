@@ -24,7 +24,11 @@ serve(async (req) => {
 Given a word (which may be a single word, phrasal verb, or idiomatic expression) and its existing synonyms/antonyms, generate ADDITIONAL synonyms and antonyms that are NOT already listed.
 
 Rules:
-- Every word must include a Korean meaning in parentheses, e.g. identify(확인하다)
+- CRITICAL: Every single synonym and antonym MUST include its Korean meaning in parentheses immediately after the English word, with NO space before the opening parenthesis.
+  ✅ Correct: extensive(광범위한), widespread(널리 퍼진)
+  ❌ Wrong: extensive, widespread
+  ❌ Wrong: extensive (광범위한)
+- Any word without parenthesized Korean meaning is INVALID and must not appear in the output.
 - Generate 3 additional synonyms by default
 - If the 3rd synonym is forced/unnatural, generate 2 synonyms
 - Generate 2 additional antonyms by default (or 1 if only one natural opposite exists)
@@ -36,7 +40,7 @@ Rules:
 - For phrasal verbs or idioms (e.g. "turn down", "take up"), treat them as a single unit
 
 Output ONLY valid JSON (no markdown, no explanation):
-{"word_ko": "한국어 뜻", "synonyms": "word1(뜻1), word2(뜻2)", "antonyms": "word1(뜻1), word2(뜻2)"}
+{"word_ko": "한국어 뜻", "synonyms": "extensive(광범위한), widespread(널리 퍼진)", "antonyms": "narrow(좁은), limited(제한된)"}
 
 The "word_ko" field must contain the Korean meaning of the given word in the context of the passage.`;
 
