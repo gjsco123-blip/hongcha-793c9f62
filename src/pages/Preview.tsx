@@ -260,11 +260,15 @@ export default function Preview() {
         existingAntonyms: item.antonym,
         passage,
       });
+      const filterWithMeaning = (chips: string) =>
+        chips.split(",").map(c => c.trim()).filter(c => /\([^)]+\)/.test(c)).join(", ");
+      const enrichedSyn = data.synonyms ? filterWithMeaning(data.synonyms) : "";
+      const enrichedAnt = data.antonyms ? filterWithMeaning(data.antonyms) : "";
       setSynonyms((prev) =>
         sanitizeSynonymItems(prev.map((s, i) => {
           if (i !== idx) return s;
-          const newSyn = data.synonyms ? `${s.synonym}, ${data.synonyms}` : s.synonym;
-          const newAnt = data.antonyms ? `${s.antonym}, ${data.antonyms}` : s.antonym;
+          const newSyn = enrichedSyn ? `${s.synonym}, ${enrichedSyn}` : s.synonym;
+          const newAnt = enrichedAnt ? `${s.antonym}, ${enrichedAnt}` : s.antonym;
           return { ...s, synonym: newSyn, antonym: newAnt };
         }), passage)
       );
