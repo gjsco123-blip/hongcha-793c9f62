@@ -302,11 +302,13 @@ export default function Preview() {
         existingAntonyms: "",
         passage,
       });
+      const filterWithMeaning2 = (chips: string) =>
+        chips.split(",").map(c => c.trim()).filter(c => /\([^)]+\)/.test(c)).join(", ");
       const displayWord = data.word_ko ? `${word} (${data.word_ko})` : word;
       const newItem: SynAntItem = {
         word: displayWord,
-        synonym: data.synonyms || "",
-        antonym: data.antonyms || "",
+        synonym: filterWithMeaning2(data.synonyms || ""),
+        antonym: filterWithMeaning2(data.antonyms || ""),
       };
       setSynonyms((prev) => sanitizeSynonymItems([...prev, newItem], passage));
       toast.success(`"${word}" 동반의어 추가됨`);
