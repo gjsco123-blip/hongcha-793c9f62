@@ -76,8 +76,18 @@ ${trimmedPassage ? `\nPassage context:\n${trimmedPassage}` : ""}`;
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error("No content in response");
+    const message = data.choices?.[0]?.message;
+    let content = message?.content;
+
+    // Fallback: model이 tool_calls로 응답한 경우
+    if (!content && message?.tool_calls?.[0]?.function?.arguments) {
+      content = message.tool_calls[0].function.arguments;
+    }
+
+    if (!content) {
+      console.error("AI response message:", JSON.stringify(message));
+      throw new Error("No content in response");
+    }
 
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("Failed to parse JSON from response");
