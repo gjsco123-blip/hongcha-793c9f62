@@ -651,6 +651,96 @@ export default function Index() {
     }
   };
 
+  // Re-analyze a single sentence text and return the result
+  const reanalyzeSingle = async (sentence: string, id: number): Promise<SentenceResult> => {
+    const { data, error } = await invokeWithRetry(sentence, preset);
+    if (error || !data || data.error) {
+      return {
+        id, original: sentence,
+        englishChunks: [], koreanLiteralChunks: [],
+        koreanNatural: "분석 실패", englishTagged: "", koreanLiteralTagged: "",
+        syntaxNotes: [], hongTNotes: "",
+      };
+    }
+    return {
+      id, original: sentence,
+      englishChunks: parseTagged(data.english_tagged),
+      koreanLiteralChunks: parseTagged(data.korean_literal_tagged),
+      koreanNatural: data.korean_natural,
+      englishTagged: data.english_tagged,
+      koreanLiteralTagged: data.korean_literal_tagged,
+      syntaxNotes: [], hongTNotes: "",
+    };
+  };
+
+  const handleMergeResult = async (index: number) => {
+    if (index >= results.length - 1 || loading) return;
+    const merged = results[index].original + " " + results[index + 1].original;
+
+    const newResults = results.filter((_, i) => i !== index + 1).map((r, i) => ({
+      ...r,
+      id: i,
+      ...(i === index ? { original: merged, regenerating: true, englishChunks: [] as Chunk[], koreanLiteralChunks: [] as Chunk[], koreanNatural: "", syntaxNotes: [] as SyntaxNote[], hongTNotes: "" } : {}),
+    }));
+    updateResults(newResults);
+    setResultEditingIndex(null);
+
+    try {
+      const reanalyzed = await reanalyzeSingle(merged, index);
+      updateResults(prev => prev.map(r => r.id === index ? { ...reanalyzed, regenerating: false } : r));
+      const allSentences = resultsRef.current.map(r => r.original);
+      await generateHongT(index, allSentences);
+      toast.success(`문장 ${index + 1}~${index + 2} 합치기 완료`);
+    } catch (e: any) {
+      toast.error(`합치기 재분석 실패: ${e.message}`);
+      updateResults(prev => prev.map(r => r.id === index ? { ...r, regenerating: false } : r));
+    }
+  };
+
+  const handleSplitResult = async (index: number) => {
+    if (!resultEditRef.current) return;
+    const pos = resultEditRef.current.selectionStart;
+    const text = resultEditValue;
+    if (pos <= 0 || pos >= text.length) return;
+
+    const left = text.slice(0, pos).trim();
+    const right = text.slice(pos).trim();
+    if (!left || !right) return;
+
+    const newResults: SentenceResult[] = [];
+    for (let i = 0; i < results.length; i++) {
+      if (i === index) {
+        newResults.push({ ...results[i], id: newResults.length, original: left, regenerating: true, englishChunks: [], koreanLiteralChunks: [], koreanNatural: "", syntaxNotes: [], hongTNotes: "" });
+        newResults.push({ ...results[i], id: newResults.length, original: right, regenerating: true, englishChunks: [], koreanLiteralChunks: [], koreanNatural: "", syntaxNotes: [], hongTNotes: "" });
+      } else {
+        newResults.push({ ...results[i], id: newResults.length });
+      }
+    }
+    updateResults(newResults);
+    setResultEditingIndex(null);
+
+    try {
+      const leftIdx = index;
+      const rightIdx = index + 1;
+      const [leftResult, rightResult] = await Promise.all([
+        reanalyzeSingle(left, leftIdx),
+        reanalyzeSingle(right, rightIdx),
+      ]);
+      updateResults(prev => prev.map(r => {
+        if (r.id === leftIdx) return { ...leftResult, regenerating: false };
+        if (r.id === rightIdx) return { ...rightResult, regenerating: false };
+        return r;
+      }));
+      const allSentences = resultsRef.current.map(r => r.original);
+      await generateHongT(leftIdx, allSentences);
+      await generateHongT(rightIdx, allSentences);
+      toast.success(`문장 ${index + 1} 나누기 완료`);
+    } catch (e: any) {
+      toast.error(`나누기 재분석 실패: ${e.message}`);
+      updateResults(prev => prev.map(r => (r.id === index || r.id === index + 1) ? { ...r, regenerating: false } : r));
+    }
+  };
+
   const handleExportPdf = async () => {
     try {
       await exportToPdf(results, pdfTitle, "", `${pdfTitle}+구문분석.pdf`, teacherLabel);
