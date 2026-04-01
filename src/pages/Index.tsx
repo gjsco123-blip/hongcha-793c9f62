@@ -1360,6 +1360,20 @@ export default function Index() {
                 )}
               </div>
               </div>
+              {/* 합치기 버튼 */}
+              {index < results.length - 1 && (
+                <div className="flex justify-center -my-px">
+                  <button
+                    onClick={() => handleMergeResult(index)}
+                    disabled={loading || result.regenerating}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted transition-colors opacity-40 hover:opacity-100 disabled:opacity-20"
+                    title="아래 문장과 합치기"
+                  >
+                    <Merge className="w-3 h-3" />
+                    합치기
+                  </button>
+                </div>
+              )}
             ))}
             {/* 페이지 상태 표시 */}
             {pageBreakInfo.totalPages > 0 && (
