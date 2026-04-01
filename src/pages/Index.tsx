@@ -1038,9 +1038,50 @@ export default function Index() {
                   <span className="text-sm font-semibold shrink-0 w-6">
                     {String(index + 1).padStart(2, "0")}
                   </span>
-                  <p className="font-sans font-semibold text-base leading-relaxed text-foreground flex-1">
-                    {renderWithSuperscripts(result.original, result.syntaxNotes || [])}
-                  </p>
+                  {resultEditingIndex === index ? (
+                    <div className="flex-1 flex flex-col gap-1.5">
+                      <textarea
+                        ref={resultEditRef}
+                        autoFocus
+                        value={resultEditValue}
+                        onChange={(e) => setResultEditValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") setResultEditingIndex(null);
+                        }}
+                        rows={2}
+                        className="w-full bg-background border border-foreground px-2 py-1.5 text-sm font-english text-foreground outline-none resize-none"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleSplitResult(index)}
+                          className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                          title="커서 위치에서 나누기"
+                        >
+                          <Scissors className="w-3 h-3" />
+                          커서에서 나누기
+                        </button>
+                        <button
+                          onClick={() => setResultEditingIndex(null)}
+                          className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          취소 (Esc)
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p
+                      onDoubleClick={() => {
+                        if (!result.regenerating) {
+                          setResultEditingIndex(index);
+                          setResultEditValue(result.original);
+                        }
+                      }}
+                      className="font-sans font-semibold text-base leading-relaxed text-foreground flex-1 cursor-pointer hover:bg-muted/50 px-1 py-0.5 -mx-1 transition-colors"
+                      title="더블클릭으로 나누기"
+                    >
+                      {renderWithSuperscripts(result.original, result.syntaxNotes || [])}
+                    </p>
+                  )}
                   <button
                     onClick={() => handleReanalyze(result.id)}
                     disabled={result.regenerating}
