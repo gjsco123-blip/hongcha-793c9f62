@@ -124,6 +124,9 @@ export default function Index() {
   
   const [editedSentences, setEditedSentences] = useState<string[]>([]);
   const [hongTPhase, setHongTPhase] = useState<{ current: number; total: number } | null>(null);
+  const [resultEditingIndex, setResultEditingIndex] = useState<number | null>(null);
+  const [resultEditValue, setResultEditValue] = useState("");
+  const resultEditRef = useRef<HTMLTextAreaElement>(null);
 
   const categories = useCategories();
   const { teacherLabel, setTeacherLabel } = useTeacherLabel();
