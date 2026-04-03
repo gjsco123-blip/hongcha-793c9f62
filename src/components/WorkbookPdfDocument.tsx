@@ -64,6 +64,7 @@ const styles = StyleSheet.create({
     color: "#111",
   },
   workbookLabel: {
+    fontFamily: "Helvetica",
     fontSize: 8,
     fontWeight: 800,
     color: "#111",
@@ -89,12 +90,14 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   badgeText: {
+    fontFamily: "Helvetica",
     color: "#fff",
     fontSize: 6.5,
     fontWeight: 700,
     lineHeight: 1.1,
   },
   sentenceText: {
+    fontFamily: "Helvetica",
     flex: 1,
     fontSize: 9.5,
     fontWeight: 600,
@@ -126,6 +129,7 @@ const styles = StyleSheet.create({
     paddingLeft: 9,
   },
   analysisLabel: {
+    fontFamily: "Helvetica",
     fontSize: 7.5,
     fontWeight: 800,
     color: "#111",
@@ -134,6 +138,7 @@ const styles = StyleSheet.create({
     marginBottom: 1.5,
   },
   analysisText: {
+    fontFamily: "Helvetica",
     fontSize: 9.5,
     fontWeight: 400,
     color: "#111",
