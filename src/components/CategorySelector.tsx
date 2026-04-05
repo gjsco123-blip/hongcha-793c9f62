@@ -550,6 +550,7 @@ export function CategoryFullScreen({
                   새 지문 추가
                 </button>
               )}
+              <div className="pb-12" />
             </div>
           )}
         </div>
