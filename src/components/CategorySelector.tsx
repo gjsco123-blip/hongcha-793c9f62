@@ -393,14 +393,25 @@ export function CategoryFullScreen({
                 </div>
               )}
 
-              <div className="space-y-1">
+              <div ref={listRef} className="space-y-1 max-h-[60vh] overflow-y-auto">
                 {passages.map((p, idx) => (
                   <div
                     key={p.id}
                     className={`group flex items-center ${overIdx === idx && dragIdx !== idx ? "border-t-2 border-primary" : ""}`}
                     draggable={!editingPassageId}
                     onDragStart={() => setDragIdx(idx)}
-                    onDragOver={(e) => { e.preventDefault(); setOverIdx(idx); }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setOverIdx(idx);
+                      // Auto-scroll when dragging near edges
+                      const container = listRef.current;
+                      if (container) {
+                        const rect = container.getBoundingClientRect();
+                        const mouseY = e.clientY - rect.top;
+                        if (mouseY < 40) container.scrollTop -= 8;
+                        if (mouseY > rect.height - 40) container.scrollTop += 8;
+                      }
+                    }}
                     onDragEnd={() => { setDragIdx(null); setOverIdx(null); }}
                     onDrop={(e) => { e.preventDefault(); handleDrop(idx); }}
                   >
@@ -471,8 +482,6 @@ export function CategoryFullScreen({
                   </div>
                 ))}
               </div>
-
-              {/* Add passage with autocomplete */}
               {addingPassage ? (
                 <div className="relative flex items-center gap-2 mt-3 px-4">
                   <div className="relative flex-1">
