@@ -178,6 +178,12 @@ export function CategoryFullScreen({
     setAddingPassage(false);
     setShowSuggestions(false);
     setPassageHighlightIdx(-1);
+    // Auto-scroll to bottom of list
+    setTimeout(() => {
+      if (listRef.current) {
+        listRef.current.scrollTop = listRef.current.scrollHeight;
+      }
+    }, 100);
   };
 
   const handleDrop = (dropIdx: number) => {
