@@ -1,57 +1,27 @@
 
 
-# 분석 결과 화면에서 문장 합치기/나누기 기능 추가
+# 지문 목록 고정 높이 스크롤 박스 + 드래그 자동 스크롤
 
-## 현재 구조
-- `SentencePreview`는 분석 **전**에만 표시됨 (`results.length === 0`일 때)
-- 분석 후 각 `SentenceResult`는 `id`(인덱스)로 관리되며, 청킹·직역·의역·구문노트·홍T가 모두 연결되어 있음
+## 변경 내용 (`src/components/CategorySelector.tsx`)
 
-## 합치기/나누기 시 생기는 문제점
+### 1) 지문 목록을 고정 높이 스크롤 컨테이너로 감싸기
+- 387번 줄 `<div className="space-y-1">` → `<div ref={listRef} className="space-y-1 max-h-[60vh] overflow-y-auto">`
+- `useRef<HTMLDivElement>` 추가
 
-| 작업 | 문제 |
-|------|------|
-| **합치기** | 두 문장의 청킹·직역·의역·구문노트·홍T를 어떻게 병합? 단순 문자열 연결로는 청크 넘버링이 깨지고, 의역도 부자연스러움 |
-| **나누기** | 하나의 분석 결과를 둘로 쪼개면, 청킹·직역이 어디서 끊기는지 자동 판단 불가 |
-| **공통** | id(인덱스) 전체 재배치 필요, 구문노트의 `targetText` 앵커 깨짐 가능 |
+### 2) 드래그 중 자동 스크롤 로직 추가
+- `onDragOver` 핸들러에서 마우스 Y 위치를 컨테이너 경계와 비교
+- 상단 40px 이내 → `listRef.current.scrollTop -= 5`
+- 하단 40px 이내 → `listRef.current.scrollTop += 5`
+- `requestAnimationFrame` 기반으로 부드럽게 처리
 
-## 현실적 해결책: 합치기/나누기 후 해당 문장만 자동 재분석
-
-문장 텍스트만 합치거나 나누고, 영향받는 문장의 분석 데이터는 **즉시 재분석(re-analyze)** 처리. 기존 데이터를 억지로 병합하는 것보다 깔끔하고 안정적.
-
-### 구현 내용
-
-#### 1. 결과 화면에 합치기/나누기 UI 추가 (`Index.tsx`)
-- 각 문장 사이에 기존 `SentencePreview`와 동일한 스타일의 "합치기" 버튼 표시
-- 각 문장 번호 옆에 "나누기" 아이콘 (더블클릭 → 편집 모드 → 커서에서 나누기)
-
-#### 2. `handleMergeResult(index)` — 합치기 로직
-```text
-1. results[index].original + " " + results[index+1].original → 합친 문장
-2. 합친 문장으로 results 배열 재구성 (id 재배치)
-3. 합친 문장만 engine 호출하여 재분석
-4. 재분석 완료되면 해당 결과 교체
-```
-
-#### 3. `handleSplitResult(index, pos)` — 나누기 로직
-```text
-1. 원문을 커서 위치에서 left/right로 분할
-2. results 배열 재구성 (id 재배치)
-3. 분할된 두 문장 각각 engine 호출하여 재분석
-4. 재분석 완료되면 해당 결과 교체
-```
-
-#### 4. 재분석 중 UX
-- 합치거나 나눈 문장은 `regenerating: true` 상태로 로딩 스피너 표시
-- 나머지 문장은 기존 결과 유지 (위치만 id 재배치)
-- 홍T도 영향받는 문장만 재생성
+### 3) 새 지문 추가 후 자동 스크롤
+- `handleAddPassage` 성공 시 `listRef.current.scrollTop = listRef.current.scrollHeight`
 
 ## 수정 파일
 | 파일 | 변경 |
 |------|------|
-| `src/pages/Index.tsx` | `handleMergeResult`, `handleSplitResult` 함수 추가 + 결과 영역에 합치기/나누기 UI |
+| `src/components/CategorySelector.tsx` | 스크롤 컨테이너 래핑, 드래그 자동 스크롤, 추가 후 자동 스크롤 |
 
 ## 기존 기능 영향
-- 기존 분석 전 `SentencePreview` 합치기/나누기는 그대로 유지
-- 재분석 방식이므로 데이터 정합성 문제 없음
-- auto-save는 재분석 완료 후에만 동작 (기존 pipeline guard 활용)
+없음. 체크박스, 이름변경, 삭제, 드래그 정렬 모두 정상 동작.
 
