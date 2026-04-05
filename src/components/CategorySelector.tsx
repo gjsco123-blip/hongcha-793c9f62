@@ -134,6 +134,9 @@ export function CategoryFullScreen({
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [overIdx, setOverIdx] = useState<number | null>(null);
 
+  // Scrollable list ref
+  const listRef = useRef<HTMLDivElement>(null);
+
   const selectedSchool = schools.find((s) => s.id === selectedSchoolId);
   const passageSuggestions = useMemo(() => {
     const seen = new Set<string>();
