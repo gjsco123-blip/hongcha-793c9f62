@@ -1,68 +1,75 @@
 
 
-# 동사 밑줄(`<v>` 태그) 누락 방지 — 검증 안전장치 추가
+# 청킹-직역 경계 불일치 원인 및 해결
 
-## 문제 정리
-- 프롬프트에는 일반동사(`had`, `studied` 등), be동사(`is`, `was` 등) 태깅 규칙이 이미 충분히 명시되어 있음
-- 문제는 **2차 검증 패스**(331~405줄)에서 AI가 응답할 때:
-  1. 마크다운 코드블록(` ```xml ... ``` `)으로 감싸서 반환하는 경우
-  2. `<v>` 태그를 실수로 제거하는 경우
-- 현재 안전 검사(`extractText` 비교)는 순수 텍스트만 비교하므로, **태그만 빠지고 텍스트는 동일한 경우를 감지하지 못함**
+## 원인 분석
+
+현재 엔진(`engine/index.ts`)의 검증 로직(290~328줄)은 영어와 한국어의 **청크 개수(`<cN>` 태그 수)**만 비교한다. 개수가 같으면 통과시키기 때문에:
+
+1. **개수는 같지만 경계가 다른 경우**: 영어에서 `<c3>they do so</c3> <c4>from within a specific paradigm.</c4>`처럼 2개로 나눈 부분을 한국어에서는 `<c3>그들은 그렇게 한다</c3> <c4>특정한 패러다임 안으로부터 말이다.</c4>`로 의미 단위가 다르게 묶일 수 있음
+2. **개수가 달라 3회 재시도 후 포기한 경우**: 327줄에서 `"Max attempts reached, using last result"`로 불일치 결과를 그대로 반환
+
+핵심 문제: **각 `<cN>` 번호가 영어/한국어에서 동일한 의미 단위에 대응하는지 검증하지 않음**
+
+## 해결 방안
+
+### 1) 태그 번호 1:1 대응 검증 추가
+개수뿐 아니라, 영어에 존재하는 모든 태그 번호(`c1, c2, ... cN`)가 한국어에도 동일하게 존재하는지 확인
+
+### 2) 불일치 시 한국어 재생성 경량 호출
+영어 청킹은 유지한 채, 한국어 직역만 다시 생성하는 보정 패스 추가. 영어 태그 구조를 그대로 제공하고 "이 구조에 맞춰 번역하라"고 지시
+
+### 3) 프롬프트 강화
+기존 프롬프트의 CHUNKING RULES에 더 명확한 제약 추가
 
 ## 수정 내용 (`supabase/functions/engine/index.ts`)
 
-384~401줄 검증 결과 적용 로직 수정:
-
-### 1) 마크다운 코드블록 제거
-검증 AI 응답에서 ` ```...``` ` 래퍼를 strip
-
-### 2) `<v>` 태그 수 비교 안전장치
-- 원본의 `<v>` 태그 수 vs 검증 결과의 `<v>` 태그 수 비교
-- 원본에 `<v>`가 있었는데 검증 결과에 0개 → **폐기**
-- 검증 결과의 `<v>` 수가 원본의 50% 미만 → **폐기**
-
+### A. 태그 번호 매칭 함수 추가
 ```text
-수정 전:
-  if (verified) {
-    const verifiedText = normalize(extractText(verified));
-    const originalText = normalize(extractText(lastResult.english_tagged));
-    if (verifiedText === originalText) {
-      lastResult.english_tagged = verified;  ← 태그 사라져도 통과
-    }
-  }
+function getTagNumbers(tagged: string): number[] {
+  return [...tagged.matchAll(/<c(\d+)>/g)].map(m => Number(m[1])).sort((a, b) => a - b);
+}
+```
 
-수정 후:
-  if (verified) {
-    // 마크다운 래퍼 제거
-    let cleaned = verified.replace(/```[\w]*\n?/g, '').replace(/```/g, '').trim();
+### B. 검증 로직 강화 (308줄 부근)
+기존 `tagMatch`를 단순 개수 비교에서 번호 배열 비교로 변경:
+```text
+const enTags = getTagNumbers(lastResult.english_tagged);
+const krTags = getTagNumbers(lastResult.korean_literal_tagged);
+const tagMatch = JSON.stringify(enTags) === JSON.stringify(krTags);
+```
 
-    const verifiedText = normalize(extractText(cleaned));
-    const originalText = normalize(extractText(lastResult.english_tagged));
-    const origVCount = (lastResult.english_tagged.match(/<v>/g) || []).length;
-    const newVCount = (cleaned.match(/<v>/g) || []).length;
+### C. 한국어 직역 보정 패스 추가 (329줄, 동사 검증 전)
+3회 재시도 후에도 태그 불일치가 남아있으면, 영어 청킹 구조를 기준으로 한국어 직역만 재생성:
+```text
+// 태그 불일치 보정
+if (JSON.stringify(getTagNumbers(lastResult.english_tagged)) 
+    !== JSON.stringify(getTagNumbers(lastResult.korean_literal_tagged))) {
+  
+  const repairPrompt = `영어 문장이 다음과 같이 청킹되어 있다:
+${lastResult.english_tagged}
 
-    if (verifiedText === originalText) {
-      if (origVCount > 0 && newVCount === 0) {
-        console.warn("Verb verification: all <v> tags stripped, discarding");
-      } else if (origVCount > 0 && newVCount < origVCount * 0.5) {
-        console.warn("Verb verification: too many <v> tags lost, discarding");
-      } else if (cleaned !== lastResult.english_tagged) {
-        console.log("Verb verification: corrected <v> tags");
-        lastResult.english_tagged = cleaned;
-      } else {
-        console.log("Verb verification: no changes needed");
-      }
-    } else {
-      console.warn("Verb verification: text changed, discarding");
-    }
-  }
+이 태그 구조(<c1>~</c1>, <c2>~</c2>, ...)를 **정확히 동일하게** 유지하면서
+각 청크를 한국어로 직역하라. 반말 종결(~했다, ~이다)로 작성.
+반드시 같은 번호의 <cN> 태그를 사용할 것.`;
+
+  // AI 호출 → 응답을 korean_literal_tagged에 적용
+  // 태그 번호 재검증 후 일치하면 채택, 아니면 기존 유지
+}
+```
+
+### D. 프롬프트 보강 (173줄 CHUNKING RULES)
+```text
+- CRITICAL: <c1> in english_tagged MUST correspond to <c1> in korean_literal_tagged,
+  <c2> to <c2>, etc. Each numbered chunk must translate the SAME phrase boundary.
+  Do NOT merge or split chunks differently between English and Korean.
 ```
 
 ## 수정 파일
 | 파일 | 변경 |
 |------|------|
-| `supabase/functions/engine/index.ts` | 384~401줄: 마크다운 strip + `<v>` 태그 수 안전장치 |
+| `supabase/functions/engine/index.ts` | 태그 번호 매칭 함수, 검증 강화, 한국어 보정 패스, 프롬프트 보강 |
 
 ## 기존 기능 영향
-없음. 검증 패스가 정상적으로 태그를 수정/추가하는 경우는 그대로 동작.
+없음. 이미 일치하는 결과는 그대로 통과. 불일치 시에만 보정 시도.
 
