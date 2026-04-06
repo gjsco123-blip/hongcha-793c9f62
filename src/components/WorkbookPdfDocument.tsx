@@ -53,18 +53,14 @@ const styles = StyleSheet.create({
     borderWidth: 0.6,
     borderColor: "#222",
     borderRadius: 18,
-    paddingTop: 18,
-    paddingBottom: 10,
-    paddingLeft: 10,
-    paddingRight: 10,
   },
   gridLayer: {
     position: "absolute",
-    top: 14,
+    top: 0,
     right: 0,
     bottom: 0,
     left: 0,
-    zIndex: 0,
+    zIndex: 1,
   },
   gridVertical: {
     position: "absolute",
@@ -83,9 +79,12 @@ const styles = StyleSheet.create({
     borderTopColor: "#d7d7d7",
   },
   contentLayer: {
-    position: "relative",
-    zIndex: 10,
-    flexGrow: 1,
+    position: "absolute",
+    top: 18,
+    right: 10,
+    bottom: 10,
+    left: 10,
+    zIndex: 2,
   },
   header: {
     flexDirection: "row",
@@ -189,8 +188,8 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
   const hasAnalysis = Boolean(topic || heading || summary);
   const totalChars = results.reduce((acc, cur) => acc + (cur.original?.length || 0), 0);
   const gridStep = 18;
-  const verticalLines = Array.from({ length: 45 }, (_, i) => i + 1);
-  const horizontalLines = Array.from({ length: 65 }, (_, i) => i + 1);
+  const verticalLines = Array.from({ length: 45 }, (_, i) => i);
+  const horizontalLines = Array.from({ length: 65 }, (_, i) => i);
   // Keep the requested default (3.5/15), but compact automatically on dense pages
   // so the bottom analysis block is less likely to move to the next page.
   const useCompactSentenceLayout = hasAnalysis && (results.length >= 9 || totalChars > 980);
