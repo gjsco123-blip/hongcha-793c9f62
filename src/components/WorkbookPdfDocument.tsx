@@ -48,6 +48,44 @@ const styles = StyleSheet.create({
   },
   body: {
     flexGrow: 1,
+    position: "relative",
+    overflow: "hidden",
+    borderWidth: 0.8,
+    borderColor: "#111",
+    borderRadius: 10,
+    paddingTop: 10,
+    paddingBottom: 10,
+    paddingLeft: 10,
+    paddingRight: 10,
+  },
+  gridLayer: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    zIndex: 0,
+  },
+  gridVertical: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    borderLeftWidth: 0.35,
+    borderLeftStyle: "dashed",
+    borderLeftColor: "#d7d7d7",
+  },
+  gridHorizontal: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    borderTopWidth: 0.35,
+    borderTopStyle: "dashed",
+    borderTopColor: "#d7d7d7",
+  },
+  contentLayer: {
+    position: "relative",
+    zIndex: 1,
+    flexGrow: 1,
   },
   header: {
     flexDirection: "row",
@@ -152,6 +190,9 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
   const summary = (examBlock?.one_sentence_summary || "").trim();
   const hasAnalysis = Boolean(topic || heading || summary);
   const totalChars = results.reduce((acc, cur) => acc + (cur.original?.length || 0), 0);
+  const gridStep = 18;
+  const verticalLines = Array.from({ length: 45 }, (_, i) => i + 1);
+  const horizontalLines = Array.from({ length: 65 }, (_, i) => i + 1);
   // Keep the requested default (3.5/15), but compact automatically on dense pages
   // so the bottom analysis block is less likely to move to the next page.
   const useCompactSentenceLayout = hasAnalysis && (results.length >= 9 || totalChars > 980);
@@ -164,60 +205,71 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
           <Text style={styles.workbookLabel}>WORKBOOK</Text>
         </View>
         <View style={styles.body}>
-          {results.map((result, index) => (
-            <View
-              key={result.id}
-              style={[
-                styles.sentenceRow,
-                useCompactSentenceLayout ? styles.sentenceRowCompact : null,
-              ]}
-              wrap={false}
-            >
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{String(index + 1).padStart(2, "0")}</Text>
-              </View>
-              <Text
-                style={[
-                  styles.sentenceText,
-                  useCompactSentenceLayout ? styles.sentenceTextCompact : null,
-                ]}
-              >
-                {result.original}
-              </Text>
-            </View>
-          ))}
+          <View style={styles.gridLayer}>
+            {verticalLines.map((line) => (
+              <View key={`v-${line}`} style={[styles.gridVertical, { left: line * gridStep }]} />
+            ))}
+            {horizontalLines.map((line) => (
+              <View key={`h-${line}`} style={[styles.gridHorizontal, { top: line * gridStep }]} />
+            ))}
+          </View>
 
-          {hasAnalysis && (
-            <View style={styles.analysisSection}>
-              {topic ? (
-                <View style={styles.analysisItem}>
-                  <View style={styles.analysisContentWrap}>
-                    <View style={styles.analysisBar} />
-                    <Text style={styles.analysisLabel}>TOPIC</Text>
-                    <Text style={styles.analysisText}>{topic}</Text>
-                  </View>
+          <View style={styles.contentLayer}>
+            {results.map((result, index) => (
+              <View
+                key={result.id}
+                style={[
+                  styles.sentenceRow,
+                  useCompactSentenceLayout ? styles.sentenceRowCompact : null,
+                ]}
+                wrap={false}
+              >
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{String(index + 1).padStart(2, "0")}</Text>
                 </View>
-              ) : null}
-              {heading ? (
-                <View style={styles.analysisItem}>
-                  <View style={styles.analysisContentWrap}>
-                    <View style={styles.analysisBar} />
-                    <Text style={styles.analysisLabel}>TITLE</Text>
-                    <Text style={styles.analysisText}>{heading}</Text>
+                <Text
+                  style={[
+                    styles.sentenceText,
+                    useCompactSentenceLayout ? styles.sentenceTextCompact : null,
+                  ]}
+                >
+                  {result.original}
+                </Text>
+              </View>
+            ))}
+
+            {hasAnalysis && (
+              <View style={styles.analysisSection}>
+                {topic ? (
+                  <View style={styles.analysisItem}>
+                    <View style={styles.analysisContentWrap}>
+                      <View style={styles.analysisBar} />
+                      <Text style={styles.analysisLabel}>TOPIC</Text>
+                      <Text style={styles.analysisText}>{topic}</Text>
+                    </View>
                   </View>
-                </View>
-              ) : null}
-              {summary ? (
-                <View style={styles.analysisItem}>
-                  <View style={styles.analysisContentWrap}>
-                    <View style={styles.analysisBar} />
-                    <Text style={styles.analysisLabel}>SUMMARY</Text>
-                    <Text style={styles.analysisText}>{summary}</Text>
+                ) : null}
+                {heading ? (
+                  <View style={styles.analysisItem}>
+                    <View style={styles.analysisContentWrap}>
+                      <View style={styles.analysisBar} />
+                      <Text style={styles.analysisLabel}>TITLE</Text>
+                      <Text style={styles.analysisText}>{heading}</Text>
+                    </View>
                   </View>
-                </View>
-              ) : null}
-            </View>
-          )}
+                ) : null}
+                {summary ? (
+                  <View style={styles.analysisItem}>
+                    <View style={styles.analysisContentWrap}>
+                      <View style={styles.analysisBar} />
+                      <Text style={styles.analysisLabel}>SUMMARY</Text>
+                      <Text style={styles.analysisText}>{summary}</Text>
+                    </View>
+                  </View>
+                ) : null}
+              </View>
+            )}
+          </View>
         </View>
       </Page>
     </Document>
