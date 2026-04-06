@@ -50,10 +50,10 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     position: "relative",
     overflow: "hidden",
-    borderWidth: 0.8,
-    borderColor: "#111",
-    borderRadius: 10,
-    paddingTop: 10,
+    borderWidth: 0.6,
+    borderColor: "#222",
+    borderRadius: 18,
+    paddingTop: 18,
     paddingBottom: 10,
     paddingLeft: 10,
     paddingRight: 10,
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    zIndex: 0,
+    zIndex: -1,
   },
   gridVertical: {
     position: "absolute",
@@ -84,26 +84,24 @@ const styles = StyleSheet.create({
   },
   contentLayer: {
     position: "relative",
-    zIndex: 1,
+    zIndex: 2,
     flexGrow: 1,
   },
   header: {
     flexDirection: "row",
     alignItems: "flex-end",
     justifyContent: "space-between",
-    borderBottomWidth: 0.8,
-    borderBottomColor: "#111",
     paddingBottom: 6,
-    marginBottom: 15,
+    marginBottom: 0,
   },
   title: {
-    fontSize: 14,
+    fontSize: 8,
     fontWeight: 700,
     color: "#111",
   },
   workbookLabel: {
     fontFamily: "Helvetica",
-    fontSize: 8,
+    fontSize: 16,
     fontWeight: 800,
     color: "#111",
     letterSpacing: 0.6,
@@ -117,20 +115,20 @@ const styles = StyleSheet.create({
     marginBottom: 11,
   },
   badge: {
-    width: 13,
-    height: 13,
-    borderRadius: 6.5,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
     backgroundColor: "#111",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 7,
-    marginTop: -1,
+    marginTop: 0,
     flexShrink: 0,
   },
   badgeText: {
     fontFamily: "Helvetica",
     color: "#fff",
-    fontSize: 6.5,
+    fontSize: 6.3,
     fontWeight: 700,
     lineHeight: 1.1,
   },
@@ -201,8 +199,8 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
     <Document>
       <Page size="A4" style={styles.page} wrap>
         <View style={styles.header} fixed>
-          <Text style={styles.title}>{title}</Text>
           <Text style={styles.workbookLabel}>WORKBOOK</Text>
+          <Text style={styles.title}>{title}</Text>
         </View>
         <View style={styles.body}>
           <View style={styles.gridLayer}>
