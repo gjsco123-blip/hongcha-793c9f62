@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    zIndex: -1,
+    zIndex: 0,
   },
   gridSvg: {
     width: "100%",
@@ -78,6 +78,8 @@ const styles = StyleSheet.create({
   },
   contentLayer: {
     position: "relative",
+    zIndex: 1,
+    flexGrow: 1,
     marginTop: 18,
     marginRight: 10,
     marginBottom: 10,
