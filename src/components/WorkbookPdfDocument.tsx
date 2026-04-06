@@ -1,14 +1,9 @@
 import {
-  ClipPath,
-  Defs,
   Document,
   Font,
-  G,
-  Line,
+  Image,
   Page,
-  Rect,
   StyleSheet,
-  Svg,
   Text,
   View,
 } from "@react-pdf/renderer";
@@ -191,9 +186,22 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
   const gridStep = 22;
   const gridWidth = 560;
   const gridHeight = 740;
-  const cornerRadius = 18;
-  const verticalLines = Array.from({ length: Math.ceil(gridWidth / gridStep) + 1 }, (_, i) => i * gridStep);
-  const horizontalLines = Array.from({ length: Math.ceil(gridHeight / gridStep) + 1 }, (_, i) => i * gridStep);
+  const gridSvg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="${gridWidth}" height="${gridHeight}" viewBox="0 0 ${gridWidth} ${gridHeight}">
+  <defs>
+    <pattern id="grid" width="${gridStep}" height="${gridStep}" patternUnits="userSpaceOnUse">
+      <path d="M 0 0 H ${gridStep} M 0 0 V ${gridStep}"
+            fill="none"
+            stroke="#cfcfcf"
+            stroke-width="0.45"
+            stroke-dasharray="1.2 3.6"
+            stroke-linecap="round"
+            shape-rendering="geometricPrecision" />
+    </pattern>
+  </defs>
+  <rect x="0" y="0" width="${gridWidth}" height="${gridHeight}" fill="url(#grid)" />
+</svg>`;
+  const gridDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(gridSvg)}`;
   // Keep the requested default (3.5/15), but compact automatically on dense pages
   // so the bottom analysis block is less likely to move to the next page.
   const useCompactSentenceLayout = hasAnalysis && (results.length >= 9 || totalChars > 980);
@@ -207,39 +215,7 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
         </View>
         <View style={styles.body}>
           <View style={styles.gridLayer}>
-            <Svg style={styles.gridSvg} viewBox={`0 0 ${gridWidth} ${gridHeight}`} preserveAspectRatio="none">
-              <Defs>
-                <ClipPath id="workbookGridClip">
-                  <Rect x="0" y="0" width={gridWidth} height={gridHeight} rx={cornerRadius} ry={cornerRadius} />
-                </ClipPath>
-              </Defs>
-              <G clipPath="url(#workbookGridClip)">
-                {verticalLines.map((x) => (
-                  <Line
-                    key={`v-${x}`}
-                    x1={x}
-                    y1={0}
-                    x2={x}
-                    y2={gridHeight}
-                    stroke="#cfcfcf"
-                    strokeWidth={0.45}
-                    strokeDasharray="1.2,3.6"
-                  />
-                ))}
-                {horizontalLines.map((y) => (
-                  <Line
-                    key={`h-${y}`}
-                    x1={0}
-                    y1={y}
-                    x2={gridWidth}
-                    y2={y}
-                    stroke="#cfcfcf"
-                    strokeWidth={0.45}
-                    strokeDasharray="1.2,3.6"
-                  />
-                ))}
-              </G>
-            </Svg>
+            <Image src={gridDataUri} style={styles.gridSvg} />
           </View>
 
           <View style={styles.contentLayer}>
