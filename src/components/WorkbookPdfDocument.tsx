@@ -60,11 +60,11 @@ const styles = StyleSheet.create({
   },
   gridLayer: {
     position: "absolute",
-    top: 0,
+    top: 14,
     right: 0,
     bottom: 0,
     left: 0,
-    zIndex: -1,
+    zIndex: 0,
   },
   gridVertical: {
     position: "absolute",
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   },
   contentLayer: {
     position: "relative",
-    zIndex: 2,
+    zIndex: 10,
     flexGrow: 1,
   },
   header: {
