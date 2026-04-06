@@ -1,4 +1,17 @@
-import { Document, Font, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import {
+  ClipPath,
+  Defs,
+  Document,
+  Font,
+  G,
+  Line,
+  Page,
+  Rect,
+  StyleSheet,
+  Svg,
+  Text,
+  View,
+} from "@react-pdf/renderer";
 
 Font.register({
   family: "Pretendard",
@@ -62,21 +75,9 @@ const styles = StyleSheet.create({
     left: 0,
     zIndex: 1,
   },
-  gridVertical: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    borderLeftWidth: 0.35,
-    borderLeftStyle: "dashed",
-    borderLeftColor: "#d7d7d7",
-  },
-  gridHorizontal: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    borderTopWidth: 0.35,
-    borderTopStyle: "dashed",
-    borderTopColor: "#d7d7d7",
+  gridSvg: {
+    width: "100%",
+    height: "100%",
   },
   contentLayer: {
     position: "absolute",
@@ -187,9 +188,12 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
   const summary = (examBlock?.one_sentence_summary || "").trim();
   const hasAnalysis = Boolean(topic || heading || summary);
   const totalChars = results.reduce((acc, cur) => acc + (cur.original?.length || 0), 0);
-  const gridStep = 18;
-  const verticalLines = Array.from({ length: 45 }, (_, i) => i);
-  const horizontalLines = Array.from({ length: 65 }, (_, i) => i);
+  const gridStep = 22;
+  const gridWidth = 560;
+  const gridHeight = 740;
+  const cornerRadius = 18;
+  const verticalLines = Array.from({ length: Math.ceil(gridWidth / gridStep) + 1 }, (_, i) => i * gridStep);
+  const horizontalLines = Array.from({ length: Math.ceil(gridHeight / gridStep) + 1 }, (_, i) => i * gridStep);
   // Keep the requested default (3.5/15), but compact automatically on dense pages
   // so the bottom analysis block is less likely to move to the next page.
   const useCompactSentenceLayout = hasAnalysis && (results.length >= 9 || totalChars > 980);
@@ -203,12 +207,39 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
         </View>
         <View style={styles.body}>
           <View style={styles.gridLayer}>
-            {verticalLines.map((line) => (
-              <View key={`v-${line}`} style={[styles.gridVertical, { left: line * gridStep }]} />
-            ))}
-            {horizontalLines.map((line) => (
-              <View key={`h-${line}`} style={[styles.gridHorizontal, { top: line * gridStep }]} />
-            ))}
+            <Svg style={styles.gridSvg} viewBox={`0 0 ${gridWidth} ${gridHeight}`} preserveAspectRatio="none">
+              <Defs>
+                <ClipPath id="workbookGridClip">
+                  <Rect x="0" y="0" width={gridWidth} height={gridHeight} rx={cornerRadius} ry={cornerRadius} />
+                </ClipPath>
+              </Defs>
+              <G clipPath="url(#workbookGridClip)">
+                {verticalLines.map((x) => (
+                  <Line
+                    key={`v-${x}`}
+                    x1={x}
+                    y1={0}
+                    x2={x}
+                    y2={gridHeight}
+                    stroke="#cfcfcf"
+                    strokeWidth={0.45}
+                    strokeDasharray="1.2,3.6"
+                  />
+                ))}
+                {horizontalLines.map((y) => (
+                  <Line
+                    key={`h-${y}`}
+                    x1={0}
+                    y1={y}
+                    x2={gridWidth}
+                    y2={y}
+                    stroke="#cfcfcf"
+                    strokeWidth={0.45}
+                    strokeDasharray="1.2,3.6"
+                  />
+                ))}
+              </G>
+            </Svg>
           </View>
 
           <View style={styles.contentLayer}>
