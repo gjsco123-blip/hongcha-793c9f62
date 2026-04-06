@@ -385,13 +385,23 @@ Return ONLY the corrected english_tagged string. Nothing else.`;
         const verifyData = await verifyResponse.json();
         const verified = verifyData.choices?.[0]?.message?.content?.trim();
         if (verified) {
+          // Strip markdown code block wrappers if present
+          let cleaned = verified.replace(/```[\w]*\n?/g, '').replace(/```/g, '').trim();
+
           // Safety check: ensure text content is unchanged
-          const verifiedText = normalize(extractText(verified));
+          const verifiedText = normalize(extractText(cleaned));
           const originalText = normalize(extractText(lastResult!.english_tagged));
+          const origVCount = (lastResult!.english_tagged.match(/<v>/g) || []).length;
+          const newVCount = (cleaned.match(/<v>/g) || []).length;
+
           if (verifiedText === originalText) {
-            if (verified !== lastResult!.english_tagged) {
+            if (origVCount > 0 && newVCount === 0) {
+              console.warn("Verb verification: all <v> tags stripped, discarding");
+            } else if (origVCount > 0 && newVCount < origVCount * 0.5) {
+              console.warn("Verb verification: too many <v> tags lost, discarding");
+            } else if (cleaned !== lastResult!.english_tagged) {
               console.log("Verb verification: corrected <v> tags");
-              lastResult!.english_tagged = verified;
+              lastResult!.english_tagged = cleaned;
             } else {
               console.log("Verb verification: no changes needed");
             }
