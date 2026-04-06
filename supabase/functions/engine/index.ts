@@ -29,6 +29,10 @@ function countTags(tagged: string): number {
   return (tagged.match(/<c\d+>/g) || []).length;
 }
 
+function getTagNumbers(tagged: string): number[] {
+  return [...tagged.matchAll(/<c(\d+)>/g)].map(m => Number(m[1])).sort((a, b) => a - b);
+}
+
 function extractText(tagged: string): string {
   return tagged.replace(/<\/?c\d+>/g, "").replace(/<\/?v>/g, "");
 }
@@ -172,6 +176,7 @@ ONLY finite verbs — verbs that serve as the predicate of a clause with a subje
 ## CHUNKING RULES
 - Tag count in english_tagged MUST equal tag count in korean_literal_tagged.
 - Each <cN> in English maps to exactly one <cN> in Korean.
+- CRITICAL: <c1> in english_tagged MUST correspond to <c1> in korean_literal_tagged, <c2> to <c2>, etc. Each numbered chunk must translate the SAME phrase boundary. Do NOT merge or split chunks differently between English and Korean.
 - Chunks = meaning units: noun phrases, verb phrases, prepositional phrases, clauses.
 - Do NOT split articles from their nouns.
 - EVERY word and punctuation mark MUST appear in exactly one chunk — nothing omitted.
@@ -290,7 +295,9 @@ You MUST respond by calling the "analysis_result" function with the structured o
       const enCount = countTags(lastResult.english_tagged);
       const krCount = countTags(lastResult.korean_literal_tagged);
 
-      const tagMatch = enCount === krCount;
+      const enTags = getTagNumbers(lastResult.english_tagged);
+      const krTags = getTagNumbers(lastResult.korean_literal_tagged);
+      const tagMatch = JSON.stringify(enTags) === JSON.stringify(krTags);
       let reconstructed = normalize(extractText(lastResult.english_tagged));
       const original = normalize(sentence);
       let contentMatch = reconstructed === original;
@@ -320,11 +327,67 @@ You MUST respond by calling the "analysis_result" function with the structured o
       if (attempt < MAX_ATTEMPTS - 1) {
         // Add specific feedback for retry
         const feedback: string[] = [];
-        if (!tagMatch) feedback.push(`Tag count mismatch: ${enCount} English vs ${krCount} Korean chunks.`);
+        if (!tagMatch) feedback.push(`Tag number mismatch: English tags [${enTags}] vs Korean tags [${krTags}]. Each <cN> in English must have a corresponding <cN> in Korean.`);
         if (!contentMatch) feedback.push(`Your chunks are missing words. Original: "${original}" but your chunks give: "${reconstructed}". EVERY word must appear in exactly one chunk.`);
         messages.push({ role: "user", content: feedback.join(" ") + " Please redo carefully." });
       } else {
         console.warn("Max attempts reached, using last result.");
+      }
+    }
+
+    // === Korean literal repair pass (if tag numbers still mismatched) ===
+    const finalEnTags = getTagNumbers(lastResult!.english_tagged);
+    const finalKrTags = getTagNumbers(lastResult!.korean_literal_tagged);
+    if (JSON.stringify(finalEnTags) !== JSON.stringify(finalKrTags)) {
+      console.log("Tag number mismatch after retries, attempting Korean literal repair...");
+      try {
+        const repairPrompt = `You are a precise English-Korean literal translation engine.
+
+The English sentence has been chunked as follows:
+${lastResult!.english_tagged}
+
+Your job: Translate each chunk into Korean literally, using the EXACT SAME tag structure.
+- Use the same <cN>...</cN> tag numbers as the English.
+- Preserve <v>...</v> tags inside chunks — just translate the text around them.
+- Use informal Korean endings (반말): ~했다, ~이다, ~한다, ~였다.
+- NEVER use polite endings: ~합니다, ~입니다, ~했습니다.
+- NEVER use Chinese characters (Hanja).
+
+Return ONLY the Korean tagged string. Nothing else.`;
+
+        const repairResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: "Bearer " + LOVABLE_API_KEY,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-3-flash-preview",
+            messages: [
+              { role: "system", content: repairPrompt },
+              { role: "user", content: lastResult!.english_tagged },
+            ],
+          }),
+        });
+
+        if (repairResponse.ok) {
+          const repairData = await repairResponse.json();
+          const repaired = repairData.choices?.[0]?.message?.content?.trim();
+          if (repaired) {
+            let cleanedRepair = repaired.replace(/```[\w]*\n?/g, '').replace(/```/g, '').trim();
+            // Remove <v> tags from Korean (Korean doesn't use verb tags)
+            cleanedRepair = cleanedRepair.replace(/<\/?v>/g, '');
+            const repairedTags = getTagNumbers(cleanedRepair);
+            if (JSON.stringify(finalEnTags) === JSON.stringify(repairedTags)) {
+              console.log("Korean literal repair successful");
+              lastResult!.korean_literal_tagged = sanitizeKorean(cleanedRepair);
+            } else {
+              console.warn("Korean literal repair failed: tags still mismatched", repairedTags, "vs", finalEnTags);
+            }
+          }
+        }
+      } catch (repairErr) {
+        console.warn("Korean literal repair failed:", repairErr);
       }
     }
 
