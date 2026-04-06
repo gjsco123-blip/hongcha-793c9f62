@@ -201,6 +201,7 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
   </defs>
   <rect x="0" y="0" width="${gridWidth}" height="${gridHeight}" fill="url(#grid)" />
 </svg>`;
+  // Use URI-encoded SVG (instead of runtime base64 conversion) for stable rendering in react-pdf.
   const gridDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(gridSvg)}`;
   // Keep the requested default (3.5/15), but compact automatically on dense pages
   // so the bottom analysis block is less likely to move to the next page.
