@@ -358,7 +358,7 @@ Return ONLY the Korean tagged string. Nothing else.`;
         const repairResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
           headers: {
-            Authorization: \`Bearer \${LOVABLE_API_KEY}\`,
+            Authorization: "Bearer " + LOVABLE_API_KEY,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -382,7 +382,7 @@ Return ONLY the Korean tagged string. Nothing else.`;
               console.log("Korean literal repair successful");
               lastResult!.korean_literal_tagged = sanitizeKorean(cleanedRepair);
             } else {
-              console.warn(\`Korean literal repair failed: tags still mismatched [${repairedTags}] vs [${finalEnTags}]\`);
+              console.warn("Korean literal repair failed: tags still mismatched", repairedTags, "vs", finalEnTags);
             }
           }
         }
