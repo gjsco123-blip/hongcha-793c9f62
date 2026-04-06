@@ -1,8 +1,10 @@
 import {
   Document,
   Font,
-  Image,
+  Line,
   Page,
+  Rect,
+  Svg,
   StyleSheet,
   Text,
   View,
@@ -134,6 +136,8 @@ const styles = StyleSheet.create({
     fontWeight: 600,
     color: "#111",
     lineHeight: 3.5,
+    backgroundColor: "#fff",
+    paddingHorizontal: 1.5,
   },
   sentenceTextCompact: {
     fontSize: 9.2,
@@ -186,23 +190,8 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
   const gridStep = 22;
   const gridWidth = 560;
   const gridHeight = 740;
-  const gridSvg = `
-<svg xmlns="http://www.w3.org/2000/svg" width="${gridWidth}" height="${gridHeight}" viewBox="0 0 ${gridWidth} ${gridHeight}">
-  <defs>
-    <pattern id="grid" width="${gridStep}" height="${gridStep}" patternUnits="userSpaceOnUse">
-      <path d="M 0 0 H ${gridStep} M 0 0 V ${gridStep}"
-            fill="none"
-            stroke="#cfcfcf"
-            stroke-width="0.45"
-            stroke-dasharray="1.2 3.6"
-            stroke-linecap="round"
-            shape-rendering="geometricPrecision" />
-    </pattern>
-  </defs>
-  <rect x="0" y="0" width="${gridWidth}" height="${gridHeight}" fill="url(#grid)" />
-</svg>`;
-  // Use URI-encoded SVG (instead of runtime base64 conversion) for stable rendering in react-pdf.
-  const gridDataUri = `data:image/svg+xml;utf8,${encodeURIComponent(gridSvg)}`;
+  const horizontalLines = Array.from({ length: Math.floor(gridHeight / gridStep) + 1 }, (_, i) => i * gridStep);
+  const verticalLines = Array.from({ length: Math.floor(gridWidth / gridStep) + 1 }, (_, i) => i * gridStep);
   // Keep the requested default (3.5/15), but compact automatically on dense pages
   // so the bottom analysis block is less likely to move to the next page.
   const useCompactSentenceLayout = hasAnalysis && (results.length >= 9 || totalChars > 980);
@@ -216,7 +205,33 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
         </View>
         <View style={styles.body}>
           <View style={styles.gridLayer}>
-            <Image src={gridDataUri} style={styles.gridSvg} />
+            <Svg style={styles.gridSvg} viewBox={`0 0 ${gridWidth} ${gridHeight}`}>
+              <Rect x={0} y={0} width={gridWidth} height={gridHeight} fill="#fff" />
+              {horizontalLines.map((y) => (
+                <Line
+                  key={`h-${y}`}
+                  x1={0}
+                  y1={y}
+                  x2={gridWidth}
+                  y2={y}
+                  stroke="#cfcfcf"
+                  strokeWidth={0.45}
+                  strokeDasharray="1.2 3.8"
+                />
+              ))}
+              {verticalLines.map((x) => (
+                <Line
+                  key={`v-${x}`}
+                  x1={x}
+                  y1={0}
+                  x2={x}
+                  y2={gridHeight}
+                  stroke="#cfcfcf"
+                  strokeWidth={0.45}
+                  strokeDasharray="1.2 3.8"
+                />
+              ))}
+            </Svg>
           </View>
 
           <View style={styles.contentLayer}>
