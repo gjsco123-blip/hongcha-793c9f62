@@ -187,15 +187,18 @@ const styles = StyleSheet.create({
 });
 
 // Arc text: position each letter of "WORKBOOK" along a curve at top-right corner
+// Arc text: position each letter of "WORKBOOK" along a curve outside the body's top-right corner
+// Coordinates are in PAGE space (not body-relative)
 function getArcLetters() {
   const text = "WORKBOOK";
-  // Center of the arc circle, positioned so the arc hugs the top-right corner
-  const cx = 490; // x center (near right edge of body ~535pt wide)
-  const cy = 75;  // y center
-  const radius = 62;
-  // Arc from ~210° to ~330° (top-right quadrant curve)
-  const startAngle = -150; // degrees
-  const endAngle = -30;    // degrees
+  // Body starts at paddingLeft=30, width=535, borderRadius=18
+  // Top-right corner curve center in page coords: (30 + 535 - 18, headerHeight + 18)
+  // Header is ~20pt tall (title fontSize 8 + paddingBottom 6 + marginBottom ~6)
+  const cx = 547;  // 30 + 535 - 18
+  const cy = 50;   // approximate header height + borderRadius
+  const radius = 32; // outside the 18pt corner
+  const startAngle = -80; // degrees (near top)
+  const endAngle = 0;     // degrees (right side)
   const letters = text.split("");
   const totalAngle = endAngle - startAngle;
   const step = totalAngle / (letters.length - 1);
@@ -205,7 +208,6 @@ function getArcLetters() {
     const angleRad = (angleDeg * Math.PI) / 180;
     const x = cx + radius * Math.cos(angleRad);
     const y = cy + radius * Math.sin(angleRad);
-    // rotation: tangent to circle = angle + 90°
     const rotation = angleDeg + 90;
     return { char, x, y, rotation };
   });
@@ -269,23 +271,6 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
             </Svg>
           </View>
 
-          {/* Curved "WORKBOOK" text layer - between grid and content */}
-          {arcLetters.map((letter, i) => (
-            <Text
-              key={`arc-${i}`}
-              style={[
-                styles.arcLetterBase,
-                {
-                  left: letter.x,
-                  top: letter.y,
-                  transform: `rotate(${letter.rotation}deg)`,
-                },
-              ]}
-            >
-              {letter.char}
-            </Text>
-          ))}
-
           <View style={styles.contentLayer}>
             <View style={[styles.textLayer, { paddingBottom: sentenceBottomPad }]}>
               {results.map((result, index) => (
@@ -345,6 +330,23 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
             )}
           </View>
         </View>
+
+        {/* Curved "WORKBOOK" text - outside body, page-level absolute positioning */}
+        {arcLetters.map((letter, i) => (
+          <Text
+            key={`arc-${i}`}
+            style={[
+              styles.arcLetterBase,
+              {
+                left: letter.x,
+                top: letter.y,
+                transform: `rotate(${letter.rotation}deg)`,
+              },
+            ]}
+          >
+            {letter.char}
+          </Text>
+        ))}
       </Page>
     </Document>
   );
