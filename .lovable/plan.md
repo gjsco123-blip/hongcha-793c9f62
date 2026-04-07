@@ -1,45 +1,35 @@
 
 
-# "feed" → "fe" 변환 버그 수정
+# 워크북 PDF 격자가 텍스트 위에 렌더링되는 문제 수정
 
 ## 원인
 
-`synonym-sanitizer.ts`의 `toBaseToken` 함수(181줄)에서 `-ed`로 끝나는 단어를 무조건 과거형으로 판단하고 `-ed`를 제거함.
+`@react-pdf/renderer`는 **`zIndex`를 안정적으로 지원하지 않음**. 현재 `gridLayer`에 `zIndex: 0`, `contentLayer`에 `zIndex: 2`를 설정했지만, react-pdf에서는 이 속성이 무시되는 경우가 많아 격자가 텍스트 위에 그려지는 현상 발생.
 
-"feed"는 원형 자체가 `-eed`로 끝나는 단어인데, `clean.endsWith("ed")` 조건에 걸려 `"fe"`로 잘못 변환됨. 같은 문제가 "seed", "need", "speed", "bleed", "breed", "weed", "proceed", "exceed", "succeed" 등에도 발생 가능.
+## 해결 방법 (`src/components/WorkbookPdfDocument.tsx`)
 
-## 해결 (`src/lib/synonym-sanitizer.ts`)
+`zIndex`에 의존하지 않고, **레이아웃 구조 자체**로 순서를 보장:
 
-### `-ed` 제거 전 보호 목록 추가 (181줄 앞)
+1. **gridLayer와 contentLayer 모두 `position: absolute`를 유지**하되, `zIndex` 속성을 모두 제거
+2. **JSX 렌더링 순서를 gridLayer → contentLayer로 유지** (react-pdf는 나중에 렌더링된 요소가 위에 옴)
+3. **contentLayer에 불투명 배경 없음 확인** (투명해야 격자가 비침)
+4. **textLayer에서도 `zIndex` 제거**
 
-`-eed`로 끝나는 단어들은 원형이므로 `-ed` 제거 대상에서 제외:
+핵심: react-pdf에서는 DOM 순서가 곧 z-order. `zIndex` 프로퍼티를 제거하고 순서만으로 해결.
 
-```typescript
-// 181줄 직전에 추가
-const STEM_ED_EXCEPTIONS = new Set([
-  "feed", "seed", "need", "speed", "bleed", "breed", "weed",
-  "proceed", "exceed", "succeed", "heed", "deed", "reed",
-  "creed", "greed", "steed", "freed",
-]);
+### 변경 요약
 
-if (clean.endsWith("ed") && clean.length > 3) {
-  if (STEM_ED_EXCEPTIONS.has(clean)) return clean;  // ← 새로 추가
-  let base = clean.slice(0, -2);
-  // ... 기존 로직
-}
+```text
+gridLayer:  zIndex: 0  → 삭제
+contentLayer: zIndex: 2 → 삭제  
+textLayer: zIndex: 2    → 삭제
+analysisSection: zIndex: 3 → 삭제
+body: backgroundColor: "#fff" → 유지 (배경색은 body에만)
 ```
 
-더 일반적인 패턴으로, `-eed`로 끝나면서 `IRREGULAR_BASE`에 없는 단어는 원형으로 보호하는 규칙도 가능:
+격자 SVG의 배경을 투명하게 유지하고, `body`의 `backgroundColor: "#fff"`가 가장 뒤에서 흰 배경 역할.
 
-```typescript
-if (clean.endsWith("eed")) return clean;  // feed, seed, need 등 모두 보호
-```
-
-### 수정 파일
 | 파일 | 변경 |
 |------|------|
-| `src/lib/synonym-sanitizer.ts` | `toBaseToken` 181줄: `-eed` 끝나는 단어 보호 규칙 추가 |
-
-## 기존 기능 영향
-없음. "needed" → "need", "seeded" → "seed" 등은 `-eed`가 아닌 `-eeded`이므로 이 규칙에 해당하지 않고, 기존 `-ed` 제거 로직이 정상 작동함.
+| `src/components/WorkbookPdfDocument.tsx` | 모든 `zIndex` 제거, DOM 순서로 레이어링 보장 |
 
