@@ -63,6 +63,7 @@ const styles = StyleSheet.create({
     borderWidth: 0.6,
     borderColor: "#222",
     borderRadius: 18,
+    backgroundColor: "#fff",
   },
   gridLayer: {
     position: "absolute",
@@ -70,6 +71,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
+    zIndex: 0,
   },
   gridSvg: {
     width: "100%",
@@ -82,6 +84,7 @@ const styles = StyleSheet.create({
     bottom: 10,
     left: 10,
     flexDirection: "column",
+    zIndex: 1,
   },
   header: {
     flexDirection: "row",
@@ -135,8 +138,6 @@ const styles = StyleSheet.create({
     fontWeight: 600,
     color: "#111",
     lineHeight: 3.5,
-    backgroundColor: "#fff",
-    paddingHorizontal: 1.5,
   },
   sentenceTextCompact: {
     fontSize: 9.2,
@@ -187,15 +188,15 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
   const hasAnalysis = Boolean(topic || heading || summary);
   const totalChars = results.reduce((acc, cur) => acc + (cur.original?.length || 0), 0);
   const gridStep = 22;
-  const gridStart = -gridStep;
+  const gridStart = 0;
   const gridWidth = 560;
   const gridHeight = 740;
   const horizontalLines = Array.from(
-    { length: Math.floor((gridHeight - gridStart) / gridStep) + 2 },
+    { length: Math.floor((gridHeight - gridStart) / gridStep) + 1 },
     (_, i) => gridStart + i * gridStep
   );
   const verticalLines = Array.from(
-    { length: Math.floor((gridWidth - gridStart) / gridStep) + 2 },
+    { length: Math.floor((gridWidth - gridStart) / gridStep) + 1 },
     (_, i) => gridStart + i * gridStep
   );
   // Keep the requested default (3.5/15), but compact automatically on dense pages
