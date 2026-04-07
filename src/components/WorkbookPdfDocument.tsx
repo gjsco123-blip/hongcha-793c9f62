@@ -101,12 +101,12 @@ const styles = StyleSheet.create({
     fontWeight: 700,
     color: "#111",
   },
-  workbookLabel: {
+  arcLetterBase: {
+    position: "absolute" as const,
     fontFamily: "Helvetica",
-    fontSize: 16,
-    fontWeight: 800,
+    fontSize: 7.5,
+    fontWeight: 700,
     color: "#111",
-    letterSpacing: 0.6,
   },
   sentenceRow: {
     flexDirection: "row",
@@ -186,6 +186,31 @@ const styles = StyleSheet.create({
   },
 });
 
+// Arc text: position each letter of "WORKBOOK" along a curve at top-right corner
+function getArcLetters() {
+  const text = "WORKBOOK";
+  // Center of the arc circle, positioned so the arc hugs the top-right corner
+  const cx = 490; // x center (near right edge of body ~535pt wide)
+  const cy = 75;  // y center
+  const radius = 62;
+  // Arc from ~210° to ~330° (top-right quadrant curve)
+  const startAngle = -150; // degrees
+  const endAngle = -30;    // degrees
+  const letters = text.split("");
+  const totalAngle = endAngle - startAngle;
+  const step = totalAngle / (letters.length - 1);
+
+  return letters.map((char, i) => {
+    const angleDeg = startAngle + i * step;
+    const angleRad = (angleDeg * Math.PI) / 180;
+    const x = cx + radius * Math.cos(angleRad);
+    const y = cy + radius * Math.sin(angleRad);
+    // rotation: tangent to circle = angle + 90°
+    const rotation = angleDeg + 90;
+    return { char, x, y, rotation };
+  });
+}
+
 export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDocumentProps) {
   const topic = (examBlock?.topic || "").trim();
   const heading = (examBlock?.title || "").trim();
@@ -204,17 +229,15 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
     { length: Math.floor((gridWidth - gridStart) / gridStep) + 2 },
     (_, i) => gridStart + i * gridStep
   );
-  // Keep the requested default (3.5/15), but compact automatically on dense pages
-  // so the bottom analysis block is less likely to move to the next page.
   const useCompactSentenceLayout = hasAnalysis && (results.length >= 9 || totalChars > 980);
   const sentenceBottomPad = hasAnalysis ? 185 : 0;
+  const arcLetters = getArcLetters();
 
   return (
     <Document>
       <Page size="A4" style={styles.page} wrap>
         <View style={styles.header} fixed>
           <Text style={styles.title}>{title}</Text>
-          <Text style={styles.workbookLabel}>WORKBOOK</Text>
         </View>
         <View style={styles.body}>
           <View style={styles.gridLayer}>
@@ -245,6 +268,23 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
               ))}
             </Svg>
           </View>
+
+          {/* Curved "WORKBOOK" text layer - between grid and content */}
+          {arcLetters.map((letter, i) => (
+            <Text
+              key={`arc-${i}`}
+              style={[
+                styles.arcLetterBase,
+                {
+                  left: letter.x,
+                  top: letter.y,
+                  transform: `rotate(${letter.rotation}deg)`,
+                },
+              ]}
+            >
+              {letter.char}
+            </Text>
+          ))}
 
           <View style={styles.contentLayer}>
             <View style={[styles.textLayer, { paddingBottom: sentenceBottomPad }]}>
