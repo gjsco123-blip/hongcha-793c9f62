@@ -70,20 +70,18 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    zIndex: 0,
   },
   gridSvg: {
     width: "100%",
     height: "100%",
   },
   contentLayer: {
-    position: "relative",
-    zIndex: 1,
-    flexGrow: 1,
-    marginTop: 18,
-    marginRight: 10,
-    marginBottom: 10,
-    marginLeft: 10,
+    position: "absolute",
+    top: 18,
+    right: 10,
+    bottom: 10,
+    left: 10,
+    flexDirection: "column",
   },
   header: {
     flexDirection: "row",
@@ -189,10 +187,17 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
   const hasAnalysis = Boolean(topic || heading || summary);
   const totalChars = results.reduce((acc, cur) => acc + (cur.original?.length || 0), 0);
   const gridStep = 22;
+  const gridStart = -gridStep;
   const gridWidth = 560;
   const gridHeight = 740;
-  const horizontalLines = Array.from({ length: Math.floor(gridHeight / gridStep) + 1 }, (_, i) => i * gridStep);
-  const verticalLines = Array.from({ length: Math.floor(gridWidth / gridStep) + 1 }, (_, i) => i * gridStep);
+  const horizontalLines = Array.from(
+    { length: Math.floor((gridHeight - gridStart) / gridStep) + 2 },
+    (_, i) => gridStart + i * gridStep
+  );
+  const verticalLines = Array.from(
+    { length: Math.floor((gridWidth - gridStart) / gridStep) + 2 },
+    (_, i) => gridStart + i * gridStep
+  );
   // Keep the requested default (3.5/15), but compact automatically on dense pages
   // so the bottom analysis block is less likely to move to the next page.
   const useCompactSentenceLayout = hasAnalysis && (results.length >= 9 || totalChars > 980);
@@ -206,7 +211,7 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
         </View>
         <View style={styles.body}>
           <View style={styles.gridLayer}>
-            <Svg style={styles.gridSvg} viewBox={`0 0 ${gridWidth} ${gridHeight}`}>
+            <Svg style={styles.gridSvg} viewBox={`0 0 ${gridWidth} ${gridHeight}`} preserveAspectRatio="none">
               <Rect x={0} y={0} width={gridWidth} height={gridHeight} fill="#fff" />
               {horizontalLines.map((y) => (
                 <Line
