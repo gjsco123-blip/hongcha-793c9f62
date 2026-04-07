@@ -71,20 +71,23 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    zIndex: 0,
   },
   gridSvg: {
     width: "100%",
     height: "100%",
   },
   contentLayer: {
-    position: "absolute",
-    top: 18,
-    right: 10,
-    bottom: 10,
-    left: 10,
+    flexGrow: 1,
+    position: "relative",
+    paddingTop: 18,
+    paddingRight: 10,
+    paddingBottom: 10,
+    paddingLeft: 10,
     flexDirection: "column",
-    zIndex: 1,
+  },
+  textLayer: {
+    position: "relative",
+    zIndex: 2,
   },
   header: {
     flexDirection: "row",
@@ -222,8 +225,8 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
                   x2={gridWidth}
                   y2={y}
                   stroke="#cfcfcf"
-                  strokeWidth={0.45}
-                  strokeDasharray="1.2 3.8"
+                  strokeWidth={0.4}
+                  strokeDasharray="3.2 5.2"
                 />
               ))}
               {verticalLines.map((x) => (
@@ -234,14 +237,15 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
                   x2={x}
                   y2={gridHeight}
                   stroke="#cfcfcf"
-                  strokeWidth={0.45}
-                  strokeDasharray="1.2 3.8"
+                  strokeWidth={0.4}
+                  strokeDasharray="3.2 5.2"
                 />
               ))}
             </Svg>
           </View>
 
           <View style={styles.contentLayer}>
+            <View style={styles.textLayer}>
             {results.map((result, index) => (
               <View
                 key={result.id}
@@ -296,6 +300,7 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
                 ) : null}
               </View>
             )}
+            </View>
           </View>
         </View>
       </Page>
