@@ -269,6 +269,23 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
             </Svg>
           </View>
 
+          {/* Curved "WORKBOOK" text layer - between grid and content */}
+          {arcLetters.map((letter, i) => (
+            <Text
+              key={`arc-${i}`}
+              style={[
+                styles.arcLetterBase,
+                {
+                  left: letter.x,
+                  top: letter.y,
+                  transform: `rotate(${letter.rotation}deg)`,
+                },
+              ]}
+            >
+              {letter.char}
+            </Text>
+          ))}
+
           <View style={styles.contentLayer}>
             <View style={[styles.textLayer, { paddingBottom: sentenceBottomPad }]}>
               {results.map((result, index) => (
