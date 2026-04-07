@@ -1,39 +1,54 @@
 
 
-# WORKBOOK 텍스트 곡선 배치
+# WORKBOOK 곡선 텍스트 — body 바깥쪽 배치
 
-## 접근 방식
+## 현재 문제
 
-`@react-pdf/renderer`는 SVG `<textPath>`를 지원하지 않으므로, **각 글자를 개별 `<Text>`로 만들어 원호 위 좌표에 배치 + `transform: rotate()`**로 곡선 효과를 구현.
+글자들이 body 박스 **안쪽**에 배치되어 있음. 사용자는 body의 우측 상단 둥근 모서리 **바깥쪽**을 따라 글자가 나열되길 원함 (CASETiFY 케이스 외곽 느낌).
 
-CASETiFY 사진처럼, 워크북 body의 **우측 상단 둥근 모서리(borderRadius: 18)** 안쪽을 따라 "WORKBOOK" 글자가 호를 그리며 배치됨.
+## 핵심 변경
 
-## 구현 (`src/components/WorkbookPdfDocument.tsx`)
+현재 곡선 텍스트가 `<View style={styles.body}>` 안에 있는데, body 바깥으로 옮겨야 함. body에 `overflow: "hidden"`이 있어 바깥 글자가 잘리기 때문.
 
-### 1) 글자별 좌표/회전 계산 함수
+### 구현 (`src/components/WorkbookPdfDocument.tsx`)
+
+**1) 곡선 텍스트를 body 밖으로 이동**
+
+현재 arc 글자들이 body View 내부에 렌더링됨 → body **밖**, page 레벨의 별도 절대 위치 레이어로 이동.
+
+**2) 좌표 재계산**
+
+body 좌표 기준이 아니라 page 기준으로 변경:
+- body는 page의 `paddingLeft: 30`, header 높이(약 20pt) 아래에서 시작
+- body 너비: 535pt, borderRadius: 18pt
+- 우측 상단 모서리 곡선 중심 (page 기준): `x ≈ 547, y ≈ 50`
+- 글자를 모서리 **바깥**에 배치하므로 radius를 borderRadius(18)보다 큰 값으로: **약 30~35pt**
+- 각도 범위: `-80°`(위쪽) → `0°`(오른쪽) 정도
+
 ```text
-function getArcPositions(text: string, cx: number, cy: number, radius: number, startAngle: number, endAngle: number) {
-  // 각 글자를 균등 분배하여 (x, y, rotation) 반환
-}
+cx: 547   (30 + 535 - 18 = 페이지 기준 모서리 곡선 중심 x)
+cy: 50    (header 높이 + body borderRadius 중심 y)
+radius: 32 (18pt 모서리 + 14pt 바깥 여백)
+startAngle: -80
+endAngle: 0
 ```
 
-### 2) 기존 헤더의 "WORKBOOK" 라벨을 제거
-현재 `styles.header` 안의 `<Text style={styles.workbookLabel}>WORKBOOK</Text>` 삭제
+**3) JSX 구조 변경**
 
-### 3) body 내부 우측 상단에 곡선 텍스트 배치
-`gridLayer`와 `contentLayer` 사이에 absolute로 위치한 곡선 텍스트 레이어 추가. 각 글자는 `position: absolute`, `left`, `top`, `transform: rotate(Ndeg)`로 배치.
+```text
+<Page>
+  <View style={header}>...</View>
+  <View style={body}>
+    {/* gridLayer */}
+    {/* contentLayer */}
+  </View>
+  {/* 곡선 텍스트: body 바깥, page 레벨에서 절대 위치 */}
+  {arcLetters.map(...)}
+</Page>
+```
 
-### 4) 스타일
-- 폰트: Helvetica Bold, 약 7~8pt
-- 색상: #111
-- letterSpacing 효과는 각 글자 간 각도 간격으로 조절
-
-## 제약/주의사항
-- `@react-pdf/renderer`의 `transform`은 `rotate(Ndeg)` 형식 지원. 단, 회전 중심점(transform-origin) 제어가 제한적이라 미세 조정 필요
-- 글자 수가 8개("WORKBOOK")로 고정이므로 하드코딩된 좌표 배열도 실용적
-
-## 수정 파일
+### 수정 파일
 | 파일 | 변경 |
 |------|------|
-| `src/components/WorkbookPdfDocument.tsx` | 헤더 WORKBOOK 라벨 → body 우측 상단 곡선 배치로 변경 |
+| `src/components/WorkbookPdfDocument.tsx` | arc 텍스트를 body 밖으로 이동, 좌표를 page 기준으로 재계산 |
 
