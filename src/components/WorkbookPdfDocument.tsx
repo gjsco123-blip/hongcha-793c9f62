@@ -70,7 +70,6 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    zIndex: 0,
   },
   gridSvg: {
     width: "100%",
@@ -82,7 +81,6 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    zIndex: 2,
     paddingTop: 18,
     paddingRight: 10,
     paddingBottom: 10,
@@ -90,7 +88,6 @@ const styles = StyleSheet.create({
   },
   textLayer: {
     position: "relative",
-    zIndex: 2,
   },
   header: {
     flexDirection: "row",
@@ -154,7 +151,6 @@ const styles = StyleSheet.create({
     left: 10,
     right: 10,
     bottom: 10,
-    zIndex: 3,
   },
   analysisItem: {
     marginBottom: 13.5,
