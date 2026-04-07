@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
   arcLetterBase: {
     position: "absolute" as const,
     fontFamily: "Helvetica",
-    fontSize: 7.5,
+    fontSize: 6.5,
     fontWeight: 700,
     color: "#111",
   },
@@ -191,14 +191,17 @@ const styles = StyleSheet.create({
 // Coordinates are in PAGE space (not body-relative)
 function getArcLetters() {
   const text = "WORKBOOK";
-  // Body starts at paddingLeft=30, width=535, borderRadius=18
-  // Top-right corner curve center in page coords: (30 + 535 - 18, headerHeight + 18)
-  // Header is ~20pt tall (title fontSize 8 + paddingBottom 6 + marginBottom ~6)
-  const cx = 547;  // 30 + 535 - 18
-  const cy = 50;   // approximate header height + borderRadius
-  const radius = 32; // outside the 18pt corner
-  const startAngle = -80; // degrees (near top)
-  const endAngle = 0;     // degrees (right side)
+  // Body: paddingLeft=30, width=535, borderRadius=18
+  // Header: title(8pt) + paddingBottom(6pt) ≈ 14pt total
+  // Body top-right borderRadius center in page coords:
+  //   cx = 30 + 535 - 18 = 547
+  //   cy = 30(pagePadTop) + 14(header) + 18(borderRadius) = 62
+  const cx = 547;
+  const cy = 62;
+  // radius = borderRadius(18) + border(0.6) + half-fontSize(~3.5) ≈ 23
+  const radius = 23;
+  const startAngle = -85; // near top edge
+  const endAngle = -5;    // near right edge
   const letters = text.split("");
   const totalAngle = endAngle - startAngle;
   const step = totalAngle / (letters.length - 1);
