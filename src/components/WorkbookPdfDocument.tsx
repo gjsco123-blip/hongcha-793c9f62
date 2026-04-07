@@ -3,7 +3,6 @@ import {
   Font,
   Line,
   Page,
-  Rect,
   Svg,
   StyleSheet,
   Text,
@@ -71,19 +70,23 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
+    zIndex: 0,
   },
   gridSvg: {
     width: "100%",
     height: "100%",
   },
   contentLayer: {
-    flexGrow: 1,
-    position: "relative",
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    zIndex: 2,
     paddingTop: 18,
     paddingRight: 10,
     paddingBottom: 10,
     paddingLeft: 10,
-    flexDirection: "column",
   },
   textLayer: {
     position: "relative",
@@ -147,8 +150,11 @@ const styles = StyleSheet.create({
     lineHeight: 3.0,
   },
   analysisSection: {
-    marginTop: "auto",
-    paddingTop: 6,
+    position: "absolute",
+    left: 10,
+    right: 10,
+    bottom: 10,
+    zIndex: 3,
   },
   analysisItem: {
     marginBottom: 13.5,
@@ -191,32 +197,32 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
   const hasAnalysis = Boolean(topic || heading || summary);
   const totalChars = results.reduce((acc, cur) => acc + (cur.original?.length || 0), 0);
   const gridStep = 22;
-  const gridStart = 0;
+  const gridStart = -22;
   const gridWidth = 560;
   const gridHeight = 740;
   const horizontalLines = Array.from(
-    { length: Math.floor((gridHeight - gridStart) / gridStep) + 1 },
+    { length: Math.floor((gridHeight - gridStart) / gridStep) + 2 },
     (_, i) => gridStart + i * gridStep
   );
   const verticalLines = Array.from(
-    { length: Math.floor((gridWidth - gridStart) / gridStep) + 1 },
+    { length: Math.floor((gridWidth - gridStart) / gridStep) + 2 },
     (_, i) => gridStart + i * gridStep
   );
   // Keep the requested default (3.5/15), but compact automatically on dense pages
   // so the bottom analysis block is less likely to move to the next page.
   const useCompactSentenceLayout = hasAnalysis && (results.length >= 9 || totalChars > 980);
+  const sentenceBottomPad = hasAnalysis ? 185 : 0;
 
   return (
     <Document>
       <Page size="A4" style={styles.page} wrap>
         <View style={styles.header} fixed>
-          <Text style={styles.workbookLabel}>WORKBOOK</Text>
           <Text style={styles.title}>{title}</Text>
+          <Text style={styles.workbookLabel}>WORKBOOK</Text>
         </View>
         <View style={styles.body}>
           <View style={styles.gridLayer}>
             <Svg style={styles.gridSvg} viewBox={`0 0 ${gridWidth} ${gridHeight}`} preserveAspectRatio="none">
-              <Rect x={0} y={0} width={gridWidth} height={gridHeight} fill="#fff" />
               {horizontalLines.map((y) => (
                 <Line
                   key={`h-${y}`}
@@ -245,29 +251,30 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
           </View>
 
           <View style={styles.contentLayer}>
-            <View style={styles.textLayer}>
-            {results.map((result, index) => (
-              <View
-                key={result.id}
-                style={[
-                  styles.sentenceRow,
-                  useCompactSentenceLayout ? styles.sentenceRowCompact : null,
-                ]}
-                wrap={false}
-              >
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{String(index + 1).padStart(2, "0")}</Text>
-                </View>
-                <Text
+            <View style={[styles.textLayer, { paddingBottom: sentenceBottomPad }]}>
+              {results.map((result, index) => (
+                <View
+                  key={result.id}
                   style={[
-                    styles.sentenceText,
-                    useCompactSentenceLayout ? styles.sentenceTextCompact : null,
+                    styles.sentenceRow,
+                    useCompactSentenceLayout ? styles.sentenceRowCompact : null,
                   ]}
+                  wrap={false}
                 >
-                  {result.original}
-                </Text>
-              </View>
-            ))}
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{String(index + 1).padStart(2, "0")}</Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.sentenceText,
+                      useCompactSentenceLayout ? styles.sentenceTextCompact : null,
+                    ]}
+                  >
+                    {result.original}
+                  </Text>
+                </View>
+              ))}
+            </View>
 
             {hasAnalysis && (
               <View style={styles.analysisSection}>
@@ -300,7 +307,6 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
                 ) : null}
               </View>
             )}
-            </View>
           </View>
         </View>
       </Page>
