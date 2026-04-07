@@ -101,12 +101,12 @@ const styles = StyleSheet.create({
     fontWeight: 700,
     color: "#111",
   },
-  workbookLabel: {
+  arcLetterBase: {
+    position: "absolute" as const,
     fontFamily: "Helvetica",
-    fontSize: 16,
-    fontWeight: 800,
+    fontSize: 7.5,
+    fontWeight: 700,
     color: "#111",
-    letterSpacing: 0.6,
   },
   sentenceRow: {
     flexDirection: "row",
