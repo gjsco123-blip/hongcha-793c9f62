@@ -178,6 +178,7 @@ const toBaseToken = (token: string) => {
   if (clean === "died") return "die";
   if (clean.endsWith("ied") && clean.length > 3) return `${clean.slice(0, -3)}y`;
   if (clean.endsWith("ies") && clean.length > 4) return `${clean.slice(0, -3)}y`;
+  if (clean.endsWith("eed")) return clean;
   if (clean.endsWith("ed") && clean.length > 3) {
     let base = clean.slice(0, -2);
     if (IRREGULAR_BASE[base]) return IRREGULAR_BASE[base];
