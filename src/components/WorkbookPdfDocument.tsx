@@ -187,28 +187,39 @@ const styles = StyleSheet.create({
   },
 });
 
-// Path-based placement: top straight → 18pt corner arc → right straight
-// Coordinates in PAGE space
-// Per-letter metrics indexed by position in "WORKBOOK".
-// `w`          – approximate rendered width of glyph at 6.5pt Helvetica Bold.
-// `borderPush` – post-anchor correction that pushes the rendered glyph toward
-//                the border (along the inward normal). Applied AFTER the
-//                center→anchor conversion so it directly adjusts the visual
-//                outline-to-border gap. R (index 2) is the reference (0).
-//                Round glyphs (O, B) need positive values because their visible
-//                outline sits inside the bounding box.
-const LETTER_METRICS: { char: string; w: number; borderPush: number }[] = [
-  { char: "W", w: 5.8, borderPush: 0.1 },
-  { char: "O", w: 4.8, borderPush: 0.25 },
-  { char: "R", w: 4.4, borderPush: 0 },     // ★ REFERENCE
-  { char: "K", w: 4.4, borderPush: 0.25 },
-  { char: "B", w: 4.5, borderPush: 0.75 },
-  { char: "O", w: 4.8, borderPush: 0.95 },
-  { char: "O", w: 4.8, borderPush: 0.95 },
-  { char: "K", w: 4.4, borderPush: 0.3 },
+// Per-letter optical corrections (2-axis: normal + tangent).
+// normalOffset: push toward border (negative = closer). R is reference (0,0).
+// tangentOffset: shift along path direction.
+const LETTER_METRICS: { char: string; normalOffset: number; tangentOffset: number }[] = [
+  { char: "W", normalOffset: 0,   tangentOffset: 0 },
+  { char: "O", normalOffset: 0,   tangentOffset: 0 },
+  { char: "R", normalOffset: 0,   tangentOffset: 0 },   // ★ REFERENCE
+  { char: "K", normalOffset: 0,   tangentOffset: 0 },
+  { char: "B", normalOffset: 0,   tangentOffset: 0 },
+  { char: "O", normalOffset: 0,   tangentOffset: 0 },
+  { char: "O", normalOffset: 0,   tangentOffset: 0 },
+  { char: "K", normalOffset: 0,   tangentOffset: 0 },
 ];
 
-function getArcLetters() {
+interface ArcPoint {
+  char: string;
+  // Page-space coordinates of the point ON the path (border + baseOffset)
+  px: number;
+  py: number;
+  // Rotation in degrees (CW, for pdfkit)
+  rotation: number;
+  // Outward normal unit vector
+  nx: number;
+  ny: number;
+  // Tangent unit vector (along path direction)
+  tx: number;
+  ty: number;
+  // Per-letter offsets
+  normalOffset: number;
+  tangentOffset: number;
+}
+
+function getArcPoints(): ArcPoint[] {
   const text = "WORKBOOK";
   const letters = text.split("");
 
@@ -222,7 +233,7 @@ function getArcLetters() {
   const bodyTop = pagePadTop + headerHeight;
   const bodyRight = pagePadLeft + bodyWidth;
 
-  // Base offset from border edge to letter visual center (K reference)
+  // Base offset from border edge to letter center
   const baseOffset = borderW + 1.5;
 
   // Arc center (page coords)
@@ -249,25 +260,21 @@ function getArcLetters() {
   // Equal spacing
   const spacing = totalLen / (letters.length + 1);
 
-  const charH = 6.5; // font height constant
-
   return letters.map((char, i) => {
     const d = spacing * (i + 1);
-    const m = LETTER_METRICS[i] || { w: 4.5, borderPush: 0 };
+    const m = LETTER_METRICS[i] || { normalOffset: 0, tangentOffset: 0 };
 
-    // Path point + normal direction (pointing outward from body)
     let px: number, py: number, rotation: number;
-    let nx: number, ny: number; // outward normal unit vector
+    let nx: number, ny: number;
+    let tx: number, ty: number;
 
     if (d <= seg1Len) {
-      // Top straight: normal points up (0, -1)
       px = topStartX + d;
       py = bodyTop;
       rotation = 0;
-      nx = 0;
-      ny = -1;
+      nx = 0; ny = -1;
+      tx = 1; ty = 0;
     } else if (d <= seg1Len + seg2Len) {
-      // Arc: normal points radially outward from arc center
       const arcD = d - seg1Len;
       const angleDeg = -90 + (arcD / seg2Len) * 90;
       const angleRad = (angleDeg * Math.PI) / 180;
@@ -276,32 +283,30 @@ function getArcLetters() {
       rotation = angleDeg + 90;
       nx = Math.cos(angleRad);
       ny = Math.sin(angleRad);
+      // Tangent is 90° CCW from normal for CW arc
+      tx = -ny; ty = nx;
     } else {
-      // Right straight: normal points right (1, 0)
       const straightD = d - seg1Len - seg2Len;
       px = bodyRight;
       py = rightStartY + straightD;
       rotation = 90;
-      nx = 1;
-      ny = 0;
+      nx = 1; ny = 0;
+      tx = 0; ty = 1;
     }
 
-    // Move outward from border by baseOffset (same for ALL letters)
-    const pathX = px + nx * baseOffset;
-    const pathY = py + ny * baseOffset;
+    // Move outward from border by baseOffset
+    px += nx * baseOffset;
+    py += ny * baseOffset;
 
-    // Anchor correction: convert from visual center to top-left anchor
-    const rad = (rotation * Math.PI) / 180;
-    let ax = pathX - (m.w / 2) * Math.cos(rad) - (charH / 2) * Math.sin(rad);
-    let ay = pathY + (m.w / 2) * Math.sin(rad) - (charH / 2) * Math.cos(rad);
-
-    // Post-anchor borderPush: move rendered glyph toward the border
-    // along the inward normal (-nx, -ny) to compensate for round glyphs
-    // whose visible outline doesn't reach the bounding-box edge.
-    ax -= nx * m.borderPush;
-    ay -= ny * m.borderPush;
-
-    return { char, x: ax, y: ay, rotation };
+    return {
+      char,
+      px, py,
+      rotation,
+      nx, ny,
+      tx, ty,
+      normalOffset: m.normalOffset,
+      tangentOffset: m.tangentOffset,
+    };
   });
 }
 
