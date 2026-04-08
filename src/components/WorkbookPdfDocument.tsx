@@ -188,20 +188,23 @@ const styles = StyleSheet.create({
 
 // Path-based placement: top straight → 18pt corner arc → right straight
 // Coordinates in PAGE space
-// Per-character metrics for Helvetica Bold ~6.5pt
-// charW = approximate rendered width, opticalInset = how much to pull inward
-// so the visible gap to the border matches visually across all letters.
 // Per-letter metrics indexed by position in "WORKBOOK".
-// R at index 2 is the visual reference (inset 0). All others calibrated to match R's border distance.
-const LETTER_METRICS: { char: string; w: number; inset: number }[] = [
-  { char: "W", w: 5.8, inset: 0.15 },  // 0 – top straight
-  { char: "O", w: 4.8, inset: 0.5 },   // 1 – top straight
-  { char: "R", w: 4.4, inset: 0 },     // 2 – top→curve ★ reference
-  { char: "K", w: 4.4, inset: 0 },     // 3 – curve
-  { char: "B", w: 4.5, inset: 0.4 },   // 4 – curve→right
-  { char: "O", w: 4.8, inset: 0.5 },   // 5 – right straight
-  { char: "O", w: 4.8, inset: 0.5 },   // 6 – right straight
-  { char: "K", w: 4.4, inset: 0 },     // 7 – right straight
+// `w`          – approximate rendered width of glyph at 6.5pt Helvetica Bold.
+// `borderPush` – post-anchor correction that pushes the rendered glyph toward
+//                the border (along the inward normal). Applied AFTER the
+//                center→anchor conversion so it directly adjusts the visual
+//                outline-to-border gap. R (index 2) is the reference (0).
+//                Round glyphs (O, B) need positive values because their visible
+//                outline sits inside the bounding box.
+const LETTER_METRICS: { char: string; w: number; borderPush: number }[] = [
+  { char: "W", w: 5.8, borderPush: 0.3 },   // 0 – top straight, wide but mostly fills bbox
+  { char: "O", w: 4.8, borderPush: 1.2 },   // 1 – top straight, round outline well inside bbox
+  { char: "R", w: 4.4, borderPush: 0 },     // 2 – top→curve ★ REFERENCE
+  { char: "K", w: 4.4, borderPush: 0 },     // 3 – curve, straight edges like R
+  { char: "B", w: 4.5, borderPush: 1.0 },   // 4 – curve→right, round right side
+  { char: "O", w: 4.8, borderPush: 1.2 },   // 5 – right straight
+  { char: "O", w: 4.8, borderPush: 1.2 },   // 6 – right straight
+  { char: "K", w: 4.4, borderPush: 0 },     // 7 – right straight
 ];
 
 function getArcLetters() {
