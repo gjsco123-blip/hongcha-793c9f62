@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   title: {
-    fontSize: 8,
+    fontSize: 16,
     fontWeight: 700,
     color: "#111",
   },
@@ -195,10 +195,10 @@ const LETTER_METRICS: { char: string; normalOffset: number; tangentOffset: numbe
   { char: "O", normalOffset: 0,   tangentOffset: 0 },
   { char: "R", normalOffset: 0,   tangentOffset: 0 },   // ★ REFERENCE
   { char: "K", normalOffset: 0,   tangentOffset: 0 },
-  { char: "B", normalOffset: 0,   tangentOffset: 0 },
-  { char: "O", normalOffset: 0,   tangentOffset: 0 },
-  { char: "O", normalOffset: 0,   tangentOffset: 0 },
-  { char: "K", normalOffset: 0,   tangentOffset: 0 },
+  { char: "B", normalOffset: 0.6, tangentOffset: 0 },
+  { char: "O", normalOffset: 0.8, tangentOffset: 0 },
+  { char: "O", normalOffset: 0.8, tangentOffset: 0 },
+  { char: "K", normalOffset: 0.8, tangentOffset: 0 },
 ];
 
 interface ArcPoint {
