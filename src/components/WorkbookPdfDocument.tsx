@@ -1,4 +1,5 @@
 import {
+  Canvas,
   Document,
   Font,
   Line,
@@ -101,12 +102,12 @@ const styles = StyleSheet.create({
     fontWeight: 700,
     color: "#111",
   },
-  arcLetterBase: {
+  arcCanvas: {
     position: "absolute" as const,
-    fontFamily: "Helvetica",
-    fontSize: 6.5,
-    fontWeight: 700,
-    color: "#111",
+    top: 0,
+    left: 0,
+    width: 595.28,  // A4 width in pt
+    height: 841.89, // A4 height in pt
   },
   sentenceRow: {
     flexDirection: "row",
