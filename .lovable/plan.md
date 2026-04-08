@@ -1,32 +1,35 @@
 
 
-# 워크북 PDF 저장 오류 수정
+# BOOK 외곽선 이격 + 제목 크기 변경
 
-## 원인
+## 현재 상태
 
-`Canvas`의 `paint` 콜백에서 `painter.widthOfString(pt.char)`를 호출하는데, `@react-pdf/renderer`의 painter 객체는 이 메서드를 지원하지 않음. → `x.widthOfString is not a function` 에러.
+- W O R K는 외곽선과 적절한 간격 유지 (OK)
+- B O O K는 외곽선에 **딱 붙어** 있음 → 밀어내야 함
+- 제목 fontSize가 8pt로 작음
 
 ## 수정 (`src/components/WorkbookPdfDocument.tsx`)
 
-### 1. `widthOfString` 호출 제거
+### 1. `LETTER_METRICS` normalOffset — 양수 = 바깥으로 밀기
 
-Helvetica-Bold 6.5pt 기준 글자 폭을 고정값으로 대체. `LETTER_METRICS`에 이미 per-letter 데이터가 있으므로 거기에 `w` (글자 폭 추정치)를 추가하거나, 폰트 크기 기반 상수(~3.8pt)를 사용.
+| idx | 글자 | normalOffset | 변경 |
+|-----|------|-------------|------|
+| 0 | W | 0 | 유지 |
+| 1 | O | 0 | 유지 |
+| 2 | R | 0 | 기준 |
+| 3 | K | 0 | 유지 |
+| 4 | B | 0.6 | 바깥으로 밀기 |
+| 5 | O | 0.8 | 바깥으로 밀기 |
+| 6 | O | 0.8 | 바깥으로 밀기 |
+| 7 | K | 0.8 | 바깥으로 밀기 |
 
-### 2. 변경 코드 (446행 부근)
+### 2. 제목 fontSize
 
-```typescript
-// Before (에러)
-const w = painter.widthOfString(pt.char);
-
-// After (고정 추정값)
-const w = fontSize * 0.65; // Helvetica-Bold 대문자 평균 폭
-```
-
-이 한 줄 수정으로 저장 에러가 해결됨. 글자 센터링의 미세 차이는 0.몇pt 수준이라 육안으로 구분 불가.
+`styles.title.fontSize`: 8 → 16
 
 ## 수정 파일
 
 | 파일 | 변경 |
 |------|------|
-| `src/components/WorkbookPdfDocument.tsx` | `widthOfString` → 고정 폭 상수 (1행) |
+| `src/components/WorkbookPdfDocument.tsx` | LETTER_METRICS normalOffset 4행 + title fontSize 1행 |
 
