@@ -186,32 +186,74 @@ const styles = StyleSheet.create({
   },
 });
 
-// Arc text: position each letter of "WORKBOOK" along a curve at top-right corner
-// Arc text: position each letter of "WORKBOOK" along a curve outside the body's top-right corner
-// Coordinates are in PAGE space (not body-relative)
+// Path-based placement: top straight → 18pt corner arc → right straight
+// Coordinates in PAGE space
 function getArcLetters() {
   const text = "WORKBOOK";
-  // Body: paddingLeft=30, width=535, borderRadius=18
-  // Header: title(8pt) + paddingBottom(6pt) ≈ 14pt total
-  // Body top-right borderRadius center in page coords:
-  //   cx = 30 + 535 - 18 = 547
-  //   cy = 30(pagePadTop) + 14(header) + 18(borderRadius) = 62
-  const cx = 547;
-  const cy = 62;
-  // radius = borderRadius(18) + border(0.6) + half-fontSize(~3.5) ≈ 23
-  const radius = 23;
-  const startAngle = -85; // near top edge
-  const endAngle = -5;    // near right edge
   const letters = text.split("");
-  const totalAngle = endAngle - startAngle;
-  const step = totalAngle / (letters.length - 1);
+
+  const pagePadLeft = 30;
+  const pagePadTop = 30;
+  const headerHeight = 14;
+  const bodyWidth = 535;
+  const borderRadius = 18;
+  const borderW = 0.6;
+
+  const bodyTop = pagePadTop + headerHeight;
+  const bodyRight = pagePadLeft + bodyWidth;
+
+  // Offset from border edge to letter center
+  const offset = borderW + 4;
+
+  // Arc center (page coords)
+  const cx = bodyRight - borderRadius;
+  const cy = bodyTop + borderRadius;
+
+  // Segment 1: top straight line, moving right
+  const topY = bodyTop - offset;
+  const topStartX = cx - 30;
+  const topEndX = cx;
+
+  // Segment 2: corner arc (90°, from -90° to 0°)
+  const arcRadius = borderRadius + offset;
+
+  // Segment 3: right straight line, moving down
+  const rightX = bodyRight + offset;
+  const rightStartY = cy;
+  const rightEndY = cy + 30;
+
+  // Calculate segment lengths
+  const seg1Len = topEndX - topStartX;
+  const seg2Len = (Math.PI / 2) * arcRadius;
+  const seg3Len = rightEndY - rightStartY;
+  const totalLen = seg1Len + seg2Len + seg3Len;
+
+  // Distribute letters with equal spacing
+  const spacing = totalLen / (letters.length + 1);
 
   return letters.map((char, i) => {
-    const angleDeg = startAngle + i * step;
-    const angleRad = (angleDeg * Math.PI) / 180;
-    const x = cx + radius * Math.cos(angleRad);
-    const y = cy + radius * Math.sin(angleRad);
-    const rotation = angleDeg + 90;
+    const d = spacing * (i + 1);
+
+    let x: number, y: number, rotation: number;
+
+    if (d <= seg1Len) {
+      x = topStartX + d;
+      y = topY;
+      rotation = 0;
+    } else if (d <= seg1Len + seg2Len) {
+      const arcD = d - seg1Len;
+      const angleDeg = -90 + (arcD / seg2Len) * 90;
+      const angleRad = (angleDeg * Math.PI) / 180;
+      x = cx + arcRadius * Math.cos(angleRad);
+      y = cy + arcRadius * Math.sin(angleRad);
+      rotation = angleDeg + 90;
+    } else {
+      const straightD = d - seg1Len - seg2Len;
+      x = rightX;
+      y = rightStartY + straightD;
+      rotation = 90;
+    }
+
     return { char, x, y, rotation };
   });
 }
