@@ -198,13 +198,13 @@ const styles = StyleSheet.create({
 //                outline sits inside the bounding box.
 const LETTER_METRICS: { char: string; w: number; borderPush: number }[] = [
   { char: "W", w: 5.8, borderPush: 0.1 },
-  { char: "O", w: 4.8, borderPush: 0.4 },
+  { char: "O", w: 4.8, borderPush: 0.25 },
   { char: "R", w: 4.4, borderPush: 0 },     // ★ REFERENCE
-  { char: "K", w: 4.4, borderPush: 0 },
-  { char: "B", w: 4.5, borderPush: 0.3 },
-  { char: "O", w: 4.8, borderPush: 0.4 },
-  { char: "O", w: 4.8, borderPush: 0.4 },
-  { char: "K", w: 4.4, borderPush: 0 },
+  { char: "K", w: 4.4, borderPush: 0.25 },
+  { char: "B", w: 4.5, borderPush: 0.75 },
+  { char: "O", w: 4.8, borderPush: 0.95 },
+  { char: "O", w: 4.8, borderPush: 0.95 },
+  { char: "K", w: 4.4, borderPush: 0.3 },
 ];
 
 function getArcLetters() {
