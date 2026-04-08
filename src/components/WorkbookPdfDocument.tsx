@@ -330,7 +330,7 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
   );
   const useCompactSentenceLayout = hasAnalysis && (results.length >= 9 || totalChars > 980);
   const sentenceBottomPad = hasAnalysis ? 185 : 0;
-  const arcLetters = getArcLetters();
+  const arcPoints = getArcPoints();
 
   return (
     <Document>
@@ -428,22 +428,39 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
           </View>
         </View>
 
-        {/* Curved "WORKBOOK" text - outside body, page-level absolute positioning */}
-        {arcLetters.map((letter, i) => (
-          <Text
-            key={`arc-${i}`}
-            style={[
-              styles.arcLetterBase,
-              {
-                left: letter.x,
-                top: letter.y,
-                transform: `rotate(${letter.rotation}deg)`,
-              },
-            ]}
-          >
-            {letter.char}
-          </Text>
-        ))}
+        {/* Curved "WORKBOOK" text - Canvas-based for precise rotation origin control */}
+        <Canvas
+          style={styles.arcCanvas}
+          paint={(painter) => {
+            const fontSize = 6.5;
+            painter.fontSize(fontSize);
+            painter.font("Helvetica-Bold");
+            painter.fillColor("#111");
+
+            for (const pt of arcPoints) {
+              // Final position = path point + normal/tangent offsets
+              const fx = pt.px + pt.nx * pt.normalOffset + pt.tx * pt.tangentOffset;
+              const fy = pt.py + pt.ny * pt.normalOffset + pt.ty * pt.tangentOffset;
+
+              // Measure actual glyph width for centering
+              const w = painter.widthOfString(pt.char);
+
+              painter.save();
+              // Translate to the target point, rotate around IT, then draw centered
+              painter.translate(fx, fy);
+              painter.rotate(pt.rotation, { origin: [0, 0] });
+              // Draw text centered on origin: shift left by half-width, up by half-height
+              painter.text(pt.char, -w / 2, -fontSize / 2, {
+                width: w + 2,
+                align: "left",
+                lineBreak: false,
+              });
+              painter.restore();
+            }
+
+            return null;
+          }}
+        />
       </Page>
     </Document>
   );
