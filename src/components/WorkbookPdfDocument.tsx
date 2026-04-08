@@ -191,13 +191,18 @@ const styles = StyleSheet.create({
 // Per-character metrics for Helvetica Bold ~6.5pt
 // charW = approximate rendered width, opticalInset = how much to pull inward
 // so the visible gap to the border matches visually across all letters.
-const CHAR_METRICS: Record<string, { w: number; inset: number }> = {
-  W: { w: 5.8, inset: 0 },
-  O: { w: 4.8, inset: 1.0 },
-  R: { w: 4.4, inset: 0 },
-  K: { w: 4.4, inset: 0 },   // reference letter
-  B: { w: 4.5, inset: 0.8 },
-};
+// Per-letter metrics indexed by position in "WORKBOOK".
+// K at index 3 is the visual reference (inset 0).
+const LETTER_METRICS: { char: string; w: number; inset: number }[] = [
+  { char: "W", w: 5.8, inset: 0.2 },   // 0 – top straight
+  { char: "O", w: 4.8, inset: 0.7 },   // 1 – top straight
+  { char: "R", w: 4.4, inset: 0 },     // 2 – top→curve
+  { char: "K", w: 4.4, inset: 0 },     // 3 – curve (reference)
+  { char: "B", w: 4.5, inset: 0.55 },  // 4 – curve→right
+  { char: "O", w: 4.8, inset: 0.65 },  // 5 – right straight
+  { char: "O", w: 4.8, inset: 0.65 },  // 6 – right straight
+  { char: "K", w: 4.4, inset: 0 },     // 7 – right straight
+];
 
 function getArcLetters() {
   const text = "WORKBOOK";
