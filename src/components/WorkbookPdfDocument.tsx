@@ -197,14 +197,14 @@ const styles = StyleSheet.create({
 //                Round glyphs (O, B) need positive values because their visible
 //                outline sits inside the bounding box.
 const LETTER_METRICS: { char: string; w: number; borderPush: number }[] = [
-  { char: "W", w: 5.8, borderPush: 0.2 },   // 0 – top straight, wide but fills bbox
-  { char: "O", w: 4.8, borderPush: 0.8 },   // 1 – top straight, round outline
-  { char: "R", w: 4.4, borderPush: 0 },     // 2 – top→curve ★ REFERENCE
-  { char: "K", w: 4.4, borderPush: 0 },     // 3 – curve, straight edges like R
-  { char: "B", w: 4.5, borderPush: 0.7 },   // 4 – curve→right, round right side
-  { char: "O", w: 4.8, borderPush: 0.8 },   // 5 – right straight, round
-  { char: "O", w: 4.8, borderPush: 0.8 },   // 6 – right straight, round
-  { char: "K", w: 4.4, borderPush: 0 },     // 7 – right straight
+  { char: "W", w: 5.8, borderPush: 0.1 },
+  { char: "O", w: 4.8, borderPush: 0.4 },
+  { char: "R", w: 4.4, borderPush: 0 },     // ★ REFERENCE
+  { char: "K", w: 4.4, borderPush: 0 },
+  { char: "B", w: 4.5, borderPush: 0.3 },
+  { char: "O", w: 4.8, borderPush: 0.4 },
+  { char: "O", w: 4.8, borderPush: 0.4 },
+  { char: "K", w: 4.4, borderPush: 0 },
 ];
 
 function getArcLetters() {
@@ -291,8 +291,8 @@ function getArcLetters() {
 
     // Anchor correction: convert from visual center to top-left anchor
     const rad = (rotation * Math.PI) / 180;
-    let ax = pathX - (m.w / 2) * Math.cos(rad) + (charH / 2) * Math.sin(rad);
-    let ay = pathY - (m.w / 2) * Math.sin(rad) - (charH / 2) * Math.cos(rad);
+    let ax = pathX - (m.w / 2) * Math.cos(rad) - (charH / 2) * Math.sin(rad);
+    let ay = pathY + (m.w / 2) * Math.sin(rad) - (charH / 2) * Math.cos(rad);
 
     // Post-anchor borderPush: move rendered glyph toward the border
     // along the inward normal (-nx, -ny) to compensate for round glyphs
