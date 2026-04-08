@@ -285,15 +285,20 @@ function getArcLetters() {
       ny = 0;
     }
 
-    // Move outward from border by baseOffset, then pull back by optical inset
-    const effectiveOffset = baseOffset - m.inset;
-    const pathX = px + nx * effectiveOffset;
-    const pathY = py + ny * effectiveOffset;
+    // Move outward from border by baseOffset (same for ALL letters)
+    const pathX = px + nx * baseOffset;
+    const pathY = py + ny * baseOffset;
 
     // Anchor correction: convert from visual center to top-left anchor
     const rad = (rotation * Math.PI) / 180;
-    const ax = pathX - (m.w / 2) * Math.cos(rad) + (charH / 2) * Math.sin(rad);
-    const ay = pathY - (m.w / 2) * Math.sin(rad) - (charH / 2) * Math.cos(rad);
+    let ax = pathX - (m.w / 2) * Math.cos(rad) + (charH / 2) * Math.sin(rad);
+    let ay = pathY - (m.w / 2) * Math.sin(rad) - (charH / 2) * Math.cos(rad);
+
+    // Post-anchor borderPush: move rendered glyph toward the border
+    // along the inward normal (-nx, -ny) to compensate for round glyphs
+    // whose visible outline doesn't reach the bounding-box edge.
+    ax -= nx * m.borderPush;
+    ay -= ny * m.borderPush;
 
     return { char, x: ax, y: ay, rotation };
   });
