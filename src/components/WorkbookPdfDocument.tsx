@@ -188,6 +188,17 @@ const styles = StyleSheet.create({
 
 // Path-based placement: top straight → 18pt corner arc → right straight
 // Coordinates in PAGE space
+// Per-character metrics for Helvetica Bold ~6.5pt
+// charW = approximate rendered width, opticalInset = how much to pull inward
+// so the visible gap to the border matches visually across all letters.
+const CHAR_METRICS: Record<string, { w: number; inset: number }> = {
+  W: { w: 5.8, inset: 0 },
+  O: { w: 4.8, inset: 1.0 },
+  R: { w: 4.4, inset: 0 },
+  K: { w: 4.4, inset: 0 },   // reference letter
+  B: { w: 4.5, inset: 0.8 },
+};
+
 function getArcLetters() {
   const text = "WORKBOOK";
   const letters = text.split("");
@@ -202,66 +213,79 @@ function getArcLetters() {
   const bodyTop = pagePadTop + headerHeight;
   const bodyRight = pagePadLeft + bodyWidth;
 
-  // Offset from border edge to letter center
-  const offset = borderW + 4;
+  // Base offset from border edge to letter visual center (K reference)
+  const baseOffset = borderW + 4;
 
   // Arc center (page coords)
   const cx = bodyRight - borderRadius;
   const cy = bodyTop + borderRadius;
 
-  // Segment 1: top straight line, moving right (wider range)
-  const topY = bodyTop - offset;
+  // Segment 1: top straight line, moving right
   const topStartX = cx - 50;
   const topEndX = cx;
 
   // Segment 2: corner arc (90°, from -90° to 0°)
-  const arcRadius = borderRadius + offset;
+  const arcRadius = borderRadius + baseOffset;
 
-  // Segment 3: right straight line, moving down (wider range)
-  const rightX = bodyRight + offset;
+  // Segment 3: right straight line, moving down
   const rightStartY = cy;
   const rightEndY = cy + 50;
 
-  // Calculate segment lengths
+  // Segment lengths
   const seg1Len = topEndX - topStartX;
   const seg2Len = (Math.PI / 2) * arcRadius;
   const seg3Len = rightEndY - rightStartY;
   const totalLen = seg1Len + seg2Len + seg3Len;
 
-  // Distribute letters with equal spacing
+  // Equal spacing
   const spacing = totalLen / (letters.length + 1);
 
-  // Approximate char dimensions for centering correction
-  const charW = 4.5;
-  const charH = 6.5;
+  const charH = 6.5; // font height constant
 
   return letters.map((char, i) => {
     const d = spacing * (i + 1);
+    const m = CHAR_METRICS[char] || { w: 4.5, inset: 0 };
 
-    let x: number, y: number, rotation: number;
+    // Path point + normal direction (pointing outward from body)
+    let px: number, py: number, rotation: number;
+    let nx: number, ny: number; // outward normal unit vector
 
     if (d <= seg1Len) {
-      x = topStartX + d;
-      y = topY;
+      // Top straight: normal points up (0, -1)
+      px = topStartX + d;
+      py = bodyTop;
       rotation = 0;
+      nx = 0;
+      ny = -1;
     } else if (d <= seg1Len + seg2Len) {
+      // Arc: normal points radially outward from arc center
       const arcD = d - seg1Len;
       const angleDeg = -90 + (arcD / seg2Len) * 90;
       const angleRad = (angleDeg * Math.PI) / 180;
-      x = cx + arcRadius * Math.cos(angleRad);
-      y = cy + arcRadius * Math.sin(angleRad);
+      px = cx + borderRadius * Math.cos(angleRad);
+      py = cy + borderRadius * Math.sin(angleRad);
       rotation = angleDeg + 90;
+      nx = Math.cos(angleRad);
+      ny = Math.sin(angleRad);
     } else {
+      // Right straight: normal points right (1, 0)
       const straightD = d - seg1Len - seg2Len;
-      x = rightX;
-      y = rightStartY + straightD;
+      px = bodyRight;
+      py = rightStartY + straightD;
       rotation = 90;
+      nx = 1;
+      ny = 0;
     }
 
-    // Center-correct: shift so visual center sits on the path point
+    // Move outward from border by baseOffset, then pull back by optical inset
+    const effectiveOffset = baseOffset - m.inset;
+    const pathX = px + nx * effectiveOffset;
+    const pathY = py + ny * effectiveOffset;
+
+    // Anchor correction: convert from visual center to top-left anchor
     const rad = (rotation * Math.PI) / 180;
-    const ax = x - (charW / 2) * Math.cos(rad) + (charH / 2) * Math.sin(rad);
-    const ay = y - (charW / 2) * Math.sin(rad) - (charH / 2) * Math.cos(rad);
+    const ax = pathX - (m.w / 2) * Math.cos(rad) + (charH / 2) * Math.sin(rad);
+    const ay = pathY - (m.w / 2) * Math.sin(rad) - (charH / 2) * Math.cos(rad);
 
     return { char, x: ax, y: ay, rotation };
   });
