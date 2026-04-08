@@ -443,7 +443,7 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
               const fy = pt.py + pt.ny * pt.normalOffset + pt.ty * pt.tangentOffset;
 
               // Measure actual glyph width for centering
-              const w = painter.widthOfString(pt.char);
+              const w = fontSize * 0.65;
 
               painter.save();
               // Translate to the target point, rotate around IT, then draw centered
