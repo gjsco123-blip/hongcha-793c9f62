@@ -197,13 +197,13 @@ const styles = StyleSheet.create({
 //                Round glyphs (O, B) need positive values because their visible
 //                outline sits inside the bounding box.
 const LETTER_METRICS: { char: string; w: number; borderPush: number }[] = [
-  { char: "W", w: 5.8, borderPush: 0.3 },   // 0 – top straight, wide but mostly fills bbox
-  { char: "O", w: 4.8, borderPush: 1.2 },   // 1 – top straight, round outline well inside bbox
+  { char: "W", w: 5.8, borderPush: 0.2 },   // 0 – top straight, wide but fills bbox
+  { char: "O", w: 4.8, borderPush: 0.8 },   // 1 – top straight, round outline
   { char: "R", w: 4.4, borderPush: 0 },     // 2 – top→curve ★ REFERENCE
   { char: "K", w: 4.4, borderPush: 0 },     // 3 – curve, straight edges like R
-  { char: "B", w: 4.5, borderPush: 1.0 },   // 4 – curve→right, round right side
-  { char: "O", w: 4.8, borderPush: 1.2 },   // 5 – right straight
-  { char: "O", w: 4.8, borderPush: 1.2 },   // 6 – right straight
+  { char: "B", w: 4.5, borderPush: 0.7 },   // 4 – curve→right, round right side
+  { char: "O", w: 4.8, borderPush: 0.8 },   // 5 – right straight, round
+  { char: "O", w: 4.8, borderPush: 0.8 },   // 6 – right straight, round
   { char: "K", w: 4.4, borderPush: 0 },     // 7 – right straight
 ];
 
@@ -222,7 +222,7 @@ function getArcLetters() {
   const bodyRight = pagePadLeft + bodyWidth;
 
   // Base offset from border edge to letter visual center (K reference)
-  const baseOffset = borderW + 4;
+  const baseOffset = borderW + 1.5;
 
   // Arc center (page coords)
   const cx = bodyRight - borderRadius;
