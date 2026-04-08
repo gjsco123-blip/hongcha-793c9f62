@@ -192,15 +192,15 @@ const styles = StyleSheet.create({
 // charW = approximate rendered width, opticalInset = how much to pull inward
 // so the visible gap to the border matches visually across all letters.
 // Per-letter metrics indexed by position in "WORKBOOK".
-// K at index 3 is the visual reference (inset 0).
+// R at index 2 is the visual reference (inset 0). All others calibrated to match R's border distance.
 const LETTER_METRICS: { char: string; w: number; inset: number }[] = [
-  { char: "W", w: 5.8, inset: 0.2 },   // 0 – top straight
-  { char: "O", w: 4.8, inset: 0.7 },   // 1 – top straight
-  { char: "R", w: 4.4, inset: 0 },     // 2 – top→curve
-  { char: "K", w: 4.4, inset: 0 },     // 3 – curve (reference)
-  { char: "B", w: 4.5, inset: 0.55 },  // 4 – curve→right
-  { char: "O", w: 4.8, inset: 0.65 },  // 5 – right straight
-  { char: "O", w: 4.8, inset: 0.65 },  // 6 – right straight
+  { char: "W", w: 5.8, inset: 0.15 },  // 0 – top straight
+  { char: "O", w: 4.8, inset: 0.5 },   // 1 – top straight
+  { char: "R", w: 4.4, inset: 0 },     // 2 – top→curve ★ reference
+  { char: "K", w: 4.4, inset: 0 },     // 3 – curve
+  { char: "B", w: 4.5, inset: 0.4 },   // 4 – curve→right
+  { char: "O", w: 4.8, inset: 0.5 },   // 5 – right straight
+  { char: "O", w: 4.8, inset: 0.5 },   // 6 – right straight
   { char: "K", w: 4.4, inset: 0 },     // 7 – right straight
 ];
 
