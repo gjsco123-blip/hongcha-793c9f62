@@ -252,7 +252,7 @@ function getArcLetters() {
 
   return letters.map((char, i) => {
     const d = spacing * (i + 1);
-    const m = LETTER_METRICS[i] || { w: 4.5, inset: 0 };
+    const m = LETTER_METRICS[i] || { w: 4.5, borderPush: 0 };
 
     // Path point + normal direction (pointing outward from body)
     let px: number, py: number, rotation: number;
