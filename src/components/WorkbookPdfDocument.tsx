@@ -209,18 +209,18 @@ function getArcLetters() {
   const cx = bodyRight - borderRadius;
   const cy = bodyTop + borderRadius;
 
-  // Segment 1: top straight line, moving right
+  // Segment 1: top straight line, moving right (wider range)
   const topY = bodyTop - offset;
-  const topStartX = cx - 30;
+  const topStartX = cx - 50;
   const topEndX = cx;
 
   // Segment 2: corner arc (90°, from -90° to 0°)
   const arcRadius = borderRadius + offset;
 
-  // Segment 3: right straight line, moving down
+  // Segment 3: right straight line, moving down (wider range)
   const rightX = bodyRight + offset;
   const rightStartY = cy;
-  const rightEndY = cy + 30;
+  const rightEndY = cy + 50;
 
   // Calculate segment lengths
   const seg1Len = topEndX - topStartX;
@@ -230,6 +230,10 @@ function getArcLetters() {
 
   // Distribute letters with equal spacing
   const spacing = totalLen / (letters.length + 1);
+
+  // Approximate char dimensions for centering correction
+  const charW = 4.5;
+  const charH = 6.5;
 
   return letters.map((char, i) => {
     const d = spacing * (i + 1);
@@ -254,7 +258,12 @@ function getArcLetters() {
       rotation = 90;
     }
 
-    return { char, x, y, rotation };
+    // Center-correct: shift so visual center sits on the path point
+    const rad = (rotation * Math.PI) / 180;
+    const ax = x - (charW / 2) * Math.cos(rad) + (charH / 2) * Math.sin(rad);
+    const ay = y - (charW / 2) * Math.sin(rad) - (charH / 2) * Math.cos(rad);
+
+    return { char, x: ax, y: ay, rotation };
   });
 }
 
