@@ -47,6 +47,8 @@ interface WorkbookPdfDocumentProps {
   examBlock?: ExamBlock | null;
 }
 
+const HEADER_HEIGHT = 30;
+
 const styles = StyleSheet.create({
   page: {
     paddingTop: 30,
@@ -94,6 +96,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-end",
     justifyContent: "space-between",
+    height: HEADER_HEIGHT,
     paddingBottom: 6,
     marginBottom: 0,
   },
@@ -225,12 +228,11 @@ function getArcPoints(): ArcPoint[] {
 
   const pagePadLeft = 30;
   const pagePadTop = 30;
-  const headerHeight = 26;
   const bodyWidth = 535;
   const borderRadius = 18;
   const borderW = 0.6;
 
-  const bodyTop = pagePadTop + headerHeight;
+  const bodyTop = pagePadTop + HEADER_HEIGHT;
   const bodyRight = pagePadLeft + bodyWidth;
 
   // Base offset from border edge to letter center
