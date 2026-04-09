@@ -97,12 +97,12 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     justifyContent: "space-between",
     height: HEADER_HEIGHT,
-    paddingBottom: 6,
+    paddingBottom: 2,
     marginBottom: 0,
   },
   title: {
-    fontSize: 16,
-    fontWeight: 700,
+    fontSize: 12,
+    fontWeight: 800,
     color: "#111",
   },
   arcCanvas: {
