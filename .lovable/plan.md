@@ -1,35 +1,39 @@
 
 
-# WORKBOOK 전체 외곽선 간격 통일
+# WORKBOOK 좌표를 헤더에서 완전 분리 (Decoupling)
 
-## 현재 상태
+## 핵심 원리
 
-- `OOK`: normalOffset 0.8 → 외곽선에서 적절히 떨어져 있음 (이게 목표 간격)
-- `WORKB`: normalOffset 0~0.6 → 외곽선에 붙어 있음
-- 헤더와 Canvas 좌표는 `headerHeight` 상수로만 연결, 실제 View와 독립 (분리 완료)
+헤더 View에 **고정 높이 상수**를 부여하고, 그 상수를 `getArcPoints()`와 헤더 스타일이 **함께 참조**하게 만든다. 제목 크기가 바뀌어도 헤더 높이는 고정이므로 WORKBOOK 좌표는 절대 변하지 않는다.
 
 ## 수정 (`src/components/WorkbookPdfDocument.tsx`)
 
-### LETTER_METRICS normalOffset 통일
+### 1. 공유 상수 선언
 
-모든 글자를 `OOK`와 같은 0.8로 맞춤. 상단 직선의 `W/O/R`은 normal 방향이 위쪽이라 0.8이면 충분. 코너의 `K/B`도 0.8로 올림.
-
+파일 상단(styles 위)에 상수 추가:
 ```typescript
-const LETTER_METRICS = [
-  { char: "W", normalOffset: 0.8, tangentOffset: 0 },
-  { char: "O", normalOffset: 0.8, tangentOffset: 0 },
-  { char: "R", normalOffset: 0.8, tangentOffset: 0 },
-  { char: "K", normalOffset: 0.8, tangentOffset: 0 },
-  { char: "B", normalOffset: 0.8, tangentOffset: 0 },
-  { char: "O", normalOffset: 0.8, tangentOffset: 0 },
-  { char: "O", normalOffset: 0.8, tangentOffset: 0 },
-  { char: "K", normalOffset: 0.8, tangentOffset: 0 },
-];
+const HEADER_HEIGHT = 30; // 헤더 영역 고정 높이 (px)
 ```
+
+### 2. 헤더 스타일에 고정 높이 적용
+
+`styles.header`에 `height: HEADER_HEIGHT` 추가. 제목 fontSize가 바뀌어도 헤더 박스 크기는 불변.
+
+### 3. `getArcPoints()` 수정
+
+`headerHeight = 26` 하드코딩을 제거하고 `HEADER_HEIGHT` 상수를 직접 사용:
+```typescript
+const bodyTop = pagePadTop + HEADER_HEIGHT;
+```
+
+### 결과
+
+- 왼쪽 제목 크기/패딩을 아무리 바꿔도 → 헤더 View 높이 고정 → body 시작점 고정 → WORKBOOK 좌표 불변
+- WORKBOOK의 현재 normalOffset(0.8) 및 위치는 전혀 건드리지 않음
 
 ## 수정 파일
 
 | 파일 | 변경 |
 |------|------|
-| `src/components/WorkbookPdfDocument.tsx` | LETTER_METRICS normalOffset 5행 변경 |
+| `src/components/WorkbookPdfDocument.tsx` | 상수 1개 추가, header style 1행, getArcPoints 1행 수정 |
 
