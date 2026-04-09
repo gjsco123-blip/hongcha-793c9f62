@@ -191,11 +191,11 @@ const styles = StyleSheet.create({
 // normalOffset: push toward border (negative = closer). R is reference (0,0).
 // tangentOffset: shift along path direction.
 const LETTER_METRICS: { char: string; normalOffset: number; tangentOffset: number }[] = [
-  { char: "W", normalOffset: 0,   tangentOffset: 0 },
-  { char: "O", normalOffset: 0,   tangentOffset: 0 },
-  { char: "R", normalOffset: 0,   tangentOffset: 0 },   // ★ REFERENCE
-  { char: "K", normalOffset: 0,   tangentOffset: 0 },
-  { char: "B", normalOffset: 0.6, tangentOffset: 0 },
+  { char: "W", normalOffset: 0.8, tangentOffset: 0 },
+  { char: "O", normalOffset: 0.8, tangentOffset: 0 },
+  { char: "R", normalOffset: 0.8, tangentOffset: 0 },
+  { char: "K", normalOffset: 0.8, tangentOffset: 0 },
+  { char: "B", normalOffset: 0.8, tangentOffset: 0 },
   { char: "O", normalOffset: 0.8, tangentOffset: 0 },
   { char: "O", normalOffset: 0.8, tangentOffset: 0 },
   { char: "K", normalOffset: 0.8, tangentOffset: 0 },
