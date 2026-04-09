@@ -1,35 +1,28 @@
 
 
-# BOOK 외곽선 이격 + 제목 크기 변경
+# WORKBOOK 위치 동기화 + BOOK 이격 수정
 
-## 현재 상태
+## 원인
 
-- W O R K는 외곽선과 적절한 간격 유지 (OK)
-- B O O K는 외곽선에 **딱 붙어** 있음 → 밀어내야 함
-- 제목 fontSize가 8pt로 작음
+`getArcPoints()`의 `headerHeight = 14`가 title fontSize 8pt 기준값. 16pt로 키운 후 업데이트 안 해서 WORK가 실제 외곽선보다 ~8pt 위에 그려짐.
 
 ## 수정 (`src/components/WorkbookPdfDocument.tsx`)
 
-### 1. `LETTER_METRICS` normalOffset — 양수 = 바깥으로 밀기
+### 1. headerHeight 동기화 (228행)
 
-| idx | 글자 | normalOffset | 변경 |
-|-----|------|-------------|------|
-| 0 | W | 0 | 유지 |
-| 1 | O | 0 | 유지 |
-| 2 | R | 0 | 기준 |
-| 3 | K | 0 | 유지 |
-| 4 | B | 0.6 | 바깥으로 밀기 |
-| 5 | O | 0.8 | 바깥으로 밀기 |
-| 6 | O | 0.8 | 바깥으로 밀기 |
-| 7 | K | 0.8 | 바깥으로 밀기 |
+```
+headerHeight = 14 → headerHeight = 26
+```
 
-### 2. 제목 fontSize
+Pretendard 16pt bold 줄높이(~20pt) + header paddingBottom(6pt) = ~26pt. 이렇게 하면 Canvas 좌표가 실제 body 외곽선과 다시 일치함.
 
-`styles.title.fontSize`: 8 → 16
+### 2. BOOK normalOffset 유지
+
+현재 B=0.6, O=0.8, O=0.8, K=0.8 값은 유지. headerHeight 수정 후 실제 결과를 보고 미세조정 판단.
 
 ## 수정 파일
 
 | 파일 | 변경 |
 |------|------|
-| `src/components/WorkbookPdfDocument.tsx` | LETTER_METRICS normalOffset 4행 + title fontSize 1행 |
+| `src/components/WorkbookPdfDocument.tsx` | `headerHeight` 14→26 (1행) |
 
