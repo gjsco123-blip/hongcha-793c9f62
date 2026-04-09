@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    paddingTop: 10,
+    paddingTop: 18,
     paddingRight: 10,
     paddingBottom: 10,
     paddingLeft: 10,
@@ -225,7 +225,7 @@ function getArcPoints(): ArcPoint[] {
 
   const pagePadLeft = 30;
   const pagePadTop = 30;
-  const headerHeight = 0;
+  const headerHeight = 26;
   const bodyWidth = 535;
   const borderRadius = 18;
   const borderW = 0.6;
