@@ -225,7 +225,7 @@ function getArcPoints(): ArcPoint[] {
 
   const pagePadLeft = 30;
   const pagePadTop = 30;
-  const headerHeight = 14;
+  const headerHeight = 26;
   const bodyWidth = 535;
   const borderRadius = 18;
   const borderW = 0.6;
