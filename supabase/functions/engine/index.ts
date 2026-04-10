@@ -143,6 +143,11 @@ ONLY finite verbs — verbs that serve as the predicate of a clause with a subje
   - CORRECT: it<v>'ll change</v> → 'll = will = finite verb
   - WRONG: there's no reason → missing <v> tag on 's
   - **EXCEPTION**: "let's" = "let us" → 's is NOT a verb here. Tag "let" instead: <v>let</v>'s follow.
+- **Negative contractions**: isn't, don't, won't, can't, doesn't, hasn't, hadn't, wouldn't, couldn't, shouldn't, aren't, weren't, wasn't, mustn't — these are SINGLE verb units. Tag the ENTIRE word as one <v> block.
+  - CORRECT: it <v>isn't</v> easy
+  - WRONG: it <v>is</v>n't easy
+  - CORRECT: they <v>don't</v> know
+  - WRONG: they <v>do</v>n't know
 
 ### NEVER tag these — they are NOT verbs:
 1. **To-infinitives**: "to cause", "to achieve", "to engage", "to switch off" → NO <v> tag. The word "to" before a verb = infinitive = NOT a finite verb.
@@ -410,6 +415,9 @@ Given an English sentence that has been chunked with <c1>...</c1>, <c2>...</c2> 
 - Contracted verbs: 's (= is/has), 're (= are), 've (= have), 'd (= would/had), 'll (= will)
   - CORRECT: there<v>'s</v> no reason
   - EXCEPTION: "let's" = "let us" → 's is NOT a verb. Tag: <v>let</v>'s
+- Negative contractions (isn't, don't, won't, can't, doesn't, hasn't, hadn't, wouldn't, couldn't, shouldn't, aren't, weren't, wasn't, mustn't) are SINGLE verb units. Tag entire word: <v>isn't</v>, <v>don't</v>
+  - CORRECT: it <v>isn't</v> easy
+  - WRONG: it <v>is</v>n't easy
 
 ## What MUST NOT have <v> tags:
 1. To-infinitives: "to cause", "to achieve" → NO <v>
