@@ -1,16 +1,34 @@
 
 
-# 왼쪽 헤더 제목 스타일 수정
+# 부정 축약형(isn't, don't 등) 통째로 동사 태깅
 
-HEADER_HEIGHT=30 고정이므로 WORKBOOK 위치는 절대 변하지 않음.
+## 문제
 
-## 수정 (`src/components/WorkbookPdfDocument.tsx`)
+현재 엔진 프롬프트에 `'s`, `'re`, `'ve` 등 일반 축약형 규칙은 있지만, **부정 축약형(n't)** 규칙이 없음. AI가 `isn't`를 `is` + `n't`로 분리하거나, `is`만 동사 태깅하고 `n't`는 빠뜨리는 경우 발생.
 
-| 속성 | 현재 | 변경 |
-|------|------|------|
-| `styles.title.fontSize` | 16 | 12 |
-| `styles.title.fontWeight` | 700 | 800 |
-| `styles.header.paddingBottom` | 6 | 2 |
+## 수정 내용
 
-3행만 수정. WORKBOOK 관련 코드 일절 미접촉.
+### 1. 엔진 프롬프트 — 1차 분석 (`supabase/functions/engine/index.ts`)
+
+`systemPrompt`의 VERB TAGGING 섹션(Contracted verbs 부분, ~140행)에 부정 축약형 규칙 추가:
+
+```
+- **Negative contractions**: isn't, don't, won't, can't, doesn't, hasn't, hadn't, wouldn't, couldn't, shouldn't, aren't, weren't, wasn't, mustn't — these are SINGLE verb units. Tag the ENTIRE word as one <v> block.
+  - CORRECT: it <v>isn't</v> easy
+  - WRONG: it <v>is</v>n't easy
+  - CORRECT: they <v>don't</v> know
+  - WRONG: they <v>do</v>n't know
+```
+
+### 2. 동사 검증 프롬프트 — 2차 검증 (`supabase/functions/engine/index.ts`)
+
+`verbVerifyPrompt`(~410행)의 Contracted verbs 섹션에도 동일한 규칙 추가.
+
+### 수정 파일
+
+| 파일 | 변경 |
+|------|------|
+| `supabase/functions/engine/index.ts` | 프롬프트 2곳에 부정 축약형 규칙 추가 |
+
+엔진 함수 재배포 필요. 클라이언트 코드 변경 없음.
 
