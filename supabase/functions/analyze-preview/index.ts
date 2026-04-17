@@ -30,11 +30,12 @@ function safeParseJson(raw: string): any {
 }
 
 const SYSTEM_PROMPT = `[CRITICAL LENGTH RULE — 최우선 규칙]
-summary의 각 줄(①②③④)은 반드시 한국어 45~58자 (공백·번호·구두점 포함).
-- 40자 미만 = 무효. 출력 금지.
+summary의 각 줄(①②③④)은 반드시 한국어 48~55자 (공백·번호·구두점 포함). 허용 범위는 45~58자.
+- 45자 미만 = 무효. 58자 초과 = 무효. 출력 금지.
 - 출력 직전 각 줄 글자수를 직접 세어 검증할 것.
-- 짧으면 주체/메커니즘/구체 개념을 1개 추가해 늘릴 것.
-- "간결하게" 쓰려는 본능을 누르고 정보를 채워 넣을 것.
+- 짧으면 [주체] + [원인/메커니즘] + [결과/결론 방향] 3요소 중 누락된 것을 추가해 늘릴 것.
+- 길이를 맞추는 방식은 "압축"이 아니라 "정보 추가". 추상어를 더 끼워넣지 말고 구체 개념·주체·메커니즘을 명시할 것.
+- "간결하게"라는 본능을 누르고 정보를 채워 넣을 것.
 이 규칙은 다른 모든 스타일 규칙보다 우선한다.
 
 You are a Korean high school English exam specialist AND a preview engine for Korean high school reading comprehension passages.
@@ -161,23 +162,30 @@ Generate the following as a JSON object:
 ────────────────────
 모범 예시 (Few-shot — 길이/밀도 감각용)
 ────────────────────
-Good #1 (각 줄 45~58자, 한 줄 고정, 명사형 종결):
-① 즉각적 보상이 장기적 이익보다 우선시되는 의사결정 경향
-② 인간 두뇌가 현재 가치를 과대평가하도록 진화했다는 메커니즘
-③ 마시멜로 실험에서 드러난 만족 지연과 자기통제 능력의 차이
-④ 보상 즉각성이 합리적 판단을 왜곡한다는 저자의 비판적 결론
+Good #1 (각 줄 정확히 48~55자, 한 줄 고정, 명사형 종결):
+① 즉각적 보상을 선호하는 인간 두뇌의 진화적 편향이 장기적 의사결정을 왜곡시키는 경향성
+② 현재 가치를 과대평가하도록 설계된 두뇌 회로가 미래 이익을 체계적으로 평가절하하는 메커니즘
+③ 마시멜로 실험에서 만족을 지연한 아동들이 학업·사회성 면에서 더 우수했다는 연구 결과
+④ 보상 즉각성이 합리적 판단을 구조적으로 왜곡한다는 점을 경계해야 한다는 저자의 비판적 결론
 
-Good #2 (50~55자 — 정보 밀도 충분):
-① 외부 보상에 의존한 동기 부여가 내재적 흥미를 약화시키는 구조
-② 보상이 주어질 때 활동 자체보다 결과에 집중하게 되는 심리 메커니즘
-③ 학생들에게 독서 보상을 제공한 실험에서 관찰된 흥미 감소 현상
-④ 외적 보상의 무분별한 사용을 경계해야 한다는 저자의 핵심 주장
+Good #2 (각 줄 정확히 48~55자, 정보 밀도 충분):
+① 외부 보상에 의존한 동기 부여가 활동 자체에 대한 내재적 흥미를 점진적으로 약화시키는 구조
+② 보상이 주어질 때 학습자가 활동의 즐거움보다 결과에만 집중하게 되는 심리적 전환 메커니즘
+③ 독서에 금전적 보상을 제공한 학생들이 보상 종료 후 오히려 독서 빈도가 감소한 실험 사례
+④ 외적 보상의 무분별한 사용이 자율성과 흥미를 훼손할 수 있다는 저자의 핵심적 경고 메시지
 
-Bad (40자 미만 — 정보 부족, 절대 금지):
-① 외부적 보상이 단기 동기 부여에 미치는 한계   ← 약 24자, 무효
-② 인센티브와 처벌이 초래하는 비용과 스트레스   ← 약 22자, 무효
-→ 위 길이는 모두 무효. 주체/원인/결과 중 1~2개를 추가해
-   50자 안팎으로 만들 것.
+Bad (40자대 — 정보 부족, 절대 금지):
+① 즉각적 보상이 장기적 이익보다 우선시되는 의사결정 경향  ← 약 30자, 무효 (너무 짧음)
+② 인간 두뇌가 현재 가치를 과대평가하도록 진화한 메커니즘  ← 약 30자, 무효 (너무 짧음)
+③ 외부적 보상이 단기 동기 부여에 미치는 한계  ← 약 24자, 무효
+④ 인센티브와 처벌이 초래하는 비용과 스트레스  ← 약 22자, 무효
+→ 위 길이는 모두 무효. 반드시 [주체] + [원인/메커니즘] + [결과/결론 방향]
+   3요소 중 최소 2개를 명시해 48~55자로 만들 것.
+
+[줄 길이 강제 — 다시 강조]
+- 각 줄은 반드시 한국어 48~55자(공백·번호 포함). 45자 미만 또는 58자 초과 모두 무효.
+- 출력 직전 ①②③④ 각 줄 글자수를 정확히 세어 검증할 것.
+- 짧으면 [주체/원인/결과] 중 누락된 요소를 추가해 늘릴 것 — "압축"이 아니라 "정보 추가"로 길이를 맞출 것.
 
 Bad (한 항목이 줄바꿈 — 절대 금지):
 ② 인간 두뇌가 현재 가치를\\n과대평가하는 메커니즘
@@ -188,10 +196,10 @@ Bad (한 항목이 줄바꿈 — 절대 금지):
 - 모든 문장은 반드시 명사형으로 마무리할 것.
 - 허용 패턴: ~라는 점, ~하는 구조, ~하는 흐름, ~라는 전제, ~경향, ~라는 의미, ~하는 방식, ~필요성, ~중요성, ~라는 주장
 - 금지 패턴: ~한다, ~된다, ~이다, ~있다, ~했다, ~합니다, ~됩니다, ~임, ~함
-- Good: "① 보상의 즉각성이 의사결정에 미치는 영향"
-- Good: "② 즉각적 보상이 장기적 이익보다 선호되는 경향"
-- Bad: "① 보상의 즉각성이 의사결정에 영향을 미친다"
-- Bad: "② 즉각적 보상이 장기적 이익보다 선호됨"
+- Good: "① 보상의 즉각성이 합리적 의사결정을 구조적으로 왜곡한다는 점을 드러내는 영향"
+- Good: "② 즉각적 보상이 장기적 이익보다 우선시되는 인간 두뇌의 진화적 편향 경향"
+- Bad: "① 보상의 즉각성이 의사결정에 영향을 미친다" (너무 짧고 동사 종결)
+- Bad: "② 즉각적 보상이 장기적 이익보다 선호됨" (음슴체 금지)
 
 ────────────────────
 Critical Korean Exam Rules
@@ -257,11 +265,15 @@ async function callAi(
   return content as string;
 }
 
-function summaryHasShortLine(summary: unknown, minLen = 40): boolean {
+function summaryHasOutOfRangeLine(
+  summary: unknown,
+  minLen = 45,
+  maxLen = 58,
+): boolean {
   if (typeof summary !== "string") return false;
   const lines = summary.split("\n").map((l) => l.trim()).filter(Boolean);
   if (lines.length === 0) return false;
-  return lines.some((line) => line.length < minLen);
+  return lines.some((line) => line.length < minLen || line.length > maxLen);
 }
 
 serve(async (req) => {
@@ -294,10 +306,10 @@ serve(async (req) => {
 
     let parsed = safeParseJson(content);
 
-    // 후처리 안전망: summary 줄 길이 검증 → 짧으면 1회 재호출
-    if (summaryHasShortLine(parsed?.summary)) {
+    // 후처리 안전망: summary 줄 길이 검증 (45~58자 범위) → 벗어나면 1회 재호출
+    if (summaryHasOutOfRangeLine(parsed?.summary)) {
       console.log(
-        "[analyze-preview] short summary line detected, retrying once. lines:",
+        "[analyze-preview] out-of-range summary line detected (target 45~58), retrying once. lines:",
         String(parsed?.summary)
           .split("\n")
           .map((l: string) => `${l.length}자`)
@@ -311,20 +323,22 @@ serve(async (req) => {
           {
             role: "user",
             content:
-              "이전 응답의 summary 항목 중 일부가 너무 짧았음(40자 미만). 각 줄을 반드시 한국어 45~58자(공백·번호 포함, 50자 안팎 권장)로 다시 작성해 동일한 JSON 형식으로 다시 출력할 것. 다른 필드도 동일하게 포함할 것.",
+              "이전 응답의 summary 항목 중 일부가 목표 길이(한국어 48~55자) 범위를 벗어났음. 각 줄을 반드시 한국어 48~55자(공백·번호 포함)로 다시 작성할 것. 짧다면 [주체] + [원인/메커니즘] + [결과/결론 방향] 3요소 중 누락된 것을 추가해 늘릴 것 — 압축이 아니라 정보 추가로 길이를 맞출 것. 동일한 JSON 형식으로 모든 필드를 포함해 다시 출력할 것.",
           },
         ]);
         const retryParsed = safeParseJson(retryContent);
-        if (!summaryHasShortLine(retryParsed?.summary)) {
+        if (!summaryHasOutOfRangeLine(retryParsed?.summary)) {
           parsed = retryParsed;
-          console.log("[analyze-preview] retry succeeded");
+          console.log("[analyze-preview] retry succeeded (all lines in 45~58)");
         } else {
-          // 재시도해도 짧음 → 둘 중 더 긴 쪽 채택
+          // 재시도해도 범위 밖 → 둘 중 평균 길이가 50자에 더 가까운 쪽 채택
           const firstAvg = avgLineLen(parsed?.summary);
           const retryAvg = avgLineLen(retryParsed?.summary);
-          if (retryAvg > firstAvg) parsed = retryParsed;
+          const firstDist = Math.abs(firstAvg - 50);
+          const retryDist = Math.abs(retryAvg - 50);
+          if (retryDist < firstDist) parsed = retryParsed;
           console.log(
-            `[analyze-preview] retry still short (first avg=${firstAvg}, retry avg=${retryAvg})`,
+            `[analyze-preview] retry still out-of-range (first avg=${firstAvg}, retry avg=${retryAvg})`,
           );
         }
       } catch (retryErr) {
