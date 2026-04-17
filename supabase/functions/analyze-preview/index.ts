@@ -30,11 +30,12 @@ function safeParseJson(raw: string): any {
 }
 
 const SYSTEM_PROMPT = `[CRITICAL LENGTH RULE — 최우선 규칙]
-summary의 각 줄(①②③④)은 반드시 한국어 45~58자 (공백·번호·구두점 포함).
-- 40자 미만 = 무효. 출력 금지.
+summary의 각 줄(①②③④)은 반드시 한국어 48~55자 (공백·번호·구두점 포함). 허용 범위는 45~58자.
+- 45자 미만 = 무효. 58자 초과 = 무효. 출력 금지.
 - 출력 직전 각 줄 글자수를 직접 세어 검증할 것.
-- 짧으면 주체/메커니즘/구체 개념을 1개 추가해 늘릴 것.
-- "간결하게" 쓰려는 본능을 누르고 정보를 채워 넣을 것.
+- 짧으면 [주체] + [원인/메커니즘] + [결과/결론 방향] 3요소 중 누락된 것을 추가해 늘릴 것.
+- 길이를 맞추는 방식은 "압축"이 아니라 "정보 추가". 추상어를 더 끼워넣지 말고 구체 개념·주체·메커니즘을 명시할 것.
+- "간결하게"라는 본능을 누르고 정보를 채워 넣을 것.
 이 규칙은 다른 모든 스타일 규칙보다 우선한다.
 
 You are a Korean high school English exam specialist AND a preview engine for Korean high school reading comprehension passages.
