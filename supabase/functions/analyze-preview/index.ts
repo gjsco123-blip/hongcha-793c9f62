@@ -231,6 +231,24 @@ Critical Korean Exam Rules
 출력 형식:
 {"summary":"①...\\n②...\\n③...\\n④...","exam_block":{"topic":"...","topic_ko":"...","title":"...","title_ko":"...","one_sentence_summary":"...","one_sentence_summary_ko":"..."}}`;
 
+const SELF_CRITIQUE_PROMPT = `다음 체크리스트로 이전 응답을 평가하고, 하나라도 미달이면 수정 후 동일 JSON으로 다시 출력할 것.
+
+[Passage Logic 체크리스트]
+1. ①②③④ 각 줄 글자수가 한국어 45~58자(공백·번호 포함)인가?
+   → 짧으면 [주체]+[원인/메커니즘]+[결과/결론] 3요소 중 누락된 것을 추가해 늘릴 것.
+2. 각 줄이 명사형 종결(~점/구조/경향/방식 등)인가? 동사 종결·음슴체 금지.
+3. 원문의 논리 구조(대비/인과/양보/문제해결)가 ④번 결론 줄에 정확히 반영됐는가?
+4. 원문에 없는 평가·주장·예측이 추가되지 않았는가?
+
+[exam_block 체크리스트]
+5. topic이 단순 설명이 아니라 명확한 CLAIM(주장)인가?
+6. title이 5~9 단어 명사구(abstract noun + of + key concept 권장)인가?
+7. one_sentence_summary가 정확히 한 문장이며 논리 구조를 반영하는가?
+
+평가 결과 모든 항목 충족이면 1차 응답을 그대로 다시 출력.
+하나라도 미달이면 수정한 결과를 동일 JSON 형식으로 출력.
+JSON 객체 외 다른 텍스트 출력 금지.`;
+
 const LOVABLE_API_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 async function callAi(
@@ -244,8 +262,9 @@ async function callAi(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "google/gemini-3.1-pro-preview",
+      model: "google/gemini-3-flash-preview",
       messages,
+      temperature: 0.25,
     }),
   });
 
@@ -302,6 +321,25 @@ serve(async (req) => {
         });
       }
       throw e;
+    }
+
+    // 2차 호출 (Self-Critique): AI가 1차 결과를 체크리스트로 평가/수정
+    try {
+      const critiqueContent = await callAi(LOVABLE_API_KEY, [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: passage },
+        { role: "assistant", content },
+        { role: "user", content: SELF_CRITIQUE_PROMPT },
+      ]);
+      const critiqueParsed = safeParseJson(critiqueContent);
+      if (critiqueParsed?.summary && critiqueParsed?.exam_block) {
+        content = critiqueContent;
+        console.log("[analyze-preview] self-critique applied");
+      } else {
+        console.log("[analyze-preview] self-critique result invalid, using 1st response");
+      }
+    } catch (critiqueErr) {
+      console.warn("[analyze-preview] self-critique failed, using 1st response:", critiqueErr);
     }
 
     let parsed = safeParseJson(content);
