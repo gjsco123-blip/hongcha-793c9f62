@@ -264,11 +264,15 @@ async function callAi(
   return content as string;
 }
 
-function summaryHasShortLine(summary: unknown, minLen = 40): boolean {
+function summaryHasOutOfRangeLine(
+  summary: unknown,
+  minLen = 45,
+  maxLen = 58,
+): boolean {
   if (typeof summary !== "string") return false;
   const lines = summary.split("\n").map((l) => l.trim()).filter(Boolean);
   if (lines.length === 0) return false;
-  return lines.some((line) => line.length < minLen);
+  return lines.some((line) => line.length < minLen || line.length > maxLen);
 }
 
 serve(async (req) => {
