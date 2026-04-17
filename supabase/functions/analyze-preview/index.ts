@@ -29,17 +29,15 @@ function safeParseJson(raw: string): any {
   throw new Error("Failed to parse preview JSON");
 }
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+const SYSTEM_PROMPT = `[CRITICAL LENGTH RULE — 최우선 규칙]
+summary의 각 줄(①②③④)은 반드시 한국어 45~58자 (공백·번호·구두점 포함).
+- 40자 미만 = 무효. 출력 금지.
+- 출력 직전 각 줄 글자수를 직접 세어 검증할 것.
+- 짧으면 주체/메커니즘/구체 개념을 1개 추가해 늘릴 것.
+- "간결하게" 쓰려는 본능을 누르고 정보를 채워 넣을 것.
+이 규칙은 다른 모든 스타일 규칙보다 우선한다.
 
-  try {
-    const { passage } = await req.json();
-    if (!passage) throw new Error("Missing passage");
-
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-
-    const systemPrompt = `You are a Korean high school English exam specialist AND a preview engine for Korean high school reading comprehension passages.
+You are a Korean high school English exam specialist AND a preview engine for Korean high school reading comprehension passages.
 
 Below are sample correct answers from Korean mock exams.
 Follow their abstraction level, tone, and structure.
@@ -143,7 +141,7 @@ Generate the following as a JSON object:
    - 각 항목 앞에 번호를 붙일 것: ① ② ③ ④
    - **각 항목은 정확히 한 줄(single line)** — 항목 내부에 \\n, 줄바꿈, 또는 줄을 나누는 어떠한 문자도 절대 포함 금지.
    - **각 줄 길이는 한국어 기준 45~58자** (번호·공백·구두점 포함).
-     - 35자 미만이면 핵심 정보(주체/원인/결과/조건 중 1개)를 더 명시해 길이를 늘릴 것.
+     - 40자 미만이면 무효. 핵심 정보(주체/원인/결과/조건)를 추가해 50자 안팎으로 늘릴 것.
      - 60자를 초과하면 부수적 수식어를 제거해 길이를 줄일 것.
    - 정보 밀도는 기존보다 소폭(+10~20%) 높이되, 추상어 나열은 금지. 원인/결과·주체·결론 중 핵심 요소를 각 줄에 분명히 포함할 것.
    - ① 지문의 핵심 주장 또는 중심 아이디어를 진술.
@@ -163,14 +161,24 @@ Generate the following as a JSON object:
 ────────────────────
 모범 예시 (Few-shot — 길이/밀도 감각용)
 ────────────────────
-Good (각 줄 45~58자, 한 줄 고정, 명사형 종결):
+Good #1 (각 줄 45~58자, 한 줄 고정, 명사형 종결):
 ① 즉각적 보상이 장기적 이익보다 우선시되는 의사결정 경향
 ② 인간 두뇌가 현재 가치를 과대평가하도록 진화했다는 메커니즘
 ③ 마시멜로 실험에서 드러난 만족 지연과 자기통제 능력의 차이
 ④ 보상 즉각성이 합리적 판단을 왜곡한다는 저자의 비판적 결론
 
-Bad (너무 짧음 — 정보 부족):
-① 보상의 즉각성이 의사결정에 미치는 영향
+Good #2 (50~55자 — 정보 밀도 충분):
+① 외부 보상에 의존한 동기 부여가 내재적 흥미를 약화시키는 구조
+② 보상이 주어질 때 활동 자체보다 결과에 집중하게 되는 심리 메커니즘
+③ 학생들에게 독서 보상을 제공한 실험에서 관찰된 흥미 감소 현상
+④ 외적 보상의 무분별한 사용을 경계해야 한다는 저자의 핵심 주장
+
+Bad (40자 미만 — 정보 부족, 절대 금지):
+① 외부적 보상이 단기 동기 부여에 미치는 한계   ← 약 24자, 무효
+② 인센티브와 처벌이 초래하는 비용과 스트레스   ← 약 22자, 무효
+→ 위 길이는 모두 무효. 주체/원인/결과 중 1~2개를 추가해
+   50자 안팎으로 만들 것.
+
 Bad (한 항목이 줄바꿈 — 절대 금지):
 ② 인간 두뇌가 현재 가치를\\n과대평가하는 메커니즘
 
@@ -196,49 +204,134 @@ Critical Korean Exam Rules
 - Focus on the overall argumentative direction.
 
 ────────────────────
+[OUTPUT SELF-CHECK]
+────────────────────
+출력 직전, summary의 각 줄 글자수(공백·번호 포함)를 세어
+45~58자 범위인지 확인할 것.
+범위 밖(특히 40자 미만)이면 다시 작성한 후 출력할 것.
+
+────────────────────
 절대 규칙
 ────────────────────
 - JSON 객체만 출력. 다른 텍스트 금지.
 - summary는 반드시 \\n으로 구분된 4줄이어야 한다 (①②③④).
 - summary 각 항목 내부에는 \\n, 줄바꿈, 또는 줄을 나누는 어떠한 문자도 절대 포함 금지. 4개 항목 사이의 \\n만 허용.
 - summary 각 줄 길이는 한국어 기준 45~58자 범위 강제 (번호·공백·구두점 포함).
+- 40자 미만은 절대 금지.
 - 의미 왜곡 금지: 원문에 없는 주장, 평가, 비판, 예측을 추가하지 말 것.
 
 출력 형식:
 {"summary":"①...\\n②...\\n③...\\n④...","exam_block":{"topic":"...","topic_ko":"...","title":"...","title_ko":"...","one_sentence_summary":"...","one_sentence_summary_ko":"..."}}`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: passage },
-        ],
-      }),
-    });
+const LOVABLE_API_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("AI error:", response.status, errText);
-      if (response.status === 429) {
+async function callAi(
+  apiKey: string,
+  messages: Array<{ role: string; content: string }>,
+) {
+  const response = await fetch(LOVABLE_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      messages,
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error("AI error:", response.status, errText);
+    const err = new Error(`AI error: ${response.status}`) as Error & {
+      status?: number;
+    };
+    err.status = response.status;
+    throw err;
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error("No content in response");
+  return content as string;
+}
+
+function summaryHasShortLine(summary: unknown, minLen = 40): boolean {
+  if (typeof summary !== "string") return false;
+  const lines = summary.split("\n").map((l) => l.trim()).filter(Boolean);
+  if (lines.length === 0) return false;
+  return lines.some((line) => line.length < minLen);
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  try {
+    const { passage } = await req.json();
+    if (!passage) throw new Error("Missing passage");
+
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
+    // 1차 호출
+    let content: string;
+    try {
+      content = await callAi(LOVABLE_API_KEY, [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: passage },
+      ]);
+    } catch (e) {
+      const status = (e as { status?: number }).status;
+      if (status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      throw new Error(`AI error: ${response.status}`);
+      throw e;
     }
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error("No content in response");
+    let parsed = safeParseJson(content);
 
-    const parsed = safeParseJson(content);
+    // 후처리 안전망: summary 줄 길이 검증 → 짧으면 1회 재호출
+    if (summaryHasShortLine(parsed?.summary)) {
+      console.log(
+        "[analyze-preview] short summary line detected, retrying once. lines:",
+        String(parsed?.summary)
+          .split("\n")
+          .map((l: string) => `${l.length}자`)
+          .join(" / "),
+      );
+      try {
+        const retryContent = await callAi(LOVABLE_API_KEY, [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: passage },
+          { role: "assistant", content },
+          {
+            role: "user",
+            content:
+              "이전 응답의 summary 항목 중 일부가 너무 짧았음(40자 미만). 각 줄을 반드시 한국어 45~58자(공백·번호 포함, 50자 안팎 권장)로 다시 작성해 동일한 JSON 형식으로 다시 출력할 것. 다른 필드도 동일하게 포함할 것.",
+          },
+        ]);
+        const retryParsed = safeParseJson(retryContent);
+        if (!summaryHasShortLine(retryParsed?.summary)) {
+          parsed = retryParsed;
+          console.log("[analyze-preview] retry succeeded");
+        } else {
+          // 재시도해도 짧음 → 둘 중 더 긴 쪽 채택
+          const firstAvg = avgLineLen(parsed?.summary);
+          const retryAvg = avgLineLen(retryParsed?.summary);
+          if (retryAvg > firstAvg) parsed = retryParsed;
+          console.log(
+            `[analyze-preview] retry still short (first avg=${firstAvg}, retry avg=${retryAvg})`,
+          );
+        }
+      } catch (retryErr) {
+        console.error("[analyze-preview] retry failed:", retryErr);
+        // 재시도 실패해도 1차 결과 반환
+      }
+    }
 
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -251,3 +344,10 @@ Critical Korean Exam Rules
     });
   }
 });
+
+function avgLineLen(summary: unknown): number {
+  if (typeof summary !== "string") return 0;
+  const lines = summary.split("\n").map((l) => l.trim()).filter(Boolean);
+  if (lines.length === 0) return 0;
+  return lines.reduce((s, l) => s + l.length, 0) / lines.length;
+}
