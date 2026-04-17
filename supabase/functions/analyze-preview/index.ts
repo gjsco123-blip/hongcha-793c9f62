@@ -323,6 +323,25 @@ serve(async (req) => {
       throw e;
     }
 
+    // 2차 호출 (Self-Critique): AI가 1차 결과를 체크리스트로 평가/수정
+    try {
+      const critiqueContent = await callAi(LOVABLE_API_KEY, [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: passage },
+        { role: "assistant", content },
+        { role: "user", content: SELF_CRITIQUE_PROMPT },
+      ]);
+      const critiqueParsed = safeParseJson(critiqueContent);
+      if (critiqueParsed?.summary && critiqueParsed?.exam_block) {
+        content = critiqueContent;
+        console.log("[analyze-preview] self-critique applied");
+      } else {
+        console.log("[analyze-preview] self-critique result invalid, using 1st response");
+      }
+    } catch (critiqueErr) {
+      console.warn("[analyze-preview] self-critique failed, using 1st response:", critiqueErr);
+    }
+
     let parsed = safeParseJson(content);
 
     // 후처리 안전망: summary 줄 길이 검증 (45~58자 범위) → 벗어나면 1회 재호출
