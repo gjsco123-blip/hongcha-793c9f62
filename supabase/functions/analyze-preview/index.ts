@@ -305,10 +305,10 @@ serve(async (req) => {
 
     let parsed = safeParseJson(content);
 
-    // 후처리 안전망: summary 줄 길이 검증 → 짧으면 1회 재호출
-    if (summaryHasShortLine(parsed?.summary)) {
+    // 후처리 안전망: summary 줄 길이 검증 (45~58자 범위) → 벗어나면 1회 재호출
+    if (summaryHasOutOfRangeLine(parsed?.summary)) {
       console.log(
-        "[analyze-preview] short summary line detected, retrying once. lines:",
+        "[analyze-preview] out-of-range summary line detected (target 45~58), retrying once. lines:",
         String(parsed?.summary)
           .split("\n")
           .map((l: string) => `${l.length}자`)
@@ -322,20 +322,22 @@ serve(async (req) => {
           {
             role: "user",
             content:
-              "이전 응답의 summary 항목 중 일부가 너무 짧았음(40자 미만). 각 줄을 반드시 한국어 45~58자(공백·번호 포함, 50자 안팎 권장)로 다시 작성해 동일한 JSON 형식으로 다시 출력할 것. 다른 필드도 동일하게 포함할 것.",
+              "이전 응답의 summary 항목 중 일부가 목표 길이(한국어 48~55자) 범위를 벗어났음. 각 줄을 반드시 한국어 48~55자(공백·번호 포함)로 다시 작성할 것. 짧다면 [주체] + [원인/메커니즘] + [결과/결론 방향] 3요소 중 누락된 것을 추가해 늘릴 것 — 압축이 아니라 정보 추가로 길이를 맞출 것. 동일한 JSON 형식으로 모든 필드를 포함해 다시 출력할 것.",
           },
         ]);
         const retryParsed = safeParseJson(retryContent);
-        if (!summaryHasShortLine(retryParsed?.summary)) {
+        if (!summaryHasOutOfRangeLine(retryParsed?.summary)) {
           parsed = retryParsed;
-          console.log("[analyze-preview] retry succeeded");
+          console.log("[analyze-preview] retry succeeded (all lines in 45~58)");
         } else {
-          // 재시도해도 짧음 → 둘 중 더 긴 쪽 채택
+          // 재시도해도 범위 밖 → 둘 중 평균 길이가 50자에 더 가까운 쪽 채택
           const firstAvg = avgLineLen(parsed?.summary);
           const retryAvg = avgLineLen(retryParsed?.summary);
-          if (retryAvg > firstAvg) parsed = retryParsed;
+          const firstDist = Math.abs(firstAvg - 50);
+          const retryDist = Math.abs(retryAvg - 50);
+          if (retryDist < firstDist) parsed = retryParsed;
           console.log(
-            `[analyze-preview] retry still short (first avg=${firstAvg}, retry avg=${retryAvg})`,
+            `[analyze-preview] retry still out-of-range (first avg=${firstAvg}, retry avg=${retryAvg})`,
           );
         }
       } catch (retryErr) {
