@@ -135,7 +135,21 @@ Generate the following as a JSON object:
    - Abstract but not overly philosophical.
    - Do NOT split into multiple sentences.
 
-6. exam_block.one_sentence_summary_ko: Korean translation of one_sentence_summary.
+6. exam_block.one_sentence_summary_ko (한글 직역):
+   - 영문 one_sentence_summary의 직역(literal translation).
+   - 영문 어순·구조·핵심 명사를 최대한 보존할 것.
+   - 영문 단어가 한글에서 1:1로 추적 가능해야 함 (학생이 영문↔한글 짝지어 읽기 가능).
+   - 영문에 없는 부연·예시·평가어 추가 금지.
+   - 핵심 명사는 그대로 옮길 것 (예: "long-term decision-making" → "장기적 의사결정").
+   - 자연스러운 한국어 어순 조정은 허용하나, 의미 단위(주어/동사/목적어/수식구) 순서를 임의로 뒤집지 말 것.
+   - 종결: "~한다 / ~이다 / ~된다" 평서문 동사 종결 (명사형 종결 금지).
+   - 한자어 금지, 한글만.
+   - 금지어: "~을 시사한다 / ~을 의미한다 / ~라고 볼 수 있다" 같은 해설성 표현 (영문에 그런 표현이 있을 때만 허용).
+
+   예시:
+   영문: "Immediate rewards systematically distort long-term decision-making by exploiting evolutionary biases in the human brain."
+   Good: "즉각적 보상은 인간 두뇌의 진화적 편향을 이용해 장기적 의사결정을 체계적으로 왜곡한다."
+   Bad: "사람들은 당장의 만족 때문에 미래를 제대로 못 본다는 점이 문제다."
 
 7. summary (Passage Logic / 지문 논리):
    - 반드시 정확히 4개 항목, 줄바꿈 \\n으로 구분, 한국어로 작성.
