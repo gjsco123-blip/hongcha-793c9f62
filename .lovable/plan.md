@@ -1,34 +1,49 @@
 
 
-# 부정 축약형(isn't, don't 등) 통째로 동사 태깅
+# Passage Logic 품질 개선 — 한 줄 고정 + 글자수 상한 + 밀도 강화
 
-## 문제
+## 수정 파일
+`supabase/functions/analyze-preview/index.ts` (프롬프트만 수정)
 
-현재 엔진 프롬프트에 `'s`, `'re`, `'ve` 등 일반 축약형 규칙은 있지만, **부정 축약형(n't)** 규칙이 없음. AI가 `isn't`를 `is` + `n't`로 분리하거나, `is`만 동사 태깅하고 `n't`는 빠뜨리는 경우 발생.
+## 변경 내용
 
-## 수정 내용
+### 1. summary 규칙 강화 (기존 규칙에 추가/대체)
 
-### 1. 엔진 프롬프트 — 1차 분석 (`supabase/functions/engine/index.ts`)
+기존:
+- 정확히 4문장, `\n`으로 구분
+- 각 문장 앞 ① ② ③ ④
 
-`systemPrompt`의 VERB TAGGING 섹션(Contracted verbs 부분, ~140행)에 부정 축약형 규칙 추가:
+추가/강화:
+- **각 항목은 정확히 한 줄(single line)** — 줄바꿈 절대 금지
+- **각 줄 한국어 기준 45~58자** (공백·번호·구두점 포함)
+- 너무 짧으면(35자 미만) 핵심 정보 1개를 더 명시할 것
+- 너무 길면(60자 초과) 부수적 수식어 제거
+- 정보 밀도를 기존보다 소폭(+10~20%) 높이되, 추상어 나열 금지
+- 각 줄에 원인/결과·주체·결론 중 핵심 요소를 분명히 포함
+
+### 2. 종결 스타일 섹션은 그대로 유지 (명사형 종결)
+
+### 3. Few-shot 예시 1개 추가
+이상적 길이/밀도 감각을 잡아주기 위해 모범 예시 1쌍 삽입:
 
 ```
-- **Negative contractions**: isn't, don't, won't, can't, doesn't, hasn't, hadn't, wouldn't, couldn't, shouldn't, aren't, weren't, wasn't, mustn't — these are SINGLE verb units. Tag the ENTIRE word as one <v> block.
-  - CORRECT: it <v>isn't</v> easy
-  - WRONG: it <v>is</v>n't easy
-  - CORRECT: they <v>don't</v> know
-  - WRONG: they <v>do</v>n't know
+Good (45~58자, 한 줄, 명사형 종결):
+① 즉각적 보상이 장기적 이익보다 우선시되는 의사결정 경향
+② 인간 두뇌가 현재 가치를 과대평가하도록 진화했다는 메커니즘
+③ 마시멜로 실험에서 드러난 만족 지연과 자기통제의 차이
+④ 보상 즉각성이 합리적 판단을 왜곡한다는 저자의 결론
 ```
 
-### 2. 동사 검증 프롬프트 — 2차 검증 (`supabase/functions/engine/index.ts`)
+### 4. 절대 규칙에 추가
+- "summary 각 줄에 `\n` 포함 금지 (4줄 사이의 `\n`만 허용)"
+- "각 줄 길이 45~58자 범위 강제"
 
-`verbVerifyPrompt`(~410행)의 Contracted verbs 섹션에도 동일한 규칙 추가.
+## 안 건드리는 부분
+- 모델(`gemini-3-flash-preview`) 그대로
+- exam_block(topic/title/one_sentence_summary) 규칙 그대로
+- 프론트(`PreviewSummarySection.tsx`) 그대로 — 후처리 강제 변형 없음
+- `analyze-preview` 외 다른 엣지 함수 미변경
 
-### 수정 파일
-
-| 파일 | 변경 |
-|------|------|
-| `supabase/functions/engine/index.ts` | 프롬프트 2곳에 부정 축약형 규칙 추가 |
-
-엔진 함수 재배포 필요. 클라이언트 코드 변경 없음.
+## 배포
+프롬프트만 변경되므로 `analyze-preview` 함수 재배포 1회.
 
