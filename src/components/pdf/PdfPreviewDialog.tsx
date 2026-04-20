@@ -84,7 +84,7 @@ export function PdfPreviewDialog({
           ctx.scale(dpr, dpr);
 
           container.appendChild(canvas);
-          await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+          await page.render({ canvasContext: ctx, viewport }).promise;
         }
       } catch (e: any) {
         if (!cancelled) setError(e?.message || "PDF 렌더 실패");
