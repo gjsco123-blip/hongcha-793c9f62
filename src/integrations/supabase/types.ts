@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      feature_flags: {
+        Row: {
+          created_at: string
+          description: string | null
+          enabled_for_admin: boolean
+          enabled_for_all: boolean
+          id: string
+          key: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          enabled_for_admin?: boolean
+          enabled_for_all?: boolean
+          id?: string
+          key: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          enabled_for_admin?: boolean
+          enabled_for_all?: boolean
+          id?: string
+          key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       learning_examples: {
         Row: {
           ai_draft: string
