@@ -6,6 +6,7 @@ import { PreviewPdf } from "@/components/PreviewPdf";
 import { WorkbookPdfDocument } from "@/components/WorkbookPdfDocument";
 import { parsePassageStore, PassageStorePayload } from "@/lib/passage-store";
 import type { Passage } from "@/hooks/useCategories";
+import { useFeatureFlag } from "@/hooks/useFeatureFlag";
 
 type PdfType = "syntax" | "preview" | "combined" | "workbook";
 
@@ -59,6 +60,8 @@ function triggerDownload(blob: Blob, filename: string) {
 }
 
 export function useBatchPdfExport() {
+  const subjectUnderlineEnabled = useFeatureFlag("subject_underline");
+
   const batchExportSyntax = useCallback(
     async (passages: Passage[], selectedIds: Set<string>, schoolName: string, teacherLabel?: string) => {
       const selected = passages
@@ -81,13 +84,14 @@ export function useBatchPdfExport() {
           title,
           subtitle: p.name,
           teacherLabel,
+          subjectUnderlineEnabled,
         });
         blobs.push(await pdf(doc).toBlob());
       }
       const merged = await mergePdfBlobs(blobs);
       triggerDownload(merged, `${schoolName}_구문분석.pdf`);
     },
-    []
+    [subjectUnderlineEnabled]
   );
 
   const batchExportPreview = useCallback(
@@ -156,13 +160,14 @@ export function useBatchPdfExport() {
           title,
           subtitle: p.name,
           teacherLabel,
+          subjectUnderlineEnabled,
         });
         blobs.push(await pdf(syntaxDoc).toBlob());
       }
       const merged = await mergePdfBlobs(blobs);
       triggerDownload(merged, `${schoolName}_통합.pdf`);
     },
-    []
+    [subjectUnderlineEnabled]
   );
 
   const batchExportWorkbook = useCallback(
