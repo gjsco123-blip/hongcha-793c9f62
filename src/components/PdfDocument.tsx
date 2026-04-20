@@ -523,8 +523,8 @@ function renderChunksWithVerbUnderline(
     });
     if (ci < chunks.length - 1) {
       elements.push(
-        <Text key={`slash-${ci}`} style={styles.englishWord}>
-          {" / "}
+        <Text key={`slash-${ci}`} style={styles.chunkSlash}>
+          /
         </Text>,
       );
     }
