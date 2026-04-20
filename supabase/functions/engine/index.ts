@@ -522,7 +522,7 @@ Given an English sentence chunked with <c1>...</c1> tags, with <v>...</v> verb t
 
 ## What MUST have <s> tags (subjects ONLY):
 - The grammatical subject NP of each finite clause (수일치의 핵).
-- Include determiner + pre-modifiers + head noun ONLY.
+- Include determiner + pre-modifiers + head noun ONLY. STRICT — never include any post-modifier (PP / relative clause / participle / to-infinitive / appositive). Cut <s> at the head noun.
 - Subordinate clause subjects also: "Because <s>the rain</s> stopped, <s>we</s> went out".
 - Expletive It: "<s>It</s> <v>is</v> important...".
 - There/Here + be + NP: tag the NP after the verb. "There <v>are</v> <s>many students</s>".
@@ -533,6 +533,16 @@ Given an English sentence chunked with <c1>...</c1> tags, with <v>...</v> verb t
   - CORRECT: <c1>What <s>he</s> <v>said</v></c1> <c2><v>is</v> true</c2>
   - CORRECT: <c1>That <s>he</s> <v>lied</v></c1> <c2><v>surprised</v> me</c2>
 
+## Relative clause rules (관계절):
+- Antecedent (선행사) is <s> if it is the subject of the main verb — head noun only, no relative tail inside <s>.
+- **Subject relative clause** (who/which/that immediately followed by <v>): the relative pronoun is NOT <s>. The relative-clause chunk has NO <s>; it only has <v>.
+  - CORRECT: <s>the people</s> who <v>are taking</v> part in it
+  - WRONG:   <s>who</s> <v>are taking</v> part in it
+  - WRONG:   <s>the people who are taking part in it</s>
+- **Object relative clause** (who(m)/which/that followed by an NP then <v>): tag the inner NP subject as <s>. The relative pronoun is never <s>.
+  - CORRECT: <s>the book</s> that <s>I</s> <v>read</v>
+  - CORRECT: <s>the man</s> whom <s>she</s> <v>met</v>
+
 ## What MUST NOT have <s> tags (REMOVE if found):
 1. **Direct objects** (NP after a transitive verb): "<v>allows</v> citizens" → "citizens" is NOT <s>.
 2. **Indirect objects**: "<v>gave</v> him a book" → "him", "a book" are NOT <s>.
@@ -541,13 +551,20 @@ Given an English sentence chunked with <c1>...</c1> tags, with <v>...</v> verb t
 5. **Objects of prepositions**: "on the table" → "the table" is NOT <s>.
 6. **Nouns inside infinitive phrases**: "to read the book" → "the book" is NOT <s>.
 7. **Nouns inside participial phrases**: "holding the umbrella" → "the umbrella" is NOT <s>.
-8. **Post-modifiers of the subject** (relative clauses, PPs, participles AFTER head noun) → NOT inside <s>.
+8. **Post-modifiers of the subject** (relative clauses, PPs, participles, to-infinitives, appositives AFTER head noun) → NOT inside <s>. ALWAYS cut <s> at the head noun.
+   - WRONG: <s>something like this thought</s>  → CORRECT: <s>something</s> like this thought
+   - WRONG: <s>the man with a hat</s>           → CORRECT: <s>the man</s> with a hat
+   - WRONG: <s>students taking the test</s>     → CORRECT: <s>students</s> taking the test
+   - WRONG: <s>the book that I read</s>         → CORRECT: <s>the book</s> that <s>I</s> <v>read</v>
 9. **Parentheticals** (콤마 삽입구): "however", "for example" — NOT inside <s>.
 10. **Whole noun clause as subject**: NEVER wrap an entire that/wh/whether-clause in <s>. If you find <s>What he said</s> or <s>That he lied</s>, REMOVE the outer <s> and instead tag only the inner subject (e.g. <s>he</s>).
+11. **Relative pronouns themselves** (who/whom/which/that/whose as relative): NEVER <s>. If you find <s>who</s>, <s>which</s>, <s>that</s> inside a relative clause, REMOVE.
+12. **Subject relative clause has zero <s>**: if a chunk starts with a relative pronoun followed immediately by <v> (e.g. "who <v>are taking</v>..."), the chunk must contain NO <s> at all.
 
 ## Per-clause rule:
 - Each finite clause has at most ONE <s>. If you see two <s> in one clause, the second one is wrong (likely an object/complement) — REMOVE it.
 - An upper clause whose subject is a noun clause has ZERO <s> — do NOT add one. The inner subject of the noun clause is the only <s>.
+- A subject-type relative clause has ZERO <s>. An object-type relative clause has exactly ONE <s> (the inner subject after the relative pronoun).
 
 ## Constraint:
 - <s> and <v> must NEVER overlap or nest. Always adjacent.
