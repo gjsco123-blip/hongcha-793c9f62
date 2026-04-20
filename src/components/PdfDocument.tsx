@@ -1,6 +1,6 @@
 import { Document, Page, View, Text, StyleSheet, Font } from "@react-pdf/renderer";
 import { PdfHeader } from "@/components/pdf/PdfHeader";
-import { Chunk, segmentsToWords } from "@/lib/chunk-utils";
+import { Chunk, segmentsToWords, mergeAdverbsBetweenVerbs } from "@/lib/chunk-utils";
 import { paginateResults, type PaginationSentence } from "@/lib/pdf-pagination";
 import { computeSuperscriptPositions, type SyntaxNoteWithTarget } from "@/lib/syntax-superscript";
 
