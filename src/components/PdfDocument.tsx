@@ -444,26 +444,35 @@ function renderChunksWithVerbUnderline(
         .sort((a, b) => a[0] - b[0])
         .map(([offset, ids]) => ({ offset, ids }));
 
+      const isSubjectSeg = subjectUnderlineEnabled && !!seg.isSubject;
+      const isLabeledSeg =
+        (seg.isVerb || isSubjectSeg) && /[A-Za-z]/.test(seg.text);
+      const svLbl = mergedSvLabels.get(si);
+      const hasSvLabel =
+        svLbl !== undefined &&
+        (seg.isVerb || seg.isSubject) &&
+        /[A-Za-z]/.test(seg.text);
+
+      // Build the text spans for this segment (underlined parts + sups).
+      const segChildren: React.ReactNode[] = [];
       const pushSegmentText = (text: string, keyBase: string) => {
         if (!text) return;
-        const isSubjectSeg = subjectUnderlineEnabled && !!seg.isSubject;
-        const canUnderline = (seg.isVerb || isSubjectSeg) && /[A-Za-z]/.test(text);
-        if (!canUnderline) {
-          elements.push(<Text key={keyBase}>{text}</Text>);
+        if (!isLabeledSeg) {
+          segChildren.push(<Text key={keyBase}>{text}</Text>);
           return;
         }
         const underlineStyle = seg.isVerb ? styles.verbUnderline : styles.subjectUnderline;
         const match = text.match(/^(.*\S)([\s,.:;!?]+)$/);
         if (match) {
-          elements.push(
+          segChildren.push(
             <Text key={`${keyBase}-v`} style={underlineStyle}>
               {match[1]}
             </Text>,
           );
-          elements.push(<Text key={`${keyBase}-p`}>{match[2]}</Text>);
+          segChildren.push(<Text key={`${keyBase}-p`}>{match[2]}</Text>);
           return;
         }
-        elements.push(
+        segChildren.push(
           <Text key={keyBase} style={underlineStyle}>
             {text}
           </Text>,
@@ -476,22 +485,37 @@ function renderChunksWithVerbUnderline(
           pushSegmentText(seg.text.slice(cursor, event.offset), `${ci}-${si}-txt-${ei}`);
         }
         event.ids.forEach((id, idi) => {
-          elements.push(renderSup(`${ci}-${si}-sup-${ei}-${idi}-${id}`, id));
+          segChildren.push(renderSup(`${ci}-${si}-sup-${ei}-${idi}-${id}`, id));
         });
         cursor = event.offset;
       });
       pushSegmentText(seg.text.slice(cursor), `${ci}-${si}-txt-tail`);
 
-      // Append sv label for this segment (if any). Render as an inline absolute
-      // text so it sits centered under the underlined word(s) without affecting
-      // line height. We approximate centering by placing it after the segment.
-      const svLbl = mergedSvLabels.get(si);
-      if (svLbl && (seg.isVerb || seg.isSubject) && /[A-Za-z]/.test(seg.text)) {
-        elements.push(renderInlineSvLabel(svLbl, `${ci}-${si}-sv`));
+      if (hasSvLabel && svLbl) {
+        // Wrap labeled segment in a relative View so the s/v label can be
+        // absolutely centered just below the underline. The wrapper itself
+        // sits as one inline-flow item inside the row-wrap container; the
+        // label is outside the line flow → no lineHeight impact.
+        elements.push(
+          <View key={`${ci}-${si}-wrap`} style={styles.labeledWrap}>
+            <Text style={styles.englishWord}>{segChildren}</Text>
+            {renderAbsoluteSvLabel(svLbl, `${ci}-${si}-sv`)}
+          </View>,
+        );
+      } else {
+        elements.push(
+          <Text key={`${ci}-${si}-text`} style={styles.englishWord}>
+            {segChildren}
+          </Text>,
+        );
       }
     });
     if (ci < chunks.length - 1) {
-      elements.push(<Text key={`slash-${ci}`}> / </Text>);
+      elements.push(
+        <Text key={`slash-${ci}`} style={styles.englishWord}>
+          {" / "}
+        </Text>,
+      );
     }
   });
 
