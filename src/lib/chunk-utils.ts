@@ -133,8 +133,15 @@ export function chunksToTagged(chunks: Chunk[]): string {
     .map((c) => {
       const inner = c.segments
         .map((s) => {
-          if (s.isVerb) return `<v>${s.text}</v>`;
-          if (s.isSubject) return `<s>${s.text}</s>`;
+          const gAttr = s.groupId !== undefined ? ` g="${s.groupId}"` : "";
+          if (s.isVerb) {
+            const tag = s.isSubordinate ? "vs" : "v";
+            return `<${tag}${gAttr}>${s.text}</${tag}>`;
+          }
+          if (s.isSubject) {
+            const tag = s.isSubordinate ? "ss" : "s";
+            return `<${tag}${gAttr}>${s.text}</${tag}>`;
+          }
           return s.text;
         })
         .join("");
@@ -163,8 +170,8 @@ export function getChunkColor(index: number): string {
 /** Split a segment's text into individual words, preserving spaces */
 export function segmentsToWords(
   segments: ChunkSegment[],
-): { word: string; isVerb: boolean; isSubject: boolean }[] {
-  const words: { word: string; isVerb: boolean; isSubject: boolean }[] = [];
+): { word: string; isVerb: boolean; isSubject: boolean; isSubordinate: boolean; groupId?: number }[] {
+  const words: { word: string; isVerb: boolean; isSubject: boolean; isSubordinate: boolean; groupId?: number }[] = [];
   for (const seg of segments) {
     const parts = seg.text.split(/(\s+)/);
     for (const part of parts) {
@@ -175,6 +182,8 @@ export function segmentsToWords(
           word: part,
           isVerb: seg.isVerb && hasLetter,
           isSubject: !!seg.isSubject && hasLetter,
+          isSubordinate: !!seg.isSubordinate && hasLetter,
+          groupId: hasLetter ? seg.groupId : undefined,
         });
       }
     }
@@ -184,20 +193,26 @@ export function segmentsToWords(
 
 /** Rebuild segments from word-level verb info */
 export function wordsToSegments(
-  words: { word: string; isVerb: boolean; isSubject?: boolean }[],
+  words: { word: string; isVerb: boolean; isSubject?: boolean; isSubordinate?: boolean; groupId?: number }[],
 ): ChunkSegment[] {
   if (words.length === 0) return [{ text: "", isVerb: false }];
 
   const sameKind = (
-    a: { isVerb: boolean; isSubject?: boolean },
-    b: { isVerb: boolean; isSubject?: boolean },
-  ) => a.isVerb === b.isVerb && !!a.isSubject === !!b.isSubject;
+    a: { isVerb: boolean; isSubject?: boolean; isSubordinate?: boolean; groupId?: number },
+    b: { isVerb: boolean; isSubject?: boolean; isSubordinate?: boolean; groupId?: number },
+  ) =>
+    a.isVerb === b.isVerb &&
+    !!a.isSubject === !!b.isSubject &&
+    !!a.isSubordinate === !!b.isSubordinate &&
+    a.groupId === b.groupId;
 
   const segments: ChunkSegment[] = [];
   let current: ChunkSegment = {
     text: words[0].word,
     isVerb: words[0].isVerb,
     isSubject: !!words[0].isSubject,
+    isSubordinate: !!words[0].isSubordinate || undefined,
+    groupId: words[0].groupId,
   };
 
   for (let i = 1; i < words.length; i++) {
@@ -205,8 +220,20 @@ export function wordsToSegments(
       current.text += " " + words[i].word;
     } else {
       // Add trailing space to non-last segments for proper spacing
-      segments.push({ text: current.text + " ", isVerb: current.isVerb, isSubject: current.isSubject });
-      current = { text: words[i].word, isVerb: words[i].isVerb, isSubject: !!words[i].isSubject };
+      segments.push({
+        text: current.text + " ",
+        isVerb: current.isVerb,
+        isSubject: current.isSubject,
+        isSubordinate: current.isSubordinate,
+        groupId: current.groupId,
+      });
+      current = {
+        text: words[i].word,
+        isVerb: words[i].isVerb,
+        isSubject: !!words[i].isSubject,
+        isSubordinate: !!words[i].isSubordinate || undefined,
+        groupId: words[i].groupId,
+      };
     }
   }
   segments.push(current);
