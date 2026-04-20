@@ -155,6 +155,63 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
     }
   };
 
+  const applyRole = (
+    chunkIndex: number,
+    wordIndex: number,
+    role: "s" | "v" | "none",
+  ) => {
+    const target = isEditing ? draftChunks : chunks;
+    const chunk = target[chunkIndex];
+    const words = segmentsToWords(chunk.segments);
+    if (!/[A-Za-z]/.test(words[wordIndex]?.word || "")) return;
+
+    const isSubordinate =
+      role === "none" ? false : detectSubordinate(target, chunkIndex, wordIndex);
+
+    words[wordIndex] = {
+      ...words[wordIndex],
+      isVerb: role === "v",
+      isSubject: role === "s",
+      isSubordinate,
+      groupId: undefined,
+    };
+    const newSegments = wordsToSegments(words);
+
+    if (isEditing) {
+      const newChunks = draftChunks.map((c, i) =>
+        i === chunkIndex ? { ...c, segments: newSegments } : c,
+      );
+      setDraftChunks(newChunks);
+    } else {
+      const newChunks = chunks.map((c, i) =>
+        i === chunkIndex ? { ...c, segments: newSegments } : c,
+      );
+      onChange(newChunks);
+    }
+  };
+
+  const handleWordContextMenu = (
+    e: React.MouseEvent,
+    chunkIndex: number,
+    wordIndex: number,
+  ) => {
+    if (!isEditing) return;
+    const target = isEditing ? draftChunks : chunks;
+    const chunk = target[chunkIndex];
+    const words = segmentsToWords(chunk.segments);
+    if (!/[A-Za-z]/.test(words[wordIndex]?.word || "")) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    if (!containerRect) return;
+    setRoleMenu({
+      x: e.clientX - containerRect.left,
+      y: e.clientY - containerRect.top,
+      chunkIndex,
+      wordIndex,
+    });
+  };
+
   const handleMerge = (index: number) => {
     if (index >= draftChunks.length - 1) return;
     const newChunks = [...draftChunks];
