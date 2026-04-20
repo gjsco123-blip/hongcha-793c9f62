@@ -308,7 +308,13 @@ export function mergeAdverbsBetweenVerbs(
       }
       if (consumed.length > 1) {
         const mergedIdx = merged.length;
-        merged.push({ text: combinedText, isVerb: true });
+        // Preserve subordinate flag and groupId from the first verb in the run.
+        merged.push({
+          text: combinedText,
+          isVerb: true,
+          isSubordinate: cur.isSubordinate,
+          groupId: cur.groupId,
+        });
         for (const idx of consumed) indexMap[idx] = mergedIdx;
         i = j + 1;
         continue;
