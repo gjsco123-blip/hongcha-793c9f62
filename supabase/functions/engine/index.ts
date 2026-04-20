@@ -545,7 +545,9 @@ Return ONLY the Korean tagged string. Nothing else.`;
           if (repaired) {
             let cleanedRepair = repaired.replace(/```[\w]*\n?/g, '').replace(/```/g, '').trim();
             // Remove <v> tags from Korean (Korean doesn't use verb tags)
-            cleanedRepair = cleanedRepair.replace(/<\/?v>/g, '').replace(/<\/?s>/g, '');
+            cleanedRepair = cleanedRepair
+              .replace(/<(?:v|s|vs|ss)(?:\s+g="\d+")?>/g, '')
+              .replace(/<\/(?:v|s|vs|ss)>/g, '');
             const repairedTags = getTagNumbers(cleanedRepair);
             if (JSON.stringify(finalEnTags) === JSON.stringify(repairedTags)) {
               console.log("Korean literal repair successful");
