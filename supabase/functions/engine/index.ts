@@ -74,6 +74,7 @@ function stripObjectSubjectTags(tagged: string): { result: string; removed: numb
   // Process each <cN>...</cN> chunk independently
   const chunkRe = /<c(\d+)>([\s\S]*?)<\/c\1>/g;
   let totalRemoved = 0;
+  let existentialPreserved = 0;
   const newString = tagged.replace(chunkRe, (whole, num, inner) => {
     // Collect tag tokens within this chunk
     const toks: Tok[] = [];
@@ -95,6 +96,52 @@ function stripObjectSubjectTags(tagged: string): { result: string; removed: numb
     const firstVerbIdx = opens.findIndex(t => t.tag === "v" || t.tag === "vs");
     if (firstVerbIdx === -1) return whole; // no verb in chunk → leave alone
 
+    // Helper: detect if a subject tag is the post-verbal subject of an existential
+    // construction (there is/are/was/were/exists/remains/lies/comes ...).
+    // We look at the text between the closing of the immediately preceding verb tag
+    // and the opening of the candidate subject tag — it should be just whitespace/nothing.
+    // Then we check what precedes the opening of that verb tag inside the chunk:
+    // it must contain "there" (case-insensitive) as the last word, with no other
+    // intervening verb/subject tag between "there" and the verb open.
+    const existentialVerbRe = /\b(?:is|are|was|were|isn't|aren't|wasn't|weren't|'s|'re|has\s+been|have\s+been|had\s+been|will\s+be|may\s+be|might\s+be|can\s+be|could\s+be|should\s+be|exists?|existed|remains?|remained|lies?|lay|lain|comes?|came)\b/i;
+    const isExistentialSubject = (subjOpenIdxInToks: number): boolean => {
+      // Find the most recent verb open BEFORE this subject open
+      let prevVerbTok: Tok | null = null;
+      for (let k = subjOpenIdxInToks - 1; k >= 0; k--) {
+        const t = toks[k];
+        if (t.kind === "open" && (t.tag === "v" || t.tag === "vs")) { prevVerbTok = t; break; }
+      }
+      if (!prevVerbTok) return false;
+
+      // Find the matching close of that verb
+      let depth = 1;
+      let verbCloseTok: Tok | null = null;
+      const verbStartIdx = toks.indexOf(prevVerbTok);
+      for (let j = verbStartIdx + 1; j < toks.length; j++) {
+        const t = toks[j];
+        if (t.tag !== prevVerbTok.tag) continue;
+        if (t.kind === "open") depth++;
+        else { depth--; if (depth === 0) { verbCloseTok = t; break; } }
+      }
+      if (!verbCloseTok) return false;
+
+      // Text between verb close and subject open should be whitespace only
+      const subjOpenTok = toks[subjOpenIdxInToks];
+      const between = inner.slice(verbCloseTok.end, subjOpenTok.start);
+      if (between.replace(/\s+/g, "") !== "") return false;
+
+      // Verb tag content (the actual verb words)
+      const verbInner = inner.slice(prevVerbTok.end, verbCloseTok.start);
+      if (!existentialVerbRe.test(verbInner)) return false;
+
+      // Text BEFORE the verb open inside the chunk — strip any tag markup.
+      const beforeVerb = inner.slice(0, prevVerbTok.start).replace(/<\/?[a-z]+(?:\s+g="\d+")?>/gi, " ");
+      // Last non-empty word should be "there"
+      const tokens = beforeVerb.trim().split(/\s+/).filter(Boolean);
+      const lastWord = tokens[tokens.length - 1] || "";
+      return /^there$/i.test(lastWord);
+    };
+
     // For each subject open after the first verb, decide if it's an object.
     const stripPositions: { start: number; end: number }[] = [];
     for (let i = firstVerbIdx + 1; i < opens.length; i++) {
@@ -105,6 +152,13 @@ function stripObjectSubjectTags(tagged: string): { result: string; removed: numb
       const next = opens[i + 1];
       if (next && (next.tag === "v" || next.tag === "vs")) {
         // cur could legitimately be the subject of a following verb (e.g. relative clause subject).
+        continue;
+      }
+      // Existential "there is/are NP" guard: if cur is the post-verbal subject of an
+      // existential clause, it's the REAL subject — never strip.
+      const curIdxInToks = toks.indexOf(cur);
+      if (isExistentialSubject(curIdxInToks)) {
+        existentialPreserved++;
         continue;
       }
       // cur is an object: mark its open tag and matching close tag for removal.
@@ -139,6 +193,9 @@ function stripObjectSubjectTags(tagged: string): { result: string; removed: numb
     return `<c${num}>${updated}</c${num}>`;
   });
 
+  if (existentialPreserved > 0) {
+    console.log(`Existential there: preserved ${existentialPreserved} subject(s)`);
+  }
   return { result: newString, removed: totalRemoved };
 }
 
