@@ -295,6 +295,52 @@ Ask: "Does THIS exact NP perform a finite verb that comes AFTER it (or is right 
 - Each finite clause has **exactly ONE** subject NP. Never tag two <s> in the same clause.
 - **Exception**: a clause whose subject is a noun clause (that/wh/whether-clause) has ZERO <s> in the upper clause — the only <s> appears INSIDE the noun clause for the inner subject.
 
+## CLAUSE TYPE TAGS — MAIN vs SUBORDINATE
+
+There are FOUR tag forms for subject and verb. Pick exactly one per phrase:
+- \`<s>...</s>\` — subject of the **main (matrix) clause**
+- \`<v>...</v>\` — verb of the **main (matrix) clause**
+- \`<ss>...</ss>\` — subject of a **subordinate clause**
+- \`<vs>...</vs>\` — verb of a **subordinate clause**
+
+### What counts as subordinate (use ss/vs):
+1. **Adverbial clauses** introduced by because, when, while, if, although, though, since, as (= because/when), unless, until, before, after, so that, etc.
+   - "<c1>Because <ss>the rain</ss> <vs>stopped</vs></c1>, <c2><s>we</s> <v>went out</v></c2>"
+2. **Relative clauses** (who/whom/which/that/whose):
+   - Subject relative: "<c1><s>the people</s></c1> <c2>who <vs>are taking</vs> part</c2>" (relative-clause verb is vs; no inner subject)
+   - Object relative: "<c1><s>the book</s></c1> <c2>that <ss>I</ss> <vs>read</vs></c2>"
+3. **Noun clauses** (that/wh/whether/if when introducing a clause):
+   - "<c1>What <ss>he</ss> <vs>said</vs></c1> <c2><v>is</v> true</c2>" (inner = ss/vs, outer matrix verb = v)
+   - "<c1>That <ss>he</ss> <vs>lied</vs></c1> <c2><v>surprised</v> me</c2>"
+   - "<c1><s>I</s> <v>think</v></c1> <c2>that <ss>he</ss> <vs>is</vs> right</c2>"
+
+### What stays main (use s/v):
+- The single matrix clause that is NOT inside any subordinator.
+- For sentences with NO subordinate clauses, every subject/verb is s/v.
+
+### Key rule: nested subordination still uses ss/vs (we do not distinguish nesting depth).
+
+## PARALLEL (COORDINATION) GROUPS — g="N" attribute
+
+When two or more subjects, or two or more verbs, in the **same clause** are joined by coordinating conjunctions (and, or, but, nor) or commas in a list, mark them as a parallel group by adding an identical \`g="N"\` attribute. Use small integers (1, 2, 3, …) and re-use within the same coordinated set.
+
+- Two parallel verbs in main clause:
+  - "<c1><s>He</s> <v g="1">sang</v> and <v g="1">danced</v></c1>"
+- Three parallel verbs in main clause:
+  - "<c1><s>She</s> <v g="1">came</v>, <v g="1">saw</v>, and <v g="1">conquered</v></c1>"
+- Two parallel subjects in main clause (NOT to be confused with a single coordinated NP "John and Mary"):
+  - **Default**: "John and Mary" is ONE subject NP — wrap as a single <s>: "<s>John and Mary</s> <v>are</v> friends".
+  - Use parallel <s g="N"> ONLY when there are clearly two separate subject NPs each with its own verb structure that share the same finite verb. This is RARE — when in doubt, use a single <s>.
+- Parallel verbs in a subordinate clause use <vs g="N">:
+  - "<c1>because <ss>he</ss> <vs g="1">studied</vs> and <vs g="1">practiced</vs></c1> <c2><s>he</s> <v>passed</v></c2>"
+- Different clauses → DIFFERENT (or no) groups. Never reuse the same g across clause boundaries.
+- A solo verb/subject (only one in its role within its clause) → NO g attribute.
+
+### When NOT to use g:
+- Coordinated noun phrases inside a single subject NP: "<s>my brother and I</s>" — single <s>, no g.
+- Auxiliary chains (have been working) — these are ONE verb tag, not parallel.
+- Verbs in different clauses, even if coordinated at the discourse level.
+
 ## CHUNKING RULES
 - Tag count in english_tagged MUST equal tag count in korean_literal_tagged.
 - Each <cN> in English maps to exactly one <cN> in Korean.
