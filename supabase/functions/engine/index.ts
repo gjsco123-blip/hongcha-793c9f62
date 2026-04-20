@@ -441,6 +441,7 @@ Given an English sentence that has been chunked with <c1>...</c1>, <c2>...</c2> 
 1. DO NOT change the <cN>...</cN> structure in any way — same tags, same boundaries, same text.
 2. DO NOT change the text content at all — no word additions, removals, or reordering.
 3. ONLY add, remove, or adjust <v>...</v> tags.
+4. PRESERVE all <s>...</s> tags exactly as they are. Do NOT remove, add, or modify them.
 
 ## What MUST have <v> tags (finite verbs only):
 - Simple finite verbs: <v>discovered</v>, <v>is</v>, <v>runs</v>
