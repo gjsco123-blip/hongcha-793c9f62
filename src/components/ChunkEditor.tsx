@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { Chunk, segmentsToWords, wordsToSegments } from "@/lib/chunk-utils";
+import { Chunk, segmentsToWords, wordsToSegments, mergeAdverbsBetweenVerbs } from "@/lib/chunk-utils";
 import { Sparkles, Check, X, Pencil, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFeatureFlag } from "@/hooks/useFeatureFlag";
