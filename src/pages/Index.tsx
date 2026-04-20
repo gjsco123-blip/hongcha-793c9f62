@@ -756,13 +756,10 @@ export default function Index() {
     setPdfGenerating(true);
     try {
       const url = await previewPdf(results, pdfTitle, "", teacherLabel);
-      // Convert blob URL to data URL for sandbox compatibility
       const resp = await fetch(url);
       const blob = await resp.blob();
       URL.revokeObjectURL(url);
-      const reader = new FileReader();
-      reader.onloadend = () => setPdfBlobUrl(reader.result as string);
-      reader.readAsDataURL(blob);
+      setPdfPreviewBlob(blob);
     } catch (err: any) {
       toast.error(`PDF 미리보기 실패: ${err.message}`);
     } finally {
@@ -771,7 +768,7 @@ export default function Index() {
   };
 
   const closePdfPreview = () => {
-    setPdfBlobUrl(null);
+    setPdfPreviewBlob(null);
   };
 
   const handleExportCombinedPdf = async () => {
@@ -1397,27 +1394,11 @@ export default function Index() {
         )}
       </main>
 
-      <Dialog open={!!pdfBlobUrl} onOpenChange={(open) => { if (!open) closePdfPreview(); }}>
-        <DialogContent className="max-w-[95vw] w-[95vw] h-[90vh] p-0 gap-0">
-          <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card">
-            <span className="text-sm font-medium">PDF 미리보기</span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleExportPdf}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-foreground text-foreground hover:bg-foreground hover:text-background transition-colors"
-              >
-                <FileDown className="w-3.5 h-3.5" /> 다운로드
-              </button>
-              <button onClick={closePdfPreview} className="text-muted-foreground hover:text-foreground">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-          {pdfBlobUrl && (
-            <iframe src={pdfBlobUrl} className="w-full flex-1" style={{ height: "calc(90vh - 48px)" }} />
-          )}
-        </DialogContent>
-      </Dialog>
+      <PdfPreviewDialog
+        blob={pdfPreviewBlob}
+        onClose={closePdfPreview}
+        onDownload={handleExportPdf}
+      />
     </div>
   );
 }
