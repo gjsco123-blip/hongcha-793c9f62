@@ -67,6 +67,7 @@ interface PdfDocumentProps {
   title: string;
   subtitle: string;
   teacherLabel?: string;
+  subjectUnderlineEnabled?: boolean;
 }
 
 // 5mm = 14.17pt, 12mm = 34.02pt
@@ -216,10 +217,18 @@ const styles = StyleSheet.create({
   verbUnderline: {
     textDecoration: "underline",
   },
+  subjectUnderline: {
+    textDecoration: "underline",
+  },
 });
 
 /** Render chunks with slash, applying underline to verbs and superscript for syntax notes */
-function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote[], original?: string) {
+function renderChunksWithVerbUnderline(
+  chunks: Chunk[],
+  syntaxNotes?: SyntaxNote[],
+  original?: string,
+  subjectUnderlineEnabled: boolean = false,
+) {
   const elements: React.ReactNode[] = [];
 
   const clampOffsetInSegment = (text: string, rawOffset: number) => {
@@ -369,15 +378,17 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
 
       const pushSegmentText = (text: string, keyBase: string) => {
         if (!text) return;
-        const canUnderline = seg.isVerb && /[A-Za-z]/.test(text);
+        const isSubjectSeg = subjectUnderlineEnabled && !!seg.isSubject;
+        const canUnderline = (seg.isVerb || isSubjectSeg) && /[A-Za-z]/.test(text);
         if (!canUnderline) {
           elements.push(<Text key={keyBase}>{text}</Text>);
           return;
         }
+        const underlineStyle = seg.isVerb ? styles.verbUnderline : styles.subjectUnderline;
         const match = text.match(/^(.*\S)([\s,.:;!?]+)$/);
         if (match) {
           elements.push(
-            <Text key={`${keyBase}-v`} style={styles.verbUnderline}>
+            <Text key={`${keyBase}-v`} style={underlineStyle}>
               {match[1]}
             </Text>,
           );
@@ -385,7 +396,7 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
           return;
         }
         elements.push(
-          <Text key={keyBase} style={styles.verbUnderline}>
+          <Text key={keyBase} style={underlineStyle}>
             {text}
           </Text>,
         );
@@ -422,11 +433,13 @@ function SentenceBlock({
   index,
   isLast,
   teacherLabel = "홍T",
+  subjectUnderlineEnabled = false,
 }: {
   result: SentenceResult;
   index: number;
   isLast: boolean;
   teacherLabel?: string;
+  subjectUnderlineEnabled?: boolean;
 }) {
   return (
     <View
@@ -442,7 +455,12 @@ function SentenceBlock({
         <Text style={styles.sentenceNumber}>{String(index + 1).padStart(2, "0")} </Text>
         <Text style={styles.englishText}>
           {result.englishChunks.length > 0
-            ? renderChunksWithVerbUnderline(result.englishChunks, result.syntaxNotes, result.original)
+            ? renderChunksWithVerbUnderline(
+                result.englishChunks,
+                result.syntaxNotes,
+                result.original,
+                subjectUnderlineEnabled,
+              )
             : result.original}
         </Text>
       </View>
@@ -508,7 +526,13 @@ function SentenceBlock({
   );
 }
 
-export function PdfDocument({ results, title, subtitle, teacherLabel = "홍T" }: PdfDocumentProps) {
+export function PdfDocument({
+  results,
+  title,
+  subtitle,
+  teacherLabel = "홍T",
+  subjectUnderlineEnabled = false,
+}: PdfDocumentProps) {
   const { pages } = paginateResults(results);
 
   // Track global sentence index across pages
@@ -539,6 +563,7 @@ export function PdfDocument({ results, title, subtitle, teacherLabel = "홍T" }:
                       index={pageStartIndex + idx}
                       isLast={isLastInPage}
                       teacherLabel={teacherLabel}
+                      subjectUnderlineEnabled={subjectUnderlineEnabled}
                     />
                   );
                 })}

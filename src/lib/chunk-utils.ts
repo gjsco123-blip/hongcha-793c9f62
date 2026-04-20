@@ -3,6 +3,7 @@
 export interface ChunkSegment {
   text: string;
   isVerb: boolean;
+  isSubject?: boolean;
 }
 
 export interface Chunk {
@@ -15,26 +16,33 @@ function hasEnglishLetterToken(word: string): boolean {
   return /[A-Za-z]/.test(word);
 }
 
-/** Parse <v>...</v> tags inside a chunk's text into segments */
-function parseVerbSegments(raw: string): ChunkSegment[] {
+/**
+ * Parse <v>...</v> and <s>...</s> tags inside a chunk's text into segments.
+ * Assumes the engine never nests these tags (enforced by the prompt).
+ */
+function parseTaggedSegments(raw: string): ChunkSegment[] {
   const segments: ChunkSegment[] = [];
-  const vRegex = /<v>(.*?)<\/v>/g;
+  // Match either <v>...</v> or <s>...</s> (non-greedy, no nesting)
+  const tagRegex = /<(v|s)>([\s\S]*?)<\/\1>/g;
   let lastIndex = 0;
   let match;
 
-  while ((match = vRegex.exec(raw)) !== null) {
+  while ((match = tagRegex.exec(raw)) !== null) {
     if (match.index > lastIndex) {
       segments.push({ text: raw.substring(lastIndex, match.index), isVerb: false });
     }
-    segments.push({ text: match[1], isVerb: true });
-    lastIndex = vRegex.lastIndex;
+    if (match[1] === "v") {
+      segments.push({ text: match[2], isVerb: true });
+    } else {
+      segments.push({ text: match[2], isVerb: false, isSubject: true });
+    }
+    lastIndex = tagRegex.lastIndex;
   }
 
   if (lastIndex < raw.length) {
     segments.push({ text: raw.substring(lastIndex), isVerb: false });
   }
 
-  // If no <v> tags found, return single non-verb segment
   if (segments.length === 0) {
     segments.push({ text: raw, isVerb: false });
   }
@@ -52,11 +60,11 @@ export function parseTagged(tagged: string): Chunk[] {
     matchedRanges.push({ start: match.index, end: regex.lastIndex });
     // Remove any residual <cN> or </cN> tags inside the chunk content
     const rawText = match[2].trim().replace(/<\/?c\d+>/g, "");
-    const cleanText = rawText.replace(/<\/?v>/g, "");
+    const cleanText = rawText.replace(/<\/?v>/g, "").replace(/<\/?s>/g, "");
     chunks.push({
       tag: parseInt(match[1]),
       text: cleanText,
-      segments: parseVerbSegments(rawText),
+      segments: parseTaggedSegments(rawText),
     });
   }
 
@@ -65,7 +73,12 @@ export function parseTagged(tagged: string): Chunk[] {
     let pos = 0;
     for (const range of matchedRanges) {
       if (range.start > pos) {
-        const orphan = tagged.substring(pos, range.start).replace(/<\/?c\d+>/g, "").replace(/<\/?v>/g, "").trim();
+        const orphan = tagged
+          .substring(pos, range.start)
+          .replace(/<\/?c\d+>/g, "")
+          .replace(/<\/?v>/g, "")
+          .replace(/<\/?s>/g, "")
+          .trim();
         if (orphan) {
           // Find the chunk whose range starts at range.start (i.e. the next chunk)
           const idx = matchedRanges.indexOf(range);
@@ -84,7 +97,12 @@ export function parseTagged(tagged: string): Chunk[] {
     }
     // Check trailing text after last match
     if (pos < tagged.length) {
-      const trailing = tagged.substring(pos).replace(/<\/?c\d+>/g, "").replace(/<\/?v>/g, "").trim();
+      const trailing = tagged
+        .substring(pos)
+        .replace(/<\/?c\d+>/g, "")
+        .replace(/<\/?v>/g, "")
+        .replace(/<\/?s>/g, "")
+        .trim();
       if (trailing) {
         const last = chunks[chunks.length - 1];
         last.text += " " + trailing;
@@ -101,7 +119,11 @@ export function chunksToTagged(chunks: Chunk[]): string {
   return chunks
     .map((c) => {
       const inner = c.segments
-        .map((s) => (s.isVerb ? `<v>${s.text}</v>` : s.text))
+        .map((s) => {
+          if (s.isVerb) return `<v>${s.text}</v>`;
+          if (s.isSubject) return `<s>${s.text}</s>`;
+          return s.text;
+        })
         .join("");
       return `<c${c.tag}>${inner}</c${c.tag}>`;
     })
@@ -126,14 +148,21 @@ export function getChunkColor(index: number): string {
 }
 
 /** Split a segment's text into individual words, preserving spaces */
-export function segmentsToWords(segments: ChunkSegment[]): { word: string; isVerb: boolean }[] {
-  const words: { word: string; isVerb: boolean }[] = [];
+export function segmentsToWords(
+  segments: ChunkSegment[],
+): { word: string; isVerb: boolean; isSubject: boolean }[] {
+  const words: { word: string; isVerb: boolean; isSubject: boolean }[] = [];
   for (const seg of segments) {
     const parts = seg.text.split(/(\s+)/);
     for (const part of parts) {
       if (part.trim()) {
         // Keep punctuation tokens (e.g. "—") from being treated as verbs.
-        words.push({ word: part, isVerb: seg.isVerb && hasEnglishLetterToken(part) });
+        const hasLetter = hasEnglishLetterToken(part);
+        words.push({
+          word: part,
+          isVerb: seg.isVerb && hasLetter,
+          isSubject: !!seg.isSubject && hasLetter,
+        });
       }
     }
   }
@@ -141,19 +170,30 @@ export function segmentsToWords(segments: ChunkSegment[]): { word: string; isVer
 }
 
 /** Rebuild segments from word-level verb info */
-export function wordsToSegments(words: { word: string; isVerb: boolean }[]): ChunkSegment[] {
+export function wordsToSegments(
+  words: { word: string; isVerb: boolean; isSubject?: boolean }[],
+): ChunkSegment[] {
   if (words.length === 0) return [{ text: "", isVerb: false }];
-  
+
+  const sameKind = (
+    a: { isVerb: boolean; isSubject?: boolean },
+    b: { isVerb: boolean; isSubject?: boolean },
+  ) => a.isVerb === b.isVerb && !!a.isSubject === !!b.isSubject;
+
   const segments: ChunkSegment[] = [];
-  let current = { text: words[0].word, isVerb: words[0].isVerb };
+  let current: ChunkSegment = {
+    text: words[0].word,
+    isVerb: words[0].isVerb,
+    isSubject: !!words[0].isSubject,
+  };
 
   for (let i = 1; i < words.length; i++) {
-    if (words[i].isVerb === current.isVerb) {
+    if (sameKind(words[i], current)) {
       current.text += " " + words[i].word;
     } else {
       // Add trailing space to non-last segments for proper spacing
-      segments.push({ text: current.text + " ", isVerb: current.isVerb });
-      current = { text: words[i].word, isVerb: words[i].isVerb };
+      segments.push({ text: current.text + " ", isVerb: current.isVerb, isSubject: current.isSubject });
+      current = { text: words[i].word, isVerb: words[i].isVerb, isSubject: !!words[i].isSubject };
     }
   }
   segments.push(current);
