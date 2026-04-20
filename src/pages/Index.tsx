@@ -18,6 +18,7 @@ import { FileDown, RotateCw, X, Scissors, RefreshCw, Eye, Loader2, Settings2, Sp
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { PdfPreviewDialog } from "@/components/pdf/PdfPreviewDialog";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 type Preset = "고1" | "고2" | "수능";
@@ -307,7 +308,7 @@ export default function Index() {
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [combinedPdfGenerating, setCombinedPdfGenerating] = useState(false);
   const [workbookPdfGenerating, setWorkbookPdfGenerating] = useState(false);
-  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [pdfPreviewBlob, setPdfPreviewBlob] = useState<Blob | null>(null);
 
   // PDF 페이지 구분선 계산 — 공용 페이지네이션 로직 사용 (PDF와 100% 동일)
   const pageBreakInfo = useMemo(() => {
