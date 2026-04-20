@@ -1,52 +1,47 @@
 
 
-## CHUNKING 영역 정돈 + 라벨 드래그 오염 차단
+## 슬래시 앞 간격 복구 — 1줄 수정
 
-### 변경 1 — 청크 박스 정리 (시각 정돈)
+### 원인
+청크 컨테이너 구조:
+```
+[청크 div (gap-1)]   외부 gap-x-1.5   [청크 div]
+  단어들  슬래시          ↑ 여기는 넓음
+       ↑ 여기가 좁음 (gap-1 = 4px)
+```
+- 슬래시(`/`)가 청크 div **내부 끝**에 위치 → 슬래시 앞쪽은 청크 내부 `gap-1`(4px), 뒤쪽은 외부 `gap-x-1.5`(6px) + 다음 청크 패딩 효과
+- 일반 모드에서 청크 박스(border + px-2 패딩)를 제거하면서 시각적 좌우 균형이 더 깨져 보임
+- **SV 라벨 기능과는 무관** — 라벨은 단어 span 안쪽에 absolute로 떠 있어서 슬래시 위치에 영향 0
 
-**`src/components/ChunkEditor.tsx`**
-- 청크 박스(`border border-border rounded-md bg-background`) 표시 조건을 변경:
-  - **편집 모드**: 박스 유지 (분할/병합 클릭 영역 필요)
-  - **일반 모드**: 박스 제거, 슬래시 구분자만 유지 → 라벨이 깔끔히 보임
-- 청크 간 세로 간격 확대: 라벨 영역 확보를 위해 `gap-y` 증가 (`gap-1.5` → `gap-x-1.5 gap-y-5`)
-- 슬래시 `/` 색상은 그대로 유지(`text-muted-foreground`)
+### 해결
+`src/components/ChunkEditor.tsx` 라인 390 — 슬래시 span에 좌측 마진 한 줄만 추가:
 
 ```tsx
-// 변경 예시
-<span className={`inline px-2 py-1 text-xs font-english ${
-  isEditing 
-    ? "border border-border rounded-md bg-background" 
-    : ""
-} text-foreground break-words max-w-full`}>
+// Before
+<span className="text-muted-foreground text-xs">/</span>
+
+// After
+<span className="text-muted-foreground text-xs ml-1">/</span>
 ```
 
-### 변경 2 — 라벨이 드래그에 포함되지 않도록
+`ml-1`(4px)을 추가하면 슬래시 앞 간격이 청크 div 내부 `gap-1`(4px)에 더해져 총 8px → 외부 gap-x-1.5(6px)와 시각적으로 균형 맞음.
 
-**`src/components/ChunkEditor.tsx`의 `renderSvLabel`**
-- 라벨 span에 `select-none` 클래스 + `user-select: none` 인라인 스타일 추가
-- 추가 안전장치: `aria-hidden="true"` (스크린리더 중복 방지, 시각 라벨이므로)
-- `handleMouseUp`의 텍스트 정규화는 그대로 두되, 안전망으로 라벨 패턴 제거 정규식 추가:
-  ```ts
-  .replace(/\b[sv]['′]?[₀-₉]?\b/g, "") // 라벨 잔재 방지
-  ```
-  → 단, 영어 단어 손상 위험이 있으므로 **`select-none`이 1차 방어선**, 정규식은 2차 방어선
-
-### 변경 3 — 일관성 (선택)
-ResultDisplay 본문에 SV 라벨이 노출되는 곳이 있다면 동일하게 `select-none` 적용. (확인 후 적용)
+### SV 라벨 기능과의 충돌 검증
+- SV 라벨은 `renderSvLabel`로 단어 span 내부에 `inline-flex flex-col`로 렌더 (height: 0, absolute-like)
+- 슬래시 span은 청크 div 끝의 별도 텍스트 노드
+- 두 요소는 DOM 트리에서 완전히 분리됨 → **충돌 없음**
+- `select-none`도 슬래시에는 영향 없음
 
 ### 변경 파일
-- `src/components/ChunkEditor.tsx` — 박스 조건부 + 간격 + select-none + selection 정규화
-- `src/components/ResultDisplay.tsx` — 라벨에 동일 select-none (해당 시)
+- `src/components/ChunkEditor.tsx` — 1줄 (슬래시 span에 `ml-1` 추가)
 
 ### 검증 포인트
-1. 일반 모드에서 청크가 슬래시로만 구분되어 깔끔한지
-2. 편집 모드에서는 박스가 유지되어 분할/병합 UX 문제없는지
-3. 드래그로 영어 구문 선택 시 `v₁`, `s'` 같은 라벨이 selection에 안 들어가는지
-4. 분석 요청 시 콘솔/네트워크 페이로드에 라벨 텍스트가 섞이지 않는지
-5. 줄간격 확대로 페이지 전체 높이가 너무 길어지진 않는지 (gap-y-5 적정선 확인)
+1. 슬래시 양쪽 간격이 균등해 보이는지 (이전 사진과 비슷한 느낌)
+2. 편집 모드(박스 있음)에서도 어색하지 않은지
+3. SV 라벨이 여전히 단어 밑에 정확히 위치하는지
+4. 줄바꿈 시 슬래시가 어색한 위치로 떨어지지 않는지
+5. 너무 넓다 싶으면 `ml-1` → `ml-0.5`로 조정
 
-### 리스크
-- `gap-y` 확대 시 화면 길이 증가 → 너무 크면 `gap-y-4`로 미세 조정
-- 일반 모드에서 박스가 사라지면 청크 경계가 슬래시에만 의존하므로, 슬래시 색상이 너무 옅으면 가독성 저하 → 필요 시 `text-muted-foreground/70`로 살짝 진하게
-- `select-none`은 모든 모던 브라우저 지원. 사파리 포함 안전
+### 답: 매우 간단한 문제 맞음
+CSS 한 클래스 추가로 끝, SV 라벨 기능과 완전히 독립적이라 회귀 위험 0.
 
