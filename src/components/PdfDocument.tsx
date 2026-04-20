@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     marginTop: 0.5,
-    fontSize: 7,
+    fontSize: 9,
     fontFamily: "GangwonEduSaeeum",
     letterSpacing: -0.2,
     color: "#000",
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
     lineHeight: 1,
   },
   svLabelSub: {
-    fontSize: 5,
+    fontSize: 7,
     fontFamily: "GangwonEduSaeeum",
     color: "#000",
     verticalAlign: "sub",
