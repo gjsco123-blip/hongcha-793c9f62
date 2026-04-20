@@ -468,9 +468,10 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
                     <span
                       onClick={isEditing ? () => handleWordInteraction(i, wi) : undefined}
                       onDoubleClick={isEditing ? () => handleWordDoubleClick(i, wi) : undefined}
+                      onContextMenu={isEditing ? (e) => handleWordContextMenu(e, i, wi) : undefined}
                       className={`${(w.isVerb || (subjectUnderlineEnabled && w.isSubject)) && /[A-Za-z]/.test(w.word) ? "underline decoration-foreground decoration-2 underline-offset-[3px]" : ""}
                         ${isEditing ? "cursor-pointer hover:bg-muted/80 rounded-sm" : ""}`}
-                      title={isEditing ? "클릭: 분할 / 더블클릭: 동사 표시" : ""}
+                      title={isEditing ? "클릭: 분할 · 더블클릭: 동사 · 우클릭: 주어/동사/해제" : ""}
                     >
                       {w.word}
                     </span>
