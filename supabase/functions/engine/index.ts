@@ -566,13 +566,14 @@ Return ONLY the Korean tagged string. Nothing else.`;
     try {
       const subjectVerifyPrompt = `You are a precise English grammar SUBJECT-tagging verifier.
 
-Given an English sentence chunked with <c1>...</c1> tags, with <v>...</v> verb tags and <s>...</s> subject tags, your job is to VERIFY and CORRECT ONLY the <s> tags.
+Given an English sentence chunked with <c1>...</c1> tags, with verb tags (<v> for main, <vs> for subordinate) and subject tags (<s> for main, <ss> for subordinate), your job is to VERIFY and CORRECT ONLY the subject tags (<s> and <ss>).
 
 ## ABSOLUTE RULES:
 1. DO NOT change the <cN>...</cN> structure — same tags, same boundaries, same text.
 2. DO NOT change the text content at all — no word additions, removals, or reordering.
-3. DO NOT change <v>...</v> tags — leave them exactly as-is.
-4. ONLY add, remove, or adjust <s>...</s> tags.
+3. DO NOT change <v>...</v> or <vs>...</vs> tags — leave them and any g="N" attributes exactly as-is.
+4. ONLY add, remove, or adjust <s>...</s> and <ss>...</ss> tags. Preserve their g="N" attributes if present.
+5. Use <ss> when the subject is inside a subordinate clause (relative / adverbial / noun clause). Use <s> for the matrix-clause subject. The matching verb tag (<v> vs <vs>) signals the clause type — match it.
 
 ## What MUST have <s> tags (subjects ONLY):
 - The grammatical subject NP of each finite clause (수일치의 핵).
