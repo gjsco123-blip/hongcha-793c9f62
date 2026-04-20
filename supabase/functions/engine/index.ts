@@ -189,7 +189,7 @@ Tag the **head noun phrase (NP)** that serves as the grammatical subject (수일
   - "<s>John and Mary</s>" (coordinated subject — wrap the whole NP)
 - **Subordinate clause subjects also get <s>**: "Because <s>the rain</s> stopped, <s>we</s> went out"
 - **Expletive It (가주어)**: "<s>It</s> is important that..." → tag "It" as <s>
-- **There/Here + be + NP**: `there/here` is NOT the subject. Tag the **NP after the verb** as <s>.
+- **There/Here + be + NP**: 'there/here' is NOT the subject. Tag the **NP after the verb** as <s>.
   - "There are <s>many students</s>" (NOT <s>there</s>)
   - "Here are <s>the books</s> I bought" (relative clause "I bought" excluded)
 
