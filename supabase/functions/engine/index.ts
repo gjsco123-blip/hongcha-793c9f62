@@ -792,6 +792,14 @@ Given an English sentence chunked with <c1>...</c1> tags, with verb tags (<v> fo
     - WRONG:   <v>know</v> <s>the man</s> <s>she</s> <v>met</v>
     - CORRECT: <v>know</v> the man <s>she</s> <v>met</v>
     - Rule: if you see two consecutive subject tags with no verb between them, the FIRST one is wrong — REMOVE it.
+14. **Existential "there" — the post-verbal NP IS the subject (must be tagged).**
+    "there" itself is an expletive and NEVER gets <s>. The grammatical subject is the NP AFTER the be-verb (or existential verb: exists/remains/lies/comes...).
+    - WRONG:   <s>There</s> <v>is</v> so little variation amongst us
+    - WRONG:   There <v>is</v> so little variation amongst us   ← subject MISSING — ADD <s> on the post-verbal NP
+    - CORRECT: There <v>is</v> <s>so little variation</s> amongst us
+    - Same for: there are / there was / there were / there exists / there remains / there comes...
+    - In a subordinate existential clause use <ss>: "...because there <vs>is</vs> <ss>no time</ss>".
+    - DO NOT strip the post-verbal NP's subject tag in existential clauses, even though it appears after the verb — it is NOT an object/complement.
 
 ## Per-clause rule:
 - Each finite clause has at most ONE <s>. If you see two <s> in one clause, the second one is wrong (likely an object/complement) — REMOVE it.
