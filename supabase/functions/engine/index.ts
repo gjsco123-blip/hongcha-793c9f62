@@ -765,8 +765,8 @@ Return ONLY the corrected english_tagged string. Nothing else.`;
           // Safety check: ensure text content is unchanged
           const verifiedText = normalize(extractText(cleaned));
           const originalText = normalize(extractText(lastResult!.english_tagged));
-          const origVCount = (lastResult!.english_tagged.match(/<v>/g) || []).length;
-          const newVCount = (cleaned.match(/<v>/g) || []).length;
+          const origVCount = (lastResult!.english_tagged.match(/<v(?:s)?(?:\s+g="\d+")?>/g) || []).length;
+          const newVCount = (cleaned.match(/<v(?:s)?(?:\s+g="\d+")?>/g) || []).length;
 
           if (verifiedText === originalText) {
             if (origVCount > 0 && newVCount === 0) {
