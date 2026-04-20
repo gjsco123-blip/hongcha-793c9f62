@@ -1,54 +1,52 @@
 
 
-## 명사절 주어 — 정확한 규칙 정리
+## 주어 태깅 — 전치사구·관계대명사 수정 (B안 채택)
 
-### 이해 수정
-이전 플랜은 "명사절이 주어 자리면 `<s>` 자체를 생략" → **이건 잘못 이해한 것.**
+### 결정
+- **B안**: 관계절 안의 **목적격 관계절의 진짜 주어(`I` 등)는 `<s>` 허용**
+- 단, **주격 관계대명사(`who/which/that`) 자체는 `<s>` 금지**
 
-올바른 이해:
-- **명사절 전체를 `<s>`로 묶지 마라** (밑줄 겹침 발생)
-- 대신 **명사절 안의 진짜 주어(내부 주어)를 `<s>`로 처리하라**
+### 핵심 규칙 (engine/index.ts)
 
-### 적용 규칙
+**1. NP 후치수식 엄격 배제 (Option A)**
+- `<s>`는 한정사 + 전치 형용사 + head noun까지만
+- head noun 뒤 어떤 후치수식도 포함 금지: 전치사구, 관계절, 분사구, to부정사, 동격
+- ❌ `<s>something like this thought</s>` → ✅ `<s>something</s> like this thought`
+- ❌ `<s>the man with a hat</s>` → ✅ `<s>the man</s> with a hat`
+- ❌ `<s>students taking the test</s>` → ✅ `<s>students</s> taking the test`
 
-| 케이스 | 처리 |
-|---|---|
-| `What he said is true` | `What`은 `<s>` 안 함, **내부 주어 `he`만 `<s>`** / `said`, `is` 모두 `<v>` |
-| `That he lied surprised me` | `That` 절 전체 안 묶음, **`he`만 `<s>`** / `lied`, `surprised` 모두 `<v>` |
-| `Whether it rains matters` | **`it`만 `<s>`** / `rains`, `matters` 모두 `<v>` |
-| `What I want is rest` | **`I`만 `<s>`** / `want`, `is` 모두 `<v>` |
+**2. 관계절 내부 처리 (B안)**
+- **주격 관계절** (`who/which/that` + V): 관계대명사 자체에 `<s>` 금지 → 관계절 청크에 `<s>` 없음, `<v>`만
+  - ✅ `<s>the people</s> who <v>are taking</v> part in it`
+  - ❌ `<s>who</s> are taking part`
+- **목적격 관계절** (`who/which/that` + S + V): 관계절 안의 진짜 주어는 `<s>` 허용
+  - ✅ `<s>the book</s> that <s>I</s> <v>read</v>`
+  - ✅ `<s>the man</s> whom <s>she</s> <v>met</v>`
+- 규칙 요약: **관계대명사가 관계절의 주어 역할이면 `<s>` 안 침**, 관계대명사가 목적어 역할이면 그 뒤 진짜 주어를 `<s>` 침
 
-핵심:
-- 주절(상위 절)에는 명사절이 주어지만 → **상위 절의 `<s>`는 비움** (명사절 전체 묶기 금지)
-- 명사절(하위 절) 내부에는 → **내부 주어를 `<s>`로 정상 처리**
-- 결과: `<s>`와 `<v>`가 절대 겹치지 않음, 학습자는 내부 절 구조를 명확히 인식
+**3. Subject verification pass 강화**
+- `<s>` 안에 후치수식 토큰 있으면 head noun까지 잘라냄
+- `<s>` 안에 관계대명사(`who/whom/which/that/whose`)가 있으면 제거
+- 청크 첫 토큰이 관계대명사 + 바로 `<v>`가 오면 → 그 청크 안의 `<s>` 모두 제거 (주격 관계절)
+- 청크 첫 토큰이 관계대명사 + NP + `<v>` 패턴이면 → NP를 `<s>`로 인정 (목적격 관계절)
 
-### 회귀 안전성
-- 가주어 It (`It is important that he came`) → **`It`만 `<s>`**, 명사절 안 `he`도 `<s>` (변동 없음, 둘 다 정상 작동)
-- 동명사구 주어 (`Locking-in prices ...`) → 그대로 `<s>` (명사절 아님)
-- to부정사구 주어 (`To learn English ...`) → 그대로 `<s>` (명사절 아님)
-- 일반 NP 주어 → 그대로 `<s>` (변동 없음)
-
-### 엔진 프롬프트 변경 (engine/index.ts)
-
-**1차 분석 규칙에 명시:**
-- "명사절(that-clause, wh-clause, whether-clause)이 주어 자리에 있을 때, 명사절 전체를 `<s>`로 감싸지 말 것"
-- "대신 그 명사절 내부의 finite verb의 주어만 `<s>`로 태깅할 것"
-- "결과적으로 상위 절은 `<s>` 없이 `<v>`만 가지게 될 수 있음 — 정상"
-
-**Few-shot 예시 추가:**
-- `<c1>What <s>he</s> <v>said</v></c1> <c2><v>is</v> true</c2>` ✓
-- `<c1>That <s>he</s> <v>lied</v></c1> <c2><v>surprised</v> me</c2>` ✓
-- ❌ 금지: `<s>What he said</s>` (명사절 통째 태깅 금지)
-
-**Subject verification pass에 동기화:**
-- 명사절 전체를 감싼 `<s>` 발견 시 → 제거하고 내부 주어로 옮김
-- 상위 절에 `<s>`가 없어도 정상으로 인정 (강제 추가 금지)
+**4. 메모리 업데이트**
+`mem://features/subject-underline.md`:
+- "Option A 엄격 적용: head noun 뒤 후치수식 절대 포함 금지"
+- "주격 관계절: `<s>` 없음 / 목적격 관계절: 내부 주어 `<s>` 허용"
 
 ### 변경 파일
-- `supabase/functions/engine/index.ts` (1차 프롬프트 + verification pass)
-- `mem://features/subject-underline.md` (명사절 주어 규칙 명문화)
+- `supabase/functions/engine/index.ts`
+- `.lovable/memory/features/subject-underline.md`
+
+### 검증 케이스
+1. `something like this thought ...` → `<s>something</s>`만
+2. `the people who are taking part in it` → `<s>the people</s>`만, 관계절 청크 안 깨끗
+3. `the book that I read` → `<s>the book</s>`, `<s>I</s>` 둘 다 (B안)
+4. (회귀) `What he said is true` → 명사절 내부 `<s>he</s>`만
+5. (회귀) `Locking-in prices ...` → `<s>Locking-in prices</s>`
+6. (회귀) `The policy allows citizens ...` → `<s>The policy</s>`만
 
 ### 기존 데이터
-엔진 수정 후 현재 지문은 **재분석 필요**.
+엔진 수정 후 현재 지문 **재분석 필요**.
 
