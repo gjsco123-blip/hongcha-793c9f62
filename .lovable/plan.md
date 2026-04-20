@@ -1,56 +1,69 @@
 
 
-## UI–PDF 라벨 동기화 — `mergeAdverbsBetweenVerbs` 적용
+## 목적어가 주어로 잘못 태깅되는 문제 — 결정적 후처리 가드 추가
 
-### 원인 (정확히)
-PDF는 `mergeAdverbsBetweenVerbs`로 `[동사][부사][동사]` 패턴을 시각적으로 한 동사 그룹으로 합쳐서 라벨링함:
-- `are even happily endorsed` → 한 덩어리 → `v₃` 하나
-- `go unquestioned` 같이 단일 동사 → `v₂` 그대로
+### 사고 분석
 
-반면 UI(`ChunkEditor.tsx`)는 원본 segments 그대로 단어 매핑함:
-- `are`(verb) / `even`(non-verb) / `happily`(non-verb) / `endorsed`(verb) → `v₃`, `v₄` 두 개로 보임
+스크린샷 문장: *"How people interpret **the messages** they receive and **the situations** they encounter becomes their subjective reality..."*
 
-→ **데이터는 동일, 렌더 경로만 불일치**.
+올바른 구조:
+- `the messages`, `the situations` = `interpret`의 **목적어 (NP)** → **태그 없음**
+- `they receive`, `they encounter` = 그 목적어를 수식하는 **목적격 관계절** (관계대명사 생략) → 관계절 안의 `they`만 `<ss>`, `receive/encounter`만 `<vs>`
 
-### 해결
-`ChunkEditor.tsx`의 `wordLabelLookup` 계산 부분을 PDF와 동일하게 `mergeAdverbsBetweenVerbs` 결과 기준으로 다시 매핑.
+LLM이 잘못 태깅한 결과 (현 화면):
+- `<ss>the messages</ss>` ❌, `<ss>the situations</ss>` ❌
 
-### 변경 파일
-**`src/components/ChunkEditor.tsx`**
+### 근본 원인
+1. **프롬프트 충돌**: "동사 뒤 NP는 목적어(<s> 금지)" 규칙(254줄)과 "관계절 선행사를 <s>로 태깅"(223줄, 311줄) 규칙이 **목적격 관계절**(예: `verb + NP + [that/who/which 생략] + S + V`) 케이스에서 충돌. LLM이 후자를 우선 적용.
+2. **검증 통과**: subject verification pass도 같은 LLM 기반이라 같은 실수 반복(LLM 일관성 편향).
+3. **결정적 가드 부재**: "`<v>` 직후 첫 명사구는 절대 `<s>`/`<ss>` 금지" 같은 코드 레벨 룰이 없음.
 
-1. `mergeAdverbsBetweenVerbs` import 추가.
-2. `computeSvLabels`는 **원본 chunks 기준 그대로** 호출(데이터 충실 유지) — 단, 라벨을 단어에 꽂을 때 병합 후 segment 기준으로 매핑.
-3. `wordLabelLookup` 빌드 로직 교체:
-   ```
-   for each chunk ci:
-     { segments: merged, indexMap } = mergeAdverbsBetweenVerbs(chunk.segments)
-     mergedSv = Map<mergedSi, SvLabel>()
-     for oi in chunk.segments:
-       lbl = svMap.get(`${ci}:${oi}`)
-       if lbl && !mergedSv.has(indexMap[oi]):
-         mergedSv.set(indexMap[oi], lbl)
-     // merged segments → words → 라벨 위치 결정 (verb=마지막 단어, subject=첫 단어)
-     for merged segments: place label on target word index
-   ```
-4. 단어 자체 렌더(`words` 배열, 밑줄 처리)는 **원본 segments 기준 그대로** 유지 → 동사 토글/우클릭/분할 동작에 영향 없음. 밑줄도 verb segment 단어마다 그대로 그어지므로 `are even happily endorsed` 전체가 자연스럽게 밑줄 연속처럼 보임(이미 그렇게 동작 중).
+### 해결 — 3중 방어
+**파일: `supabase/functions/engine/index.ts`**
 
-### 영향 범위
-- ✅ `are even happily endorsed` → `v₃` 하나로 표시
-- ✅ `can always be injected`, `is being studied` 같은 동사구도 단일 라벨
-- ✅ 기존 단일 동사(`go`, `endorsed` 분리되지 않은 경우) 동작 그대로
-- ✅ 편집 모드의 클릭/더블클릭/우클릭 좌표 매핑 영향 없음 (원본 words 기준 유지)
-- ✅ PDF는 변경 없음 (이미 정상)
+#### 1. 결정적 후처리 함수 `stripObjectSubjectTags()` 추가 (핵심)
+정규식·토큰 기반으로 LLM 결과에서 명백히 잘못된 `<s>/<ss>` 제거. 검증 패스 **다음**에 마지막으로 실행 (LLM이 다시 망쳐도 못 빠져나감).
+
+규칙:
+- **R1**: `<v>...</v>` 또는 `<vs>...</vs>` 직후, 같은 절(같은 `<cN>` 안 OR 인접 `<cN>`)에서 처음 등장하는 `<s>...</s>` 또는 `<ss>...</ss>`가 **다른 동사 태그를 가운데 두지 않고** 바로 이어지면 → 그 NP는 목적어이므로 `<s>/<ss>` 태그만 벗기기 (텍스트는 보존).
+  - 단, 그 NP 직후에 **새로운 동사 태그**(`<v>`/`<vs>`)가 같은 절 안에 있으면 → 진짜 다음 절의 주어일 수 있으므로 건너뜀.
+- **R2** (관계절 특화): 패턴 `<v|vs>X</v|vs> <s|ss>NP</s|ss> <s|ss>Y</s|ss> <v|vs>Z</v|vs>` 감지 — `NP`와 `Y` 사이에 동사가 없고 `Y` 뒤에 동사가 오면 → `NP`는 **선행사+목적어**, `Y`는 **관계절 주어**. → `NP`의 `<s|ss>` 제거 (목적어), `Y`의 `<ss>`는 유지.
+  - 이 패턴이 정확히 스크린샷의 `interpret <ss>the messages</ss> <ss>they</ss> <vs>receive</vs>` 케이스를 커버.
+- **R3**: 같은 `<cN>` 청크 안에 `<s>`/`<ss>`가 2개 이상이고 사이에 동사가 없으면 → 첫 번째가 목적어로 추정되므로 제거 (보수적: 두 번째에 동사가 따라올 때만).
+
+안전장치:
+- 텍스트 내용·`<cN>` 구조·동사 태그 개수 변경 없음을 검증한 뒤 적용.
+- 변화량이 비정상(>50% 주어 제거)이면 폐기.
+
+#### 2. 메인 프롬프트 강화 (294줄 근처)
+"NEVER tag these as <s>" 섹션에 **명시적 신규 규칙** 추가:
+```
+9. Antecedent of an OBJECT relative clause when the antecedent ITSELF is the OBJECT
+   of an outer verb. The antecedent stays UNTAGGED; only the inner subject of the
+   relative clause gets <ss>.
+   - WRONG:   <s>How</s> <s>people</s> <v>interpret</v> <s>the messages</s> <s>they</s> <v>receive</v>
+   - CORRECT: How <ss>people</ss> <vs>interpret</vs> the messages <ss>they</ss> <vs>receive</vs>
+   - 이유: "the messages"는 interpret의 목적어이자 동시에 관계절(생략된 that/which)의 선행사.
+     목적어이기 때문에 <s>/<ss>를 받지 않는다.
+```
+
+#### 3. Subject verification 프롬프트에도 동일 규칙 추가
+verifier가 "선행사니까 무조건 `<s>`" 라는 잘못된 학습을 깨도록.
 
 ### 변경 안 하는 것
-- `sv-labels.ts`, `chunk-utils.ts`, `PdfDocument.tsx`
-- ChunkEditor의 단어 분할/병합/우클릭 로직
-- 데이터 저장 구조
+- `<cN>` 청크 구조, 동사 태그 로직, 한국어 번역
+- UI / PDF (LLM 결과만 정확해지면 자동 반영)
+- 기존 verb verification pass
 
 ### 검증 포인트
-1. `are even happily endorsed`가 UI에서 `v₃` 하나로 보이는지 (PDF와 일치)
-2. 단일 동사들은 기존 라벨 유지
-3. 병렬 동사 그룹(`v₁/v₂`)이 그대로 매겨지는지
-4. 편집 모드 진입 후 단어 클릭/더블클릭/우클릭 정상 동작
-5. 종속절 `v'` 라벨도 동일하게 한 덩어리로 표시되는지
-6. 밑줄이 동사구 전체에 연속으로 보이는지
+1. 스크린샷 문장 재분석 → `the messages`, `the situations`에 밑줄/라벨 없어야 함
+2. 관계절 안의 `they receive`, `they encounter`는 그대로 `s'/v'`로 표시
+3. 단순 관계절 (`the book that I read`) → `<s>the book</s> that <ss>I</ss> <vs>read</vs>` 정상 유지
+4. 주어-관계절 (`the people who are taking part`) → 선행사가 진짜 주어면 `<s>` 유지
+5. 일반 SVO 문장 (`He gave her a book`) 영향 없음
+6. 콘솔 로그에 `Object-as-subject strip: removed N tags` 형태로 가드 작동 여부 추적 가능
+
+### 한계
+- 매우 드물게 보수적 규칙이 정상 케이스를 건드릴 수 있음 → 변화량 임계값과 텍스트 무결성 체크로 폐기
+- 100% 보장 아니지만 LLM 단독 대비 신뢰도 대폭 상승
 
