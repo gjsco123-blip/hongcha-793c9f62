@@ -74,6 +74,7 @@ function stripObjectSubjectTags(tagged: string): { result: string; removed: numb
   // Process each <cN>...</cN> chunk independently
   const chunkRe = /<c(\d+)>([\s\S]*?)<\/c\1>/g;
   let totalRemoved = 0;
+  let existentialPreserved = 0;
   const newString = tagged.replace(chunkRe, (whole, num, inner) => {
     // Collect tag tokens within this chunk
     const toks: Tok[] = [];
@@ -95,6 +96,52 @@ function stripObjectSubjectTags(tagged: string): { result: string; removed: numb
     const firstVerbIdx = opens.findIndex(t => t.tag === "v" || t.tag === "vs");
     if (firstVerbIdx === -1) return whole; // no verb in chunk → leave alone
 
+    // Helper: detect if a subject tag is the post-verbal subject of an existential
+    // construction (there is/are/was/were/exists/remains/lies/comes ...).
+    // We look at the text between the closing of the immediately preceding verb tag
+    // and the opening of the candidate subject tag — it should be just whitespace/nothing.
+    // Then we check what precedes the opening of that verb tag inside the chunk:
+    // it must contain "there" (case-insensitive) as the last word, with no other
+    // intervening verb/subject tag between "there" and the verb open.
+    const existentialVerbRe = /\b(?:is|are|was|were|isn't|aren't|wasn't|weren't|'s|'re|has\s+been|have\s+been|had\s+been|will\s+be|may\s+be|might\s+be|can\s+be|could\s+be|should\s+be|exists?|existed|remains?|remained|lies?|lay|lain|comes?|came)\b/i;
+    const isExistentialSubject = (subjOpenIdxInToks: number): boolean => {
+      // Find the most recent verb open BEFORE this subject open
+      let prevVerbTok: Tok | null = null;
+      for (let k = subjOpenIdxInToks - 1; k >= 0; k--) {
+        const t = toks[k];
+        if (t.kind === "open" && (t.tag === "v" || t.tag === "vs")) { prevVerbTok = t; break; }
+      }
+      if (!prevVerbTok) return false;
+
+      // Find the matching close of that verb
+      let depth = 1;
+      let verbCloseTok: Tok | null = null;
+      const verbStartIdx = toks.indexOf(prevVerbTok);
+      for (let j = verbStartIdx + 1; j < toks.length; j++) {
+        const t = toks[j];
+        if (t.tag !== prevVerbTok.tag) continue;
+        if (t.kind === "open") depth++;
+        else { depth--; if (depth === 0) { verbCloseTok = t; break; } }
+      }
+      if (!verbCloseTok) return false;
+
+      // Text between verb close and subject open should be whitespace only
+      const subjOpenTok = toks[subjOpenIdxInToks];
+      const between = inner.slice(verbCloseTok.end, subjOpenTok.start);
+      if (between.replace(/\s+/g, "") !== "") return false;
+
+      // Verb tag content (the actual verb words)
+      const verbInner = inner.slice(prevVerbTok.end, verbCloseTok.start);
+      if (!existentialVerbRe.test(verbInner)) return false;
+
+      // Text BEFORE the verb open inside the chunk — strip any tag markup.
+      const beforeVerb = inner.slice(0, prevVerbTok.start).replace(/<\/?[a-z]+(?:\s+g="\d+")?>/gi, " ");
+      // Last non-empty word should be "there"
+      const tokens = beforeVerb.trim().split(/\s+/).filter(Boolean);
+      const lastWord = tokens[tokens.length - 1] || "";
+      return /^there$/i.test(lastWord);
+    };
+
     // For each subject open after the first verb, decide if it's an object.
     const stripPositions: { start: number; end: number }[] = [];
     for (let i = firstVerbIdx + 1; i < opens.length; i++) {
@@ -105,6 +152,13 @@ function stripObjectSubjectTags(tagged: string): { result: string; removed: numb
       const next = opens[i + 1];
       if (next && (next.tag === "v" || next.tag === "vs")) {
         // cur could legitimately be the subject of a following verb (e.g. relative clause subject).
+        continue;
+      }
+      // Existential "there is/are NP" guard: if cur is the post-verbal subject of an
+      // existential clause, it's the REAL subject — never strip.
+      const curIdxInToks = toks.indexOf(cur);
+      if (isExistentialSubject(curIdxInToks)) {
+        existentialPreserved++;
         continue;
       }
       // cur is an object: mark its open tag and matching close tag for removal.
@@ -139,6 +193,9 @@ function stripObjectSubjectTags(tagged: string): { result: string; removed: numb
     return `<c${num}>${updated}</c${num}>`;
   });
 
+  if (existentialPreserved > 0) {
+    console.log(`Existential there: preserved ${existentialPreserved} subject(s)`);
+  }
   return { result: newString, removed: totalRemoved };
 }
 
@@ -373,6 +430,14 @@ Tag the **head noun phrase (NP)** that serves as the grammatical subject (수일
    - 이유: "the messages"는 interpret의 목적어 + 관계절(생략된 that/which)의 선행사. 목적어이므로 <s>/<ss>를 받지 않음.
    - 또 다른 예: "<s>I</s> <v>know</v> the man <s>she</s> <v>met</v>" — "the man"은 know의 목적어 + met의 선행사 → 절대 <s>/<ss> 금지.
    - 핵심 판단: 한 동사 직후에 NP가 나오고, 그 NP 뒤에 (관계대명사 없이도) 또 다른 S+V가 따라오면 → 그 NP는 무조건 OBJECT, 절대 주어 태그 금지.
+10. **The expletive "there" in existential sentences is NEVER the subject.**
+    The REAL subject is the noun phrase AFTER the be-verb (or existential verb).
+    - WRONG:   <s>There</s> <v>is</v> so little variation amongst us
+    - WRONG:   There <v>is</v> so little variation amongst us  ← subject MISSING, must tag the post-verbal NP
+    - CORRECT: There <v>is</v> <s>so little variation</s> amongst us
+    - Same rule for: there are / there was / there were / there exists / there remains / there comes / there lies ...
+    - The post-verbal NP gets <s> (or <ss> if the existential clause is itself subordinate, e.g. "...because there <vs>is</vs> <ss>no time</ss>").
+    - Never leave an existential clause without a subject tag on the post-verbal NP.
 
 ### Strong negative few-shot examples (MEMORIZE):
 - "The policy allows citizens to retain freedom"
@@ -727,6 +792,14 @@ Given an English sentence chunked with <c1>...</c1> tags, with verb tags (<v> fo
     - WRONG:   <v>know</v> <s>the man</s> <s>she</s> <v>met</v>
     - CORRECT: <v>know</v> the man <s>she</s> <v>met</v>
     - Rule: if you see two consecutive subject tags with no verb between them, the FIRST one is wrong — REMOVE it.
+14. **Existential "there" — the post-verbal NP IS the subject (must be tagged).**
+    "there" itself is an expletive and NEVER gets <s>. The grammatical subject is the NP AFTER the be-verb (or existential verb: exists/remains/lies/comes...).
+    - WRONG:   <s>There</s> <v>is</v> so little variation amongst us
+    - WRONG:   There <v>is</v> so little variation amongst us   ← subject MISSING — ADD <s> on the post-verbal NP
+    - CORRECT: There <v>is</v> <s>so little variation</s> amongst us
+    - Same for: there are / there was / there were / there exists / there remains / there comes...
+    - In a subordinate existential clause use <ss>: "...because there <vs>is</vs> <ss>no time</ss>".
+    - DO NOT strip the post-verbal NP's subject tag in existential clauses, even though it appears after the verb — it is NOT an object/complement.
 
 ## Per-clause rule:
 - Each finite clause has at most ONE <s>. If you see two <s> in one clause, the second one is wrong (likely an object/complement) — REMOVE it.
