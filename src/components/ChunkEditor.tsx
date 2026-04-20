@@ -36,6 +36,7 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
     const rawText = selection?.toString().trim();
     const text = rawText
       ?.replace(/\s*\/\s*/g, " ")
+      .replace(/\b[sv]['′]?[₀-₉]?\b/g, "")
       .replace(/\s+/g, " ")
       .trim();
     if (text && text.length >= 1 && containerRef.current?.contains(selection?.anchorNode ?? null)) {
