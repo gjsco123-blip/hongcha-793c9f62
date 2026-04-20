@@ -811,6 +811,27 @@ Return ONLY the corrected english_tagged string. Nothing else. No markdown, no c
       console.warn("Subject verification failed, using original:", subjErr);
     }
 
+    // === Deterministic post-processing guard: strip object-as-subject tags ===
+    try {
+      const beforeSCount = (lastResult!.english_tagged.match(/<s(?:s)?(?:\s+g="\d+")?>/g) || []).length;
+      const { result: stripped, removed } = stripObjectSubjectTags(lastResult!.english_tagged);
+      if (removed > 0) {
+        // Safety: text content unchanged
+        const oldText = normalize(extractText(lastResult!.english_tagged));
+        const newText = normalize(extractText(stripped));
+        // Safety: no more than 50% of subjects removed (guard against false positives)
+        const tooAggressive = beforeSCount > 0 && removed > beforeSCount * 0.5;
+        if (newText === oldText && !tooAggressive) {
+          console.log(`Object-as-subject strip: removed ${removed} tags`);
+          lastResult!.english_tagged = stripped;
+        } else {
+          console.warn("Object-as-subject strip: discarded", { textChanged: newText !== oldText, tooAggressive, removed, beforeSCount });
+        }
+      }
+    } catch (stripErr) {
+      console.warn("Object-as-subject strip failed:", stripErr);
+    }
+
     // === Verb tag verification pass ===
     try {
       const verbVerifyPrompt = `You are a precise English grammar verb-tagging verifier.
