@@ -1,6 +1,6 @@
 import { Document, Page, View, Text, StyleSheet, Font } from "@react-pdf/renderer";
 import { PdfHeader } from "@/components/pdf/PdfHeader";
-import { Chunk, segmentsToWords } from "@/lib/chunk-utils";
+import { Chunk, segmentsToWords, mergeAdverbsBetweenVerbs } from "@/lib/chunk-utils";
 import { paginateResults, type PaginationSentence } from "@/lib/pdf-pagination";
 import { computeSuperscriptPositions, type SyntaxNoteWithTarget } from "@/lib/syntax-superscript";
 
@@ -331,8 +331,30 @@ function renderChunksWithVerbUnderline(chunks: Chunk[], syntaxNotes?: SyntaxNote
   );
 
   chunks.forEach((chunk, ci) => {
-    chunk.segments.forEach((seg, si) => {
-      const sups = superscriptMap.get(`${ci}-${si}`) || [];
+    // Visual-only: collapse adverbs/whitespace between adjacent verb segments
+    // so the underline stays continuous (e.g., "can always be injected").
+    const { segments: renderSegments, indexMap } = mergeAdverbsBetweenVerbs(chunk.segments);
+    // Remap superscripts from original segment index -> merged segment index.
+    // Offsets within a merged segment are recomputed as (prefix length within
+    // merged text) + (original offset within original segment).
+    const remappedSups = new Map<number, { id: number; offset: number }[]>();
+    for (let oi = 0; oi < chunk.segments.length; oi++) {
+      const sups = superscriptMap.get(`${ci}-${oi}`);
+      if (!sups || sups.length === 0) continue;
+      const newIdx = indexMap[oi];
+      // Compute prefix length: sum of original segment texts that map to the
+      // same merged index and come before `oi`.
+      let prefix = 0;
+      for (let k = 0; k < oi; k++) {
+        if (indexMap[k] === newIdx) prefix += chunk.segments[k].text.length;
+      }
+      const arr = remappedSups.get(newIdx) || [];
+      for (const s of sups) arr.push({ id: s.id, offset: prefix + s.offset });
+      remappedSups.set(newIdx, arr);
+    }
+
+    renderSegments.forEach((seg, si) => {
+      const sups = remappedSups.get(si) || [];
       // Group by exact offset so multiple note ids can be rendered at the same anchor.
       const groupedByOffset = new Map<number, number[]>();
       for (const s of sups) {

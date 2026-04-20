@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Chunk } from "@/lib/chunk-utils";
+import { Chunk, mergeAdverbsBetweenVerbs } from "@/lib/chunk-utils";
 
 interface ResultDisplayProps {
   label: string;
@@ -80,7 +80,7 @@ export function ResultDisplay({ label, chunks, text, isKorean, onTextChange, onC
                     }}
                   >
                     {!isKorean
-                      ? chunk.segments.map((seg, si) => (
+                      ? mergeAdverbsBetweenVerbs(chunk.segments).segments.map((seg, si) => (
                           <span
                             key={si}
                             className={seg.isVerb ? "underline decoration-foreground decoration-2 underline-offset-[3px]" : ""}
