@@ -215,12 +215,13 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
 
   const renderSvLabel = (lbl: SvLabel) => (
     <span
-      className="inline-flex flex-col items-center align-baseline"
-      style={{ height: 0, overflow: "visible" }}
+      className="inline-flex flex-col items-center align-baseline select-none"
+      style={{ height: 0, overflow: "visible", userSelect: "none" }}
+      aria-hidden="true"
     >
       <span
-        className="text-[12px] leading-none text-black font-sans"
-        style={{ marginTop: 3 }}
+        className="text-[12px] leading-none text-black font-sans select-none"
+        style={{ marginTop: 3, userSelect: "none" }}
       >
         {lbl.base}
         {lbl.prime ? "'" : ""}
