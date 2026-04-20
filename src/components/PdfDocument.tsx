@@ -152,6 +152,41 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 6,
   },
+  englishRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    flex: 1,
+    marginLeft: 6,
+    alignItems: "flex-start",
+  },
+  englishWord: {
+    fontFamily: "Pretendard",
+    fontWeight: 600,
+    fontSize: 9.5,
+    lineHeight: 2.5,
+  },
+  // Wrapper around a labeled (verb/subject) segment so we can absolutely
+  // position the s/v label centered below it without affecting line height.
+  labeledWrap: {
+    position: "relative",
+    flexDirection: "row",
+  },
+  svLabelAbsolute: {
+    position: "absolute",
+    top: "100%",
+    left: 0,
+    right: 0,
+    marginTop: 1.5,
+    fontSize: 6,
+    color: "#000",
+    textAlign: "center",
+    lineHeight: 1,
+  },
+  svLabelSub: {
+    fontSize: 4.5,
+    color: "#000",
+    verticalAlign: "sub",
+  },
   translationContainer: {
     marginLeft: -2,
   },
@@ -224,7 +259,13 @@ const styles = StyleSheet.create({
   },
 });
 
-/** Render chunks with slash, applying underline to verbs and superscript for syntax notes */
+/**
+ * Render chunks as a flex-wrap row of word-level <Text> and labeled <View>
+ * wrappers. Labeled (verb/subject) segments use a relative wrapper so the
+ * s/v label can be absolutely positioned centered under the underlined word
+ * group without affecting line height. The caller must place the returned
+ * nodes inside a <View flexDirection="row" flexWrap="wrap"> container.
+ */
 function renderChunksWithVerbUnderline(
   chunks: Chunk[],
   syntaxNotes?: SyntaxNote[],
@@ -236,31 +277,17 @@ function renderChunksWithVerbUnderline(
   // Pre-compute s/v labels once for this sentence (against original chunks).
   const svMap = svLabelsEnabled ? computeSvLabels(chunks) : null;
 
-  // Inline subscript-style label rendered after a verb/subject segment.
-  // Uses verticalAlign: "sub" so the label sits slightly below the baseline
-  // (just under the underline) without affecting line height. Order:
-  // base → prime (') → subscript number, so the prime stays visible.
-  const renderInlineSvLabel = (lbl: SvLabel, key: string) => {
-    return (
-      <Text
-        key={key}
-        style={{
-          fontSize: 6,
-          color: "#000",
-          verticalAlign: "sub" as const,
-        }}
-      >
-        {"\u200A"}
-        {lbl.base}
-        {lbl.prime ? "'" : ""}
-        {lbl.index !== undefined ? (
-          <Text style={{ fontSize: 4.5, verticalAlign: "sub" as const }}>
-            {lbl.index}
-          </Text>
-        ) : null}
-      </Text>
-    );
-  };
+  // Absolute-positioned label rendered just below a verb/subject wrapper.
+  // Order: base → prime (') → subscript number.
+  const renderAbsoluteSvLabel = (lbl: SvLabel, key: string) => (
+    <Text key={key} style={styles.svLabelAbsolute} fixed={false}>
+      {lbl.base}
+      {lbl.prime ? "'" : ""}
+      {lbl.index !== undefined ? (
+        <Text style={styles.svLabelSub}>{lbl.index}</Text>
+      ) : null}
+    </Text>
+  );
 
   const clampOffsetInSegment = (text: string, rawOffset: number) => {
     let o = Math.max(0, Math.min(rawOffset, text.length));
@@ -417,26 +444,35 @@ function renderChunksWithVerbUnderline(
         .sort((a, b) => a[0] - b[0])
         .map(([offset, ids]) => ({ offset, ids }));
 
+      const isSubjectSeg = subjectUnderlineEnabled && !!seg.isSubject;
+      const isLabeledSeg =
+        (seg.isVerb || isSubjectSeg) && /[A-Za-z]/.test(seg.text);
+      const svLbl = mergedSvLabels.get(si);
+      const hasSvLabel =
+        svLbl !== undefined &&
+        (seg.isVerb || seg.isSubject) &&
+        /[A-Za-z]/.test(seg.text);
+
+      // Build the text spans for this segment (underlined parts + sups).
+      const segChildren: React.ReactNode[] = [];
       const pushSegmentText = (text: string, keyBase: string) => {
         if (!text) return;
-        const isSubjectSeg = subjectUnderlineEnabled && !!seg.isSubject;
-        const canUnderline = (seg.isVerb || isSubjectSeg) && /[A-Za-z]/.test(text);
-        if (!canUnderline) {
-          elements.push(<Text key={keyBase}>{text}</Text>);
+        if (!isLabeledSeg) {
+          segChildren.push(<Text key={keyBase}>{text}</Text>);
           return;
         }
         const underlineStyle = seg.isVerb ? styles.verbUnderline : styles.subjectUnderline;
         const match = text.match(/^(.*\S)([\s,.:;!?]+)$/);
         if (match) {
-          elements.push(
+          segChildren.push(
             <Text key={`${keyBase}-v`} style={underlineStyle}>
               {match[1]}
             </Text>,
           );
-          elements.push(<Text key={`${keyBase}-p`}>{match[2]}</Text>);
+          segChildren.push(<Text key={`${keyBase}-p`}>{match[2]}</Text>);
           return;
         }
-        elements.push(
+        segChildren.push(
           <Text key={keyBase} style={underlineStyle}>
             {text}
           </Text>,
@@ -449,22 +485,37 @@ function renderChunksWithVerbUnderline(
           pushSegmentText(seg.text.slice(cursor, event.offset), `${ci}-${si}-txt-${ei}`);
         }
         event.ids.forEach((id, idi) => {
-          elements.push(renderSup(`${ci}-${si}-sup-${ei}-${idi}-${id}`, id));
+          segChildren.push(renderSup(`${ci}-${si}-sup-${ei}-${idi}-${id}`, id));
         });
         cursor = event.offset;
       });
       pushSegmentText(seg.text.slice(cursor), `${ci}-${si}-txt-tail`);
 
-      // Append sv label for this segment (if any). Render as an inline absolute
-      // text so it sits centered under the underlined word(s) without affecting
-      // line height. We approximate centering by placing it after the segment.
-      const svLbl = mergedSvLabels.get(si);
-      if (svLbl && (seg.isVerb || seg.isSubject) && /[A-Za-z]/.test(seg.text)) {
-        elements.push(renderInlineSvLabel(svLbl, `${ci}-${si}-sv`));
+      if (hasSvLabel && svLbl) {
+        // Wrap labeled segment in a relative View so the s/v label can be
+        // absolutely centered just below the underline. The wrapper itself
+        // sits as one inline-flow item inside the row-wrap container; the
+        // label is outside the line flow → no lineHeight impact.
+        elements.push(
+          <View key={`${ci}-${si}-wrap`} style={styles.labeledWrap}>
+            <Text style={styles.englishWord}>{segChildren}</Text>
+            {renderAbsoluteSvLabel(svLbl, `${ci}-${si}-sv`)}
+          </View>,
+        );
+      } else {
+        elements.push(
+          <Text key={`${ci}-${si}-text`} style={styles.englishWord}>
+            {segChildren}
+          </Text>,
+        );
       }
     });
     if (ci < chunks.length - 1) {
-      elements.push(<Text key={`slash-${ci}`}> / </Text>);
+      elements.push(
+        <Text key={`slash-${ci}`} style={styles.englishWord}>
+          {" / "}
+        </Text>,
+      );
     }
   });
 
@@ -504,17 +555,19 @@ function SentenceBlock({
     >
       <View style={styles.sentenceRow}>
         <Text style={styles.sentenceNumber}>{String(index + 1).padStart(2, "0")} </Text>
-        <Text style={styles.englishText}>
-          {result.englishChunks.length > 0
-            ? renderChunksWithVerbUnderline(
-                result.englishChunks,
-                result.syntaxNotes,
-                result.original,
-                subjectUnderlineEnabled,
-                svLabelsEnabled,
-              )
-            : result.original}
-        </Text>
+        {result.englishChunks.length > 0 ? (
+          <View style={styles.englishRow}>
+            {renderChunksWithVerbUnderline(
+              result.englishChunks,
+              result.syntaxNotes,
+              result.original,
+              subjectUnderlineEnabled,
+              svLabelsEnabled,
+            )}
+          </View>
+        ) : (
+          <Text style={styles.englishText}>{result.original}</Text>
+        )}
       </View>
 
       {result.englishChunks.length > 0 && (
