@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { Chunk, segmentsToWords, wordsToSegments } from "@/lib/chunk-utils";
 import { Sparkles, Check, X, Pencil, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useFeatureFlag } from "@/hooks/useFeatureFlag";
 import type { SyntaxNote } from "@/pages/Index";
 
 interface ChunkEditorProps {
@@ -14,6 +15,7 @@ interface ChunkEditorProps {
 }
 
 export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, usedSlots = [], syntaxNotes = [] }: ChunkEditorProps) {
+  const subjectUnderlineEnabled = useFeatureFlag("subject_underline");
   const [isEditing, setIsEditing] = useState(false);
   const [draftChunks, setDraftChunks] = useState<Chunk[]>([]);
   const [selectedText, setSelectedText] = useState("");
@@ -312,7 +314,7 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
                   <span
                     onClick={isEditing ? () => handleWordInteraction(i, wi) : undefined}
                     onDoubleClick={isEditing ? () => handleWordDoubleClick(i, wi) : undefined}
-                    className={`${w.isVerb && /[A-Za-z]/.test(w.word) ? "underline decoration-foreground decoration-2 underline-offset-[3px]" : ""}
+                    className={`${(w.isVerb || (subjectUnderlineEnabled && w.isSubject)) && /[A-Za-z]/.test(w.word) ? "underline decoration-foreground decoration-2 underline-offset-[3px]" : ""}
                       ${isEditing ? "cursor-pointer hover:bg-muted/80 rounded-sm" : ""}`}
                     title={isEditing ? "클릭: 분할 / 더블클릭: 동사 표시" : ""}
                   >
