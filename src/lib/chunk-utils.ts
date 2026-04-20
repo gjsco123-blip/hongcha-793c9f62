@@ -165,6 +165,14 @@ const VERB_PHRASE_ADVERB_WHITELIST = new Set([
   "always", "never", "often", "sometimes", "just", "only", "also",
   "still", "even", "already", "ever", "well", "not", "no",
   "hardly", "barely", "rarely", "almost", "nearly", "quite", "very",
+  // Time adverbs
+  "now", "then", "soon", "recently", "finally", "eventually",
+  "currently", "suddenly", "immediately",
+  // Frequency / degree
+  "usually", "normally", "generally", "simply", "truly", "really",
+  "completely", "fully", "totally", "mostly", "mainly", "largely",
+  // Manner (most caught by -ly rule, listed for clarity)
+  "clearly", "easily", "quickly", "slowly", "carefully",
 ]);
 
 function isMergeableInterstitial(text: string): boolean {
