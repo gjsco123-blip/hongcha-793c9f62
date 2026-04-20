@@ -1,52 +1,73 @@
 
 
-## 주어 태깅 — 전치사구·관계대명사 수정 (B안 채택)
+## S/V 라벨 시스템 — 디자인 조정 (subscript 스타일 + 줄간격 유지)
 
-### 결정
-- **B안**: 관계절 안의 **목적격 관계절의 진짜 주어(`I` 등)는 `<s>` 허용**
-- 단, **주격 관계대명사(`who/which/that`) 자체는 `<s>` 금지**
+### 수정 사항 (이전 플랜에 추가)
 
-### 핵심 규칙 (engine/index.ts)
+**1. 라벨 표기 — subscript 스타일**
+- 기존 안: `v1`, `v2` (숫자가 본문과 같은 크기)
+- 변경: 사진처럼 **`v` + 작은 아래첨자 `1`** 형태로 표시
+- 구조: 기본 글자(`v`/`s`) + subscript 숫자(`1`,`2`) + prime(`'`)
+  - 주절 단독 동사: `v`
+  - 주절 병렬 동사: `v₁`, `v₂` (숫자만 작게)
+  - 종속절 단독 동사: `v'`
+  - 종속절 병렬 동사: `v₁'`, `v₂'`
+- 주어도 동일 규칙 (`s`, `s₁`, `s'`, `s₁'`)
 
-**1. NP 후치수식 엄격 배제 (Option A)**
-- `<s>`는 한정사 + 전치 형용사 + head noun까지만
-- head noun 뒤 어떤 후치수식도 포함 금지: 전치사구, 관계절, 분사구, to부정사, 동격
-- ❌ `<s>something like this thought</s>` → ✅ `<s>something</s> like this thought`
-- ❌ `<s>the man with a hat</s>` → ✅ `<s>the man</s> with a hat`
-- ❌ `<s>students taking the test</s>` → ✅ `<s>students</s> taking the test`
+**2. 라벨 크기 축소 + 줄간격 보존**
+- 이전 플랜은 PDF `lineHeight`를 2.5 → 2.9로 늘리려 했음 → **폐기**
+- 변경: **PDF 줄간격은 현재 값 그대로 유지** (페이지 수 변동 없음)
+- 라벨이 줄간격을 침범하지 않도록:
+  - 라벨 크기를 더 작게: PDF 4.5pt, 웹 9px (기존 5.5pt/10px에서 축소)
+  - subscript 숫자는 더 작게: PDF 3.5pt, 웹 7px
+  - 라벨 영역 높이가 기존 줄간격 여백 안에 들어가도록 측정·조정
 
-**2. 관계절 내부 처리 (B안)**
-- **주격 관계절** (`who/which/that` + V): 관계대명사 자체에 `<s>` 금지 → 관계절 청크에 `<s>` 없음, `<v>`만
-  - ✅ `<s>the people</s> who <v>are taking</v> part in it`
-  - ❌ `<s>who</s> are taking part`
-- **목적격 관계절** (`who/which/that` + S + V): 관계절 안의 진짜 주어는 `<s>` 허용
-  - ✅ `<s>the book</s> that <s>I</s> <v>read</v>`
-  - ✅ `<s>the man</s> whom <s>she</s> <v>met</v>`
-- 규칙 요약: **관계대명사가 관계절의 주어 역할이면 `<s>` 안 침**, 관계대명사가 목적어 역할이면 그 뒤 진짜 주어를 `<s>` 침
+**3. 밑줄과 라벨 사이 간격**
+- 라벨이 밑줄에 붙지 않도록 살짝 떨어뜨림
+- 웹: `marginTop: 2px` (밑줄 offset 3px와 별개로 추가 여백)
+- PDF: `marginTop: 1.5pt`
 
-**3. Subject verification pass 강화**
-- `<s>` 안에 후치수식 토큰 있으면 head noun까지 잘라냄
-- `<s>` 안에 관계대명사(`who/whom/which/that/whose`)가 있으면 제거
-- 청크 첫 토큰이 관계대명사 + 바로 `<v>`가 오면 → 그 청크 안의 `<s>` 모두 제거 (주격 관계절)
-- 청크 첫 토큰이 관계대명사 + NP + `<v>` 패턴이면 → NP를 `<s>`로 인정 (목적격 관계절)
+**4. 위치/정렬**
+- 가운데 정렬 (변경 없음)
+- 폰트: Pretendard (변경 없음)
 
-**4. 메모리 업데이트**
-`mem://features/subject-underline.md`:
-- "Option A 엄격 적용: head noun 뒤 후치수식 절대 포함 금지"
-- "주격 관계절: `<s>` 없음 / 목적격 관계절: 내부 주어 `<s>` 허용"
+### 렌더링 구현 메모
 
-### 변경 파일
+**웹 (ResultDisplay/ChunkEditor)**
+```
+<span class="inline-flex flex-col items-center align-baseline">
+  <span class="underline decoration-2 underline-offset-[3px]">read</span>
+  <span class="text-[9px] text-muted-foreground leading-none mt-[2px] font-pretendard">
+    v<sub class="text-[7px]">1</sub>'
+  </span>
+</span>
+```
+- `inline-flex flex-col`로 단어 위·라벨 아래 배치
+- 라벨이 line-box를 늘리지 않도록 `leading-none`
+- 부모 `<p>`의 `line-height`는 현재 값 유지 — 라벨이 다음 줄을 밀지 않게 라벨 컨테이너에 `height: 0; overflow: visible` 적용 검토 (실제 줄 높이를 키우지 않음)
+
+**PDF (PdfDocument)**
+- react-pdf의 inline `View`는 baseline 정렬 제약이 있음
+- 해법: 동사/주어 세그먼트를 `<View style={{ flexDirection: 'column', alignItems: 'center' }}>` 로 감싸되, **줄 높이가 늘어나지 않도록** 라벨 `<Text>`에 `position: 'absolute'` + 부모 `position: 'relative'` 사용
+  - 라벨이 줄 흐름 밖에 떠 있게 → lineHeight 영향 0
+  - PDF에서 absolute 텍스트는 가능 (검증된 패턴: PdfHeader)
+- subscript 숫자: 별도 `<Text>` 더 작게, `style={{ fontSize: 3.5, lineHeight: 1 }}`
+
+### 변경 파일 (이전 플랜과 동일, 스타일만 조정)
 - `supabase/functions/engine/index.ts`
+- `src/lib/chunk-utils.ts`
+- `src/lib/sv-labels.ts` (신규) — 라벨 텍스트 + subscript 분리 반환
+- `src/components/ResultDisplay.tsx`
+- `src/components/ChunkEditor.tsx`
+- `src/components/PdfDocument.tsx` (lineHeight 변경 없음, absolute 라벨)
+- `src/pages/Index.tsx`
+- DB migration: `feature_flags` insert (`sv_labels`)
 - `.lovable/memory/features/subject-underline.md`
+- `.lovable/memory/features/sv-labels.md` (신규)
 
-### 검증 케이스
-1. `something like this thought ...` → `<s>something</s>`만
-2. `the people who are taking part in it` → `<s>the people</s>`만, 관계절 청크 안 깨끗
-3. `the book that I read` → `<s>the book</s>`, `<s>I</s>` 둘 다 (B안)
-4. (회귀) `What he said is true` → 명사절 내부 `<s>he</s>`만
-5. (회귀) `Locking-in prices ...` → `<s>Locking-in prices</s>`
-6. (회귀) `The policy allows citizens ...` → `<s>The policy</s>`만
-
-### 기존 데이터
-엔진 수정 후 현재 지문 **재분석 필요**.
+### 검증 포인트
+- PDF 페이지 수가 라벨 적용 전후 동일한지 (회귀)
+- 라벨이 다음 줄 단어를 가리지 않는지 (overflow visible)
+- 밑줄과 라벨 사이 시각적 여백 확인
+- `v₁` 형태가 사진과 유사하게 렌더되는지 (특히 PDF)
 
