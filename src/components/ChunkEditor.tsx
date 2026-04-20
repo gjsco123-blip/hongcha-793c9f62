@@ -257,7 +257,7 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
         </div>
       )}
 
-      <div ref={containerRef} onMouseUp={handleMouseUp} className="relative flex flex-wrap items-center gap-1.5">
+      <div ref={containerRef} onMouseUp={handleMouseUp} className="relative flex flex-wrap items-center gap-x-1.5 gap-y-5">
         {/* Selection tooltip - 기본 버튼 */}
         {tooltipPos && selectedText && !showHintInput && (
           <button
