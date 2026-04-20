@@ -34,7 +34,7 @@ function getTagNumbers(tagged: string): number[] {
 }
 
 function extractText(tagged: string): string {
-  return tagged.replace(/<\/?c\d+>/g, "").replace(/<\/?v>/g, "");
+  return tagged.replace(/<\/?c\d+>/g, "").replace(/<\/?v>/g, "").replace(/<\/?s>/g, "");
 }
 
 function normalize(text: string): string {
@@ -178,6 +178,40 @@ ONLY finite verbs — verbs that serve as the predicate of a clause with a subje
 
 ### Quick test: Ask "Does this word have a SUBJECT performing it RIGHT HERE in this clause?" If NO → do NOT use <v>.
 
+## SUBJECT TAGGING — TAG WITH <s>...</s>
+
+Tag the **head noun phrase (NP)** that serves as the grammatical subject (수일치의 핵) with <s>...</s>.
+
+### What to include in <s>:
+- **Determiner + pre-modifiers + head noun ONLY**. Examples:
+  - "<s>The new students</s> are confronted..." (include "The new" and head "students")
+  - "<s>students</s>" (bare plural, no determiner)
+  - "<s>John and Mary</s>" (coordinated subject — wrap the whole NP)
+- **Subordinate clause subjects also get <s>**: "Because <s>the rain</s> stopped, <s>we</s> went out"
+- **Expletive It (가주어)**: "<s>It</s> is important that..." → tag "It" as <s>
+- **There/Here + be + NP**: `there/here` is NOT the subject. Tag the **NP after the verb** as <s>.
+  - "There are <s>many students</s>" (NOT <s>there</s>)
+  - "Here are <s>the books</s> I bought" (relative clause "I bought" excluded)
+
+### What to EXCLUDE from <s>:
+- **Post-modifiers** (전치사구/관계절/분사구/동격): "<s>The students</s> from Seoul who passed are..." — exclude "from Seoul who passed"
+- **Parentheticals/insertions** (콤마로 분리된 삽입구): "<s>The students</s>, however, are confused" — "however" is OUTSIDE <s>
+- Adverbs and conjunctions
+
+### CRITICAL constraint:
+- <v> and <s> tags MUST NEVER overlap or nest. They are always **adjacent** (with optional whitespace/text between).
+- WRONG: <s>The <v>students</v></s>  ← never nest
+- WRONG: <s>The students <v>are</v></s>  ← never nest
+- CORRECT: <s>The students</s> <v>are</v>
+
+### Examples:
+- <c1><s>The new students</s></c1> <c2><v>are</v> now <v>confronted</v> with...</c2>
+- <c1>Because <s>the rain</s> <v>stopped</v>,</c1> <c2><s>we</s> <v>went out</v></c2>
+- <c1><s>The students</s>, however,</c1> <c2><v>are</v> confused</c2>
+- <c1><s>It</s> <v>is</v> important</c1> <c2>that <s>he</s> <v>arrived</v></c2>
+- <c1>There <v>are</v> <s>many students</s></c1> <c2>from Seoul</c2>
+- <c1><s>John and Mary</s> <v>are</v> friends</c1>
+
 ## CHUNKING RULES
 - Tag count in english_tagged MUST equal tag count in korean_literal_tagged.
 - Each <cN> in English maps to exactly one <cN> in Korean.
@@ -189,6 +223,7 @@ ONLY finite verbs — verbs that serve as the predicate of a clause with a subje
 - Conjunctions (while, but, although, because, however) MUST be included in a chunk, never dropped.
 - Concatenating all chunks (removing tags) MUST reconstruct the original sentence exactly.
 - <v> tags go INSIDE <c> tags: <c1>The researchers <v>discovered</v></c1>
+- <s> tags go INSIDE <c> tags, never overlapping with <v>.
 
 ## KOREAN TRANSLATION RULES
 - NEVER use Chinese characters (漢字/Hanja) in Korean translations.
