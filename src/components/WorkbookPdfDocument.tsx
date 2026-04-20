@@ -131,8 +131,8 @@ const styles = StyleSheet.create({
   sentenceText: {
     fontFamily: "GangwonEduSaeeum",
     flex: 1,
-    fontSize: 9.5,
-    fontWeight: 600,
+    fontSize: 13,
+    fontWeight: 700,
     color: "#111",
     lineHeight: 3.5,
   },
