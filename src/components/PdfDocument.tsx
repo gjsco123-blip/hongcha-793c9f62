@@ -152,6 +152,41 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 6,
   },
+  englishRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    flex: 1,
+    marginLeft: 6,
+    alignItems: "flex-start",
+  },
+  englishWord: {
+    fontFamily: "Pretendard",
+    fontWeight: 600,
+    fontSize: 9.5,
+    lineHeight: 2.5,
+  },
+  // Wrapper around a labeled (verb/subject) segment so we can absolutely
+  // position the s/v label centered below it without affecting line height.
+  labeledWrap: {
+    position: "relative",
+    flexDirection: "row",
+  },
+  svLabelAbsolute: {
+    position: "absolute",
+    top: "100%",
+    left: 0,
+    right: 0,
+    marginTop: 1.5,
+    fontSize: 6,
+    color: "#000",
+    textAlign: "center",
+    lineHeight: 1,
+  },
+  svLabelSub: {
+    fontSize: 4.5,
+    color: "#000",
+    verticalAlign: "sub",
+  },
   translationContainer: {
     marginLeft: -2,
   },
