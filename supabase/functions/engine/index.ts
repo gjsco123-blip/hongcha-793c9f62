@@ -192,6 +192,17 @@ Tag the **head noun phrase (NP)** that serves as the grammatical subject (수일
 - **There/Here + be + NP**: 'there/here' is NOT the subject. Tag the **NP after the verb** as <s>.
   - "There are <s>many students</s>" (NOT <s>there</s>)
   - "Here are <s>the books</s> I bought" (relative clause "I bought" excluded)
+- **Gerund-phrase subject (동명사 주어)**: tag the gerund + its core (e.g. direct object of the gerund) as <s>. Exclude long post-modifiers (PP/adv).
+  - "<s>Locking-in prices</s> by buying and selling grain for future delivery <v>helped</v>..." (only "Locking-in prices" inside <s>)
+  - "<s>Reading books</s> <v>makes</v> you smart"
+- **To-infinitive subject (to부정사 주어)**: tag the to-infinitive + its core object as <s>.
+  - "<s>To learn English</s> <v>is</v> fun"
+- **Noun-clause subject (명사절 주어 — that / wh / whether)**: DO **NOT** wrap the whole noun clause in <s>. Instead, tag the **internal subject** of the noun clause as <s>, and leave the upper clause WITHOUT any <s>.
+  - CORRECT: <c1>What <s>he</s> <v>said</v></c1> <c2><v>is</v> true</c2>
+  - CORRECT: <c1>That <s>he</s> <v>lied</v></c1> <c2><v>surprised</v> me</c2>
+  - CORRECT: <c1>Whether <s>it</s> <v>rains</v></c1> <c2><v>matters</v></c2>
+  - WRONG:   <s>What he said</s> <v>is</v> true   ← never wrap a noun clause
+  - The upper clause (e.g. "<v>is</v> true") may legitimately have NO <s> at all. That is correct.
 
 ### What to EXCLUDE from <s>:
 - **Post-modifiers** (전치사구/관계절/분사구/동격): "<s>The students</s> from Seoul who passed are..." — exclude "from Seoul who passed"
