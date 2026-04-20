@@ -4,6 +4,7 @@ import { Sparkles, Check, X, Pencil, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFeatureFlag } from "@/hooks/useFeatureFlag";
 import type { SyntaxNote } from "@/pages/Index";
+import { computeSvLabels, type SvLabel } from "@/lib/sv-labels";
 
 interface ChunkEditorProps {
   chunks: Chunk[];
@@ -16,6 +17,7 @@ interface ChunkEditorProps {
 
 export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, usedSlots = [], syntaxNotes = [] }: ChunkEditorProps) {
   const subjectUnderlineEnabled = useFeatureFlag("subject_underline");
+  const svLabelsEnabled = useFeatureFlag("sv_labels");
   const [isEditing, setIsEditing] = useState(false);
   const [draftChunks, setDraftChunks] = useState<Chunk[]>([]);
   const [selectedText, setSelectedText] = useState("");
@@ -186,6 +188,48 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
   };
 
   const displayChunks = isEditing ? draftChunks : chunks;
+  const svMap = svLabelsEnabled ? computeSvLabels(displayChunks) : null;
+
+  // Compute per-chunk word-level labels by re-deriving boundaries from segments.
+  // We label only the first word of each labeled segment so adjacent words in the
+  // same segment don't repeat the marker.
+  const wordLabelLookup = (() => {
+    const map = new Map<string, SvLabel>();
+    if (!svMap) return map;
+    displayChunks.forEach((c, ci) => {
+      let wIdx = 0;
+      c.segments.forEach((seg, si) => {
+        const lbl = svMap.get(`${ci}:${si}`);
+        const segWords = seg.text.split(/(\s+)/).filter((p) => p.trim());
+        if (lbl && segWords.length > 0) {
+          // Place label under the LAST word of the segment for verbs (e.g. "are taking" → under "taking")
+          // and FIRST word for subjects (e.g. "The students" → under "The"). Centering looks more natural.
+          const targetOffset = lbl.base === "v" ? segWords.length - 1 : 0;
+          map.set(`${ci}:${wIdx + targetOffset}`, lbl);
+        }
+        wIdx += segWords.length;
+      });
+    });
+    return map;
+  })();
+
+  const renderSvLabel = (lbl: SvLabel) => (
+    <span
+      className="inline-flex flex-col items-center align-baseline"
+      style={{ height: 0, overflow: "visible" }}
+    >
+      <span
+        className="text-[9px] leading-none text-muted-foreground font-sans"
+        style={{ marginTop: 2, fontStyle: "italic" }}
+      >
+        {lbl.base}
+        {lbl.index !== undefined && (
+          <sub className="text-[7px]" style={{ lineHeight: 1 }}>{lbl.index}</sub>
+        )}
+        {lbl.prime ? "'" : ""}
+      </span>
+    </span>
+  );
 
   return (
     <div className="space-y-2">
@@ -311,14 +355,19 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
             <span className="inline px-2 py-1 text-xs font-english border border-border rounded-md bg-background text-foreground break-words max-w-full">
               {words.map((w, wi) => (
                 <span key={wi}>
-                  <span
-                    onClick={isEditing ? () => handleWordInteraction(i, wi) : undefined}
-                    onDoubleClick={isEditing ? () => handleWordDoubleClick(i, wi) : undefined}
-                    className={`${(w.isVerb || (subjectUnderlineEnabled && w.isSubject)) && /[A-Za-z]/.test(w.word) ? "underline decoration-foreground decoration-2 underline-offset-[3px]" : ""}
-                      ${isEditing ? "cursor-pointer hover:bg-muted/80 rounded-sm" : ""}`}
-                    title={isEditing ? "클릭: 분할 / 더블클릭: 동사 표시" : ""}
-                  >
-                    {w.word}
+                  <span className="inline-flex flex-col items-center align-baseline">
+                    <span
+                      onClick={isEditing ? () => handleWordInteraction(i, wi) : undefined}
+                      onDoubleClick={isEditing ? () => handleWordDoubleClick(i, wi) : undefined}
+                      className={`${(w.isVerb || (subjectUnderlineEnabled && w.isSubject)) && /[A-Za-z]/.test(w.word) ? "underline decoration-foreground decoration-2 underline-offset-[3px]" : ""}
+                        ${isEditing ? "cursor-pointer hover:bg-muted/80 rounded-sm" : ""}`}
+                      title={isEditing ? "클릭: 분할 / 더블클릭: 동사 표시" : ""}
+                    >
+                      {w.word}
+                    </span>
+                    {wordLabelLookup.get(`${i}:${wi}`)
+                      ? renderSvLabel(wordLabelLookup.get(`${i}:${wi}`)!)
+                      : null}
                   </span>
                   {wi < words.length - 1 ? " " : ""}
                 </span>

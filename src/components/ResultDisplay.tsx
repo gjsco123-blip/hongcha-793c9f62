@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Chunk, mergeAdverbsBetweenVerbs } from "@/lib/chunk-utils";
 import { useFeatureFlag } from "@/hooks/useFeatureFlag";
+import { computeSvLabels, type SvLabel } from "@/lib/sv-labels";
 
 interface ResultDisplayProps {
   label: string;
@@ -13,7 +14,29 @@ interface ResultDisplayProps {
 
 export function ResultDisplay({ label, chunks, text, isKorean, onTextChange, onChunkTextChange }: ResultDisplayProps) {
   const subjectUnderlineEnabled = useFeatureFlag("subject_underline");
+  const svLabelsEnabled = useFeatureFlag("sv_labels");
   const [editingText, setEditingText] = useState(false);
+  // Compute s/v labels at the chunk-collection level (not pre-merge), so
+  // parallel groups across chunks share the same numbering.
+  const svMap = chunks && !isKorean ? computeSvLabels(chunks) : null;
+
+  const renderSvLabel = (lbl: SvLabel) => (
+    <span
+      className="inline-flex flex-col items-center align-baseline"
+      style={{ height: 0, overflow: "visible" }}
+    >
+      <span
+        className="text-[9px] leading-none text-muted-foreground font-sans"
+        style={{ marginTop: 2, fontStyle: "italic" }}
+      >
+        {lbl.base}
+        {lbl.index !== undefined && (
+          <sub className="text-[7px]" style={{ lineHeight: 1 }}>{lbl.index}</sub>
+        )}
+        {lbl.prime ? "'" : ""}
+      </span>
+    </span>
+  );
   const [editingChunkIdx, setEditingChunkIdx] = useState<number | null>(null);
   const [draftText, setDraftText] = useState("");
   const [draftChunk, setDraftChunk] = useState("");
@@ -82,18 +105,42 @@ export function ResultDisplay({ label, chunks, text, isKorean, onTextChange, onC
                     }}
                   >
                     {!isKorean
-                      ? mergeAdverbsBetweenVerbs(chunk.segments).segments.map((seg, si) => (
-                          <span
-                            key={si}
-                            className={
-                              seg.isVerb || (subjectUnderlineEnabled && seg.isSubject)
-                                ? "underline decoration-foreground decoration-2 underline-offset-[3px]"
-                                : ""
+                      ? (() => {
+                          const { segments: mergedSegs, indexMap } = mergeAdverbsBetweenVerbs(chunk.segments);
+                          // Build merged-index → label by taking the first label found
+                          // among original segments mapped to that merged index.
+                          const mergedLabels = new Map<number, SvLabel>();
+                          if (svMap && svLabelsEnabled) {
+                            for (let oi = 0; oi < chunk.segments.length; oi++) {
+                              const lbl = svMap.get(`${i}:${oi}`);
+                              if (lbl && !mergedLabels.has(indexMap[oi])) {
+                                mergedLabels.set(indexMap[oi], lbl);
+                              }
                             }
-                          >
-                            {seg.text}
-                          </span>
-                        ))
+                          }
+                          return mergedSegs.map((seg, si) => {
+                            const showUnderline =
+                              seg.isVerb || (subjectUnderlineEnabled && seg.isSubject);
+                            const lbl = mergedLabels.get(si);
+                            return (
+                              <span
+                                key={si}
+                                className="inline-flex flex-col items-center align-baseline"
+                              >
+                                <span
+                                  className={
+                                    showUnderline
+                                      ? "underline decoration-foreground decoration-2 underline-offset-[3px]"
+                                      : ""
+                                  }
+                                >
+                                  {seg.text}
+                                </span>
+                                {lbl ? renderSvLabel(lbl) : null}
+                              </span>
+                            );
+                          });
+                        })()
                       : chunk.text}
                   </span>
                 )}

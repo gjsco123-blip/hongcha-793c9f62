@@ -61,6 +61,7 @@ function triggerDownload(blob: Blob, filename: string) {
 
 export function useBatchPdfExport() {
   const subjectUnderlineEnabled = useFeatureFlag("subject_underline");
+  const svLabelsEnabled = useFeatureFlag("sv_labels");
 
   const batchExportSyntax = useCallback(
     async (passages: Passage[], selectedIds: Set<string>, schoolName: string, teacherLabel?: string) => {
@@ -85,13 +86,14 @@ export function useBatchPdfExport() {
           subtitle: p.name,
           teacherLabel,
           subjectUnderlineEnabled,
+          svLabelsEnabled,
         });
         blobs.push(await pdf(doc).toBlob());
       }
       const merged = await mergePdfBlobs(blobs);
       triggerDownload(merged, `${schoolName}_구문분석.pdf`);
     },
-    [subjectUnderlineEnabled]
+    [subjectUnderlineEnabled, svLabelsEnabled]
   );
 
   const batchExportPreview = useCallback(
@@ -161,13 +163,14 @@ export function useBatchPdfExport() {
           subtitle: p.name,
           teacherLabel,
           subjectUnderlineEnabled,
+          svLabelsEnabled,
         });
         blobs.push(await pdf(syntaxDoc).toBlob());
       }
       const merged = await mergePdfBlobs(blobs);
       triggerDownload(merged, `${schoolName}_통합.pdf`);
     },
-    [subjectUnderlineEnabled]
+    [subjectUnderlineEnabled, svLabelsEnabled]
   );
 
   const batchExportWorkbook = useCallback(

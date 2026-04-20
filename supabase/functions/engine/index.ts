@@ -34,7 +34,10 @@ function getTagNumbers(tagged: string): number[] {
 }
 
 function extractText(tagged: string): string {
-  return tagged.replace(/<\/?c\d+>/g, "").replace(/<\/?v>/g, "").replace(/<\/?s>/g, "");
+  return tagged
+    .replace(/<\/?c\d+>/g, "")
+    .replace(/<(?:v|s|vs|ss)(?:\s+g="\d+")?>/g, "")
+    .replace(/<\/(?:v|s|vs|ss)>/g, "");
 }
 
 function normalize(text: string): string {
@@ -292,6 +295,52 @@ Ask: "Does THIS exact NP perform a finite verb that comes AFTER it (or is right 
 - Each finite clause has **exactly ONE** subject NP. Never tag two <s> in the same clause.
 - **Exception**: a clause whose subject is a noun clause (that/wh/whether-clause) has ZERO <s> in the upper clause — the only <s> appears INSIDE the noun clause for the inner subject.
 
+## CLAUSE TYPE TAGS — MAIN vs SUBORDINATE
+
+There are FOUR tag forms for subject and verb. Pick exactly one per phrase:
+- \`<s>...</s>\` — subject of the **main (matrix) clause**
+- \`<v>...</v>\` — verb of the **main (matrix) clause**
+- \`<ss>...</ss>\` — subject of a **subordinate clause**
+- \`<vs>...</vs>\` — verb of a **subordinate clause**
+
+### What counts as subordinate (use ss/vs):
+1. **Adverbial clauses** introduced by because, when, while, if, although, though, since, as (= because/when), unless, until, before, after, so that, etc.
+   - "<c1>Because <ss>the rain</ss> <vs>stopped</vs></c1>, <c2><s>we</s> <v>went out</v></c2>"
+2. **Relative clauses** (who/whom/which/that/whose):
+   - Subject relative: "<c1><s>the people</s></c1> <c2>who <vs>are taking</vs> part</c2>" (relative-clause verb is vs; no inner subject)
+   - Object relative: "<c1><s>the book</s></c1> <c2>that <ss>I</ss> <vs>read</vs></c2>"
+3. **Noun clauses** (that/wh/whether/if when introducing a clause):
+   - "<c1>What <ss>he</ss> <vs>said</vs></c1> <c2><v>is</v> true</c2>" (inner = ss/vs, outer matrix verb = v)
+   - "<c1>That <ss>he</ss> <vs>lied</vs></c1> <c2><v>surprised</v> me</c2>"
+   - "<c1><s>I</s> <v>think</v></c1> <c2>that <ss>he</ss> <vs>is</vs> right</c2>"
+
+### What stays main (use s/v):
+- The single matrix clause that is NOT inside any subordinator.
+- For sentences with NO subordinate clauses, every subject/verb is s/v.
+
+### Key rule: nested subordination still uses ss/vs (we do not distinguish nesting depth).
+
+## PARALLEL (COORDINATION) GROUPS — g="N" attribute
+
+When two or more subjects, or two or more verbs, in the **same clause** are joined by coordinating conjunctions (and, or, but, nor) or commas in a list, mark them as a parallel group by adding an identical \`g="N"\` attribute. Use small integers (1, 2, 3, …) and re-use within the same coordinated set.
+
+- Two parallel verbs in main clause:
+  - "<c1><s>He</s> <v g="1">sang</v> and <v g="1">danced</v></c1>"
+- Three parallel verbs in main clause:
+  - "<c1><s>She</s> <v g="1">came</v>, <v g="1">saw</v>, and <v g="1">conquered</v></c1>"
+- Two parallel subjects in main clause (NOT to be confused with a single coordinated NP "John and Mary"):
+  - **Default**: "John and Mary" is ONE subject NP — wrap as a single <s>: "<s>John and Mary</s> <v>are</v> friends".
+  - Use parallel <s g="N"> ONLY when there are clearly two separate subject NPs each with its own verb structure that share the same finite verb. This is RARE — when in doubt, use a single <s>.
+- Parallel verbs in a subordinate clause use <vs g="N">:
+  - "<c1>because <ss>he</ss> <vs g="1">studied</vs> and <vs g="1">practiced</vs></c1> <c2><s>he</s> <v>passed</v></c2>"
+- Different clauses → DIFFERENT (or no) groups. Never reuse the same g across clause boundaries.
+- A solo verb/subject (only one in its role within its clause) → NO g attribute.
+
+### When NOT to use g:
+- Coordinated noun phrases inside a single subject NP: "<s>my brother and I</s>" — single <s>, no g.
+- Auxiliary chains (have been working) — these are ONE verb tag, not parallel.
+- Verbs in different clauses, even if coordinated at the discourse level.
+
 ## CHUNKING RULES
 - Tag count in english_tagged MUST equal tag count in korean_literal_tagged.
 - Each <cN> in English maps to exactly one <cN> in Korean.
@@ -330,7 +379,7 @@ You MUST respond by calling the "analysis_result" function with the structured o
             properties: {
               english_tagged: {
                 type: "string",
-                description: "English sentence with <c1>...</c1> <c2>...</c2> tags around each chunk. Main verbs within chunks are wrapped with <v>...</v> tags.",
+                description: "English sentence with <c1>...</c1> tags around each chunk. Main-clause verbs use <v>...</v>, subordinate-clause verbs use <vs>...</vs>. Main-clause subjects use <s>...</s>, subordinate-clause subjects use <ss>...</ss>. Parallel coordinated subjects/verbs in the same clause share an identical g=\"N\" attribute (e.g. <v g=\"1\">sang</v> ... <v g=\"1\">danced</v>).",
               },
               korean_literal_tagged: {
                 type: "string",
@@ -496,7 +545,9 @@ Return ONLY the Korean tagged string. Nothing else.`;
           if (repaired) {
             let cleanedRepair = repaired.replace(/```[\w]*\n?/g, '').replace(/```/g, '').trim();
             // Remove <v> tags from Korean (Korean doesn't use verb tags)
-            cleanedRepair = cleanedRepair.replace(/<\/?v>/g, '').replace(/<\/?s>/g, '');
+            cleanedRepair = cleanedRepair
+              .replace(/<(?:v|s|vs|ss)(?:\s+g="\d+")?>/g, '')
+              .replace(/<\/(?:v|s|vs|ss)>/g, '');
             const repairedTags = getTagNumbers(cleanedRepair);
             if (JSON.stringify(finalEnTags) === JSON.stringify(repairedTags)) {
               console.log("Korean literal repair successful");
@@ -515,13 +566,14 @@ Return ONLY the Korean tagged string. Nothing else.`;
     try {
       const subjectVerifyPrompt = `You are a precise English grammar SUBJECT-tagging verifier.
 
-Given an English sentence chunked with <c1>...</c1> tags, with <v>...</v> verb tags and <s>...</s> subject tags, your job is to VERIFY and CORRECT ONLY the <s> tags.
+Given an English sentence chunked with <c1>...</c1> tags, with verb tags (<v> for main, <vs> for subordinate) and subject tags (<s> for main, <ss> for subordinate), your job is to VERIFY and CORRECT ONLY the subject tags (<s> and <ss>).
 
 ## ABSOLUTE RULES:
 1. DO NOT change the <cN>...</cN> structure — same tags, same boundaries, same text.
 2. DO NOT change the text content at all — no word additions, removals, or reordering.
-3. DO NOT change <v>...</v> tags — leave them exactly as-is.
-4. ONLY add, remove, or adjust <s>...</s> tags.
+3. DO NOT change <v>...</v> or <vs>...</vs> tags — leave them and any g="N" attributes exactly as-is.
+4. ONLY add, remove, or adjust <s>...</s> and <ss>...</ss> tags. Preserve their g="N" attributes if present.
+5. Use <ss> when the subject is inside a subordinate clause (relative / adverbial / noun clause). Use <s> for the matrix-clause subject. The matching verb tag (<v> vs <vs>) signals the clause type — match it.
 
 ## What MUST have <s> tags (subjects ONLY):
 - The grammatical subject NP of each finite clause (수일치의 핵).
@@ -622,13 +674,13 @@ Return ONLY the corrected english_tagged string. Nothing else. No markdown, no c
           const oldText = normalize(extractText(lastResult!.english_tagged));
           const oldCTags = JSON.stringify(getTagNumbers(lastResult!.english_tagged));
           const newCTags = JSON.stringify(getTagNumbers(cleanedSubj));
-          const oldVCount = (lastResult!.english_tagged.match(/<v>/g) || []).length;
-          const newVCount = (cleanedSubj.match(/<v>/g) || []).length;
+          const oldVCount = (lastResult!.english_tagged.match(/<v(?:s)?(?:\s+g="\d+")?>/g) || []).length;
+          const newVCount = (cleanedSubj.match(/<v(?:s)?(?:\s+g="\d+")?>/g) || []).length;
 
           if (newText === oldText && oldCTags === newCTags && oldVCount === newVCount) {
             if (cleanedSubj !== lastResult!.english_tagged) {
-              const oldSCount = (lastResult!.english_tagged.match(/<s>/g) || []).length;
-              const newSCount = (cleanedSubj.match(/<s>/g) || []).length;
+              const oldSCount = (lastResult!.english_tagged.match(/<s(?:s)?(?:\s+g="\d+")?>/g) || []).length;
+              const newSCount = (cleanedSubj.match(/<s(?:s)?(?:\s+g="\d+")?>/g) || []).length;
               console.log(`Subject verification: <s> tags ${oldSCount} → ${newSCount}`);
               lastResult!.english_tagged = cleanedSubj;
             } else {
@@ -651,13 +703,14 @@ Return ONLY the corrected english_tagged string. Nothing else. No markdown, no c
     try {
       const verbVerifyPrompt = `You are a precise English grammar verb-tagging verifier.
 
-Given an English sentence that has been chunked with <c1>...</c1>, <c2>...</c2> tags and verb-tagged with <v>...</v> tags, your job is to VERIFY and CORRECT ONLY the <v> tags.
+Given an English sentence chunked with <c1>...</c1> tags and verb-tagged with <v> (main clause) or <vs> (subordinate clause) tags, your job is to VERIFY and CORRECT ONLY the verb tags (<v> and <vs>).
 
 ## ABSOLUTE RULES:
 1. DO NOT change the <cN>...</cN> structure in any way — same tags, same boundaries, same text.
 2. DO NOT change the text content at all — no word additions, removals, or reordering.
-3. ONLY add, remove, or adjust <v>...</v> tags.
-4. PRESERVE all <s>...</s> tags exactly as they are. Do NOT remove, add, or modify them.
+3. ONLY add, remove, or adjust <v>...</v> and <vs>...</vs> tags. Preserve g="N" attributes if present.
+4. PRESERVE all <s>...</s> and <ss>...</ss> tags exactly as they are. Do NOT remove, add, or modify them.
+5. Use <vs> when the verb is inside a subordinate clause (relative / adverbial / noun clause). Use <v> for the matrix-clause verb. Match the clause type of the surrounding subject (<s> or <ss>).
 
 ## What MUST have <v> tags (finite verbs only):
 - Simple finite verbs: <v>discovered</v>, <v>is</v>, <v>runs</v>
@@ -714,8 +767,8 @@ Return ONLY the corrected english_tagged string. Nothing else.`;
           // Safety check: ensure text content is unchanged
           const verifiedText = normalize(extractText(cleaned));
           const originalText = normalize(extractText(lastResult!.english_tagged));
-          const origVCount = (lastResult!.english_tagged.match(/<v>/g) || []).length;
-          const newVCount = (cleaned.match(/<v>/g) || []).length;
+          const origVCount = (lastResult!.english_tagged.match(/<v(?:s)?(?:\s+g="\d+")?>/g) || []).length;
+          const newVCount = (cleaned.match(/<v(?:s)?(?:\s+g="\d+")?>/g) || []).length;
 
           if (verifiedText === originalText) {
             if (origVCount > 0 && newVCount === 0) {

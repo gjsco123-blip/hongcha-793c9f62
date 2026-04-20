@@ -3,6 +3,7 @@ import { PdfHeader } from "@/components/pdf/PdfHeader";
 import { Chunk, segmentsToWords, mergeAdverbsBetweenVerbs } from "@/lib/chunk-utils";
 import { paginateResults, type PaginationSentence } from "@/lib/pdf-pagination";
 import { computeSuperscriptPositions, type SyntaxNoteWithTarget } from "@/lib/syntax-superscript";
+import { computeSvLabels, type SvLabel } from "@/lib/sv-labels";
 
 Font.register({
   family: "Pretendard",
@@ -68,6 +69,7 @@ interface PdfDocumentProps {
   subtitle: string;
   teacherLabel?: string;
   subjectUnderlineEnabled?: boolean;
+  svLabelsEnabled?: boolean;
 }
 
 // 5mm = 14.17pt, 12mm = 34.02pt
@@ -228,8 +230,32 @@ function renderChunksWithVerbUnderline(
   syntaxNotes?: SyntaxNote[],
   original?: string,
   subjectUnderlineEnabled: boolean = false,
+  svLabelsEnabled: boolean = false,
 ) {
   const elements: React.ReactNode[] = [];
+  // Pre-compute s/v labels once for this sentence (against original chunks).
+  const svMap = svLabelsEnabled ? computeSvLabels(chunks) : null;
+
+  // Inline subscript-style label rendered after a verb/subject segment.
+  // Uses verticalAlign: "sub" so the label appears slightly below the baseline
+  // — visually similar to "label under word" without affecting line height.
+  const renderInlineSvLabel = (lbl: SvLabel, key: string) => {
+    const labelText = `${lbl.base}${lbl.index !== undefined ? lbl.index : ""}${lbl.prime ? "'" : ""}`;
+    return (
+      <Text
+        key={key}
+        style={{
+          fontSize: 4.5,
+          color: "#666",
+          fontStyle: "italic" as const,
+          verticalAlign: "sub" as const,
+        }}
+      >
+        {"\u200A"}
+        {labelText}
+      </Text>
+    );
+  };
 
   const clampOffsetInSegment = (text: string, rawOffset: number) => {
     let o = Math.max(0, Math.min(rawOffset, text.length));
@@ -343,6 +369,16 @@ function renderChunksWithVerbUnderline(
     // Visual-only: collapse adverbs/whitespace between adjacent verb segments
     // so the underline stays continuous (e.g., "can always be injected").
     const { segments: renderSegments, indexMap } = mergeAdverbsBetweenVerbs(chunk.segments);
+    // Remap sv labels to merged segments (take the first label found).
+    const mergedSvLabels = new Map<number, SvLabel>();
+    if (svMap) {
+      for (let oi = 0; oi < chunk.segments.length; oi++) {
+        const lbl = svMap.get(`${ci}:${oi}`);
+        if (lbl && !mergedSvLabels.has(indexMap[oi])) {
+          mergedSvLabels.set(indexMap[oi], lbl);
+        }
+      }
+    }
     // Remap superscripts from original segment index -> merged segment index.
     // Offsets within a merged segment are recomputed as (prefix length within
     // merged text) + (original offset within original segment).
@@ -413,6 +449,14 @@ function renderChunksWithVerbUnderline(
         cursor = event.offset;
       });
       pushSegmentText(seg.text.slice(cursor), `${ci}-${si}-txt-tail`);
+
+      // Append sv label for this segment (if any). Render as an inline absolute
+      // text so it sits centered under the underlined word(s) without affecting
+      // line height. We approximate centering by placing it after the segment.
+      const svLbl = mergedSvLabels.get(si);
+      if (svLbl && (seg.isVerb || seg.isSubject) && /[A-Za-z]/.test(seg.text)) {
+        elements.push(renderInlineSvLabel(svLbl, `${ci}-${si}-sv`));
+      }
     });
     if (ci < chunks.length - 1) {
       elements.push(<Text key={`slash-${ci}`}> / </Text>);
@@ -434,12 +478,14 @@ function SentenceBlock({
   isLast,
   teacherLabel = "홍T",
   subjectUnderlineEnabled = false,
+  svLabelsEnabled = false,
 }: {
   result: SentenceResult;
   index: number;
   isLast: boolean;
   teacherLabel?: string;
   subjectUnderlineEnabled?: boolean;
+  svLabelsEnabled?: boolean;
 }) {
   return (
     <View
@@ -460,6 +506,7 @@ function SentenceBlock({
                 result.syntaxNotes,
                 result.original,
                 subjectUnderlineEnabled,
+                svLabelsEnabled,
               )
             : result.original}
         </Text>
@@ -532,6 +579,7 @@ export function PdfDocument({
   subtitle,
   teacherLabel = "홍T",
   subjectUnderlineEnabled = false,
+  svLabelsEnabled = false,
 }: PdfDocumentProps) {
   const { pages } = paginateResults(results);
 
@@ -564,6 +612,7 @@ export function PdfDocument({
                       isLast={isLastInPage}
                       teacherLabel={teacherLabel}
                       subjectUnderlineEnabled={subjectUnderlineEnabled}
+                      svLabelsEnabled={svLabelsEnabled}
                     />
                   );
                 })}
