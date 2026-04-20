@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
     right: 0,
     marginTop: 0.5,
     fontSize: 7,
-    fontFamily: "Pretendard",
+    fontFamily: "GangwonEduSaeeum",
     letterSpacing: -0.2,
     color: "#000",
     textAlign: "center",
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
   },
   svLabelSub: {
     fontSize: 5,
-    fontFamily: "Pretendard",
+    fontFamily: "GangwonEduSaeeum",
     color: "#000",
     verticalAlign: "sub",
   },
@@ -294,9 +294,7 @@ function renderChunksWithVerbUnderline(
     <Text key={key} style={styles.svLabelAbsolute} fixed={false}>
       {lbl.base}
       {lbl.prime ? "'" : ""}
-      {lbl.index !== undefined ? (
-        <Text style={styles.svLabelSub}>{lbl.index}</Text>
-      ) : null}
+      {lbl.index !== undefined ? <Text style={styles.svLabelSub}>{lbl.index}</Text> : null}
     </Text>
   );
 
@@ -456,13 +454,9 @@ function renderChunksWithVerbUnderline(
         .map(([offset, ids]) => ({ offset, ids }));
 
       const isSubjectSeg = subjectUnderlineEnabled && !!seg.isSubject;
-      const isLabeledSeg =
-        (seg.isVerb || isSubjectSeg) && /[A-Za-z]/.test(seg.text);
+      const isLabeledSeg = (seg.isVerb || isSubjectSeg) && /[A-Za-z]/.test(seg.text);
       const svLbl = mergedSvLabels.get(si);
-      const hasSvLabel =
-        svLbl !== undefined &&
-        (seg.isVerb || seg.isSubject) &&
-        /[A-Za-z]/.test(seg.text);
+      const hasSvLabel = svLbl !== undefined && (seg.isVerb || seg.isSubject) && /[A-Za-z]/.test(seg.text);
 
       // Build the text spans for this segment (underlined parts + sups).
       const segChildren: React.ReactNode[] = [];
