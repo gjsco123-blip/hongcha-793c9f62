@@ -721,6 +721,12 @@ Given an English sentence chunked with <c1>...</c1> tags, with verb tags (<v> fo
 10. **Whole noun clause as subject**: NEVER wrap an entire that/wh/whether-clause in <s>. If you find <s>What he said</s> or <s>That he lied</s>, REMOVE the outer <s> and instead tag only the inner subject (e.g. <s>he</s>).
 11. **Relative pronouns themselves** (who/whom/which/that/whose as relative): NEVER <s>. If you find <s>who</s>, <s>which</s>, <s>that</s> inside a relative clause, REMOVE.
 12. **Subject relative clause has zero <s>**: if a chunk starts with a relative pronoun followed immediately by <v> (e.g. "who <v>are taking</v>..."), the chunk must contain NO <s> at all.
+13. **Antecedent that is itself an OBJECT of the outer verb**: NEVER tag. Pattern: `<v>outer-V</v> NP <ss>inner-S</ss> <vs>inner-V</vs>` — the NP between outer-V and inner-S is the OBJECT of outer-V (and the antecedent of an object relative clause with omitted relative pronoun). It must stay UNTAGGED.
+    - WRONG:   <v>interpret</v> <ss>the messages</ss> <ss>they</ss> <vs>receive</vs>
+    - CORRECT: <vs>interpret</vs> the messages <ss>they</ss> <vs>receive</vs>
+    - WRONG:   <v>know</v> <s>the man</s> <s>she</s> <v>met</v>
+    - CORRECT: <v>know</v> the man <s>she</s> <v>met</v>
+    - Rule: if you see two consecutive subject tags with no verb between them, the FIRST one is wrong — REMOVE it.
 
 ## Per-clause rule:
 - Each finite clause has at most ONE <s>. If you see two <s> in one clause, the second one is wrong (likely an object/complement) — REMOVE it.
