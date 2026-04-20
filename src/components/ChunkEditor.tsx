@@ -253,24 +253,52 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
   const displayChunks = isEditing ? draftChunks : chunks;
   const svMap = svLabelsEnabled ? computeSvLabels(displayChunks) : null;
 
-  // Compute per-chunk word-level labels by re-deriving boundaries from segments.
-  // We label only the first word of each labeled segment so adjacent words in the
-  // same segment don't repeat the marker.
+  // Compute per-chunk word-level labels using the SAME merge logic as the PDF
+  // (mergeAdverbsBetweenVerbs) so phrases like "are even happily endorsed" get
+  // a single label instead of two. Word indices remain based on the ORIGINAL
+  // segments (so click/double-click/contextmenu coordinates are unchanged).
   const wordLabelLookup = (() => {
     const map = new Map<string, SvLabel>();
     if (!svMap) return map;
     displayChunks.forEach((c, ci) => {
-      let wIdx = 0;
-      c.segments.forEach((seg, si) => {
-        const lbl = svMap.get(`${ci}:${si}`);
-        const segWords = seg.text.split(/(\s+)/).filter((p) => p.trim());
-        if (lbl && segWords.length > 0) {
-          // Place label under the LAST word of the segment for verbs (e.g. "are taking" → under "taking")
-          // and FIRST word for subjects (e.g. "The students" → under "The"). Centering looks more natural.
-          const targetOffset = lbl.base === "v" ? segWords.length - 1 : 0;
-          map.set(`${ci}:${wIdx + targetOffset}`, lbl);
+      const { segments: mergedSegs, indexMap } = mergeAdverbsBetweenVerbs(c.segments);
+      // Pick first label found per merged segment.
+      const mergedLabels = new Map<number, SvLabel>();
+      for (let oi = 0; oi < c.segments.length; oi++) {
+        const lbl = svMap.get(`${ci}:${oi}`);
+        if (lbl && !mergedLabels.has(indexMap[oi])) {
+          mergedLabels.set(indexMap[oi], lbl);
         }
-        wIdx += segWords.length;
+      }
+      // Word offsets per ORIGINAL segment (so we can resolve word positions).
+      const segWordCounts = c.segments.map(
+        (seg) => seg.text.split(/(\s+)/).filter((p) => p.trim()).length,
+      );
+      const segWordStart: number[] = [];
+      let acc = 0;
+      for (const n of segWordCounts) {
+        segWordStart.push(acc);
+        acc += n;
+      }
+      // For each merged segment with a label, find its original-word range and
+      // place the marker under the LAST word for verbs, FIRST word for subjects.
+      mergedSegs.forEach((_, mi) => {
+        const lbl = mergedLabels.get(mi);
+        if (!lbl) return;
+        // Original segments that map to this merged segment.
+        let firstWord = Infinity;
+        let lastWord = -Infinity;
+        for (let oi = 0; oi < c.segments.length; oi++) {
+          if (indexMap[oi] !== mi) continue;
+          const start = segWordStart[oi];
+          const end = start + segWordCounts[oi] - 1;
+          if (segWordCounts[oi] === 0) continue;
+          if (start < firstWord) firstWord = start;
+          if (end > lastWord) lastWord = end;
+        }
+        if (firstWord === Infinity) return;
+        const target = lbl.base === "v" ? lastWord : firstWord;
+        map.set(`${ci}:${target}`, lbl);
       });
     });
     return map;
