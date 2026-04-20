@@ -365,6 +365,14 @@ Tag the **head noun phrase (NP)** that serves as the grammatical subject (수일
    - CORRECT: <s>The students</s> who <v>passed</v> the exam <v>are</v> happy
    - WRONG: <s>The balance of power</s> <v>shifted</v>  (when "of power" is post-modifier — only if it's the actual subject NP)
      Note: if "of power" is restrictive part of subject head, include it; but in "<v>has shifted</v> the balance of power", "the balance of power" is the OBJECT.
+9. **Antecedent of an OBJECT relative clause when the antecedent ITSELF is the OBJECT of an outer verb**.
+   The antecedent stays UNTAGGED (it's already an object). Only the inner subject of the relative clause gets <ss>.
+   - Pattern: outer-V + [antecedent NP, which is the OBJECT of outer-V] + [optional 생략된 that/which/who] + inner-S + inner-V
+   - WRONG:   How <s>people</s> <v>interpret</v> <s>the messages</s> <s>they</s> <v>receive</v>
+   - CORRECT: How <ss>people</ss> <vs>interpret</vs> the messages <ss>they</ss> <vs>receive</vs>
+   - 이유: "the messages"는 interpret의 목적어 + 관계절(생략된 that/which)의 선행사. 목적어이므로 <s>/<ss>를 받지 않음.
+   - 또 다른 예: "<s>I</s> <v>know</v> the man <s>she</s> <v>met</v>" — "the man"은 know의 목적어 + met의 선행사 → 절대 <s>/<ss> 금지.
+   - 핵심 판단: 한 동사 직후에 NP가 나오고, 그 NP 뒤에 (관계대명사 없이도) 또 다른 S+V가 따라오면 → 그 NP는 무조건 OBJECT, 절대 주어 태그 금지.
 
 ### Strong negative few-shot examples (MEMORIZE):
 - "The policy allows citizens to retain freedom"
