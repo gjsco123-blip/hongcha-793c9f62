@@ -212,6 +212,50 @@ Tag the **head noun phrase (NP)** that serves as the grammatical subject (수일
 - <c1>There <v>are</v> <s>many students</s></c1> <c2>from Seoul</c2>
 - <c1><s>John and Mary</s> <v>are</v> friends</c1>
 
+### NEVER tag these as <s> — these are NOT subjects:
+1. **Direct objects** (동사 뒤 명사구는 기본적으로 목적어). After a transitive verb, the NP that follows is the object, NOT the subject.
+   - WRONG: <s>The policy</s> <v>allows</v> <s>citizens</s> to retain freedom  ← "citizens" is the OBJECT
+   - CORRECT: <s>The policy</s> <v>allows</v> citizens to retain freedom
+2. **Indirect objects**: "She <v>gave</v> him a book" → "him" and "a book" are objects, NOT <s>.
+3. **Object complements**: "They <v>elected</v> her president" → "her" and "president" are NOT <s>.
+4. **Subject complements** (linking verb 뒤의 보어): "<s>He</s> <v>is</v> a teacher" → "a teacher" is a complement, NOT <s>.
+   - WRONG: <s>He</s> <v>is</v> <s>a teacher</s>
+   - CORRECT: <s>He</s> <v>is</v> a teacher
+5. **Objects of prepositions**: "<s>The book</s> <v>is</v> on the table" → "the table" is NOT <s>.
+6. **Nouns inside infinitive phrases**: "<s>I</s> <v>want</v> to read the book" → "the book" is NOT <s>.
+7. **Nouns inside participial phrases**: "<v>holding</v> the umbrella" → "the umbrella" is NOT <s>.
+8. **Post-modifiers of the subject**: relative clauses, prepositional phrases, and participial phrases that follow the head noun are NOT part of <s>.
+   - WRONG: <s>The students who passed the exam</s> <v>are</v> happy
+   - CORRECT: <s>The students</s> who <v>passed</v> the exam <v>are</v> happy
+   - WRONG: <s>The balance of power</s> <v>shifted</v>  (when "of power" is post-modifier — only if it's the actual subject NP)
+     Note: if "of power" is restrictive part of subject head, include it; but in "<v>has shifted</v> the balance of power", "the balance of power" is the OBJECT.
+
+### Strong negative few-shot examples (MEMORIZE):
+- "The policy allows citizens to retain freedom"
+  - CORRECT: <c1><s>The policy</s> <v>allows</v> citizens</c1> <c2>to retain freedom</c2>
+  - WRONG:   <c1><s>The policy</s> <v>allows</v> <s>citizens</s></c1> <c2>to retain <s>freedom</s></c2>
+- "Technology has shifted the balance of power"
+  - CORRECT: <c1><s>Technology</s> <v>has shifted</v></c1> <c2>the balance of power</c2>
+  - WRONG:   <c1><s>Technology</s> <v>has shifted</v></c1> <c2><s>the balance of power</s></c2>
+- "The democratization of technology will not solve the problem"
+  - CORRECT: <c1><s>The democratization of technology</s> <v>will not solve</v></c1> <c2>the problem</c2>
+  - WRONG:   <c1><s>The democratization of technology</s> <v>will not solve</v> <s>the problem</s></c1>
+- "She is a doctor"
+  - CORRECT: <c1><s>She</s> <v>is</v> a doctor</c1>
+  - WRONG:   <c1><s>She</s> <v>is</v> <s>a doctor</s></c1>
+- "He gave her a present"
+  - CORRECT: <c1><s>He</s> <v>gave</v> her a present</c1>
+  - WRONG:   <c1><s>He</s> <v>gave</v> <s>her</s> <s>a present</s></c1>
+
+### Decision rule before tagging any NP as <s>:
+Ask: "Does THIS exact NP perform a finite verb that comes AFTER it (or is right next to it as a clause subject)?"
+- If YES → <s>
+- If it sits AFTER a finite verb in the same clause → it's the OBJECT or COMPLEMENT → NO <s>
+- If it's inside a prepositional/infinitive/participial phrase → NO <s>
+
+### Per-clause limit:
+- Each finite clause has **exactly ONE** subject NP. Never tag two <s> in the same clause.
+
 ## CHUNKING RULES
 - Tag count in english_tagged MUST equal tag count in korean_literal_tagged.
 - Each <cN> in English maps to exactly one <cN> in Korean.
@@ -429,6 +473,104 @@ Return ONLY the Korean tagged string. Nothing else.`;
       } catch (repairErr) {
         console.warn("Korean literal repair failed:", repairErr);
       }
+    }
+
+    // === Subject tag verification pass (runs BEFORE verb verification) ===
+    try {
+      const subjectVerifyPrompt = `You are a precise English grammar SUBJECT-tagging verifier.
+
+Given an English sentence chunked with <c1>...</c1> tags, with <v>...</v> verb tags and <s>...</s> subject tags, your job is to VERIFY and CORRECT ONLY the <s> tags.
+
+## ABSOLUTE RULES:
+1. DO NOT change the <cN>...</cN> structure — same tags, same boundaries, same text.
+2. DO NOT change the text content at all — no word additions, removals, or reordering.
+3. DO NOT change <v>...</v> tags — leave them exactly as-is.
+4. ONLY add, remove, or adjust <s>...</s> tags.
+
+## What MUST have <s> tags (subjects ONLY):
+- The grammatical subject NP of each finite clause (수일치의 핵).
+- Include determiner + pre-modifiers + head noun ONLY.
+- Subordinate clause subjects also: "Because <s>the rain</s> stopped, <s>we</s> went out".
+- Expletive It: "<s>It</s> <v>is</v> important...".
+- There/Here + be + NP: tag the NP after the verb. "There <v>are</v> <s>many students</s>".
+- Coordinated subject as one: "<s>John and Mary</s> <v>are</v>...".
+
+## What MUST NOT have <s> tags (REMOVE if found):
+1. **Direct objects** (NP after a transitive verb): "<v>allows</v> citizens" → "citizens" is NOT <s>.
+2. **Indirect objects**: "<v>gave</v> him a book" → "him", "a book" are NOT <s>.
+3. **Object complements**: "<v>elected</v> her president" → "her", "president" are NOT <s>.
+4. **Subject complements (linking verb 보어)**: "<v>is</v> a teacher" → "a teacher" is NOT <s>.
+5. **Objects of prepositions**: "on the table" → "the table" is NOT <s>.
+6. **Nouns inside infinitive phrases**: "to read the book" → "the book" is NOT <s>.
+7. **Nouns inside participial phrases**: "holding the umbrella" → "the umbrella" is NOT <s>.
+8. **Post-modifiers of the subject** (relative clauses, PPs, participles AFTER head noun) → NOT inside <s>.
+9. **Parentheticals** (콤마 삽입구): "however", "for example" — NOT inside <s>.
+
+## Per-clause rule:
+- Each finite clause has exactly ONE <s>. If you see two <s> in one clause, the second one is wrong (likely an object/complement) — REMOVE it.
+
+## Constraint:
+- <s> and <v> must NEVER overlap or nest. Always adjacent.
+
+## Critical examples (apply these patterns):
+- WRONG:   <s>The policy</s> <v>allows</v> <s>citizens</s> to retain freedom
+  CORRECT: <s>The policy</s> <v>allows</v> citizens to retain freedom
+- WRONG:   <s>Technology</s> <v>has shifted</v> <s>the balance of power</s>
+  CORRECT: <s>Technology</s> <v>has shifted</v> the balance of power
+- WRONG:   <s>She</s> <v>is</v> <s>a doctor</s>
+  CORRECT: <s>She</s> <v>is</v> a doctor
+
+Return ONLY the corrected english_tagged string. Nothing else. No markdown, no commentary.`;
+
+      const subjVerifyResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [
+            { role: "system", content: subjectVerifyPrompt },
+            { role: "user", content: lastResult!.english_tagged },
+          ],
+        }),
+      });
+
+      if (subjVerifyResponse.ok) {
+        const subjData = await subjVerifyResponse.json();
+        const subjVerified = subjData.choices?.[0]?.message?.content?.trim();
+        if (subjVerified) {
+          let cleanedSubj = subjVerified.replace(/```[\w]*\n?/g, '').replace(/```/g, '').trim();
+
+          // Safety: ensure text content + chunk structure + verb tags unchanged
+          const newText = normalize(extractText(cleanedSubj));
+          const oldText = normalize(extractText(lastResult!.english_tagged));
+          const oldCTags = JSON.stringify(getTagNumbers(lastResult!.english_tagged));
+          const newCTags = JSON.stringify(getTagNumbers(cleanedSubj));
+          const oldVCount = (lastResult!.english_tagged.match(/<v>/g) || []).length;
+          const newVCount = (cleanedSubj.match(/<v>/g) || []).length;
+
+          if (newText === oldText && oldCTags === newCTags && oldVCount === newVCount) {
+            if (cleanedSubj !== lastResult!.english_tagged) {
+              const oldSCount = (lastResult!.english_tagged.match(/<s>/g) || []).length;
+              const newSCount = (cleanedSubj.match(/<s>/g) || []).length;
+              console.log(`Subject verification: <s> tags ${oldSCount} → ${newSCount}`);
+              lastResult!.english_tagged = cleanedSubj;
+            } else {
+              console.log("Subject verification: no changes needed");
+            }
+          } else {
+            console.warn("Subject verification: structure/text/verb tags changed, discarding", {
+              textChanged: newText !== oldText,
+              cTagsChanged: oldCTags !== newCTags,
+              vCountChanged: oldVCount !== newVCount,
+            });
+          }
+        }
+      }
+    } catch (subjErr) {
+      console.warn("Subject verification failed, using original:", subjErr);
     }
 
     // === Verb tag verification pass ===
