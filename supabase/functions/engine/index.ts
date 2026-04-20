@@ -205,8 +205,29 @@ Tag the **head noun phrase (NP)** that serves as the grammatical subject (수일
   - The upper clause (e.g. "<v>is</v> true") may legitimately have NO <s> at all. That is correct.
 
 ### What to EXCLUDE from <s>:
-- **Post-modifiers** (전치사구/관계절/분사구/동격): "<s>The students</s> from Seoul who passed are..." — exclude "from Seoul who passed"
+- **Post-modifiers** (전치사구/관계절/분사구/동격/to부정사): STRICT — nothing after the head noun goes inside <s>. Cut <s> at the head noun.
+  - Prepositional phrase: "<s>something</s> like this thought", "<s>the man</s> with a hat", "<s>the balance</s> of power" (when subject)
+  - Relative clause: "<s>the book</s> that I read", "<s>the people</s> who are taking part"
+  - Participial: "<s>students</s> taking the test", "<s>the door</s> opened by him"
+  - To-infinitive: "<s>the way</s> to learn"
+  - Appositive: "<s>my friend</s>, a doctor, ..."
+  - WRONG: <s>something like this thought</s>  → CORRECT: <s>something</s> like this thought
+  - WRONG: <s>the man with a hat</s>           → CORRECT: <s>the man</s> with a hat
+  - WRONG: <s>students taking the test</s>     → CORRECT: <s>students</s> taking the test
 - **Parentheticals/insertions** (콤마로 분리된 삽입구): "<s>The students</s>, however, are confused" — "however" is OUTSIDE <s>
+
+### Relative clauses (관계절) — special <s> rules:
+- A relative clause modifies its antecedent (선행사). Tag the **antecedent** as <s> (head noun only — no PP/relative tail).
+- **Subject relative clause** (관계대명사가 관계절의 주어 역할: who/which/that + V): the relative pronoun itself is NOT <s>. The relative-clause chunk has NO <s> at all — only <v>.
+  - CORRECT: <s>the people</s> who <v>are taking</v> part in it
+  - CORRECT: <s>the book</s> which <v>changed</v> my life
+  - WRONG:   <s>the people</s> <s>who</s> <v>are taking</v> part in it
+  - WRONG:   <s>the people who are taking part in it</s>
+- **Object relative clause** (관계대명사가 목적어/전치사 목적어 역할: who(m)/which/that + S + V): tag the inner subject (the real S that follows) as <s>. The relative pronoun itself is NEVER <s>.
+  - CORRECT: <s>the book</s> that <s>I</s> <v>read</v>
+  - CORRECT: <s>the man</s> whom <s>she</s> <v>met</v>
+  - WRONG:   <s>that</s> ... / <s>which</s> ...
+- Decision: if the token immediately after the relative pronoun is a finite verb (<v>) → subject-type → no <s> in the relative clause. If it is a noun phrase followed by <v> → object-type → tag that NP as <s>.
 - Adverbs and conjunctions
 
 ### CRITICAL constraint:
