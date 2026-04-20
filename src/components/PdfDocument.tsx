@@ -230,8 +230,38 @@ function renderChunksWithVerbUnderline(
   syntaxNotes?: SyntaxNote[],
   original?: string,
   subjectUnderlineEnabled: boolean = false,
+  svLabelsEnabled: boolean = false,
 ) {
   const elements: React.ReactNode[] = [];
+  // Pre-compute s/v labels once for this sentence (against original chunks).
+  const svMap = svLabelsEnabled ? computeSvLabels(chunks) : null;
+
+  const renderInlineSvLabel = (lbl: SvLabel, key: string) => {
+    // Absolute-positioned label so it doesn't affect line height.
+    // Parent <Text> for the segment must be position: relative.
+    return (
+      <Text
+        key={key}
+        style={{
+          position: "absolute" as const,
+          fontSize: 4.5,
+          color: "#666",
+          left: 0,
+          right: 0,
+          top: 9,
+          textAlign: "center" as const,
+          fontStyle: "italic" as const,
+          lineHeight: 1,
+        }}
+      >
+        {lbl.base}
+        {lbl.index !== undefined ? (
+          <Text style={{ fontSize: 3.5, lineHeight: 1, verticalAlign: "sub" as const }}>{lbl.index}</Text>
+        ) : null}
+        {lbl.prime ? "'" : ""}
+      </Text>
+    );
+  };
 
   const clampOffsetInSegment = (text: string, rawOffset: number) => {
     let o = Math.max(0, Math.min(rawOffset, text.length));
@@ -345,6 +375,16 @@ function renderChunksWithVerbUnderline(
     // Visual-only: collapse adverbs/whitespace between adjacent verb segments
     // so the underline stays continuous (e.g., "can always be injected").
     const { segments: renderSegments, indexMap } = mergeAdverbsBetweenVerbs(chunk.segments);
+    // Remap sv labels to merged segments (take the first label found).
+    const mergedSvLabels = new Map<number, SvLabel>();
+    if (svMap) {
+      for (let oi = 0; oi < chunk.segments.length; oi++) {
+        const lbl = svMap.get(`${ci}:${oi}`);
+        if (lbl && !mergedSvLabels.has(indexMap[oi])) {
+          mergedSvLabels.set(indexMap[oi], lbl);
+        }
+      }
+    }
     // Remap superscripts from original segment index -> merged segment index.
     // Offsets within a merged segment are recomputed as (prefix length within
     // merged text) + (original offset within original segment).
@@ -415,6 +455,14 @@ function renderChunksWithVerbUnderline(
         cursor = event.offset;
       });
       pushSegmentText(seg.text.slice(cursor), `${ci}-${si}-txt-tail`);
+
+      // Append sv label for this segment (if any). Render as an inline absolute
+      // text so it sits centered under the underlined word(s) without affecting
+      // line height. We approximate centering by placing it after the segment.
+      const svLbl = mergedSvLabels.get(si);
+      if (svLbl && (seg.isVerb || seg.isSubject) && /[A-Za-z]/.test(seg.text)) {
+        elements.push(renderInlineSvLabel(svLbl, `${ci}-${si}-sv`));
+      }
     });
     if (ci < chunks.length - 1) {
       elements.push(<Text key={`slash-${ci}`}> / </Text>);
