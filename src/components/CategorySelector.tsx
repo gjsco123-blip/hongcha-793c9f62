@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Plus, Trash2, LogOut, ChevronRight, BookOpen, Building2 as SchoolIcon, GripVertical, Pencil, Check, X, Download } from "lucide-react";
+import { Plus, Trash2, LogOut, ChevronRight, BookOpen, Building2 as SchoolIcon, GripVertical, Pencil, Check, X, Download, Settings } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { isAdmin } from "@/lib/admin";
+import { useNavigate } from "react-router-dom";
 import { School, Passage } from "@/hooks/useCategories";
 import { useBatchPdfExport } from "@/hooks/useBatchPdfExport";
 import { useTeacherLabel } from "@/hooks/useTeacherLabel";
