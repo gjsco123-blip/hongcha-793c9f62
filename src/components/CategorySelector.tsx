@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Plus, Trash2, LogOut, ChevronRight, BookOpen, Building2 as SchoolIcon, GripVertical, Pencil, Check, X, Download } from "lucide-react";
+import { Plus, Trash2, LogOut, ChevronRight, BookOpen, Building2 as SchoolIcon, GripVertical, Pencil, Check, X, Download, Settings } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { isAdmin } from "@/lib/admin";
+import { useNavigate } from "react-router-dom";
 import { School, Passage } from "@/hooks/useCategories";
 import { useBatchPdfExport } from "@/hooks/useBatchPdfExport";
 import { useTeacherLabel } from "@/hooks/useTeacherLabel";
@@ -31,6 +33,7 @@ export function CategoryHeaderBar({
   onClearPassage,
 }: CategorySelectorProps) {
   const { signOut, user } = useAuth();
+  const navigate = useNavigate();
   const selectedSchool = schools.find((s) => s.id === selectedSchoolId);
   const selectedPassage = passages.find((p) => p.id === selectedPassageId);
 
@@ -46,10 +49,19 @@ export function CategoryHeaderBar({
         <BookOpen className="w-3.5 h-3.5" />
         <span className="font-medium">{selectedPassage?.name}</span>
       </button>
+      {isAdmin(user) && (
+        <button
+          onClick={() => navigate("/admin")}
+          title="Admin settings"
+          className="ml-auto p-1 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Settings className="w-3.5 h-3.5" />
+        </button>
+      )}
       <button
         onClick={signOut}
         title={user?.email}
-        className="ml-auto p-1 text-muted-foreground hover:text-foreground transition-colors"
+        className={`${isAdmin(user) ? "" : "ml-auto "}p-1 text-muted-foreground hover:text-foreground transition-colors`}
       >
         <LogOut className="w-3.5 h-3.5" />
       </button>
@@ -117,6 +129,7 @@ export function CategoryFullScreen({
   onReorderPassages,
 }: CategorySelectorProps) {
   const { signOut, user } = useAuth();
+  const navigate = useNavigate();
   const { teacherLabel } = useTeacherLabel();
   const { batchExportSyntax, batchExportPreview, batchExportCombined, batchExportWorkbook } = useBatchPdfExport();
   const [addingSchool, setAddingSchool] = useState(false);
@@ -274,14 +287,25 @@ export function CategoryFullScreen({
       {/* Top bar */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-border">
         <h1 className="text-sm font-semibold tracking-[0.15em] uppercase text-foreground">Syntax</h1>
-        <button
-          onClick={signOut}
-          title={user?.email}
-          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <span className="hidden sm:inline">{user?.email}</span>
-          <LogOut className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center gap-3">
+          {isAdmin(user) && (
+            <button
+              onClick={() => navigate("/admin")}
+              title="Admin settings"
+              className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Settings className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <button
+            onClick={signOut}
+            title={user?.email}
+            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <span className="hidden sm:inline">{user?.email}</span>
+            <LogOut className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* Content */}
