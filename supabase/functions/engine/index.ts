@@ -673,13 +673,13 @@ Return ONLY the corrected english_tagged string. Nothing else. No markdown, no c
           const oldText = normalize(extractText(lastResult!.english_tagged));
           const oldCTags = JSON.stringify(getTagNumbers(lastResult!.english_tagged));
           const newCTags = JSON.stringify(getTagNumbers(cleanedSubj));
-          const oldVCount = (lastResult!.english_tagged.match(/<v>/g) || []).length;
-          const newVCount = (cleanedSubj.match(/<v>/g) || []).length;
+          const oldVCount = (lastResult!.english_tagged.match(/<v(?:s)?(?:\s+g="\d+")?>/g) || []).length;
+          const newVCount = (cleanedSubj.match(/<v(?:s)?(?:\s+g="\d+")?>/g) || []).length;
 
           if (newText === oldText && oldCTags === newCTags && oldVCount === newVCount) {
             if (cleanedSubj !== lastResult!.english_tagged) {
-              const oldSCount = (lastResult!.english_tagged.match(/<s>/g) || []).length;
-              const newSCount = (cleanedSubj.match(/<s>/g) || []).length;
+              const oldSCount = (lastResult!.english_tagged.match(/<s(?:s)?(?:\s+g="\d+")?>/g) || []).length;
+              const newSCount = (cleanedSubj.match(/<s(?:s)?(?:\s+g="\d+")?>/g) || []).length;
               console.log(`Subject verification: <s> tags ${oldSCount} → ${newSCount}`);
               lastResult!.english_tagged = cleanedSubj;
             } else {
