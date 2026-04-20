@@ -243,6 +243,9 @@ Tag the **head noun phrase (NP)** that serves as the grammatical subject (수일
 - <c1><s>It</s> <v>is</v> important</c1> <c2>that <s>he</s> <v>arrived</v></c2>
 - <c1>There <v>are</v> <s>many students</s></c1> <c2>from Seoul</c2>
 - <c1><s>John and Mary</s> <v>are</v> friends</c1>
+- <c1><s>something</s> like this thought probably <v>lay</v> behind...</c1>  ← post-modifier PP excluded
+- <c1><s>the people</s></c1> <c2>who <v>are taking</v> part in it</c2>  ← subject relative: NO <s> in c2
+- <c1><s>the book</s></c1> <c2>that <s>I</s> <v>read</v> last week</c2>  ← object relative: inner subject <s>
 
 ### NEVER tag these as <s> — these are NOT subjects:
 1. **Direct objects** (동사 뒤 명사구는 기본적으로 목적어). After a transitive verb, the NP that follows is the object, NOT the subject.
