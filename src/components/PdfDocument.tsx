@@ -259,7 +259,13 @@ const styles = StyleSheet.create({
   },
 });
 
-/** Render chunks with slash, applying underline to verbs and superscript for syntax notes */
+/**
+ * Render chunks as a flex-wrap row of word-level <Text> and labeled <View>
+ * wrappers. Labeled (verb/subject) segments use a relative wrapper so the
+ * s/v label can be absolutely positioned centered under the underlined word
+ * group without affecting line height. The caller must place the returned
+ * nodes inside a <View flexDirection="row" flexWrap="wrap"> container.
+ */
 function renderChunksWithVerbUnderline(
   chunks: Chunk[],
   syntaxNotes?: SyntaxNote[],
@@ -271,31 +277,17 @@ function renderChunksWithVerbUnderline(
   // Pre-compute s/v labels once for this sentence (against original chunks).
   const svMap = svLabelsEnabled ? computeSvLabels(chunks) : null;
 
-  // Inline subscript-style label rendered after a verb/subject segment.
-  // Uses verticalAlign: "sub" so the label sits slightly below the baseline
-  // (just under the underline) without affecting line height. Order:
-  // base → prime (') → subscript number, so the prime stays visible.
-  const renderInlineSvLabel = (lbl: SvLabel, key: string) => {
-    return (
-      <Text
-        key={key}
-        style={{
-          fontSize: 6,
-          color: "#000",
-          verticalAlign: "sub" as const,
-        }}
-      >
-        {"\u200A"}
-        {lbl.base}
-        {lbl.prime ? "'" : ""}
-        {lbl.index !== undefined ? (
-          <Text style={{ fontSize: 4.5, verticalAlign: "sub" as const }}>
-            {lbl.index}
-          </Text>
-        ) : null}
-      </Text>
-    );
-  };
+  // Absolute-positioned label rendered just below a verb/subject wrapper.
+  // Order: base → prime (') → subscript number.
+  const renderAbsoluteSvLabel = (lbl: SvLabel, key: string) => (
+    <Text key={key} style={styles.svLabelAbsolute} fixed={false}>
+      {lbl.base}
+      {lbl.prime ? "'" : ""}
+      {lbl.index !== undefined ? (
+        <Text style={styles.svLabelSub}>{lbl.index}</Text>
+      ) : null}
+    </Text>
+  );
 
   const clampOffsetInSegment = (text: string, rawOffset: number) => {
     let o = Math.max(0, Math.min(rawOffset, text.length));
