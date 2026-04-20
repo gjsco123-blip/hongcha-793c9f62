@@ -4,6 +4,10 @@ export interface ChunkSegment {
   text: string;
   isVerb: boolean;
   isSubject?: boolean;
+  /** True if this subject/verb belongs to a subordinate clause (relative/adverbial/noun clause). */
+  isSubordinate?: boolean;
+  /** Optional parallel-group id. Same id within the same clause means coordinated/parallel. */
+  groupId?: number;
 }
 
 export interface Chunk {
@@ -22,8 +26,8 @@ function hasEnglishLetterToken(word: string): boolean {
  */
 function parseTaggedSegments(raw: string): ChunkSegment[] {
   const segments: ChunkSegment[] = [];
-  // Match either <v>...</v> or <s>...</s> (non-greedy, no nesting)
-  const tagRegex = /<(v|s)>([\s\S]*?)<\/\1>/g;
+  // Match <v>, <s>, <vs>, <ss> with optional g="N" attribute (non-greedy, no nesting)
+  const tagRegex = /<(vs|ss|v|s)(?:\s+g="(\d+)")?>([\s\S]*?)<\/\1>/g;
   let lastIndex = 0;
   let match;
 
@@ -31,11 +35,18 @@ function parseTaggedSegments(raw: string): ChunkSegment[] {
     if (match.index > lastIndex) {
       segments.push({ text: raw.substring(lastIndex, match.index), isVerb: false });
     }
-    if (match[1] === "v") {
-      segments.push({ text: match[2], isVerb: true });
-    } else {
-      segments.push({ text: match[2], isVerb: false, isSubject: true });
-    }
+    const tag = match[1];
+    const groupId = match[2] ? parseInt(match[2], 10) : undefined;
+    const isVerb = tag === "v" || tag === "vs";
+    const isSubject = tag === "s" || tag === "ss";
+    const isSubordinate = tag === "vs" || tag === "ss";
+    segments.push({
+      text: match[3],
+      isVerb,
+      isSubject: isSubject || undefined,
+      isSubordinate: isSubordinate || undefined,
+      groupId,
+    });
     lastIndex = tagRegex.lastIndex;
   }
 
@@ -60,7 +71,9 @@ export function parseTagged(tagged: string): Chunk[] {
     matchedRanges.push({ start: match.index, end: regex.lastIndex });
     // Remove any residual <cN> or </cN> tags inside the chunk content
     const rawText = match[2].trim().replace(/<\/?c\d+>/g, "");
-    const cleanText = rawText.replace(/<\/?v>/g, "").replace(/<\/?s>/g, "");
+    const cleanText = rawText
+      .replace(/<(?:v|s|vs|ss)(?:\s+g="\d+")?>/g, "")
+      .replace(/<\/(?:v|s|vs|ss)>/g, "");
     chunks.push({
       tag: parseInt(match[1]),
       text: cleanText,
@@ -76,8 +89,8 @@ export function parseTagged(tagged: string): Chunk[] {
         const orphan = tagged
           .substring(pos, range.start)
           .replace(/<\/?c\d+>/g, "")
-          .replace(/<\/?v>/g, "")
-          .replace(/<\/?s>/g, "")
+          .replace(/<(?:v|s|vs|ss)(?:\s+g="\d+")?>/g, "")
+          .replace(/<\/(?:v|s|vs|ss)>/g, "")
           .trim();
         if (orphan) {
           // Find the chunk whose range starts at range.start (i.e. the next chunk)
@@ -100,8 +113,8 @@ export function parseTagged(tagged: string): Chunk[] {
       const trailing = tagged
         .substring(pos)
         .replace(/<\/?c\d+>/g, "")
-        .replace(/<\/?v>/g, "")
-        .replace(/<\/?s>/g, "")
+        .replace(/<(?:v|s|vs|ss)(?:\s+g="\d+")?>/g, "")
+        .replace(/<\/(?:v|s|vs|ss)>/g, "")
         .trim();
       if (trailing) {
         const last = chunks[chunks.length - 1];
