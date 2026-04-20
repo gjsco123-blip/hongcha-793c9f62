@@ -1,14 +1,4 @@
-import {
-  Canvas,
-  Document,
-  Font,
-  Line,
-  Page,
-  Svg,
-  StyleSheet,
-  Text,
-  View,
-} from "@react-pdf/renderer";
+import { Canvas, Document, Font, Line, Page, Svg, StyleSheet, Text, View } from "@react-pdf/renderer";
 
 Font.register({
   family: "Pretendard",
@@ -109,7 +99,7 @@ const styles = StyleSheet.create({
     position: "absolute" as const,
     top: 0,
     left: 0,
-    width: 595.28,  // A4 width in pt
+    width: 595.28, // A4 width in pt
     height: 841.89, // A4 height in pt
   },
   sentenceRow: {
@@ -139,7 +129,7 @@ const styles = StyleSheet.create({
     lineHeight: 1.1,
   },
   sentenceText: {
-    fontFamily: "Helvetica",
+    fontFamily: "GangwonEduSaeeum",
     flex: 1,
     fontSize: 9.5,
     fontWeight: 600,
@@ -274,8 +264,10 @@ function getArcPoints(): ArcPoint[] {
       px = topStartX + d;
       py = bodyTop;
       rotation = 0;
-      nx = 0; ny = -1;
-      tx = 1; ty = 0;
+      nx = 0;
+      ny = -1;
+      tx = 1;
+      ty = 0;
     } else if (d <= seg1Len + seg2Len) {
       const arcD = d - seg1Len;
       const angleDeg = -90 + (arcD / seg2Len) * 90;
@@ -286,14 +278,17 @@ function getArcPoints(): ArcPoint[] {
       nx = Math.cos(angleRad);
       ny = Math.sin(angleRad);
       // Tangent is 90° CCW from normal for CW arc
-      tx = -ny; ty = nx;
+      tx = -ny;
+      ty = nx;
     } else {
       const straightD = d - seg1Len - seg2Len;
       px = bodyRight;
       py = rightStartY + straightD;
       rotation = 90;
-      nx = 1; ny = 0;
-      tx = 0; ty = 1;
+      nx = 1;
+      ny = 0;
+      tx = 0;
+      ty = 1;
     }
 
     // Move outward from border by baseOffset
@@ -302,10 +297,13 @@ function getArcPoints(): ArcPoint[] {
 
     return {
       char,
-      px, py,
+      px,
+      py,
       rotation,
-      nx, ny,
-      tx, ty,
+      nx,
+      ny,
+      tx,
+      ty,
       normalOffset: m.normalOffset,
       tangentOffset: m.tangentOffset,
     };
@@ -324,11 +322,11 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
   const gridHeight = 740;
   const horizontalLines = Array.from(
     { length: Math.floor((gridHeight - gridStart) / gridStep) + 2 },
-    (_, i) => gridStart + i * gridStep
+    (_, i) => gridStart + i * gridStep,
   );
   const verticalLines = Array.from(
     { length: Math.floor((gridWidth - gridStart) / gridStep) + 2 },
-    (_, i) => gridStart + i * gridStep
+    (_, i) => gridStart + i * gridStep,
   );
   const useCompactSentenceLayout = hasAnalysis && (results.length >= 9 || totalChars > 980);
   const sentenceBottomPad = hasAnalysis ? 185 : 0;
@@ -375,21 +373,13 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
               {results.map((result, index) => (
                 <View
                   key={result.id}
-                  style={[
-                    styles.sentenceRow,
-                    useCompactSentenceLayout ? styles.sentenceRowCompact : null,
-                  ]}
+                  style={[styles.sentenceRow, useCompactSentenceLayout ? styles.sentenceRowCompact : null]}
                   wrap={false}
                 >
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>{String(index + 1).padStart(2, "0")}</Text>
                   </View>
-                  <Text
-                    style={[
-                      styles.sentenceText,
-                      useCompactSentenceLayout ? styles.sentenceTextCompact : null,
-                    ]}
-                  >
+                  <Text style={[styles.sentenceText, useCompactSentenceLayout ? styles.sentenceTextCompact : null]}>
                     {result.original}
                   </Text>
                 </View>
