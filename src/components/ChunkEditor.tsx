@@ -387,7 +387,7 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
               </button>
             )}
             {i < displayChunks.length - 1 && (
-              <span className="text-muted-foreground text-xs">/</span>
+              <span className="text-muted-foreground text-xs ml-1">/</span>
             )}
           </div>
           );
