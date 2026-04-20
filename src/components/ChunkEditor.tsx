@@ -36,6 +36,7 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
     const rawText = selection?.toString().trim();
     const text = rawText
       ?.replace(/\s*\/\s*/g, " ")
+      .replace(/\b[sv]['′]?[₀-₉]?\b/g, "")
       .replace(/\s+/g, " ")
       .trim();
     if (text && text.length >= 1 && containerRef.current?.contains(selection?.anchorNode ?? null)) {
@@ -215,12 +216,13 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
 
   const renderSvLabel = (lbl: SvLabel) => (
     <span
-      className="inline-flex flex-col items-center align-baseline"
-      style={{ height: 0, overflow: "visible" }}
+      className="inline-flex flex-col items-center align-baseline select-none"
+      style={{ height: 0, overflow: "visible", userSelect: "none" }}
+      aria-hidden="true"
     >
       <span
-        className="text-[12px] leading-none text-black font-sans"
-        style={{ marginTop: 3 }}
+        className="text-[12px] leading-none text-black font-sans select-none"
+        style={{ marginTop: 3, userSelect: "none" }}
       >
         {lbl.base}
         {lbl.prime ? "'" : ""}
@@ -256,7 +258,7 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
         </div>
       )}
 
-      <div ref={containerRef} onMouseUp={handleMouseUp} className="relative flex flex-wrap items-center gap-1.5">
+      <div ref={containerRef} onMouseUp={handleMouseUp} className="relative flex flex-wrap items-center gap-x-1.5 gap-y-5">
         {/* Selection tooltip - 기본 버튼 */}
         {tooltipPos && selectedText && !showHintInput && (
           <button
@@ -352,7 +354,9 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
 
           return (
           <div key={`${chunk.tag}-${i}`} className="flex items-center gap-1 max-w-full">
-            <span className="inline px-2 py-1 text-xs font-english border border-border rounded-md bg-background text-foreground break-words max-w-full">
+            <span className={`inline px-2 py-1 text-xs font-english text-foreground break-words max-w-full ${
+              isEditing ? "border border-border rounded-md bg-background" : ""
+            }`}>
               {words.map((w, wi) => (
                 <span key={wi}>
                   <span className="inline-flex flex-col items-center align-baseline">
