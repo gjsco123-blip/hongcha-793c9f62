@@ -179,7 +179,6 @@ const styles = StyleSheet.create({
     marginTop: 0.5,
     fontSize: 7,
     fontFamily: "Pretendard",
-    fontWeight: 600,
     letterSpacing: -0.2,
     color: "#000",
     textAlign: "center",
@@ -188,7 +187,6 @@ const styles = StyleSheet.create({
   svLabelSub: {
     fontSize: 5,
     fontFamily: "Pretendard",
-    fontWeight: 600,
     color: "#000",
     verticalAlign: "sub",
   },
