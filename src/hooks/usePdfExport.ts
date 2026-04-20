@@ -81,6 +81,7 @@ export async function mergePdfBlobs(blobs: Blob[]): Promise<Blob> {
 
 export function usePdfExport() {
   const subjectUnderlineEnabled = useFeatureFlag("subject_underline");
+  const svLabelsEnabled = useFeatureFlag("sv_labels");
 
   const exportToPdf = useCallback(
     async (
@@ -90,11 +91,11 @@ export function usePdfExport() {
       filename: string = "worksheet.pdf",
       teacherLabel?: string
     ) => {
-      const pdfDocument = createElement(PdfDocument, { results, title, subtitle, teacherLabel, subjectUnderlineEnabled });
+      const pdfDocument = createElement(PdfDocument, { results, title, subtitle, teacherLabel, subjectUnderlineEnabled, svLabelsEnabled });
       const blob = await pdf(pdfDocument).toBlob();
       triggerDownload(blob, filename);
     },
-    [subjectUnderlineEnabled]
+    [subjectUnderlineEnabled, svLabelsEnabled]
   );
 
   const previewPdf = useCallback(
@@ -104,11 +105,11 @@ export function usePdfExport() {
       subtitle: string,
       teacherLabel?: string
     ): Promise<string> => {
-      const pdfDocument = createElement(PdfDocument, { results, title, subtitle, teacherLabel, subjectUnderlineEnabled });
+      const pdfDocument = createElement(PdfDocument, { results, title, subtitle, teacherLabel, subjectUnderlineEnabled, svLabelsEnabled });
       const blob = await pdf(pdfDocument).toBlob();
       return URL.createObjectURL(blob);
     },
-    [subjectUnderlineEnabled]
+    [subjectUnderlineEnabled, svLabelsEnabled]
   );
 
   const exportCombinedPdf = useCallback(
@@ -127,7 +128,7 @@ export function usePdfExport() {
         examBlock: previewData.examBlock,
         title: previewData.title || title,
       });
-      const syntaxDocument = createElement(PdfDocument, { results: syntaxResults, title, subtitle, teacherLabel, subjectUnderlineEnabled });
+      const syntaxDocument = createElement(PdfDocument, { results: syntaxResults, title, subtitle, teacherLabel, subjectUnderlineEnabled, svLabelsEnabled });
       const [previewBlob, syntaxBlob] = await Promise.all([
         pdf(previewDocument).toBlob(),
         pdf(syntaxDocument).toBlob(),
@@ -135,7 +136,7 @@ export function usePdfExport() {
       const mergedBlob = await mergePdfBlobs([previewBlob, syntaxBlob]);
       triggerDownload(mergedBlob, filename);
     },
-    [subjectUnderlineEnabled]
+    [subjectUnderlineEnabled, svLabelsEnabled]
   );
 
   const exportWorkbookPdf = useCallback(
