@@ -475,7 +475,6 @@ Return ONLY the Korean tagged string. Nothing else.`;
       }
     }
 
-    // === Verb tag verification pass ===
     // === Subject tag verification pass (runs BEFORE verb verification) ===
     try {
       const subjectVerifyPrompt = `You are a precise English grammar SUBJECT-tagging verifier.
