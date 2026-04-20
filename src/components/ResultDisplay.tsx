@@ -26,7 +26,7 @@ export function ResultDisplay({ label, chunks, text, isKorean, onTextChange, onC
       style={{ height: 0, overflow: "visible" }}
     >
       <span
-        className="text-[12px] leading-none text-black font-sans font-semibold"
+        className="text-[12px] leading-none text-black font-sans"
         style={{ marginTop: 3 }}
       >
         {lbl.base}
