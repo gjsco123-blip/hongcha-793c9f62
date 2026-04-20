@@ -219,14 +219,14 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
       style={{ height: 0, overflow: "visible" }}
     >
       <span
-        className="text-[9px] leading-none text-muted-foreground font-sans"
-        style={{ marginTop: 2 }}
+        className="text-[11px] leading-none text-black font-sans"
+        style={{ marginTop: 3 }}
       >
         {lbl.base}
-        {lbl.index !== undefined && (
-          <sub className="text-[7px]" style={{ lineHeight: 1 }}>{lbl.index}</sub>
-        )}
         {lbl.prime ? "'" : ""}
+        {lbl.index !== undefined && (
+          <sub className="text-[8px]" style={{ lineHeight: 1 }}>{lbl.index}</sub>
+        )}
       </span>
     </span>
   );

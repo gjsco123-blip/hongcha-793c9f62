@@ -237,21 +237,27 @@ function renderChunksWithVerbUnderline(
   const svMap = svLabelsEnabled ? computeSvLabels(chunks) : null;
 
   // Inline subscript-style label rendered after a verb/subject segment.
-  // Uses verticalAlign: "sub" so the label appears slightly below the baseline
-  // — visually similar to "label under word" without affecting line height.
+  // Uses verticalAlign: "sub" so the label sits slightly below the baseline
+  // (just under the underline) without affecting line height. Order:
+  // base → prime (') → subscript number, so the prime stays visible.
   const renderInlineSvLabel = (lbl: SvLabel, key: string) => {
-    const labelText = `${lbl.base}${lbl.index !== undefined ? lbl.index : ""}${lbl.prime ? "'" : ""}`;
     return (
       <Text
         key={key}
         style={{
-          fontSize: 4.5,
-          color: "#666",
+          fontSize: 6,
+          color: "#000",
           verticalAlign: "sub" as const,
         }}
       >
         {"\u200A"}
-        {labelText}
+        {lbl.base}
+        {lbl.prime ? "'" : ""}
+        {lbl.index !== undefined ? (
+          <Text style={{ fontSize: 4.5, verticalAlign: "sub" as const }}>
+            {lbl.index}
+          </Text>
+        ) : null}
       </Text>
     );
   };
