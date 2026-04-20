@@ -159,3 +159,77 @@ export function wordsToSegments(words: { word: string; isVerb: boolean }[]): Chu
   segments.push(current);
   return segments;
 }
+
+// Common adverbs that appear inside verb phrases (e.g., "can always be").
+const VERB_PHRASE_ADVERB_WHITELIST = new Set([
+  "always", "never", "often", "sometimes", "just", "only", "also",
+  "still", "even", "already", "ever", "well", "not", "no",
+  "hardly", "barely", "rarely", "almost", "nearly", "quite", "very",
+]);
+
+function isMergeableInterstitial(text: string): boolean {
+  // Block any sentence punctuation that signals a real boundary.
+  if (/[,.;:!?]/.test(text)) return false;
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return true; // pure whitespace
+  if (words.length > 2) return false;
+  return words.every((w) => {
+    const lower = w.toLowerCase().replace(/[^a-z']/g, "");
+    if (!lower) return false;
+    if (VERB_PHRASE_ADVERB_WHITELIST.has(lower)) return true;
+    if (/ly$/.test(lower) && lower.length > 3) return true;
+    return false;
+  });
+}
+
+/**
+ * Render-time helper: merge non-verb segments that sit between two verb segments
+ * when they are just whitespace or short adverb phrases. Produces a parallel
+ * mapping from original segment index -> merged segment index so callers can
+ * remap superscripts/anchors that referenced the old indices.
+ *
+ * Does NOT mutate the underlying data — only the visual rendering.
+ */
+export function mergeAdverbsBetweenVerbs(
+  segments: ChunkSegment[],
+): { segments: ChunkSegment[]; indexMap: number[] } {
+  if (segments.length < 2) {
+    return { segments: segments.slice(), indexMap: segments.map((_, i) => i) };
+  }
+
+  const merged: ChunkSegment[] = [];
+  const indexMap: number[] = new Array(segments.length).fill(0);
+  let i = 0;
+
+  while (i < segments.length) {
+    const cur = segments[i];
+    // Try to consume a [verb][interstitial][verb] pattern (and extend as long as it keeps matching).
+    if (cur.isVerb && i + 2 < segments.length) {
+      let j = i;
+      let combinedText = cur.text;
+      const consumed: number[] = [i];
+      while (
+        j + 2 < segments.length &&
+        !segments[j + 1].isVerb &&
+        segments[j + 2].isVerb &&
+        isMergeableInterstitial(segments[j + 1].text)
+      ) {
+        combinedText += segments[j + 1].text + segments[j + 2].text;
+        consumed.push(j + 1, j + 2);
+        j += 2;
+      }
+      if (consumed.length > 1) {
+        const mergedIdx = merged.length;
+        merged.push({ text: combinedText, isVerb: true });
+        for (const idx of consumed) indexMap[idx] = mergedIdx;
+        i = j + 1;
+        continue;
+      }
+    }
+    indexMap[i] = merged.length;
+    merged.push(cur);
+    i++;
+  }
+
+  return { segments: merged, indexMap };
+}
