@@ -247,7 +247,6 @@ function renderChunksWithVerbUnderline(
         style={{
           fontSize: 4.5,
           color: "#666",
-          fontStyle: "italic" as const,
           verticalAlign: "sub" as const,
         }}
       >

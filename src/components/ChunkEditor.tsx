@@ -220,7 +220,7 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
     >
       <span
         className="text-[9px] leading-none text-muted-foreground font-sans"
-        style={{ marginTop: 2, fontStyle: "italic" }}
+        style={{ marginTop: 2 }}
       >
         {lbl.base}
         {lbl.index !== undefined && (
