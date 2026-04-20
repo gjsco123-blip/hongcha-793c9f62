@@ -1,73 +1,119 @@
 
-문제는 단순 레이아웃보다는 “Lovable 오른쪽 프리뷰 안의 또 다른 PDF iframe” 구조 자체에 있을 가능성이 가장 큽니다. 지금 코드상 Preview와 Index 모두 최종적으로 data URL을 iframe에 넣고 있고, published 사이트에서는 되는데 Lovable 프리뷰에서만 안 보인다면, 네이티브 PDF 뷰어가 sandbox/nested iframe 환경에서 안정적으로 동작하지 않는 쪽으로 보는 게 맞습니다. 예전에 “안된다”가 반복된 이유도 이 방식 자체가 환경 의존적이기 때문일 가능성이 큽니다.
 
-그래서 이번엔 임시 땜빵이 아니라, 아예 브라우저의 PDF 플러그인/iframe 렌더링에 의존하지 않는 방향으로 한 번에 고치는 계획으로 가는 게 맞습니다.
+## 검토 결과
 
-1. 공통 원인 정리
-- `src/pages/Preview.tsx`와 `src/pages/Index.tsx`의 미리보기 모달은 거의 동일함
-- 둘 다 현재는 `<iframe src={dataUrl}>` 방식
-- 프로젝트 메모에도 “Data URL로 우회” 규칙이 있으나, 지금 환경에서는 그것만으로 부족한 상태
-- 즉, data URL 생성 자체보다 “iframe 안 PDF 표시”가 취약점
+### 이 방식이 적절한 이유
+- **업계 표준**: Feature flag는 GitHub, Netflix, Facebook 등 대부분 회사가 쓰는 방식 (LaunchDarkly, Unleash 같은 전문 도구도 같은 원리)
+- **너의 상황에 맞음**: 3명 소규모 팀 + 운영 중 + 단계적 검증 원함 → 정확히 이 패턴이 풀려는 문제
+- **이미 프로젝트에 비슷한 패턴 존재**: `syntax_patterns` 테이블의 관리자 RLS, 메모리에도 "관리자 글로벌 공유" 패턴이 있어 일관성 OK
 
-2. 해결 전략
-- PDF를 iframe에 넣지 않고, 앱 내부에서 직접 렌더링하는 전용 PDF preview viewer로 교체
-- 생성된 `Blob` 또는 `Uint8Array`를 받아서 `pdf.js` 기반 캔버스/페이지 렌더 방식으로 표시
-- 이렇게 하면 Lovable 프리뷰와 published 사이트가 같은 렌더링 경로를 쓰게 되어 환경 차이가 크게 줄어듦
+### 추가로 다듬을 부분 (이전 플랜 보강)
 
-3. 구현 범위
-- 새 공용 컴포넌트 추가: 예) `src/components/pdf/PdfPreviewDialog.tsx`
-- 역할:
-  - 상단 헤더(제목, 다운로드, 닫기)
-  - 로딩 상태
-  - 페이지 수 표시
-  - 각 페이지를 캔버스로 렌더
-  - 에러 상태 표시
-- `src/pages/Preview.tsx`
-  - `pdfBlobUrl` 상태를 URL 문자열 대신 실제 `Blob` 또는 `Uint8Array` 중심으로 변경
-  - `handlePreviewPdf`에서 `pdf(doc).toBlob()` 결과를 viewer로 전달
-- `src/pages/Index.tsx`
-  - 같은 viewer 재사용하도록 통일
-- 필요 시 `usePdfExport.ts`에도 preview용 반환 타입을 보조 함수로 정리
+1. **DB 동기화 속도 문제**
+   - React Query 캐싱 30초 → 토글 ON 후 최대 30초 기다려야 반영됨
+   - 개선: 캐싱은 5분으로 길게 + `/admin`에서 토글 시 `queryClient.invalidateQueries` 즉시 무효화 + Supabase Realtime으로 flag 변경 자동 감지 (선택)
+   - 단순화 안: 캐싱 60초 + 페이지 새로고침 시 즉시 반영 (실용적)
 
-4. 왜 이 방식이 더 확실한지
-- 브라우저 내장 PDF 플러그인 의존 제거
-- sandbox iframe / nested iframe / data URL 표시 제한 영향 최소화
-- Preview와 Index의 동작을 공통 컴포넌트로 묶어서 이후 유지보수 쉬워짐
-- “웹에서는 되고 Lovable 프리뷰에서는 안 되는” 환경 차이를 줄일 수 있음
+2. **관리자 진입점 위치**
+   - 헤더가 페이지마다 다르면 일관성 깨짐
+   - Index 페이지 우측 상단 로그아웃 버튼 옆에 톱니바퀴 추가 (가장 자연스러움)
 
-5. 세부 작업 순서
-- `pdf.js` 렌더러 도입
-- 공통 PDF preview dialog 컴포넌트 작성
-- Preview 페이지 연결
-- Index 페이지도 동일 viewer로 전환
-- 다운로드 버튼은 기존 object URL 다운로드 방식 유지
-- 기존 iframe 기반 코드 제거 또는 fallback으로만 남김
+3. **flag 미존재 처리**
+   - `useFeatureFlag('없는키')` → false 반환 + 콘솔 경고 (개발 중 오타 방지)
 
-6. 안전장치
-- 렌더 실패 시 모달 안에 명확한 에러 메시지 표시
-- 첫 페이지라도 반드시 보이게 하고, 다중 페이지는 세로 스택으로 렌더
-- 로딩 중 스피너/텍스트 표시
-- 메모리 누수 방지를 위해 문서/worker 정리
+4. **첫 시드는 빈 테이블로**
+   - `sv_labels` 시드는 Phase 2에서 그 기능 만들 때 추가
+   - Phase 1은 인프라만, flag는 0개로 시작 → 더 깔끔
 
-7. 검증 계획
-- Lovable 오른쪽 프리뷰에서 Preview 페이지 → PDF 미리보기 클릭 → 실제 페이지가 보이는지
-- 같은 데이터로 Index 페이지 PDF 미리보기 확인
-- 다운로드는 계속 정상인지 확인
-- 페이지가 여러 장일 때 스크롤 렌더 정상인지 확인
-- published 사이트에서도 동일 viewer가 깨지지 않는지 확인
+---
 
-8. 기술 메모
-- 이번 수정의 핵심은 CSS 보정이 아니라 렌더링 방식을 바꾸는 것
-- `DialogContent`에 `flex` 추가 같은 보정은 함께 넣을 수 있지만, 메인 해결책으로 보지 않음
-- 기존 방식은 “운 좋으면 보이고 환경 따라 깨질 수 있는 구조”, 새 방식은 “앱이 직접 그림”이라 더 안정적
+## 최종 Phase 1 플랜 (보강판)
 
-9. 예상 변경 파일
-- `src/pages/Preview.tsx`
-- `src/pages/Index.tsx`
-- `src/components/pdf/PdfPreviewDialog.tsx` 신규
-- 필요 시 `package.json` 의존성 추가
+### DB
+- 신규 테이블 `feature_flags`
+  - `key` text unique, `enabled_for_admin` bool default false, `enabled_for_all` bool default false, `description` text, `created_at`, `updated_at`
+- RLS: SELECT 모든 인증 사용자 / INSERT·UPDATE·DELETE는 관리자 이메일만 (`syntax_patterns` 패턴 그대로)
+- updated_at 자동 갱신 트리거
 
-10. 최종 목표
-- 사용자가 Lovable 오른쪽 프리뷰 안에서 바로 PDF 내용을 보고 검수할 수 있게 만들기
-- 퍼블리시 후 별도 사이트 들어가서 확인하는 반복 작업을 없애기
-- 이전처럼 부분 수정 후 또 실패하는 게 아니라, 근본적으로 불안정한 iframe PDF preview 방식을 제거하기
+### 신규 파일
+- `src/lib/admin.ts` — `isAdmin(user)` (이메일 기반)
+- `src/hooks/useFeatureFlag.ts` — flag 조회 + 캐싱(60초) + 안전한 fallback
+- `src/pages/AdminSettings.tsx` — `/admin` 페이지, 비관리자 리다이렉트, flag 카드 목록 + 토글 UI
+
+### 수정 파일
+- `src/App.tsx` — `/admin` 라우트 추가
+- `src/pages/Index.tsx` — 관리자에게만 보이는 톱니바퀴 진입점
+
+### 안전장치
+- 기존 페이지 동작 변경 0
+- 다른 2명: 톱니바퀴 안 보임, `/admin` 직접 입력해도 리다이렉트
+- flag 조회 실패/미존재 → false (절대 깨지지 않음)
+
+---
+
+## 사용 방법 상세 설명
+
+### 일상 흐름
+
+**Step 1. 새 기능 만들고 싶을 때**
+- 나(Lovable)랑 대화: "S/V 라벨 기능 추가해줘"
+- 나는 자동으로 코드를 `useFeatureFlag('sv_labels')`로 감싸서 만듦
+- 동시에 `feature_flags` 테이블에 `sv_labels` 행을 자동 추가 (둘 다 false)
+
+**Step 2. 관리자 모드로 켜기**
+- 본인 계정(`co500123@naver.com`)으로 로그인 (이미 돼 있을 가능성 높음)
+- 우측 상단 **톱니바퀴 클릭** → `/admin` 진입
+- `sv_labels` 카드에서 **"관리자에게 보이기"** 토글 ON
+- 페이지 새로고침 (또는 60초 대기) → 본인 계정에만 새 기능 보임
+
+**Step 3. 검증하기**
+- 오른쪽 Lovable 프리뷰에서 직접 사용해봄
+- 문제 발견 → 나랑 대화하며 수정
+- 다른 2명은 이 시간 동안 평소처럼 기존 기능만 사용 (영향 0)
+
+**Step 4. 전체 공개**
+- 충분히 검증됐다 싶으면 `/admin`에서 **"모두에게 공개"** 토글 ON
+- 이제 3명 모두 새 기능 사용 가능
+
+**Step 5. 문제 생기면 즉시 롤백**
+- `/admin` → 토글 OFF
+- 즉시 모든 사용자에게 숨김 (코드 수정/배포 불필요)
+
+### 유의사항 4가지
+
+**A. 본인 계정 로그인 상태 확인**
+- 오른쪽 프리뷰에서 새 기능 보려면 반드시 `co500123@naver.com`으로 로그인된 상태여야 함
+- 다른 계정으로 돼 있으면 새 기능 안 보임 → 당황하지 말고 로그인 계정 확인
+
+**B. 페이지 새로고침 타이밍**
+- 토글 변경 후 즉시 반영 안 되면 **페이지 새로고침** 한 번
+- 60초 캐싱 때문 (실시간 반영 아님)
+
+**C. 새 기능마다 flag 1개**
+- S/V 라벨 → `sv_labels`
+- 다음에 다른 기능 → `feature_xyz`
+- 기능별로 독립적으로 켜고 끄기 가능
+
+**D. flag는 "임시 도구"**
+- 기능이 완전히 안정화되고 1~2주 후, "모두에게 공개" 상태 유지하면서 flag 코드 정리해서 일반 코드로 흡수해도 됨
+- 안 정리해도 큰 문제 없지만, 너무 많이 쌓이면 유지보수 부담
+
+### 실제 대화 예시
+
+```
+[너] S/V 라벨 기능 추가해줘
+[나] feature_flags에 sv_labels 추가하고, S/V 라벨 코드를 그 flag로 감싸서 구현했어. 
+     /admin에서 "관리자에게 보이기" 켜고 확인해줘.
+
+[너] 라벨 위치가 너무 아래로 내려가
+[나] (수정)... 다시 확인해줘.
+
+[너] 좋아 완벽해. 이제 다른 사람들도 쓸 수 있게 해줘
+[너] (직접 /admin에서 "모두에게 공개" 토글 ON)
+```
+
+### 리스크 / 한계
+- DB 호출 1회 추가 (로그인 시 + 60초마다) — 성능 영향 거의 없음
+- 새 기능 코드는 항상 빌드에 포함됨 — 번들 크기 약간 증가 (무시 가능 수준)
+- flag 토글은 너만 가능 — 다른 2명은 베타 참여 불가 (필요하면 화이트리스트로 확장 가능, 지금은 불필요)
+
