@@ -34,7 +34,10 @@ function getTagNumbers(tagged: string): number[] {
 }
 
 function extractText(tagged: string): string {
-  return tagged.replace(/<\/?c\d+>/g, "").replace(/<\/?v>/g, "").replace(/<\/?s>/g, "");
+  return tagged
+    .replace(/<\/?c\d+>/g, "")
+    .replace(/<(?:v|s|vs|ss)(?:\s+g="\d+")?>/g, "")
+    .replace(/<\/(?:v|s|vs|ss)>/g, "");
 }
 
 function normalize(text: string): string {
