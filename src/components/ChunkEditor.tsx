@@ -320,7 +320,50 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
         </div>
       )}
 
-      <div ref={containerRef} onMouseUp={handleMouseUp} className="relative flex flex-wrap items-center gap-x-1.5 gap-y-5">
+      <div
+        ref={containerRef}
+        onMouseUp={handleMouseUp}
+        onClick={() => roleMenu && setRoleMenu(null)}
+        className="relative flex flex-wrap items-center gap-x-1.5 gap-y-5"
+      >
+        {/* Role context menu (right-click) */}
+        {roleMenu && (
+          <div
+            className="absolute z-30 bg-card border border-border rounded-md shadow-xl py-1 min-w-[110px]"
+            style={{ left: roleMenu.x, top: roleMenu.y }}
+            onClick={(e) => e.stopPropagation()}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            <button
+              className="w-full text-left px-3 py-1.5 text-[11px] text-foreground hover:bg-muted/80"
+              onClick={() => {
+                applyRole(roleMenu.chunkIndex, roleMenu.wordIndex, "s");
+                setRoleMenu(null);
+              }}
+            >
+              주어 표시
+            </button>
+            <button
+              className="w-full text-left px-3 py-1.5 text-[11px] text-foreground hover:bg-muted/80"
+              onClick={() => {
+                applyRole(roleMenu.chunkIndex, roleMenu.wordIndex, "v");
+                setRoleMenu(null);
+              }}
+            >
+              동사 표시
+            </button>
+            <button
+              className="w-full text-left px-3 py-1.5 text-[11px] text-muted-foreground hover:bg-muted/80"
+              onClick={() => {
+                applyRole(roleMenu.chunkIndex, roleMenu.wordIndex, "none");
+                setRoleMenu(null);
+              }}
+            >
+              표시 해제
+            </button>
+          </div>
+        )}
+
         {/* Selection tooltip - 기본 버튼 */}
         {tooltipPos && selectedText && !showHintInput && (
           <button
