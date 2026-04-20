@@ -430,6 +430,14 @@ Tag the **head noun phrase (NP)** that serves as the grammatical subject (수일
    - 이유: "the messages"는 interpret의 목적어 + 관계절(생략된 that/which)의 선행사. 목적어이므로 <s>/<ss>를 받지 않음.
    - 또 다른 예: "<s>I</s> <v>know</v> the man <s>she</s> <v>met</v>" — "the man"은 know의 목적어 + met의 선행사 → 절대 <s>/<ss> 금지.
    - 핵심 판단: 한 동사 직후에 NP가 나오고, 그 NP 뒤에 (관계대명사 없이도) 또 다른 S+V가 따라오면 → 그 NP는 무조건 OBJECT, 절대 주어 태그 금지.
+10. **The expletive "there" in existential sentences is NEVER the subject.**
+    The REAL subject is the noun phrase AFTER the be-verb (or existential verb).
+    - WRONG:   <s>There</s> <v>is</v> so little variation amongst us
+    - WRONG:   There <v>is</v> so little variation amongst us  ← subject MISSING, must tag the post-verbal NP
+    - CORRECT: There <v>is</v> <s>so little variation</s> amongst us
+    - Same rule for: there are / there was / there were / there exists / there remains / there comes / there lies ...
+    - The post-verbal NP gets <s> (or <ss> if the existential clause is itself subordinate, e.g. "...because there <vs>is</vs> <ss>no time</ss>").
+    - Never leave an existential clause without a subject tag on the post-verbal NP.
 
 ### Strong negative few-shot examples (MEMORIZE):
 - "The policy allows citizens to retain freedom"
