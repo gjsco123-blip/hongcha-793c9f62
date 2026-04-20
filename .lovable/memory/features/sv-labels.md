@@ -34,8 +34,9 @@ type: feature
 - 멤버 ≥2 → 번호 부여, 단독 → 번호 없음
 
 ## 렌더링
-- **웹 (ResultDisplay/ChunkEditor)**: `inline-flex flex-col`로 단어 위·라벨 아래. 라벨 컨테이너 `height:0; overflow:visible`로 줄높이 영향 0. 폰트 9px (subscript 7px), `text-muted-foreground`, italic, `marginTop: 2px`.
-- **PDF (PdfDocument)**: inline subscript 스타일 (`verticalAlign: "sub"`, fontSize 4.5pt, color #666, italic). 줄간격(lineHeight 2.5) **그대로 유지** — 페이지 수 변동 없음. absolute positioning은 react-pdf inline 흐름에서 부정확하여 사용 안 함.
+- **순서**: `base → prime(') → subscript`. 예: 주절 단독 `v`, 주절 병렬 `v₁`, 종속절 단독 `v'`, 종속절 병렬 `v'₁`. prime을 subscript 앞에 두어 작은 숫자에 묻히지 않음.
+- **웹 (ResultDisplay/ChunkEditor)**: `inline-flex flex-col`로 단어 아래에 라벨. 컨테이너 `height:0; overflow:visible`로 줄높이 영향 0. 폰트 11px (subscript 8px), `text-black`, `marginTop: 3px` (밑줄에서 살짝 분리).
+- **PDF (PdfDocument)**: inline `verticalAlign: "sub"` Text. fontSize 6pt (subscript 내부 nested Text 4.5pt), color `#000`. 줄간격(lineHeight 2.5) **그대로 유지** — 페이지 수 변동 없음. react-pdf inline `<Text>` 흐름에서 `position:"absolute"`는 동작하지 않으므로 inline subscript 방식을 채택. italic 제거(폰트 등록 회피).
 
 ## Feature Flag
 `sv_labels` (feature_flags 테이블, 관리자 기본 ON, 일반 사용자 OFF). `subject_underline`과 독립.
