@@ -44,3 +44,9 @@ type: feature
 ## 회귀
 - 기존 데이터는 자동으로 모두 주절 처리됨 (`<s>`/`<v>`만 → isSubordinate=false, groupId=undefined)
 - 종속절·병렬 라벨을 보려면 **재분석 필요**
+
+## 수동 라벨링 (편집 모드)
+- **더블클릭**: 동사 토글(없음 ↔ v) — 기존 동작 유지.
+- **우클릭**: 컨텍스트 메뉴 `[주어 표시 / 동사 표시 / 표시 해제]`. `ChunkEditor`의 `applyRole`이 처리.
+- **종속절 자동 판별**: `src/lib/subordinate-detect.ts`의 `detectSubordinate(chunks, ci, wi)` — (1) 같은 chunk에 `isSubordinate` 세그먼트가 이미 있으면 종속, (2) 같은 문장 내 클릭 단어 이전 단어들을 역순 탐색해 종속 접속사/관계사(that/which/who/when/because/although/as 등)를 만나면 종속, (3) 종결 부호(.!?;)를 만나면 중단. 매치 시 `isSubordinate: true`로 저장 → 라벨 s'/v'로 렌더.
+- 수동 토글은 항상 `groupId: undefined` (단독 라벨). 병렬 v₁/v₂는 자동 분석 결과에서만.
