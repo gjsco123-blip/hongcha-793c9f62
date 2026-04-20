@@ -68,7 +68,7 @@ export default function Preview() {
   const [synonymSelectMode, setSynonymSelectMode] = useState(false);
   const [addingSynonymWord, setAddingSynonymWord] = useState<string | null>(null);
   const [pdfGenerating, setPdfGenerating] = useState(false);
-  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [pdfPreviewBlob, setPdfPreviewBlob] = useState<Blob | null>(null);
   const [previewCompleted, setPreviewCompleted] = useState(false);
   const [loadingSavedState, setLoadingSavedState] = useState(false);
   const [baseResultsJson, setBaseResultsJson] = useState<unknown>(null);
