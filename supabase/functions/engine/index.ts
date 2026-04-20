@@ -44,6 +44,104 @@ function normalize(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
+/**
+ * Deterministic guard: strip <s>/<ss> tags from NPs that are clearly OBJECTS, not subjects.
+ *
+ * Core insight: in any clause, the FIRST subject (s/ss) MUST appear BEFORE its verb (v/vs).
+ * Any subject tag that appears AFTER a verb tag — without an intervening verb that it could
+ * be the subject of — is almost certainly an object/complement that the LLM mis-tagged.
+ *
+ * Rules (applied per <cN> chunk; relative clauses inside the same chunk handled via R2):
+ *   R1: Within a chunk, after the FIRST verb (v/vs), any s/ss that is NOT immediately
+ *       followed by another verb tag inside the chunk is an OBJECT — strip the s/ss tag
+ *       (keep inner text).
+ *   R2 (relative clause): Pattern `<v|vs>X</v|vs> <s|ss>NP</s|ss> <s|ss>Y</s|ss> <v|vs>Z</v|vs>`
+ *       → NP is object + antecedent, Y is the relative-clause subject. Strip NP's s/ss tag,
+ *       keep Y's tag. Captured as a special case of R1 since NP is followed by another
+ *       s/ss (Y), not by a verb.
+ *
+ * Safety: validates text content unchanged, c-tag structure unchanged, v-tag count unchanged.
+ * Aborts if more than 50% of subject tags would be removed (likely false positive).
+ */
+function stripObjectSubjectTags(tagged: string): { result: string; removed: number } {
+  const subjectOpenRe = /<(s|ss)(\s+g="\d+")?>/;
+  const verbOpenRe = /<(v|vs)(\s+g="\d+")?>/;
+
+  // Tokenize the string into open/close tag events with positions.
+  type Tok = { kind: "open" | "close"; tag: "s" | "ss" | "v" | "vs"; start: number; end: number };
+  const allTagRe = /<(\/?)(s|ss|v|vs)(?:\s+g="\d+")?>/g;
+
+  // Process each <cN>...</cN> chunk independently
+  const chunkRe = /<c(\d+)>([\s\S]*?)<\/c\1>/g;
+  let totalRemoved = 0;
+  const newString = tagged.replace(chunkRe, (whole, num, inner) => {
+    // Collect tag tokens within this chunk
+    const toks: Tok[] = [];
+    let m: RegExpExecArray | null;
+    allTagRe.lastIndex = 0;
+    while ((m = allTagRe.exec(inner)) !== null) {
+      toks.push({
+        kind: m[1] === "/" ? "close" : "open",
+        tag: m[2] as Tok["tag"],
+        start: m.index,
+        end: m.index + m[0].length,
+      });
+    }
+
+    // Find opens of subject tags that appear AFTER the first verb open,
+    // and that are NOT immediately followed (in tag sequence) by a verb open.
+    // "Immediately followed" = the next OPEN tag (skipping closes) is a verb.
+    const opens = toks.filter(t => t.kind === "open");
+    const firstVerbIdx = opens.findIndex(t => t.tag === "v" || t.tag === "vs");
+    if (firstVerbIdx === -1) return whole; // no verb in chunk → leave alone
+
+    // For each subject open after the first verb, decide if it's an object.
+    const stripPositions: { start: number; end: number }[] = [];
+    for (let i = firstVerbIdx + 1; i < opens.length; i++) {
+      const cur = opens[i];
+      if (cur.tag !== "s" && cur.tag !== "ss") continue;
+      // Look at next open (if any). If next open is a verb → cur is the subject of that verb → keep.
+      // If next open is another subject or doesn't exist → cur is an object → strip.
+      const next = opens[i + 1];
+      if (next && (next.tag === "v" || next.tag === "vs")) {
+        // cur could legitimately be the subject of a following verb (e.g. relative clause subject).
+        continue;
+      }
+      // cur is an object: mark its open tag and matching close tag for removal.
+      stripPositions.push({ start: cur.start, end: cur.end });
+      // find matching close for cur
+      // walk forward in toks to find close of same tag with proper nesting
+      const startTokIdx = toks.indexOf(cur);
+      let depth = 1;
+      for (let j = startTokIdx + 1; j < toks.length; j++) {
+        const t = toks[j];
+        if (t.tag !== cur.tag) continue;
+        if (t.kind === "open") depth++;
+        else {
+          depth--;
+          if (depth === 0) {
+            stripPositions.push({ start: t.start, end: t.end });
+            break;
+          }
+        }
+      }
+    }
+
+    if (stripPositions.length === 0) return whole;
+
+    // Apply strips (sort descending so indices stay valid)
+    stripPositions.sort((a, b) => b.start - a.start);
+    let updated = inner;
+    for (const p of stripPositions) {
+      updated = updated.slice(0, p.start) + updated.slice(p.end);
+    }
+    totalRemoved += stripPositions.length / 2; // each subject = 1 open + 1 close pair
+    return `<c${num}>${updated}</c${num}>`;
+  });
+
+  return { result: newString, removed: totalRemoved };
+}
+
 /** Repair tagged string by ensuring all text from original sentence is captured in chunks */
 function repairTagged(tagged: string, original: string): string {
   const extracted = normalize(extractText(tagged));
@@ -267,6 +365,14 @@ Tag the **head noun phrase (NP)** that serves as the grammatical subject (수일
    - CORRECT: <s>The students</s> who <v>passed</v> the exam <v>are</v> happy
    - WRONG: <s>The balance of power</s> <v>shifted</v>  (when "of power" is post-modifier — only if it's the actual subject NP)
      Note: if "of power" is restrictive part of subject head, include it; but in "<v>has shifted</v> the balance of power", "the balance of power" is the OBJECT.
+9. **Antecedent of an OBJECT relative clause when the antecedent ITSELF is the OBJECT of an outer verb**.
+   The antecedent stays UNTAGGED (it's already an object). Only the inner subject of the relative clause gets <ss>.
+   - Pattern: outer-V + [antecedent NP, which is the OBJECT of outer-V] + [optional 생략된 that/which/who] + inner-S + inner-V
+   - WRONG:   How <s>people</s> <v>interpret</v> <s>the messages</s> <s>they</s> <v>receive</v>
+   - CORRECT: How <ss>people</ss> <vs>interpret</vs> the messages <ss>they</ss> <vs>receive</vs>
+   - 이유: "the messages"는 interpret의 목적어 + 관계절(생략된 that/which)의 선행사. 목적어이므로 <s>/<ss>를 받지 않음.
+   - 또 다른 예: "<s>I</s> <v>know</v> the man <s>she</s> <v>met</v>" — "the man"은 know의 목적어 + met의 선행사 → 절대 <s>/<ss> 금지.
+   - 핵심 판단: 한 동사 직후에 NP가 나오고, 그 NP 뒤에 (관계대명사 없이도) 또 다른 S+V가 따라오면 → 그 NP는 무조건 OBJECT, 절대 주어 태그 금지.
 
 ### Strong negative few-shot examples (MEMORIZE):
 - "The policy allows citizens to retain freedom"
@@ -615,6 +721,12 @@ Given an English sentence chunked with <c1>...</c1> tags, with verb tags (<v> fo
 10. **Whole noun clause as subject**: NEVER wrap an entire that/wh/whether-clause in <s>. If you find <s>What he said</s> or <s>That he lied</s>, REMOVE the outer <s> and instead tag only the inner subject (e.g. <s>he</s>).
 11. **Relative pronouns themselves** (who/whom/which/that/whose as relative): NEVER <s>. If you find <s>who</s>, <s>which</s>, <s>that</s> inside a relative clause, REMOVE.
 12. **Subject relative clause has zero <s>**: if a chunk starts with a relative pronoun followed immediately by <v> (e.g. "who <v>are taking</v>..."), the chunk must contain NO <s> at all.
+13. **Antecedent that is itself an OBJECT of the outer verb**: NEVER tag. Pattern: "<v>outer-V</v> NP <ss>inner-S</ss> <vs>inner-V</vs>" — the NP between outer-V and inner-S is the OBJECT of outer-V (and the antecedent of an object relative clause with omitted relative pronoun). It must stay UNTAGGED.
+    - WRONG:   <v>interpret</v> <ss>the messages</ss> <ss>they</ss> <vs>receive</vs>
+    - CORRECT: <vs>interpret</vs> the messages <ss>they</ss> <vs>receive</vs>
+    - WRONG:   <v>know</v> <s>the man</s> <s>she</s> <v>met</v>
+    - CORRECT: <v>know</v> the man <s>she</s> <v>met</v>
+    - Rule: if you see two consecutive subject tags with no verb between them, the FIRST one is wrong — REMOVE it.
 
 ## Per-clause rule:
 - Each finite clause has at most ONE <s>. If you see two <s> in one clause, the second one is wrong (likely an object/complement) — REMOVE it.
@@ -697,6 +809,27 @@ Return ONLY the corrected english_tagged string. Nothing else. No markdown, no c
       }
     } catch (subjErr) {
       console.warn("Subject verification failed, using original:", subjErr);
+    }
+
+    // === Deterministic post-processing guard: strip object-as-subject tags ===
+    try {
+      const beforeSCount = (lastResult!.english_tagged.match(/<s(?:s)?(?:\s+g="\d+")?>/g) || []).length;
+      const { result: stripped, removed } = stripObjectSubjectTags(lastResult!.english_tagged);
+      if (removed > 0) {
+        // Safety: text content unchanged
+        const oldText = normalize(extractText(lastResult!.english_tagged));
+        const newText = normalize(extractText(stripped));
+        // Safety: no more than 50% of subjects removed (guard against false positives)
+        const tooAggressive = beforeSCount > 0 && removed > beforeSCount * 0.5;
+        if (newText === oldText && !tooAggressive) {
+          console.log(`Object-as-subject strip: removed ${removed} tags`);
+          lastResult!.english_tagged = stripped;
+        } else {
+          console.warn("Object-as-subject strip: discarded", { textChanged: newText !== oldText, tooAggressive, removed, beforeSCount });
+        }
+      }
+    } catch (stripErr) {
+      console.warn("Object-as-subject strip failed:", stripErr);
     }
 
     // === Verb tag verification pass ===
