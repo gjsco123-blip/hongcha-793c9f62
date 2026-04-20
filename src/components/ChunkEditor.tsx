@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useFeatureFlag } from "@/hooks/useFeatureFlag";
 import type { SyntaxNote } from "@/pages/Index";
 import { computeSvLabels, type SvLabel } from "@/lib/sv-labels";
+import { detectSubordinate } from "@/lib/subordinate-detect";
 
 interface ChunkEditorProps {
   chunks: Chunk[];
@@ -28,6 +29,10 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
   const containerRef = useRef<HTMLDivElement>(null);
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hintInputRef = useRef<HTMLTextAreaElement>(null);
+  const [roleMenu, setRoleMenu] = useState<
+    | { x: number; y: number; chunkIndex: number; wordIndex: number }
+    | null
+  >(null);
 
   const handleMouseUp = useCallback(() => {
     if (!onAnalyzeSelection) return;
@@ -150,6 +155,63 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
     }
   };
 
+  const applyRole = (
+    chunkIndex: number,
+    wordIndex: number,
+    role: "s" | "v" | "none",
+  ) => {
+    const target = isEditing ? draftChunks : chunks;
+    const chunk = target[chunkIndex];
+    const words = segmentsToWords(chunk.segments);
+    if (!/[A-Za-z]/.test(words[wordIndex]?.word || "")) return;
+
+    const isSubordinate =
+      role === "none" ? false : detectSubordinate(target, chunkIndex, wordIndex);
+
+    words[wordIndex] = {
+      ...words[wordIndex],
+      isVerb: role === "v",
+      isSubject: role === "s",
+      isSubordinate,
+      groupId: undefined,
+    };
+    const newSegments = wordsToSegments(words);
+
+    if (isEditing) {
+      const newChunks = draftChunks.map((c, i) =>
+        i === chunkIndex ? { ...c, segments: newSegments } : c,
+      );
+      setDraftChunks(newChunks);
+    } else {
+      const newChunks = chunks.map((c, i) =>
+        i === chunkIndex ? { ...c, segments: newSegments } : c,
+      );
+      onChange(newChunks);
+    }
+  };
+
+  const handleWordContextMenu = (
+    e: React.MouseEvent,
+    chunkIndex: number,
+    wordIndex: number,
+  ) => {
+    if (!isEditing) return;
+    const target = isEditing ? draftChunks : chunks;
+    const chunk = target[chunkIndex];
+    const words = segmentsToWords(chunk.segments);
+    if (!/[A-Za-z]/.test(words[wordIndex]?.word || "")) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    if (!containerRect) return;
+    setRoleMenu({
+      x: e.clientX - containerRect.left,
+      y: e.clientY - containerRect.top,
+      chunkIndex,
+      wordIndex,
+    });
+  };
+
   const handleMerge = (index: number) => {
     if (index >= draftChunks.length - 1) return;
     const newChunks = [...draftChunks];
@@ -258,7 +320,50 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
         </div>
       )}
 
-      <div ref={containerRef} onMouseUp={handleMouseUp} className="relative flex flex-wrap items-center gap-x-1.5 gap-y-5">
+      <div
+        ref={containerRef}
+        onMouseUp={handleMouseUp}
+        onClick={() => roleMenu && setRoleMenu(null)}
+        className="relative flex flex-wrap items-center gap-x-1.5 gap-y-5"
+      >
+        {/* Role context menu (right-click) */}
+        {roleMenu && (
+          <div
+            className="absolute z-30 bg-card border border-border rounded-md shadow-xl py-1 min-w-[110px]"
+            style={{ left: roleMenu.x, top: roleMenu.y }}
+            onClick={(e) => e.stopPropagation()}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            <button
+              className="w-full text-left px-3 py-1.5 text-[11px] text-foreground hover:bg-muted/80"
+              onClick={() => {
+                applyRole(roleMenu.chunkIndex, roleMenu.wordIndex, "s");
+                setRoleMenu(null);
+              }}
+            >
+              주어 표시
+            </button>
+            <button
+              className="w-full text-left px-3 py-1.5 text-[11px] text-foreground hover:bg-muted/80"
+              onClick={() => {
+                applyRole(roleMenu.chunkIndex, roleMenu.wordIndex, "v");
+                setRoleMenu(null);
+              }}
+            >
+              동사 표시
+            </button>
+            <button
+              className="w-full text-left px-3 py-1.5 text-[11px] text-muted-foreground hover:bg-muted/80"
+              onClick={() => {
+                applyRole(roleMenu.chunkIndex, roleMenu.wordIndex, "none");
+                setRoleMenu(null);
+              }}
+            >
+              표시 해제
+            </button>
+          </div>
+        )}
+
         {/* Selection tooltip - 기본 버튼 */}
         {tooltipPos && selectedText && !showHintInput && (
           <button
@@ -363,9 +468,10 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
                     <span
                       onClick={isEditing ? () => handleWordInteraction(i, wi) : undefined}
                       onDoubleClick={isEditing ? () => handleWordDoubleClick(i, wi) : undefined}
+                      onContextMenu={isEditing ? (e) => handleWordContextMenu(e, i, wi) : undefined}
                       className={`${(w.isVerb || (subjectUnderlineEnabled && w.isSubject)) && /[A-Za-z]/.test(w.word) ? "underline decoration-foreground decoration-2 underline-offset-[3px]" : ""}
                         ${isEditing ? "cursor-pointer hover:bg-muted/80 rounded-sm" : ""}`}
-                      title={isEditing ? "클릭: 분할 / 더블클릭: 동사 표시" : ""}
+                      title={isEditing ? "클릭: 분할 · 더블클릭: 동사 · 우클릭: 주어/동사/해제" : ""}
                     >
                       {w.word}
                     </span>
