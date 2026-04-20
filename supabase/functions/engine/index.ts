@@ -580,6 +580,16 @@ Given an English sentence chunked with <c1>...</c1> tags, with <v>...</v> verb t
   CORRECT: What <s>he</s> <v>said</v> <v>is</v> true
 - WRONG:   <s>That he lied</s> <v>surprised</v> me
   CORRECT: That <s>he</s> <v>lied</v> <v>surprised</v> me
+- WRONG:   <s>something like this thought</s> probably <v>lay</v> behind...
+  CORRECT: <s>something</s> like this thought probably <v>lay</v> behind...
+- WRONG:   <s>the people</s> <s>who</s> <v>are taking</v> part in it
+  CORRECT: <s>the people</s> who <v>are taking</v> part in it
+- WRONG:   <s>the people who are taking part in it</s>
+  CORRECT: <s>the people</s> who <v>are taking</v> part in it
+- WRONG:   <s>the book that I read</s>
+  CORRECT: <s>the book</s> that <s>I</s> <v>read</v>
+- WRONG:   <s>the man with a hat</s> <v>arrived</v>
+  CORRECT: <s>the man</s> with a hat <v>arrived</v>
 
 Return ONLY the corrected english_tagged string. Nothing else. No markdown, no commentary.`;
 
