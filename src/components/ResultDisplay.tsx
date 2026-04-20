@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Chunk, mergeAdverbsBetweenVerbs } from "@/lib/chunk-utils";
+import { useFeatureFlag } from "@/hooks/useFeatureFlag";
 
 interface ResultDisplayProps {
   label: string;
@@ -11,6 +12,7 @@ interface ResultDisplayProps {
 }
 
 export function ResultDisplay({ label, chunks, text, isKorean, onTextChange, onChunkTextChange }: ResultDisplayProps) {
+  const subjectUnderlineEnabled = useFeatureFlag("subject_underline");
   const [editingText, setEditingText] = useState(false);
   const [editingChunkIdx, setEditingChunkIdx] = useState<number | null>(null);
   const [draftText, setDraftText] = useState("");
@@ -83,7 +85,11 @@ export function ResultDisplay({ label, chunks, text, isKorean, onTextChange, onC
                       ? mergeAdverbsBetweenVerbs(chunk.segments).segments.map((seg, si) => (
                           <span
                             key={si}
-                            className={seg.isVerb ? "underline decoration-foreground decoration-2 underline-offset-[3px]" : ""}
+                            className={
+                              seg.isVerb || (subjectUnderlineEnabled && seg.isSubject)
+                                ? "underline decoration-foreground decoration-2 underline-offset-[3px]"
+                                : ""
+                            }
                           >
                             {seg.text}
                           </span>

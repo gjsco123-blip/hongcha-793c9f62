@@ -5,6 +5,7 @@ import { PdfDocument } from "@/components/PdfDocument";
 import { PreviewPdf } from "@/components/PreviewPdf";
 import { WorkbookPdfDocument } from "@/components/WorkbookPdfDocument";
 import { Chunk } from "@/lib/chunk-utils";
+import { useFeatureFlag } from "@/hooks/useFeatureFlag";
 
 interface SyntaxNote {
   id: number;
@@ -79,6 +80,8 @@ export async function mergePdfBlobs(blobs: Blob[]): Promise<Blob> {
 }
 
 export function usePdfExport() {
+  const subjectUnderlineEnabled = useFeatureFlag("subject_underline");
+
   const exportToPdf = useCallback(
     async (
       results: SentenceResult[],
@@ -87,11 +90,11 @@ export function usePdfExport() {
       filename: string = "worksheet.pdf",
       teacherLabel?: string
     ) => {
-      const pdfDocument = createElement(PdfDocument, { results, title, subtitle, teacherLabel });
+      const pdfDocument = createElement(PdfDocument, { results, title, subtitle, teacherLabel, subjectUnderlineEnabled });
       const blob = await pdf(pdfDocument).toBlob();
       triggerDownload(blob, filename);
     },
-    []
+    [subjectUnderlineEnabled]
   );
 
   const previewPdf = useCallback(
@@ -101,11 +104,11 @@ export function usePdfExport() {
       subtitle: string,
       teacherLabel?: string
     ): Promise<string> => {
-      const pdfDocument = createElement(PdfDocument, { results, title, subtitle, teacherLabel });
+      const pdfDocument = createElement(PdfDocument, { results, title, subtitle, teacherLabel, subjectUnderlineEnabled });
       const blob = await pdf(pdfDocument).toBlob();
       return URL.createObjectURL(blob);
     },
-    []
+    [subjectUnderlineEnabled]
   );
 
   const exportCombinedPdf = useCallback(
@@ -124,7 +127,7 @@ export function usePdfExport() {
         examBlock: previewData.examBlock,
         title: previewData.title || title,
       });
-      const syntaxDocument = createElement(PdfDocument, { results: syntaxResults, title, subtitle, teacherLabel });
+      const syntaxDocument = createElement(PdfDocument, { results: syntaxResults, title, subtitle, teacherLabel, subjectUnderlineEnabled });
       const [previewBlob, syntaxBlob] = await Promise.all([
         pdf(previewDocument).toBlob(),
         pdf(syntaxDocument).toBlob(),
@@ -132,7 +135,7 @@ export function usePdfExport() {
       const mergedBlob = await mergePdfBlobs([previewBlob, syntaxBlob]);
       triggerDownload(mergedBlob, filename);
     },
-    []
+    [subjectUnderlineEnabled]
   );
 
   const exportWorkbookPdf = useCallback(
