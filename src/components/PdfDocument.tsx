@@ -165,6 +165,14 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     lineHeight: 2.5,
   },
+  chunkSlash: {
+    fontFamily: "Pretendard",
+    fontWeight: 600,
+    fontSize: 9.5,
+    lineHeight: 2.5,
+    marginLeft: 4,
+    marginRight: 4,
+  },
   // Wrapper around a labeled (verb/subject) segment so we can absolutely
   // position the s/v label centered below it without affecting line height.
   labeledWrap: {
