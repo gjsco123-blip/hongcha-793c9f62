@@ -173,10 +173,10 @@ const styles = StyleSheet.create({
   },
   svLabelAbsolute: {
     position: "absolute",
-    top: "100%",
+    top: 9.5,
     left: 0,
     right: 0,
-    marginTop: 1.5,
+    marginTop: 0.5,
     fontSize: 6,
     color: "#000",
     textAlign: "center",
