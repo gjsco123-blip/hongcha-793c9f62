@@ -506,6 +506,11 @@ Given an English sentence chunked with <c1>...</c1> tags, with <v>...</v> verb t
 - Expletive It: "<s>It</s> <v>is</v> important...".
 - There/Here + be + NP: tag the NP after the verb. "There <v>are</v> <s>many students</s>".
 - Coordinated subject as one: "<s>John and Mary</s> <v>are</v>...".
+- Gerund-phrase subject: "<s>Locking-in prices</s> by ... <v>helped</v>..." (gerund + core object only).
+- To-infinitive subject: "<s>To learn English</s> <v>is</v> fun".
+- Noun-clause subject (that/wh/whether-clause as subject): DO NOT wrap the whole noun clause. Tag the **internal subject** of the noun clause only. The upper clause then has NO <s> — that is CORRECT, do not invent one.
+  - CORRECT: <c1>What <s>he</s> <v>said</v></c1> <c2><v>is</v> true</c2>
+  - CORRECT: <c1>That <s>he</s> <v>lied</v></c1> <c2><v>surprised</v> me</c2>
 
 ## What MUST NOT have <s> tags (REMOVE if found):
 1. **Direct objects** (NP after a transitive verb): "<v>allows</v> citizens" → "citizens" is NOT <s>.
@@ -517,9 +522,11 @@ Given an English sentence chunked with <c1>...</c1> tags, with <v>...</v> verb t
 7. **Nouns inside participial phrases**: "holding the umbrella" → "the umbrella" is NOT <s>.
 8. **Post-modifiers of the subject** (relative clauses, PPs, participles AFTER head noun) → NOT inside <s>.
 9. **Parentheticals** (콤마 삽입구): "however", "for example" — NOT inside <s>.
+10. **Whole noun clause as subject**: NEVER wrap an entire that/wh/whether-clause in <s>. If you find <s>What he said</s> or <s>That he lied</s>, REMOVE the outer <s> and instead tag only the inner subject (e.g. <s>he</s>).
 
 ## Per-clause rule:
-- Each finite clause has exactly ONE <s>. If you see two <s> in one clause, the second one is wrong (likely an object/complement) — REMOVE it.
+- Each finite clause has at most ONE <s>. If you see two <s> in one clause, the second one is wrong (likely an object/complement) — REMOVE it.
+- An upper clause whose subject is a noun clause has ZERO <s> — do NOT add one. The inner subject of the noun clause is the only <s>.
 
 ## Constraint:
 - <s> and <v> must NEVER overlap or nest. Always adjacent.
@@ -531,6 +538,10 @@ Given an English sentence chunked with <c1>...</c1> tags, with <v>...</v> verb t
   CORRECT: <s>Technology</s> <v>has shifted</v> the balance of power
 - WRONG:   <s>She</s> <v>is</v> <s>a doctor</s>
   CORRECT: <s>She</s> <v>is</v> a doctor
+- WRONG:   <s>What he said</s> <v>is</v> true
+  CORRECT: What <s>he</s> <v>said</v> <v>is</v> true
+- WRONG:   <s>That he lied</s> <v>surprised</v> me
+  CORRECT: That <s>he</s> <v>lied</v> <v>surprised</v> me
 
 Return ONLY the corrected english_tagged string. Nothing else. No markdown, no commentary.`;
 
