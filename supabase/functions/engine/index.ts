@@ -266,6 +266,7 @@ Ask: "Does THIS exact NP perform a finite verb that comes AFTER it (or is right 
 
 ### Per-clause limit:
 - Each finite clause has **exactly ONE** subject NP. Never tag two <s> in the same clause.
+- **Exception**: a clause whose subject is a noun clause (that/wh/whether-clause) has ZERO <s> in the upper clause — the only <s> appears INSIDE the noun clause for the inner subject.
 
 ## CHUNKING RULES
 - Tag count in english_tagged MUST equal tag count in korean_literal_tagged.
