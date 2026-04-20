@@ -353,7 +353,9 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
 
           return (
           <div key={`${chunk.tag}-${i}`} className="flex items-center gap-1 max-w-full">
-            <span className="inline px-2 py-1 text-xs font-english border border-border rounded-md bg-background text-foreground break-words max-w-full">
+            <span className={`inline px-2 py-1 text-xs font-english text-foreground break-words max-w-full ${
+              isEditing ? "border border-border rounded-md bg-background" : ""
+            }`}>
               {words.map((w, wi) => (
                 <span key={wi}>
                   <span className="inline-flex flex-col items-center align-baseline">
