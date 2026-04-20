@@ -478,12 +478,14 @@ function SentenceBlock({
   isLast,
   teacherLabel = "홍T",
   subjectUnderlineEnabled = false,
+  svLabelsEnabled = false,
 }: {
   result: SentenceResult;
   index: number;
   isLast: boolean;
   teacherLabel?: string;
   subjectUnderlineEnabled?: boolean;
+  svLabelsEnabled?: boolean;
 }) {
   return (
     <View
@@ -504,6 +506,7 @@ function SentenceBlock({
                 result.syntaxNotes,
                 result.original,
                 subjectUnderlineEnabled,
+                svLabelsEnabled,
               )
             : result.original}
         </Text>
@@ -576,6 +579,7 @@ export function PdfDocument({
   subtitle,
   teacherLabel = "홍T",
   subjectUnderlineEnabled = false,
+  svLabelsEnabled = false,
 }: PdfDocumentProps) {
   const { pages } = paginateResults(results);
 
@@ -608,6 +612,7 @@ export function PdfDocument({
                       isLast={isLastInPage}
                       teacherLabel={teacherLabel}
                       subjectUnderlineEnabled={subjectUnderlineEnabled}
+                      svLabelsEnabled={svLabelsEnabled}
                     />
                   );
                 })}
