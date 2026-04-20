@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useFeatureFlag } from "@/hooks/useFeatureFlag";
 import type { SyntaxNote } from "@/pages/Index";
 import { computeSvLabels, type SvLabel } from "@/lib/sv-labels";
+import { detectSubordinate } from "@/lib/subordinate-detect";
 
 interface ChunkEditorProps {
   chunks: Chunk[];
@@ -28,6 +29,10 @@ export function ChunkEditor({ chunks, onChange, disabled, onAnalyzeSelection, us
   const containerRef = useRef<HTMLDivElement>(null);
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hintInputRef = useRef<HTMLTextAreaElement>(null);
+  const [roleMenu, setRoleMenu] = useState<
+    | { x: number; y: number; chunkIndex: number; wordIndex: number }
+    | null
+  >(null);
 
   const handleMouseUp = useCallback(() => {
     if (!onAnalyzeSelection) return;
