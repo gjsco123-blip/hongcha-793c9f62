@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { FileDown, X, Loader2 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import * as pdfjsLib from "pdfjs-dist";
+import type { PDFDocumentProxy } from "pdfjs-dist";
 // Vite resolves this to a hashed asset URL; ensures worker is bundled (no CDN, no sandbox issues)
 import workerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
@@ -42,7 +43,7 @@ export function PdfPreviewDialog({
 
     let cancelled = false;
     let loadingTask: ReturnType<typeof pdfjsLib.getDocument> | null = null;
-    let pdfDoc: Awaited<ReturnType<typeof loadingTask.promise>> | null = null;
+    let pdfDoc: PDFDocumentProxy | null = null;
 
     const render = async () => {
       setLoading(true);
