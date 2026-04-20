@@ -379,7 +379,7 @@ You MUST respond by calling the "analysis_result" function with the structured o
             properties: {
               english_tagged: {
                 type: "string",
-                description: "English sentence with <c1>...</c1> <c2>...</c2> tags around each chunk. Main verbs within chunks are wrapped with <v>...</v> tags.",
+                description: "English sentence with <c1>...</c1> tags around each chunk. Main-clause verbs use <v>...</v>, subordinate-clause verbs use <vs>...</vs>. Main-clause subjects use <s>...</s>, subordinate-clause subjects use <ss>...</ss>. Parallel coordinated subjects/verbs in the same clause share an identical g=\"N\" attribute (e.g. <v g=\"1\">sang</v> ... <v g=\"1\">danced</v>).",
               },
               korean_literal_tagged: {
                 type: "string",
