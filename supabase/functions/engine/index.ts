@@ -703,13 +703,14 @@ Return ONLY the corrected english_tagged string. Nothing else. No markdown, no c
     try {
       const verbVerifyPrompt = `You are a precise English grammar verb-tagging verifier.
 
-Given an English sentence that has been chunked with <c1>...</c1>, <c2>...</c2> tags and verb-tagged with <v>...</v> tags, your job is to VERIFY and CORRECT ONLY the <v> tags.
+Given an English sentence chunked with <c1>...</c1> tags and verb-tagged with <v> (main clause) or <vs> (subordinate clause) tags, your job is to VERIFY and CORRECT ONLY the verb tags (<v> and <vs>).
 
 ## ABSOLUTE RULES:
 1. DO NOT change the <cN>...</cN> structure in any way — same tags, same boundaries, same text.
 2. DO NOT change the text content at all — no word additions, removals, or reordering.
-3. ONLY add, remove, or adjust <v>...</v> tags.
-4. PRESERVE all <s>...</s> tags exactly as they are. Do NOT remove, add, or modify them.
+3. ONLY add, remove, or adjust <v>...</v> and <vs>...</vs> tags. Preserve g="N" attributes if present.
+4. PRESERVE all <s>...</s> and <ss>...</ss> tags exactly as they are. Do NOT remove, add, or modify them.
+5. Use <vs> when the verb is inside a subordinate clause (relative / adverbial / noun clause). Use <v> for the matrix-clause verb. Match the clause type of the surrounding subject (<s> or <ss>).
 
 ## What MUST have <v> tags (finite verbs only):
 - Simple finite verbs: <v>discovered</v>, <v>is</v>, <v>runs</v>
