@@ -3,6 +3,7 @@ import { PdfHeader } from "@/components/pdf/PdfHeader";
 import { Chunk, segmentsToWords, mergeAdverbsBetweenVerbs } from "@/lib/chunk-utils";
 import { paginateResults, type PaginationSentence } from "@/lib/pdf-pagination";
 import { computeSuperscriptPositions, type SyntaxNoteWithTarget } from "@/lib/syntax-superscript";
+import { computeSvLabels, type SvLabel } from "@/lib/sv-labels";
 
 Font.register({
   family: "Pretendard",
@@ -68,6 +69,7 @@ interface PdfDocumentProps {
   subtitle: string;
   teacherLabel?: string;
   subjectUnderlineEnabled?: boolean;
+  svLabelsEnabled?: boolean;
 }
 
 // 5mm = 14.17pt, 12mm = 34.02pt
