@@ -555,17 +555,19 @@ function SentenceBlock({
     >
       <View style={styles.sentenceRow}>
         <Text style={styles.sentenceNumber}>{String(index + 1).padStart(2, "0")} </Text>
-        <Text style={styles.englishText}>
-          {result.englishChunks.length > 0
-            ? renderChunksWithVerbUnderline(
-                result.englishChunks,
-                result.syntaxNotes,
-                result.original,
-                subjectUnderlineEnabled,
-                svLabelsEnabled,
-              )
-            : result.original}
-        </Text>
+        {result.englishChunks.length > 0 ? (
+          <View style={styles.englishRow}>
+            {renderChunksWithVerbUnderline(
+              result.englishChunks,
+              result.syntaxNotes,
+              result.original,
+              subjectUnderlineEnabled,
+              svLabelsEnabled,
+            )}
+          </View>
+        ) : (
+          <Text style={styles.englishText}>{result.original}</Text>
+        )}
       </View>
 
       {result.englishChunks.length > 0 && (
