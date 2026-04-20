@@ -1,69 +1,71 @@
 
 
-## 목적어가 주어로 잘못 태깅되는 문제 — 결정적 후처리 가드 추가
+## `there is/are` 존재구문 — 진짜 주어가 사라지는 문제
 
-### 사고 분석
+### 원인
+1. **결정적 가드(`stripObjectSubjectTags`)의 R1 룰이 존재구문에서 오작동**
+   - 룰: "동사 이후에 등장하는 `<s>/<ss>`는, 그 뒤에 또 다른 동사가 오지 않으면 목적어로 보고 태그 제거"
+   - 존재구문 `there <vs>is</vs> <ss>so little variation</ss> amongst us`는:
+     - `is` = 동사
+     - `so little variation` = **의미상 진짜 주어** (동사 뒤에 위치)
+     - 뒤에 또 다른 동사 없음 → 가드가 "목적어"로 오판하고 `<ss>` 제거
+   - 결과: 화면처럼 주어 라벨이 사라짐
 
-스크린샷 문장: *"How people interpret **the messages** they receive and **the situations** they encounter becomes their subjective reality..."*
+2. **(추가 가능성) LLM이 `there`를 주어로 태깅**
+   - `there`는 형식상 자리만 채우는 허사(expletive)지 주어 아님
+   - 진짜 주어는 항상 `be` 동사 **뒤** 명사구
 
-올바른 구조:
-- `the messages`, `the situations` = `interpret`의 **목적어 (NP)** → **태그 없음**
-- `they receive`, `they encounter` = 그 목적어를 수식하는 **목적격 관계절** (관계대명사 생략) → 관계절 안의 `they`만 `<ss>`, `receive/encounter`만 `<vs>`
+### 해결 — 2단 방어
 
-LLM이 잘못 태깅한 결과 (현 화면):
-- `<ss>the messages</ss>` ❌, `<ss>the situations</ss>` ❌
-
-### 근본 원인
-1. **프롬프트 충돌**: "동사 뒤 NP는 목적어(<s> 금지)" 규칙(254줄)과 "관계절 선행사를 <s>로 태깅"(223줄, 311줄) 규칙이 **목적격 관계절**(예: `verb + NP + [that/who/which 생략] + S + V`) 케이스에서 충돌. LLM이 후자를 우선 적용.
-2. **검증 통과**: subject verification pass도 같은 LLM 기반이라 같은 실수 반복(LLM 일관성 편향).
-3. **결정적 가드 부재**: "`<v>` 직후 첫 명사구는 절대 `<s>`/`<ss>` 금지" 같은 코드 레벨 룰이 없음.
-
-### 해결 — 3중 방어
 **파일: `supabase/functions/engine/index.ts`**
 
-#### 1. 결정적 후처리 함수 `stripObjectSubjectTags()` 추가 (핵심)
-정규식·토큰 기반으로 LLM 결과에서 명백히 잘못된 `<s>/<ss>` 제거. 검증 패스 **다음**에 마지막으로 실행 (LLM이 다시 망쳐도 못 빠져나감).
+#### 1. 존재구문 예외를 가드에 추가 (핵심)
+`stripObjectSubjectTags` 안에서 subject 태그를 제거하기 **직전**에 다음 체크:
 
-규칙:
-- **R1**: `<v>...</v>` 또는 `<vs>...</vs>` 직후, 같은 절(같은 `<cN>` 안 OR 인접 `<cN>`)에서 처음 등장하는 `<s>...</s>` 또는 `<ss>...</ss>`가 **다른 동사 태그를 가운데 두지 않고** 바로 이어지면 → 그 NP는 목적어이므로 `<s>/<ss>` 태그만 벗기기 (텍스트는 보존).
-  - 단, 그 NP 직후에 **새로운 동사 태그**(`<v>`/`<vs>`)가 같은 절 안에 있으면 → 진짜 다음 절의 주어일 수 있으므로 건너뜀.
-- **R2** (관계절 특화): 패턴 `<v|vs>X</v|vs> <s|ss>NP</s|ss> <s|ss>Y</s|ss> <v|vs>Z</v|vs>` 감지 — `NP`와 `Y` 사이에 동사가 없고 `Y` 뒤에 동사가 오면 → `NP`는 **선행사+목적어**, `Y`는 **관계절 주어**. → `NP`의 `<s|ss>` 제거 (목적어), `Y`의 `<ss>`는 유지.
-  - 이 패턴이 정확히 스크린샷의 `interpret <ss>the messages</ss> <ss>they</ss> <vs>receive</vs>` 케이스를 커버.
-- **R3**: 같은 `<cN>` 청크 안에 `<s>`/`<ss>`가 2개 이상이고 사이에 동사가 없으면 → 첫 번째가 목적어로 추정되므로 제거 (보수적: 두 번째에 동사가 따라올 때만).
-
-안전장치:
-- 텍스트 내용·`<cN>` 구조·동사 태그 개수 변경 없음을 검증한 뒤 적용.
-- 변화량이 비정상(>50% 주어 제거)이면 폐기.
-
-#### 2. 메인 프롬프트 강화 (294줄 근처)
-"NEVER tag these as <s>" 섹션에 **명시적 신규 규칙** 추가:
 ```
-9. Antecedent of an OBJECT relative clause when the antecedent ITSELF is the OBJECT
-   of an outer verb. The antecedent stays UNTAGGED; only the inner subject of the
-   relative clause gets <ss>.
-   - WRONG:   <s>How</s> <s>people</s> <v>interpret</v> <s>the messages</s> <s>they</s> <v>receive</v>
-   - CORRECT: How <ss>people</ss> <vs>interpret</vs> the messages <ss>they</ss> <vs>receive</vs>
-   - 이유: "the messages"는 interpret의 목적어이자 동시에 관계절(생략된 that/which)의 선행사.
-     목적어이기 때문에 <s>/<ss>를 받지 않는다.
+- 현재 chunk 내용(태그 제거 후 텍스트)에서, 제거 대상 <s|ss> 직전 토큰들을 확인
+- 패턴이 (^|문장경계) [there] [is/are/was/were/has been/have been/...] 
+  바로 뒤에 오는 첫 번째 <s|ss>이면 → 제거 금지(존재구문의 진짜 주어)
+- "there" 판별: 대소문자 무시, 단어 경계 기준
+- be동사 변형 목록: is, are, was, were, isn't, aren't, wasn't, weren't,
+  's, 're, has been, have been, had been, will be, may be, might be, can be,
+  exists, exist, existed, remains, remain, remained, lies, lie, lay, comes, came
+  (existential 패턴 모두 포함)
 ```
 
-#### 3. Subject verification 프롬프트에도 동일 규칙 추가
-verifier가 "선행사니까 무조건 `<s>`" 라는 잘못된 학습을 깨도록.
+#### 2. 메인 프롬프트에 존재구문 명시 규칙 추가
+"NEVER tag these as <s>" 섹션에 **규칙 #10** 추가:
+```
+10. The expletive "there" in existential sentences is NEVER the subject.
+    The REAL subject is the noun phrase AFTER the be-verb (or existential verb).
+    
+    - WRONG:   <s>There</s> <v>is</v> so little variation amongst us
+    - WRONG:   There <v>is</v> so little variation amongst us  (subject missing)
+    - CORRECT: There <v>is</v> <s>so little variation</s> amongst us
+    
+    Same rule for: there are / there was / there were / there exists / there remains / there comes ...
+    The post-verbal NP gets <s> (or <ss> if the existential clause is itself subordinate).
+```
 
-### 변경 안 하는 것
-- `<cN>` 청크 구조, 동사 태그 로직, 한국어 번역
+#### 3. Subject verifier 프롬프트에도 동일 규칙 추가
+verifier가 존재구문을 검증할 때 빠뜨리지 않도록 동일 예시 명시.
+
+### 변경하지 않는 것
+- `<cN>` 청크 구조, 동사 태깅 로직, 한국어 번역
+- 다른 R1/R2 가드 로직 (목적어-관계절 보호는 유지)
 - UI / PDF (LLM 결과만 정확해지면 자동 반영)
-- 기존 verb verification pass
 
 ### 검증 포인트
-1. 스크린샷 문장 재분석 → `the messages`, `the situations`에 밑줄/라벨 없어야 함
-2. 관계절 안의 `they receive`, `they encounter`는 그대로 `s'/v'`로 표시
-3. 단순 관계절 (`the book that I read`) → `<s>the book</s> that <ss>I</ss> <vs>read</vs>` 정상 유지
-4. 주어-관계절 (`the people who are taking part`) → 선행사가 진짜 주어면 `<s>` 유지
-5. 일반 SVO 문장 (`He gave her a book`) 영향 없음
-6. 콘솔 로그에 `Object-as-subject strip: removed N tags` 형태로 가드 작동 여부 추적 가능
+1. `and there is so little variation amongst us` → `there <v>is</v> <s>so little variation</s>`
+2. `There are many problems` → 주어 = `many problems`
+3. `There exists a solution` → 주어 = `a solution`
+4. **회귀 방지**:
+   - `He gave her <s>...</s>` 같은 일반 SVO에서 가드는 여전히 동작 (목적어 제거)
+   - `interpret the messages they receive` 패턴 (직전 수정한 R2)도 그대로 동작
+   - 종속절 안 존재구문(`...because there is no time`)도 `<vs>is</vs> <ss>no time</ss>` 유지
+5. 콘솔 로그: `Existential there: preserved subject` 형태로 추적 가능
 
-### 한계
-- 매우 드물게 보수적 규칙이 정상 케이스를 건드릴 수 있음 → 변화량 임계값과 텍스트 무결성 체크로 폐기
-- 100% 보장 아니지만 LLM 단독 대비 신뢰도 대폭 상승
+### 한계 (솔직)
+- LLM이 처음부터 `there is` 뒤 NP에 태그를 안 달면 가드는 도와줄 수 없음 → 프롬프트 강화로 1차 방어
+- 가드는 LLM이 정확히 태깅했는데도 잘못 떼는 케이스를 막는 안전망 역할
 
