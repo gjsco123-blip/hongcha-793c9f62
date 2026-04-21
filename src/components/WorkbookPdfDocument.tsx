@@ -129,10 +129,10 @@ const styles = StyleSheet.create({
     lineHeight: 1.1,
   },
   sentenceText: {
-    fontFamily: "GangwonEduSaeeum",
+    fontFamily: "Helvetica",
     flex: 1,
-    fontSize: 13,
-    fontWeight: 700,
+    fontSize: 9,
+    fontWeight: 600,
     color: "#111",
     lineHeight: 3.5,
   },
