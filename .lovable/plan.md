@@ -1,92 +1,71 @@
-# analyze-preview 프롬프트 모듈화
 
-## 목표
-주제/제목/요약/4단논리 각각을 **독립적으로 수정**할 수 있도록 거대한 단일 프롬프트를 의미 단위 블록으로 쪼갠다.
 
-**핵심 원칙: 모델에게 전달되는 최종 문자열은 100% 동일해야 함** → 품질 변화 없음, 순수 리팩터링.
+## `there is/are` 존재구문 — 진짜 주어가 사라지는 문제
 
-## 대상 파일
-`supabase/functions/analyze-preview/index.ts` 1개 파일만 수정.
+### 원인
+1. **결정적 가드(`stripObjectSubjectTags`)의 R1 룰이 존재구문에서 오작동**
+   - 룰: "동사 이후에 등장하는 `<s>/<ss>`는, 그 뒤에 또 다른 동사가 오지 않으면 목적어로 보고 태그 제거"
+   - 존재구문 `there <vs>is</vs> <ss>so little variation</ss> amongst us`는:
+     - `is` = 동사
+     - `so little variation` = **의미상 진짜 주어** (동사 뒤에 위치)
+     - 뒤에 또 다른 동사 없음 → 가드가 "목적어"로 오판하고 `<ss>` 제거
+   - 결과: 화면처럼 주어 라벨이 사라짐
 
-## 분리 후 구조
+2. **(추가 가능성) LLM이 `there`를 주어로 태깅**
+   - `there`는 형식상 자리만 채우는 허사(expletive)지 주어 아님
+   - 진짜 주어는 항상 `be` 동사 **뒤** 명사구
 
-```text
-┌─ COMMON_ROLE_AND_ANALYSIS  (공통)
-│   - CRITICAL LENGTH RULE (최우선 규칙)
-│   - 역할 설명 + Sample Correct Answers
-│   - Step 1. Difficulty
-│   - Step 2. Internal Analysis
-│   - Step 3. Abstraction Adjustment
-│
-├─ TOPIC_RULE              (주제만)
-│   - exam_block.topic 스펙
-│   - exam_block.topic_ko 스펙
-│
-├─ TITLE_RULE              (제목만)
-│   - exam_block.title 스펙
-│   - exam_block.title_ko 스펙
-│
-├─ ONE_SENTENCE_SUMMARY_RULE  (한 줄 요약만)
-│   - one_sentence_summary 스펙
-│   - one_sentence_summary_ko (직역) 스펙 + 예시
-│
-├─ PASSAGE_LOGIC_RULE      (4단 논리만)
-│   - summary 4줄 ①②③④ 스펙
-│   - 길이 강제 규칙
-│   - 모범/Bad 예시 (Few-shot)
-│   - 종결 스타일 (명사형)
-│
-├─ COMMON_EXAM_RULES       (공통)
-│   - Critical Korean Exam Rules
-│
-└─ OUTPUT_FORMAT           (공통)
-    - OUTPUT SELF-CHECK
-    - 절대 규칙
-    - JSON 출력 형식
+### 해결 — 2단 방어
 
-const SYSTEM_PROMPT = [
-  COMMON_ROLE_AND_ANALYSIS,
-  TOPIC_RULE,
-  TITLE_RULE,
-  ONE_SENTENCE_SUMMARY_RULE,
-  PASSAGE_LOGIC_RULE,
-  COMMON_EXAM_RULES,
-  OUTPUT_FORMAT,
-].join("\n\n");
+**파일: `supabase/functions/engine/index.ts`**
+
+#### 1. 존재구문 예외를 가드에 추가 (핵심)
+`stripObjectSubjectTags` 안에서 subject 태그를 제거하기 **직전**에 다음 체크:
+
+```
+- 현재 chunk 내용(태그 제거 후 텍스트)에서, 제거 대상 <s|ss> 직전 토큰들을 확인
+- 패턴이 (^|문장경계) [there] [is/are/was/were/has been/have been/...] 
+  바로 뒤에 오는 첫 번째 <s|ss>이면 → 제거 금지(존재구문의 진짜 주어)
+- "there" 판별: 대소문자 무시, 단어 경계 기준
+- be동사 변형 목록: is, are, was, were, isn't, aren't, wasn't, weren't,
+  's, 're, has been, have been, had been, will be, may be, might be, can be,
+  exists, exist, existed, remains, remain, remained, lies, lie, lay, comes, came
+  (existential 패턴 모두 포함)
 ```
 
-`SELF_CRITIQUE_PROMPT`도 동일 원칙으로 4개 체크 블록으로 분리:
-
-```text
-TOPIC_CHECK + TITLE_CHECK + SUMMARY_CHECK + PASSAGE_LOGIC_CHECK
-→ const SELF_CRITIQUE_PROMPT = [...].join("\n\n");
+#### 2. 메인 프롬프트에 존재구문 명시 규칙 추가
+"NEVER tag these as <s>" 섹션에 **규칙 #10** 추가:
+```
+10. The expletive "there" in existential sentences is NEVER the subject.
+    The REAL subject is the noun phrase AFTER the be-verb (or existential verb).
+    
+    - WRONG:   <s>There</s> <v>is</v> so little variation amongst us
+    - WRONG:   There <v>is</v> so little variation amongst us  (subject missing)
+    - CORRECT: There <v>is</v> <s>so little variation</s> amongst us
+    
+    Same rule for: there are / there was / there were / there exists / there remains / there comes ...
+    The post-verbal NP gets <s> (or <ss> if the existential clause is itself subordinate).
 ```
 
-## 작업 순서
+#### 3. Subject verifier 프롬프트에도 동일 규칙 추가
+verifier가 존재구문을 검증할 때 빠뜨리지 않도록 동일 예시 명시.
 
-1. 현재 `SYSTEM_PROMPT` 텍스트를 의미 단위로 잘라 7개 `const` 문자열로 분리
-2. `SYSTEM_PROMPT`는 위 7개를 `join("\n\n")`으로 조립
-3. `SELF_CRITIQUE_PROMPT`도 4개 체크 블록으로 동일하게 분리
-4. 각 블록 위에 `// ── 주제 (Topic) 규칙 ──` 같은 한글 주석 헤더 추가 → 검색/수정 시 즉시 점프 가능
-5. 함수 로직(`callAi`, `serve`, retry, self-critique 호출)은 **일체 변경 없음**
+### 변경하지 않는 것
+- `<cN>` 청크 구조, 동사 태깅 로직, 한국어 번역
+- 다른 R1/R2 가드 로직 (목적어-관계절 보호는 유지)
+- UI / PDF (LLM 결과만 정확해지면 자동 반영)
 
-## 보장 사항
+### 검증 포인트
+1. `and there is so little variation amongst us` → `there <v>is</v> <s>so little variation</s>`
+2. `There are many problems` → 주어 = `many problems`
+3. `There exists a solution` → 주어 = `a solution`
+4. **회귀 방지**:
+   - `He gave her <s>...</s>` 같은 일반 SVO에서 가드는 여전히 동작 (목적어 제거)
+   - `interpret the messages they receive` 패턴 (직전 수정한 R2)도 그대로 동작
+   - 종속절 안 존재구문(`...because there is no time`)도 `<vs>is</vs> <ss>no time</ss>` 유지
+5. 콘솔 로그: `Existential there: preserved subject` 형태로 추적 가능
 
-- 최종 프롬프트 문자열 길이/내용 동일 (단순 변수 분리)
-- AI 호출 횟수, 모델, temperature, retry 로직 모두 그대로
-- 출력 JSON 스키마 변경 없음 → 클라이언트 코드 수정 불필요
-- 사용자 체감 품질 변화 0
+### 한계 (솔직)
+- LLM이 처음부터 `there is` 뒤 NP에 태그를 안 달면 가드는 도와줄 수 없음 → 프롬프트 강화로 1차 방어
+- 가드는 LLM이 정확히 태깅했는데도 잘못 떼는 케이스를 막는 안전망 역할
 
-## 솔직한 한계
-
-- 분리 자체는 가독성 개선용이지 품질 향상은 없음 (네가 이미 동의한 부분)
-- 블록 사이 `\n\n` 결합 방식이라 원본 대비 공백 1~2개 차이가 생길 수 있음 → 모델 출력에 사실상 영향 없지만, 1:1 바이트 동일은 아님
-- 향후 "Topic만 수정" 같은 작업은 쉬워지지만, 공통 블록(분석 단계 등) 수정은 여전히 4개 필드 모두에 영향
-
-## 향후 효과
-
-- "주제 톤만 더 학술적으로" → `TOPIC_RULE`만 수정
-- "4단 논리 길이 50~60으로" → `PASSAGE_LOGIC_RULE`만 수정
-- 코드 리뷰/diff 가독성 대폭 향상
-
-진행해도 될까?

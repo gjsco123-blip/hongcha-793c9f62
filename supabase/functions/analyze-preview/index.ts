@@ -29,14 +29,7 @@ function safeParseJson(raw: string): any {
   throw new Error("Failed to parse preview JSON");
 }
 
-// ╔══════════════════════════════════════════════════════════════════╗
-// ║ SYSTEM PROMPT BLOCKS                                             ║
-// ║  - 각 블록은 독립적으로 수정 가능. 품질 변경 없이 가독성만 개선. ║
-// ║  - 최종 SYSTEM_PROMPT는 아래 블록들을 \n\n로 연결한 결과.        ║
-// ╚══════════════════════════════════════════════════════════════════╝
-
-// ── [공통] 역할 + Sample + 분석 단계 (Step 1~3) ──
-const COMMON_ROLE_AND_ANALYSIS = `[CRITICAL LENGTH RULE — 최우선 규칙]
+const SYSTEM_PROMPT = `[CRITICAL LENGTH RULE — 최우선 규칙]
 summary의 각 줄(①②③④)은 반드시 한국어 48~55자 (공백·번호·구두점 포함). 허용 범위는 45~58자.
 - 45자 미만 = 무효. 58자 초과 = 무효. 출력 금지.
 - 출력 직전 각 줄 글자수를 직접 세어 검증할 것.
@@ -112,19 +105,17 @@ If Grade 2+:
 Step 4. Generate Output
 ────────────────────
 
-Generate the following as a JSON object:`;
+Generate the following as a JSON object:
 
-// ── [주제] Topic 규칙 (exam_block.topic / topic_ko) ──
-const TOPIC_RULE = `1. exam_block.topic (Core Thesis / 주제):
+1. exam_block.topic (Core Thesis / 주제):
    - One sentence in English.
    - Must express a CLAIM (not just a topic description).
    - Broader than specific examples.
    - Preserve the direction of the conclusion. No exaggeration. No new concepts. Avoid vague "about ~" expressions.
 
-2. exam_block.topic_ko: Korean translation of topic.`;
+2. exam_block.topic_ko: Korean translation of topic.
 
-// ── [제목] Title 규칙 (exam_block.title / title_ko) ──
-const TITLE_RULE = `3. exam_block.title (Best Title / 제목):
+3. exam_block.title (Best Title / 제목):
    - Concise noun phrase in English, shorter and more compressed than the thesis.
    - Academic and clear (not poetic). Sentence case (only first word capitalized).
    - Question format allowed only if the passage clearly answers it.
@@ -132,10 +123,9 @@ const TITLE_RULE = `3. exam_block.title (Best Title / 제목):
      (e.g., impact of ~, role of ~, necessity of ~, distinction between ~).
    - 5~9 words.
 
-4. exam_block.title_ko: Korean translation of title.`;
+4. exam_block.title_ko: Korean translation of title.
 
-// ── [한 줄 요약] One-Sentence Summary 규칙 ──
-const ONE_SENTENCE_SUMMARY_RULE = `5. exam_block.one_sentence_summary (One-Sentence Summary):
+5. exam_block.one_sentence_summary (One-Sentence Summary):
    - Exactly ONE sentence in English.
    - Must clearly reflect the dominant logical relationship
      (cause-effect, contrast, concession, problem-solution, etc.).
@@ -159,10 +149,9 @@ const ONE_SENTENCE_SUMMARY_RULE = `5. exam_block.one_sentence_summary (One-Sente
    예시:
    영문: "Immediate rewards systematically distort long-term decision-making by exploiting evolutionary biases in the human brain."
    Good: "즉각적 보상은 인간 두뇌의 진화적 편향을 이용해 장기적 의사결정을 체계적으로 왜곡한다."
-   Bad: "사람들은 당장의 만족 때문에 미래를 제대로 못 본다는 점이 문제다."`;
+   Bad: "사람들은 당장의 만족 때문에 미래를 제대로 못 본다는 점이 문제다."
 
-// ── [4단 논리] Passage Logic 규칙 (summary ①②③④) ──
-const PASSAGE_LOGIC_RULE = `7. summary (Passage Logic / 지문 논리):
+7. summary (Passage Logic / 지문 논리):
    - 반드시 정확히 4개 항목, 줄바꿈 \\n으로 구분, 한국어로 작성.
    - 각 항목 앞에 번호를 붙일 것: ① ② ③ ④
    - **각 항목은 정확히 한 줄(single line)** — 항목 내부에 \\n, 줄바꿈, 또는 줄을 나누는 어떠한 문자도 절대 포함 금지.
@@ -224,10 +213,9 @@ Bad (한 항목이 줄바꿈 — 절대 금지):
 - Good: "① 보상의 즉각성이 합리적 의사결정을 구조적으로 왜곡한다는 점을 드러내는 영향"
 - Good: "② 즉각적 보상이 장기적 이익보다 우선시되는 인간 두뇌의 진화적 편향 경향"
 - Bad: "① 보상의 즉각성이 의사결정에 영향을 미친다" (너무 짧고 동사 종결)
-- Bad: "② 즉각적 보상이 장기적 이익보다 선호됨" (음슴체 금지)`;
+- Bad: "② 즉각적 보상이 장기적 이익보다 선호됨" (음슴체 금지)
 
-// ── [공통] Korean Exam 공통 금지/주의 규칙 ──
-const COMMON_EXAM_RULES = `────────────────────
+────────────────────
 Critical Korean Exam Rules
 ────────────────────
 - Do not reverse cause and effect.
@@ -235,10 +223,9 @@ Critical Korean Exam Rules
 - Do not overgeneralize beyond the passage.
 - Do not introduce concepts not central to the text.
 - Do not merely restate the first sentence.
-- Focus on the overall argumentative direction.`;
+- Focus on the overall argumentative direction.
 
-// ── [공통] 출력 자가검증 + 절대 규칙 + JSON 스키마 ──
-const OUTPUT_FORMAT = `────────────────────
+────────────────────
 [OUTPUT SELF-CHECK]
 ────────────────────
 출력 직전, summary의 각 줄 글자수(공백·번호 포함)를 세어
@@ -258,34 +245,16 @@ const OUTPUT_FORMAT = `───────────────────
 출력 형식:
 {"summary":"①...\\n②...\\n③...\\n④...","exam_block":{"topic":"...","topic_ko":"...","title":"...","title_ko":"...","one_sentence_summary":"...","one_sentence_summary_ko":"..."}}`;
 
-const SYSTEM_PROMPT = [
-  COMMON_ROLE_AND_ANALYSIS,
-  TOPIC_RULE,
-  TITLE_RULE,
-  ONE_SENTENCE_SUMMARY_RULE,
-  PASSAGE_LOGIC_RULE,
-  COMMON_EXAM_RULES,
-  OUTPUT_FORMAT,
-].join("\n\n");
+const SELF_CRITIQUE_PROMPT = `다음 체크리스트로 이전 응답을 평가하고, 하나라도 미달이면 수정 후 동일 JSON으로 다시 출력할 것.
 
-// ╔══════════════════════════════════════════════════════════════════╗
-// ║ SELF-CRITIQUE PROMPT BLOCKS                                      ║
-// ║  - 각 필드별 체크리스트를 독립 블록으로 분리.                    ║
-// ╚══════════════════════════════════════════════════════════════════╝
-
-// ── [공통] 자가검토 지시문 (헤더) ──
-const CRITIQUE_HEADER = `다음 체크리스트로 이전 응답을 평가하고, 하나라도 미달이면 수정 후 동일 JSON으로 다시 출력할 것.`;
-
-// ── [4단 논리] Passage Logic 체크 ──
-const PASSAGE_LOGIC_CHECK = `[Passage Logic 체크리스트]
+[Passage Logic 체크리스트]
 1. ①②③④ 각 줄 글자수가 한국어 45~58자(공백·번호 포함)인가?
    → 짧으면 [주체]+[원인/메커니즘]+[결과/결론] 3요소 중 누락된 것을 추가해 늘릴 것.
 2. 각 줄이 명사형 종결(~점/구조/경향/방식 등)인가? 동사 종결·음슴체 금지.
 3. 원문의 논리 구조(대비/인과/양보/문제해결)가 ④번 결론 줄에 정확히 반영됐는가?
-4. 원문에 없는 평가·주장·예측이 추가되지 않았는가?`;
+4. 원문에 없는 평가·주장·예측이 추가되지 않았는가?
 
-// ── [주제 + 제목 + 한 줄 요약] exam_block 체크 ──
-const EXAM_BLOCK_CHECK = `[exam_block 체크리스트]
+[exam_block 체크리스트]
 5. topic이 단순 설명이 아니라 명확한 CLAIM(주장)인가?
 6. title이 5~9 단어 명사구(abstract noun + of + key concept 권장)인가?
 7. one_sentence_summary가 정확히 한 문장이며 논리 구조를 반영하는가?
@@ -293,19 +262,11 @@ const EXAM_BLOCK_CHECK = `[exam_block 체크리스트]
    - 영문의 핵심 명사·동사가 한글에서 1:1 추적 가능한가?
    - 영문에 없는 해설·평가·예시가 추가되지 않았는가?
    - "~을 시사한다 / ~라고 볼 수 있다" 같은 임의 해설어가 들어가지 않았는가?
-   미달이면 직역 원칙으로 다시 작성할 것.`;
+   미달이면 직역 원칙으로 다시 작성할 것.
 
-// ── [공통] 자가검토 결과 처리 지시문 (푸터) ──
-const CRITIQUE_FOOTER = `평가 결과 모든 항목 충족이면 1차 응답을 그대로 다시 출력.
+평가 결과 모든 항목 충족이면 1차 응답을 그대로 다시 출력.
 하나라도 미달이면 수정한 결과를 동일 JSON 형식으로 출력.
 JSON 객체 외 다른 텍스트 출력 금지.`;
-
-const SELF_CRITIQUE_PROMPT = [
-  CRITIQUE_HEADER,
-  PASSAGE_LOGIC_CHECK,
-  EXAM_BLOCK_CHECK,
-  CRITIQUE_FOOTER,
-].join("\n\n");
 
 const LOVABLE_API_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
