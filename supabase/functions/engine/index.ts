@@ -595,6 +595,7 @@ You MUST respond by calling the "analysis_result" function with the structured o
           messages,
           tools,
           tool_choice: { type: "function", function: { name: "analysis_result" } },
+          max_tokens: 8192,
         }),
       });
 
@@ -615,13 +616,32 @@ You MUST respond by calling the "analysis_result" function with the structured o
       }
 
       const data = await response.json();
-      const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-      if (!toolCall) throw new Error("No tool call in response");
+      const choice = data.choices?.[0];
+      const finishReason = choice?.finish_reason;
+      const toolCall = choice?.message?.tool_calls?.[0];
+      let rawArgs: string | undefined = toolCall?.function?.arguments;
+
+      // Fallback: some models return JSON in message.content instead of tool_calls
+      if (!rawArgs) {
+        const content = choice?.message?.content;
+        if (typeof content === "string" && content.trim()) {
+          const match = content.match(/\{[\s\S]*\}/);
+          if (match) rawArgs = match[0];
+        }
+      }
+
+      if (!rawArgs) {
+        console.warn(`Attempt ${attempt + 1}: No tool call in response (finish_reason=${finishReason})`);
+        if (attempt >= MAX_ATTEMPTS - 1) {
+          throw new Error(`No tool call in response (finish_reason=${finishReason ?? "unknown"})`);
+        }
+        continue;
+      }
 
       try {
-        lastResult = safeParseJson(toolCall.function.arguments);
+        lastResult = safeParseJson(rawArgs);
       } catch (parseErr) {
-        console.warn(`Attempt ${attempt + 1}: Failed to parse tool call arguments: ${toolCall.function.arguments?.substring(0, 200)}`);
+        console.warn(`Attempt ${attempt + 1}: Failed to parse tool call arguments: ${rawArgs.substring(0, 200)}`);
         if (attempt >= MAX_ATTEMPTS - 1) throw parseErr;
         continue;
       }
