@@ -358,6 +358,27 @@ function summaryHasOutOfRangeLine(summary: unknown, minLen = 45, maxLen = 58): b
   return lines.some((line) => line.length < minLen || line.length > maxLen);
 }
 
+// 문장형 topic 판별 — Option C 자동 재시도 트리거
+function isSentenceLikeTopic(topic: unknown): boolean {
+  if (typeof topic !== "string") return false;
+  const t = topic.trim();
+  if (!t) return false;
+  // 마침표로 끝남
+  if (/[.!?]$/.test(t)) return true;
+  // 단어 수 12개 초과
+  const wordCount = t.split(/\s+/).filter(Boolean).length;
+  if (wordCount > 12) return true;
+  // 조동사
+  if (/\b(must|should|can|could|may|might|will|would|shall)\b/i.test(t)) return true;
+  // be동사/연결동사
+  if (/\b(is|are|was|were|be|been|being|am)\b/i.test(t)) return true;
+  // 평가/기능 동사 (3인칭 단수형 포함)
+  if (/\b(serves?|fails?|requires?|provides?|enables?|reflects?|demonstrates?|shows?|proves?|leads?|creates?|causes?|allows?|makes?|helps?|needs?)\b/i.test(t)) return true;
+  // 종속 접속사
+  if (/\b(because|although|while|since|whereas|though|if|when)\b/i.test(t)) return true;
+  return false;
+}
+
 // ============================================================
 // MODE-SPECIFIC PROMPT MODULES (재생성 전용 — 첫 생성은 SYSTEM_PROMPT 사용)
 // ============================================================
@@ -668,6 +689,33 @@ serve(async (req) => {
     }
 
     let parsed = safeParseJson(content);
+
+    // Option C: mode="all" 결과의 topic이 문장형이면 topic 전용 모드로 1회 재생성
+    if (mode === "all" && parsed?.exam_block?.topic && isSentenceLikeTopic(parsed.exam_block.topic)) {
+      const originalTopic = parsed.exam_block.topic;
+      console.log(`[analyze-preview] topic retry triggered: "${originalTopic}"`);
+      try {
+        const topicSystemPrompt = buildSystemPrompt("topic", grade);
+        const topicContent = await callAi(LOVABLE_API_KEY, [
+          { role: "system", content: topicSystemPrompt },
+          { role: "user", content: passage },
+        ]);
+        const topicParsed = safeParseJson(topicContent);
+        const newTopic = topicParsed?.exam_block?.topic;
+        const newTopicKo = topicParsed?.exam_block?.topic_ko;
+        if (newTopic && typeof newTopic === "string") {
+          parsed.exam_block.topic = newTopic;
+          if (newTopicKo && typeof newTopicKo === "string") {
+            parsed.exam_block.topic_ko = newTopicKo;
+          }
+          console.log(`[analyze-preview] topic retry succeeded: "${newTopic}"`);
+        } else {
+          console.log("[analyze-preview] topic retry returned invalid result, keeping original");
+        }
+      } catch (topicErr) {
+        console.warn("[analyze-preview] topic retry failed, keeping original:", topicErr);
+      }
+    }
 
     // 후처리 안전망: summary 줄 길이 검증 (45~58자) — "all" 또는 "passage_summary"에서만 적용
     const summaryEligibleForLengthCheck = mode === "all" || mode === "passage_summary";
