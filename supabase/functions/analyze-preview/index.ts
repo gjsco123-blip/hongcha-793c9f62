@@ -108,10 +108,14 @@ Step 4. Generate Output
 Generate the following as a JSON object:
 
 1. exam_block.topic (Core Thesis / 주제):
-   - One sentence in English.
-   - Must express a CLAIM (not just a topic description).
-   - Broader than specific examples.
-   - Preserve the direction of the conclusion. No exaggeration. No new concepts. Avoid vague "about ~" expressions.
+   - A concise English noun phrase, NOT a full sentence.
+   - Must follow Korean mock-exam topic-answer style.
+   - Do NOT write a sentence with subject + verb.
+   - Prefer structures such as importance of ~, necessity of ~, benefits of ~, effects of ~ on ~, impact of ~ on ~, role of ~ in ~, relationship between A and B, distinction between A and B, limitations of ~, consequences of ~.
+   - Must capture the passage's central claim, but express it as a noun phrase.
+   - Broader than specific examples, but not so abstract that the passage content disappears.
+   - Preserve the author's evaluative direction. No exaggeration. No new concepts.
+   - Avoid vague "about ~" expressions.
 
 2. exam_block.topic_ko: Korean translation of topic.
 
@@ -270,10 +274,7 @@ JSON 객체 외 다른 텍스트 출력 금지.`;
 
 const LOVABLE_API_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-async function callAi(
-  apiKey: string,
-  messages: Array<{ role: string; content: string }>,
-) {
+async function callAi(apiKey: string, messages: Array<{ role: string; content: string }>) {
   const response = await fetch(LOVABLE_API_URL, {
     method: "POST",
     headers: {
@@ -303,13 +304,12 @@ async function callAi(
   return content as string;
 }
 
-function summaryHasOutOfRangeLine(
-  summary: unknown,
-  minLen = 45,
-  maxLen = 58,
-): boolean {
+function summaryHasOutOfRangeLine(summary: unknown, minLen = 45, maxLen = 58): boolean {
   if (typeof summary !== "string") return false;
-  const lines = summary.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = summary
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
   if (lines.length === 0) return false;
   return lines.some((line) => line.length < minLen || line.length > maxLen);
 }
@@ -336,34 +336,43 @@ const PROMPT_COMMON_RULES = `[Critical Korean Exam Rules]
 - Do not merely restate the first sentence.
 - Focus on the overall argumentative direction.
 - 불필요하게 어려운 한자어는 피하되, 고등학교 독해에서 흔히 쓰는 개념어는 허용한다.
+- JSON 객체만 출력. 다른 텍스트 금지.`;
 
-const PROMPT_TOPIC_RULES = `[Sample Correct Answers — topic의 추상화 수준/톤/구조 참고]
-1) cultural openness as a foundation for Rome's growth
-2) need to act on scientific understanding in solving problems
-3) importance of specific questions to attain reliable quantitative data
-4) advantage of crop rotation in maintaining soil health
-5) our common belief that we are better than average
-6) Action Comes from Who You Think You Are
-7) the necessity of various perspectives in practicing science
-8) the impact of reward immediacy on decision-making
-9) distinction between recall and familiarity in the memory system
-10) counteraction of pleasure and pain in maintaining stability
-11) views on whether science is free from cultural context or not
-12) economic benefits of reduced domestic cooking duties through outsourcing
-
-[topic 규칙]
-- A concise English noun phrase, NOT a full sentence.
-- Must follow Korean CSAT topic-answer style.
-- Prefer: abstract noun + of + key concept.
-- Use patterns such as importance of ~, necessity of ~, role of ~, impact of ~, effect of ~, significance of ~, limitation of ~, consequence of ~, relationship between A and B.
-- Must imply the passage’s central claim, but do not write it as a full sentence.
-- Broader than specific examples.
-- Preserve the direction of the conclusion. No exaggeration. No new concepts.
-- Avoid vague "about ~" expressions.
+const PROMPT_TOPIC_RULES = `[topic 규칙]
+- Write a concise English noun phrase, NOT a full sentence.
+- Must follow Korean mock-exam topic-answer style.
+- Do NOT write a sentence with subject + verb.
+- Prefer structures such as:
+  importance of ~
+  necessity of ~
+  benefits of ~
+  effects of ~ on ~
+  impact of ~ on ~
+  role of ~ in ~
+  relationship between A and B
+  distinction between A and B
+  limitations of ~
+  consequences of ~
+  factors that ~
+- The topic must capture the passage's central claim, but express it as a noun phrase.
+- Broader than specific examples, but not so abstract that the passage content disappears.
+- Preserve the author's evaluative direction: positive, negative, critical, supportive, contrastive.
+- Do not reverse cause and effect.
+- Avoid vague expressions such as:
+  about ~
+  various aspects of ~
+  things related to ~
+  importance of understanding ~
+  ways to deal with ~
+- Avoid overly abstract or highly compressed phrasing unless grade is 3.
+- If the passage is mainly negative or critical, include that direction with words like limitation, problem, risk, drawback, issue, misconception, consequence, or negative effect.
+- If the passage is mainly positive or supportive, include that direction with words like benefit, importance, necessity, role, value, advantage, or usefulness.
+- If the passage contrasts two views, reflect the contrast with distinction, difference, relationship, tension, or contrast.
 
 [topic_ko 규칙]
 - topic의 한국어 번역.
-- 불필요하게 어려운 한자어는 피하되, 고등학교 독해에서 흔히 쓰는 개념어는 허용한다.
+- 자연스러운 한국어 명사구로 번역한다.
+- 불필요하게 어려운 한자어는 피하되, 고등학교 독해에서 흔히 쓰는 개념어는 허용한다.`;
 
 const PROMPT_TITLE_RULES = `[title 규칙]
 - Concise noun phrase in English, shorter and more compressed than the thesis.
@@ -374,7 +383,7 @@ const PROMPT_TITLE_RULES = `[title 규칙]
 
 [title_ko 규칙]
 - title의 한국어 번역.
-- 불필요하게 어려운 한자어는 피하되, 고등학교 독해에서 흔히 쓰는 개념어는 허용한다.
+- 불필요하게 어려운 한자어는 피하되, 고등학교 독해에서 흔히 쓰는 개념어는 허용한다.`;
 
 const PROMPT_EXAM_SUMMARY_RULES = `[one_sentence_summary 규칙]
 - Exactly ONE sentence in English.
@@ -453,13 +462,58 @@ const VALID_MODES: Mode[] = ["all", "topic", "title", "exam_summary", "passage_s
 type Grade = 1 | 2 | 3;
 
 function gradePrefix(grade: Grade): string {
+  if (grade === 3) {
+    return `[Target Audience]
+한국 고등학교 고3 대상.
+수능 수준의 추상 어휘와 압축된 명사구 사용.
+복잡한 논리 구조와 평가적 표현을 적극 반영.
+이 기준은 다른 모든 스타일 규칙보다 우선한다.`;
+  }
+
+  // 🔥 고1 + 고2 통합
   return `[Target Audience]
-한국 고등학교 ${grade}학년 (고${grade}) 대상.
-Calibrate vocabulary range, sentence complexity, and abstraction level accordingly.
-- 고1: 기초 어휘, 단순한 문장 구조, 구체적 개념 위주.
-- 고2: 중급 어휘, 복합 문장, 추상 개념 일부 허용.
-- 고3: 수능 수준의 추상 어휘, 복잡한 논리 구조, 평가적 표현 적극 사용.
-이 학년 기준은 다른 모든 스타일 규칙보다 우선해서 톤·난이도를 결정한다.`;
+한국 고등학교 고1~고2 대상.
+내용이 드러나는 명사구 중심으로 작성.
+과도한 추상화 금지, 직관적이고 이해 가능한 표현 사용.
+이 기준은 다른 모든 스타일 규칙보다 우선한다.`;
+}
+
+function topicExamplesByGrade(grade: Grade): string {
+  if (grade === 3) {
+    return `[Sample Topic Answers — 고3 평가원/수능 스타일]
+- significance of weighing forest resources’ non-market values
+- outcome of music radio businesses’ attempts to attract large audiences
+- consequences of profit-oriented management of museums
+- benefits of publicizing information to ensure free choices
+- limitations of using empirical observations in farming
+- functional aspects of a paradigm in scientific research
+- issues of allocating unfit tasks to humans in automated systems
+- recognition of the social nature inherent in individuality
+- effect of problem framing on approaching and solving problems
+- complicated gene-environment interplay in moral development
+
+[고3 topic 스타일]
+- 더 압축적이고 추상적인 명사구를 사용한다.
+- significance, consequence, limitation, effect, recognition, interplay, functional aspects 같은 평가적·개념적 명사를 적극 사용한다.
+- 지문의 결론 방향을 드러내되, 완전한 문장으로 쓰지 않는다.`;
+  }
+
+  return `[Sample Topic Answers — 고1~고2 교육청 스타일]
+- negative effect of fruit overconsumption on the cognitive brain
+- necessity of using a common language to integrate the curriculum
+- benefits of reduced domestic cooking duties through outsourcing
+- persuasive power of peer behavior
+- misconception about race as a biological construct
+- people’s inclination towards unpredictability
+- the role that sleep plays in the learning process
+- benefits of utilizing sound and motion in warfare
+- creativity as the realization of imagination
+- human influence on the spread of invasive species
+
+[고1~고2 topic 스타일]
+- 내용이 분명히 보이는 반추상 명사구를 사용한다.
+- effects, benefits, necessity, role, factors, influence, importance 같은 쉬운 학술 명사를 우선 사용한다.
+- 고3처럼 지나치게 압축하거나 철학적으로 만들지 않는다.`;
 }
 
 function buildSystemPrompt(mode: Mode, grade: Grade): string {
@@ -467,7 +521,13 @@ function buildSystemPrompt(mode: Mode, grade: Grade): string {
   let body: string;
   switch (mode) {
     case "topic":
-      body = [PROMPT_INTRO, PROMPT_TOPIC_RULES, PROMPT_COMMON_RULES, PROMPT_OUTPUT_TOPIC].join("\n\n");
+      body = [
+        PROMPT_INTRO,
+        topicExamplesByGrade(grade),
+        PROMPT_TOPIC_RULES,
+        PROMPT_COMMON_RULES,
+        PROMPT_OUTPUT_TOPIC,
+      ].join("\n\n");
       break;
     case "title":
       body = [PROMPT_INTRO, PROMPT_TITLE_RULES, PROMPT_COMMON_RULES, PROMPT_OUTPUT_TITLE].join("\n\n");
@@ -476,7 +536,9 @@ function buildSystemPrompt(mode: Mode, grade: Grade): string {
       body = [PROMPT_INTRO, PROMPT_EXAM_SUMMARY_RULES, PROMPT_COMMON_RULES, PROMPT_OUTPUT_EXAM_SUMMARY].join("\n\n");
       break;
     case "passage_summary":
-      body = [PROMPT_INTRO, PROMPT_PASSAGE_SUMMARY_RULES, PROMPT_COMMON_RULES, PROMPT_OUTPUT_PASSAGE_SUMMARY].join("\n\n");
+      body = [PROMPT_INTRO, PROMPT_PASSAGE_SUMMARY_RULES, PROMPT_COMMON_RULES, PROMPT_OUTPUT_PASSAGE_SUMMARY].join(
+        "\n\n",
+      );
       break;
     case "all":
     default:
@@ -496,7 +558,7 @@ serve(async (req) => {
     if (rawMode && !(VALID_MODES as string[]).includes(rawMode)) {
       console.warn(`[analyze-preview] invalid mode "${rawMode}", falling back to "all"`);
     }
-    const grade: Grade = (rawGrade === 1 || rawGrade === 2 || rawGrade === 3) ? rawGrade : 2;
+    const grade: Grade = rawGrade === 1 || rawGrade === 2 || rawGrade === 3 ? rawGrade : 2;
     if (rawGrade !== undefined && grade !== rawGrade) {
       console.warn(`[analyze-preview] invalid grade "${rawGrade}", falling back to 2`);
     }
@@ -580,9 +642,7 @@ serve(async (req) => {
           const firstDist = Math.abs(firstAvg - 50);
           const retryDist = Math.abs(retryAvg - 50);
           if (retryDist < firstDist) parsed = retryParsed;
-          console.log(
-            `[analyze-preview] retry still out-of-range (first avg=${firstAvg}, retry avg=${retryAvg})`,
-          );
+          console.log(`[analyze-preview] retry still out-of-range (first avg=${firstAvg}, retry avg=${retryAvg})`);
         }
       } catch (retryErr) {
         console.error("[analyze-preview] retry failed:", retryErr);
@@ -604,7 +664,10 @@ serve(async (req) => {
 
 function avgLineLen(summary: unknown): number {
   if (typeof summary !== "string") return 0;
-  const lines = summary.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = summary
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
   if (lines.length === 0) return 0;
   return lines.reduce((s, l) => s + l.length, 0) / lines.length;
 }
