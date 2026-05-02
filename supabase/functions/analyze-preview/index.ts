@@ -374,37 +374,39 @@ const PROMPT_COMMON_RULES = `[Critical Korean Exam Rules]
 - JSON 객체만 출력. 다른 텍스트 금지.`;
 
 const PROMPT_TOPIC_RULES = `[topic 규칙]
-- Write a concise English noun phrase, NOT a full sentence.
-- Must follow Korean mock-exam topic-answer style.
-- Do not end the topic with a period.
-- Avoid overly long two-part phrases connected by "and"; prefer one focused topic phrase.
-- Do NOT write a sentence with subject + verb.
-- Prefer structures such as:
-  importance of ~
-  necessity of ~
-  benefits of ~
-  effects of ~ on ~
-  impact of ~ on ~
-  role of ~ in ~
-  relationship between A and B
-  distinction between A and B
-  limitations of ~
-  consequences of ~
-  factors that ~
-- The topic must capture the passage's central claim, but express it as a noun phrase.
-- Broader than specific examples, but not so abstract that the passage content disappears.
-- Preserve the author's evaluative direction: positive, negative, critical, supportive, contrastive.
-- Do not reverse cause and effect.
-- Avoid vague expressions such as:
-  about ~
-  various aspects of ~
-  things related to ~
-  importance of understanding ~
-  ways to deal with ~
-- Avoid overly abstract or highly compressed phrasing unless grade is 3.
-- If the passage is mainly negative or critical, include that direction with words like limitation, problem, risk, drawback, issue, misconception, consequence, or negative effect.
-- If the passage is mainly positive or supportive, include that direction with words like benefit, importance, necessity, role, value, advantage, or usefulness.
-- If the passage contrasts two views, reflect the contrast with distinction, difference, relationship, tension, or contrast.
+- This MUST be written as a Korean mock-exam topic choice, NOT an explanation.
+- Output a concise English noun phrase that functions as a multiple-choice answer.
+- Use ONLY one central conceptual axis. Do NOT combine multiple ideas.
+
+- Prefer standard exam structures:
+  the role of ~ in ~
+  the effect(s) of ~ on ~
+  the influence of ~ on ~
+  the importance of ~
+  the necessity of ~
+  the relationship between A and B
+  the misconception about ~
+  factors affecting ~
+
+- Strongly AVOID explanatory constructions:
+  construction of ~ due to ~
+  formation of ~ from ~
+  process of ~
+  how ~ happens
+  any "due to / because of / resulting from" chains
+
+- Do NOT include:
+  contrast tails such as despite, although, while, even though
+  multiple clauses
+  "and" connecting two ideas
+  verbs as a full sentence structure
+  a period at the end
+
+- Length: 6~11 words ONLY.
+- Style priority: clarity > abstraction; exam usability > completeness.
+- If multiple elements exist, choose ONE and center the phrase around it.
+- Rewrite aggressively into a clean test option.
+- The output should look like a clean answer choice, not a summary or explanation.
 
 [topic_ko 규칙]
 - topic의 한국어 번역.
