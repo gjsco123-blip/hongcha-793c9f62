@@ -15,6 +15,7 @@ import { PreviewExamSection } from "@/components/preview/PreviewExamSection";
 import type { VocabItem, SynAntItem, ExamBlock, SectionStatus } from "@/components/preview/types";
 import { mergePassageStore, parsePassageStore } from "@/lib/passage-store";
 import { sanitizeSynonymItems } from "@/lib/synonym-sanitizer";
+import type { Grade } from "@/lib/grade-utils";
 
 async function invokeRetry(fn: string, body: any, maxRetries = 3) {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -63,6 +64,10 @@ export default function Preview() {
   const incomingPassage = (location.state as any)?.passage;
   const passageId = (location.state as any)?.passageId || sessionStorage.getItem("selected-passage-id");
   const pdfTitle = (location.state as any)?.pdfTitle || cached?.pdfTitle || "Preview";
+  // 학년: state → sessionStorage 캐시 → 폴백 고2
+  const incomingGrade = (location.state as any)?.grade as Grade | undefined;
+  const cachedGrade = (cached?.grade as Grade | undefined);
+  const grade: Grade = (incomingGrade ?? cachedGrade ?? 2) as Grade;
 
   // If navigated with a new passage, use it; otherwise restore cache
   const isNewPassage = !!incomingPassage && incomingPassage !== cached?.passage;
@@ -90,9 +95,9 @@ export default function Preview() {
 
   // Persist state to sessionStorage
   useEffect(() => {
-    const state = { passage, vocab, synonyms, summary, examBlock, pdfTitle };
+    const state = { passage, vocab, synonyms, summary, examBlock, pdfTitle, grade };
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [passage, vocab, synonyms, summary, examBlock, pdfTitle]);
+  }, [passage, vocab, synonyms, summary, examBlock, pdfTitle, grade]);
 
   useEffect(() => {
     if (!passageId) return;
@@ -199,7 +204,7 @@ export default function Preview() {
       .catch((e) => { toast.error(`동/반의어 생성 실패: ${e.message}`); setSynonymsStatus("error"); });
 
     const capitalizeFirst = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
-    const previewPromise = invokeRetry("analyze-preview", { passage })
+    const previewPromise = invokeRetry("analyze-preview", { passage, grade })
       .then((d) => {
         setSummary(d.summary || "");
         const eb = d.exam_block;
@@ -341,30 +346,30 @@ export default function Preview() {
   const regenExamTopic = useCallback(async () => {
     const data = await invokeWithFallback(
       "analyze-preview",
-      { passage, mode: "topic" },
-      { passage }
+      { passage, mode: "topic", grade },
+      { passage, grade }
     );
     const t = data.exam_block?.topic || "";
     return { en: t ? t.charAt(0).toUpperCase() + t.slice(1) : t, ko: data.exam_block?.topic_ko };
-  }, [passage]);
+  }, [passage, grade]);
 
   const regenExamTitle = useCallback(async () => {
     const data = await invokeWithFallback(
       "analyze-preview",
-      { passage, mode: "title" },
-      { passage }
+      { passage, mode: "title", grade },
+      { passage, grade }
     );
     return { en: data.exam_block?.title || "", ko: data.exam_block?.title_ko };
-  }, [passage]);
+  }, [passage, grade]);
 
   const regenExamSummary = useCallback(async () => {
     const data = await invokeWithFallback(
       "analyze-preview",
-      { passage, mode: "exam_summary" },
-      { passage }
+      { passage, mode: "exam_summary", grade },
+      { passage, grade }
     );
     return { en: data.exam_block?.one_sentence_summary || "", ko: data.exam_block?.one_sentence_summary_ko };
-  }, [passage]);
+  }, [passage, grade]);
 
   const handleExportPdf = async () => {
     try {

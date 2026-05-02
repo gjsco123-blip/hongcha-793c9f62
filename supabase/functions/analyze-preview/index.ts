@@ -447,39 +447,62 @@ const PROMPT_OUTPUT_PASSAGE_SUMMARY = `출력 형식 (JSON 객체만):
 type Mode = "all" | "topic" | "title" | "exam_summary" | "passage_summary";
 const VALID_MODES: Mode[] = ["all", "topic", "title", "exam_summary", "passage_summary"];
 
-function buildSystemPrompt(mode: Mode): string {
+type Grade = 1 | 2 | 3;
+
+function gradePrefix(grade: Grade): string {
+  return `[Target Audience]
+한국 고등학교 ${grade}학년 (고${grade}) 대상.
+Calibrate vocabulary range, sentence complexity, and abstraction level accordingly.
+- 고1: 기초 어휘, 단순한 문장 구조, 구체적 개념 위주.
+- 고2: 중급 어휘, 복합 문장, 추상 개념 일부 허용.
+- 고3: 수능 수준의 추상 어휘, 복잡한 논리 구조, 평가적 표현 적극 사용.
+이 학년 기준은 다른 모든 스타일 규칙보다 우선해서 톤·난이도를 결정한다.`;
+}
+
+function buildSystemPrompt(mode: Mode, grade: Grade): string {
+  const prefix = gradePrefix(grade);
+  let body: string;
   switch (mode) {
     case "topic":
-      return [PROMPT_INTRO, PROMPT_TOPIC_RULES, PROMPT_COMMON_RULES, PROMPT_OUTPUT_TOPIC].join("\n\n");
+      body = [PROMPT_INTRO, PROMPT_TOPIC_RULES, PROMPT_COMMON_RULES, PROMPT_OUTPUT_TOPIC].join("\n\n");
+      break;
     case "title":
-      return [PROMPT_INTRO, PROMPT_TITLE_RULES, PROMPT_COMMON_RULES, PROMPT_OUTPUT_TITLE].join("\n\n");
+      body = [PROMPT_INTRO, PROMPT_TITLE_RULES, PROMPT_COMMON_RULES, PROMPT_OUTPUT_TITLE].join("\n\n");
+      break;
     case "exam_summary":
-      return [PROMPT_INTRO, PROMPT_EXAM_SUMMARY_RULES, PROMPT_COMMON_RULES, PROMPT_OUTPUT_EXAM_SUMMARY].join("\n\n");
+      body = [PROMPT_INTRO, PROMPT_EXAM_SUMMARY_RULES, PROMPT_COMMON_RULES, PROMPT_OUTPUT_EXAM_SUMMARY].join("\n\n");
+      break;
     case "passage_summary":
-      return [PROMPT_INTRO, PROMPT_PASSAGE_SUMMARY_RULES, PROMPT_COMMON_RULES, PROMPT_OUTPUT_PASSAGE_SUMMARY].join("\n\n");
+      body = [PROMPT_INTRO, PROMPT_PASSAGE_SUMMARY_RULES, PROMPT_COMMON_RULES, PROMPT_OUTPUT_PASSAGE_SUMMARY].join("\n\n");
+      break;
     case "all":
     default:
-      return SYSTEM_PROMPT; // 기존 그대로 — 첫 생성 동작 100% 보존
+      body = SYSTEM_PROMPT; // 본문은 그대로 — 학년만 prepend
   }
+  return `${prefix}\n\n${body}`;
 }
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { passage, mode: rawMode } = await req.json();
+    const { passage, mode: rawMode, grade: rawGrade } = await req.json();
     if (!passage) throw new Error("Missing passage");
 
     const mode: Mode = (VALID_MODES as string[]).includes(rawMode) ? (rawMode as Mode) : "all";
     if (rawMode && !(VALID_MODES as string[]).includes(rawMode)) {
       console.warn(`[analyze-preview] invalid mode "${rawMode}", falling back to "all"`);
     }
-    console.log(`[analyze-preview] mode=${mode}`);
+    const grade: Grade = (rawGrade === 1 || rawGrade === 2 || rawGrade === 3) ? rawGrade : 2;
+    if (rawGrade !== undefined && grade !== rawGrade) {
+      console.warn(`[analyze-preview] invalid grade "${rawGrade}", falling back to 2`);
+    }
+    console.log(`[analyze-preview] mode=${mode} grade=${grade}`);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const systemPrompt = buildSystemPrompt(mode);
+    const systemPrompt = buildSystemPrompt(mode, grade);
 
     // 1차 호출
     let content: string;

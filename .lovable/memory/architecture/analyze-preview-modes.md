@@ -5,7 +5,10 @@ type: feature
 ---
 `supabase/functions/analyze-preview/index.ts`는 mode 파라미터로 5가지 모드 지원: `all` | `topic` | `title` | `exam_summary` | `passage_summary`.
 
-**mode="all" (첫 생성)**: 기존 SYSTEM_PROMPT 통째로 사용. self-critique 1회 + length-retry 1회. 동작 보존 — 절대 건드리지 말 것.
+**grade 파라미터 (필수 권장)**: `1 | 2 | 3` — 학교명에서 추출 (`extractGradeFromSchoolName`). 미지정 시 백엔드 폴백 = 2.
+모든 모드에서 시스템 프롬프트 맨 앞에 `gradePrefix(grade)` 한 블록을 prepend → 학년별 톤·난이도 명시 주입.
+
+**mode="all" (첫 생성)**: 기존 SYSTEM_PROMPT 본문 215줄은 보존. 단 학년 prefix prepend는 허용(예외).
 
 **모듈 프롬프트 (재생성 전용)**:
 - `PROMPT_INTRO` — 공통 도입 (난이도/내부 분석)
@@ -24,11 +27,16 @@ type: feature
 - 나머지 모드 → 둘 다 생략
 
 **프론트 호출 매핑** (`src/pages/Preview.tsx`):
-- `handleGenerate` → `{ passage }` (mode 미지정 → 백엔드 "all")
-- `regenExamTopic` → `mode: "topic"`
-- `regenExamTitle` → `mode: "title"`
-- `regenExamSummary` → `mode: "exam_summary"`
-- `regenSummary` → `mode: "passage_summary"`
+- `handleGenerate` → `{ passage, grade }` (mode 미지정 → 백엔드 "all")
+- `regenExamTopic` → `{ mode: "topic", grade }`
+- `regenExamTitle` → `{ mode: "title", grade }`
+- `regenExamSummary` → `{ mode: "exam_summary", grade }`
+- `regenSummary` → `{ mode: "passage_summary" }` (학년 영향 없음)
+
+**grade 추출/전파**:
+- `src/lib/grade-utils.ts` `extractGradeFromSchoolName(school.name)` — `/고\s*([1-3])/` 정규식, 폴백 = 2.
+- `Index.tsx`의 Preview 진입 navigate state에 `grade` 포함.
+- `Preview.tsx`는 `location.state.grade` → sessionStorage(`preview-state.grade`) 캐시 → 폴백 2 순으로 결정.
 
 **Fallback**: `invokeWithFallback` 헬퍼가 mode 호출 실패/빈 응답 시 자동으로 mode 미지정으로 재호출.
 
