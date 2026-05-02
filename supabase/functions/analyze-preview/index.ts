@@ -314,21 +314,178 @@ function summaryHasOutOfRangeLine(
   return lines.some((line) => line.length < minLen || line.length > maxLen);
 }
 
+// ============================================================
+// MODE-SPECIFIC PROMPT MODULES (재생성 전용 — 첫 생성은 SYSTEM_PROMPT 사용)
+// ============================================================
+// 첫 생성(mode:"all")은 위의 기존 SYSTEM_PROMPT를 그대로 씀 → 회귀 위험 0.
+// 아래 모듈은 개별 필드 재생성 시에만 사용.
+
+const PROMPT_INTRO = `You are a Korean high school English exam specialist for reading comprehension passages.
+I will provide an English passage. Internally analyze:
+- Difficulty (abstract noun density, evaluative language, contrast/concession, opposing views, logical complexity).
+- Central claim, main reasoning vs examples, background, evaluative direction (positive/negative/critical/supportive).
+- Dominant logical structure (cause-effect, contrast, concession, problem-solution, general-specific).
+- Conclusion direction.
+Do NOT show this analysis. Use it only to inform the output.`;
+
+const PROMPT_COMMON_RULES = `[Critical Korean Exam Rules]
+- Do not reverse cause and effect.
+- Do not narrow scope to a single example.
+- Do not overgeneralize beyond the passage.
+- Do not introduce concepts not central to the text.
+- Do not merely restate the first sentence.
+- Focus on the overall argumentative direction.
+- 한자어 금지, 한글만. JSON 객체만 출력. 다른 텍스트 금지.`;
+
+const PROMPT_TOPIC_RULES = `[Sample Correct Answers — topic의 추상화 수준/톤/구조 참고]
+1) cultural openness as a foundation for Rome's growth
+2) need to act on scientific understanding in solving problems
+3) importance of specific questions to attain reliable quantitative data
+4) advantage of crop rotation in maintaining soil health
+5) our common belief that we are better than average
+6) Action Comes from Who You Think You Are
+7) the necessity of various perspectives in practicing science
+8) the impact of reward immediacy on decision-making
+9) distinction between recall and familiarity in the memory system
+10) counteraction of pleasure and pain in maintaining stability
+11) views on whether science is free from cultural context or not
+12) economic benefits of reduced domestic cooking duties through outsourcing
+
+[topic 규칙]
+- One sentence in English.
+- Must express a CLAIM (not just a topic description).
+- Broader than specific examples.
+- Preserve the direction of the conclusion. No exaggeration. No new concepts.
+- Avoid vague "about ~" expressions.
+
+[topic_ko 규칙]
+- topic의 한국어 번역.
+- 자연스러운 한국어 명사구. 한자어 금지, 한글만.`;
+
+const PROMPT_TITLE_RULES = `[title 규칙]
+- Concise noun phrase in English, shorter and more compressed than the thesis.
+- Academic and clear (not poetic). Sentence case (only first word capitalized).
+- Question format allowed only if the passage clearly answers it.
+- Prefer structure: abstract noun + of + key concept (e.g., impact of ~, role of ~, necessity of ~, distinction between ~).
+- 5~9 words.
+
+[title_ko 규칙]
+- title의 한국어 번역.
+- 자연스러운 한국어 명사구. 한자어 금지, 한글만.`;
+
+const PROMPT_EXAM_SUMMARY_RULES = `[one_sentence_summary 규칙]
+- Exactly ONE sentence in English.
+- Must clearly reflect the dominant logical relationship (cause-effect, contrast, concession, problem-solution, etc.).
+- Remove specific examples and detailed cases.
+- Preserve evaluative direction if present.
+- Suitable for Korean mock-exam summary style.
+- Abstract but not overly philosophical.
+- Do NOT split into multiple sentences.
+
+[one_sentence_summary_ko 규칙 — 직역(literal translation)]
+- 영문 어순·구조·핵심 명사를 최대한 보존할 것.
+- 영문 단어가 한글에서 1:1로 추적 가능해야 함.
+- 영문에 없는 부연·예시·평가어 추가 금지.
+- 핵심 명사는 그대로 옮길 것 (예: "long-term decision-making" → "장기적 의사결정").
+- 자연스러운 한국어 어순 조정은 허용하나, 의미 단위 순서를 임의로 뒤집지 말 것.
+- 종결: "~한다 / ~이다 / ~된다" 평서문 동사 종결 (명사형 종결 금지).
+- 한자어 금지, 한글만.
+- 금지어: "~을 시사한다 / ~을 의미한다 / ~라고 볼 수 있다" 같은 해설성 표현 (영문에 그런 표현이 있을 때만 허용).
+
+예시:
+영문: "Immediate rewards systematically distort long-term decision-making by exploiting evolutionary biases in the human brain."
+Good: "즉각적 보상은 인간 두뇌의 진화적 편향을 이용해 장기적 의사결정을 체계적으로 왜곡한다."
+Bad: "사람들은 당장의 만족 때문에 미래를 제대로 못 본다는 점이 문제다."`;
+
+const PROMPT_PASSAGE_SUMMARY_RULES = `[CRITICAL LENGTH RULE — 최우선]
+summary의 각 줄(①②③④)은 반드시 한국어 48~55자 (공백·번호·구두점 포함). 허용 범위는 45~58자.
+- 45자 미만 = 무효. 58자 초과 = 무효. 출력 금지.
+- 출력 직전 각 줄 글자수를 직접 세어 검증할 것.
+- 짧으면 [주체] + [원인/메커니즘] + [결과/결론 방향] 3요소 중 누락된 것을 추가해 늘릴 것.
+- 길이를 맞추는 방식은 "압축"이 아니라 "정보 추가". 추상어를 더 끼워넣지 말고 구체 개념·주체·메커니즘을 명시할 것.
+
+[summary 규칙 — Passage Logic]
+- 반드시 정확히 4개 항목, 줄바꿈 \\n으로 구분, 한국어로 작성.
+- 각 항목 앞에 번호: ① ② ③ ④
+- **각 항목은 정확히 한 줄(single line)** — 항목 내부에 \\n 절대 포함 금지.
+- ① 지문의 핵심 주장 또는 중심 아이디어를 진술.
+- ② 그 아이디어를 뒷받침하는 핵심 이유나 메커니즘을 설명.
+- ③ 지문에 나오는 중요한 예시, 개념, 또는 설명을 간략히 제시.
+- ④ 최종 결론 또는 저자의 핵심 메시지를 진술.
+- 원문에 명시되지 않은 정보 추가 금지. 배경보다 핵심 논증에 집중.
+- 대비 구조(A but B) 반영. 결론의 평가 방향을 ④에 반영.
+- 첫 문장이 단순 배경이면 그대로 반복하지 말 것.
+
+[종결 스타일 — 명사형만 허용]
+- 허용: ~라는 점, ~하는 구조, ~하는 흐름, ~라는 전제, ~경향, ~라는 의미, ~하는 방식, ~필요성, ~중요성, ~라는 주장
+- 금지: ~한다, ~된다, ~이다, ~있다, ~했다, ~합니다, ~됩니다, ~임, ~함
+
+[모범 예시 — Few-shot]
+Good (각 줄 48~55자):
+① 즉각적 보상을 선호하는 인간 두뇌의 진화적 편향이 장기적 의사결정을 왜곡시키는 경향성
+② 현재 가치를 과대평가하도록 설계된 두뇌 회로가 미래 이익을 체계적으로 평가절하하는 메커니즘
+③ 마시멜로 실험에서 만족을 지연한 아동들이 학업·사회성 면에서 더 우수했다는 연구 결과
+④ 보상 즉각성이 합리적 판단을 구조적으로 왜곡한다는 점을 경계해야 한다는 저자의 비판적 결론
+
+Bad (40자대 금지): "① 즉각적 보상이 장기적 이익보다 우선시되는 의사결정 경향" ← 너무 짧음, 무효.
+
+[OUTPUT SELF-CHECK]
+출력 직전, 각 줄 글자수(공백·번호 포함)를 세어 45~58자 범위인지 확인. 범위 밖이면 다시 작성 후 출력.`;
+
+const PROMPT_OUTPUT_TOPIC = `출력 형식 (JSON 객체만):
+{"exam_block":{"topic":"...","topic_ko":"..."}}`;
+
+const PROMPT_OUTPUT_TITLE = `출력 형식 (JSON 객체만):
+{"exam_block":{"title":"...","title_ko":"..."}}`;
+
+const PROMPT_OUTPUT_EXAM_SUMMARY = `출력 형식 (JSON 객체만):
+{"exam_block":{"one_sentence_summary":"...","one_sentence_summary_ko":"..."}}`;
+
+const PROMPT_OUTPUT_PASSAGE_SUMMARY = `출력 형식 (JSON 객체만):
+{"summary":"①...\\n②...\\n③...\\n④..."}`;
+
+type Mode = "all" | "topic" | "title" | "exam_summary" | "passage_summary";
+const VALID_MODES: Mode[] = ["all", "topic", "title", "exam_summary", "passage_summary"];
+
+function buildSystemPrompt(mode: Mode): string {
+  switch (mode) {
+    case "topic":
+      return [PROMPT_INTRO, PROMPT_TOPIC_RULES, PROMPT_COMMON_RULES, PROMPT_OUTPUT_TOPIC].join("\n\n");
+    case "title":
+      return [PROMPT_INTRO, PROMPT_TITLE_RULES, PROMPT_COMMON_RULES, PROMPT_OUTPUT_TITLE].join("\n\n");
+    case "exam_summary":
+      return [PROMPT_INTRO, PROMPT_EXAM_SUMMARY_RULES, PROMPT_COMMON_RULES, PROMPT_OUTPUT_EXAM_SUMMARY].join("\n\n");
+    case "passage_summary":
+      return [PROMPT_INTRO, PROMPT_PASSAGE_SUMMARY_RULES, PROMPT_COMMON_RULES, PROMPT_OUTPUT_PASSAGE_SUMMARY].join("\n\n");
+    case "all":
+    default:
+      return SYSTEM_PROMPT; // 기존 그대로 — 첫 생성 동작 100% 보존
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { passage } = await req.json();
+    const { passage, mode: rawMode } = await req.json();
     if (!passage) throw new Error("Missing passage");
+
+    const mode: Mode = (VALID_MODES as string[]).includes(rawMode) ? (rawMode as Mode) : "all";
+    if (rawMode && !(VALID_MODES as string[]).includes(rawMode)) {
+      console.warn(`[analyze-preview] invalid mode "${rawMode}", falling back to "all"`);
+    }
+    console.log(`[analyze-preview] mode=${mode}`);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
+    const systemPrompt = buildSystemPrompt(mode);
 
     // 1차 호출
     let content: string;
     try {
       content = await callAi(LOVABLE_API_KEY, [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
         { role: "user", content: passage },
       ]);
     } catch (e) {
@@ -342,29 +499,32 @@ serve(async (req) => {
       throw e;
     }
 
-    // 2차 호출 (Self-Critique): AI가 1차 결과를 체크리스트로 평가/수정
-    try {
-      const critiqueContent = await callAi(LOVABLE_API_KEY, [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: passage },
-        { role: "assistant", content },
-        { role: "user", content: SELF_CRITIQUE_PROMPT },
-      ]);
-      const critiqueParsed = safeParseJson(critiqueContent);
-      if (critiqueParsed?.summary && critiqueParsed?.exam_block) {
-        content = critiqueContent;
-        console.log("[analyze-preview] self-critique applied");
-      } else {
-        console.log("[analyze-preview] self-critique result invalid, using 1st response");
+    // 2차 호출 (Self-Critique): mode="all"에서만 적용 — 단일 필드 모드는 비용/오염 방지를 위해 생략
+    if (mode === "all") {
+      try {
+        const critiqueContent = await callAi(LOVABLE_API_KEY, [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: passage },
+          { role: "assistant", content },
+          { role: "user", content: SELF_CRITIQUE_PROMPT },
+        ]);
+        const critiqueParsed = safeParseJson(critiqueContent);
+        if (critiqueParsed?.summary && critiqueParsed?.exam_block) {
+          content = critiqueContent;
+          console.log("[analyze-preview] self-critique applied");
+        } else {
+          console.log("[analyze-preview] self-critique result invalid, using 1st response");
+        }
+      } catch (critiqueErr) {
+        console.warn("[analyze-preview] self-critique failed, using 1st response:", critiqueErr);
       }
-    } catch (critiqueErr) {
-      console.warn("[analyze-preview] self-critique failed, using 1st response:", critiqueErr);
     }
 
     let parsed = safeParseJson(content);
 
-    // 후처리 안전망: summary 줄 길이 검증 (45~58자 범위) → 벗어나면 1회 재호출
-    if (summaryHasOutOfRangeLine(parsed?.summary)) {
+    // 후처리 안전망: summary 줄 길이 검증 (45~58자) — "all" 또는 "passage_summary"에서만 적용
+    const summaryEligibleForLengthCheck = mode === "all" || mode === "passage_summary";
+    if (summaryEligibleForLengthCheck && summaryHasOutOfRangeLine(parsed?.summary)) {
       console.log(
         "[analyze-preview] out-of-range summary line detected (target 45~58), retrying once. lines:",
         String(parsed?.summary)
@@ -374,7 +534,7 @@ serve(async (req) => {
       );
       try {
         const retryContent = await callAi(LOVABLE_API_KEY, [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           { role: "user", content: passage },
           { role: "assistant", content },
           {
