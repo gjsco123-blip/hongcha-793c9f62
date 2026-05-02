@@ -540,10 +540,10 @@ function buildSystemPrompt(mode: Mode, grade: Grade): string {
         "\n\n",
       );
       break;
-    case "all":
-    default:
-      body = SYSTEM_PROMPT; // 본문은 그대로 — 학년만 prepend
-  }
+case "all":
+default:
+  body = [topicExamplesByGrade(grade), SYSTEM_PROMPT].join("\n\n");
+  break;
   return `${prefix}\n\n${body}`;
 }
 
