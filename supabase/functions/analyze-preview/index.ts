@@ -108,18 +108,49 @@ Step 4. Generate Output
 Generate the following as a JSON object:
 
 1. exam_block.topic (Exam Topic Answer / 주제 선택지):
-   - A concise English noun phrase, NOT a full sentence.
-   - Must follow Korean mock-exam topic-answer style.
-   - Do NOT write a sentence with subject + verb.
-   - Prefer structures such as importance of ~, necessity of ~, benefits of ~, effects of ~ on ~, impact of ~ on ~, role of ~ in ~, relationship between A and B, distinction between A and B, limitations of ~, consequences of ~.
-   - Must capture the passage's central claim, but express it as a noun phrase.
-   - Broader than specific examples, but not so abstract that the passage content disappears.
-   - Preserve the author's evaluative direction. No exaggeration. No new concepts.
-   - Avoid vague "about ~" expressions.
-   - Must be 7~13 words.
-   - Do NOT include concession clauses or contrast tails such as despite ~, although ~, while ~.
-   - Do NOT combine two topic candidates with "and".
-   - Do NOT end with a period.
+
+- This MUST be written as a Korean mock-exam topic choice, NOT an explanation.
+
+- Output a concise English noun phrase that functions as a multiple-choice answer.
+
+- Use ONLY one central conceptual axis. Do NOT combine multiple ideas.
+
+- Prefer standard exam structures:
+  → the role of ~ in ~
+  → the effect(s) of ~ on ~
+  → the influence of ~ on ~
+  → the importance of ~
+  → the necessity of ~
+  → the relationship between A and B
+  → the misconception about ~
+  → factors affecting ~
+
+- Strongly AVOID explanatory constructions:
+  ❌ construction of ~ due to ~
+  ❌ formation of ~ from ~
+  ❌ process of ~
+  ❌ how ~ happens
+  ❌ any "due to / because of / resulting from" chains
+
+- Do NOT include:
+  ❌ contrast tails (despite, although, while, even though)
+  ❌ multiple clauses
+  ❌ “and” connecting two ideas
+  ❌ verbs (no full sentence structure)
+  ❌ a period at the end
+
+- Length: 6~11 words ONLY.
+
+- Style priority:
+  → clarity > abstraction
+  → exam usability > completeness
+
+- If multiple elements exist, choose ONE and center the phrase around it.
+
+- Rewrite aggressively into a clean test option.
+  (Even if information is lost, prioritize exam-style compression.)
+
+- The output should look like a clean answer choice, not a summary or explanation.
 
 2. exam_block.topic_ko: Korean translation of topic.
 
