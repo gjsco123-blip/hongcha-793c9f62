@@ -32,6 +32,21 @@ async function invokeRetry(fn: string, body: any, maxRetries = 3) {
   throw new Error("Max retries exceeded");
 }
 
+/**
+ * mode 호출이 실패하거나 응답이 비면 mode 미지정으로 폴백 재호출 (안전망).
+ */
+async function invokeWithFallback(fn: string, primaryBody: any, fallbackBody: any) {
+  try {
+    const data = await invokeRetry(fn, primaryBody);
+    if (data && (data.summary || data.exam_block)) return data;
+    console.warn(`[Preview] empty mode response, falling back`);
+    return await invokeRetry(fn, fallbackBody);
+  } catch (e) {
+    console.warn(`[Preview] mode call failed, falling back:`, e);
+    return await invokeRetry(fn, fallbackBody);
+  }
+}
+
 const STORAGE_KEY = "preview-state";
 
 function loadCached() {
@@ -240,7 +255,11 @@ export default function Preview() {
   }, [vocab, passage]);
 
   const regenSummary = useCallback(async (): Promise<string> => {
-    const data = await invokeRetry("analyze-preview", { passage });
+    const data = await invokeWithFallback(
+      "analyze-preview",
+      { passage, mode: "passage_summary" },
+      { passage }
+    );
     return data.summary || "";
   }, [passage]);
 
@@ -320,18 +339,30 @@ export default function Preview() {
   }, [synonyms, passage]);
 
   const regenExamTopic = useCallback(async () => {
-    const data = await invokeRetry("analyze-preview", { passage });
+    const data = await invokeWithFallback(
+      "analyze-preview",
+      { passage, mode: "topic" },
+      { passage }
+    );
     const t = data.exam_block?.topic || "";
     return { en: t ? t.charAt(0).toUpperCase() + t.slice(1) : t, ko: data.exam_block?.topic_ko };
   }, [passage]);
 
   const regenExamTitle = useCallback(async () => {
-    const data = await invokeRetry("analyze-preview", { passage });
+    const data = await invokeWithFallback(
+      "analyze-preview",
+      { passage, mode: "title" },
+      { passage }
+    );
     return { en: data.exam_block?.title || "", ko: data.exam_block?.title_ko };
   }, [passage]);
 
   const regenExamSummary = useCallback(async () => {
-    const data = await invokeRetry("analyze-preview", { passage });
+    const data = await invokeWithFallback(
+      "analyze-preview",
+      { passage, mode: "exam_summary" },
+      { passage }
+    );
     return { en: data.exam_block?.one_sentence_summary || "", ko: data.exam_block?.one_sentence_summary_ko };
   }, [passage]);
 
