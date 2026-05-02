@@ -262,11 +262,11 @@ export default function Preview() {
   const regenSummary = useCallback(async (): Promise<string> => {
     const data = await invokeWithFallback(
       "analyze-preview",
-      { passage, mode: "passage_summary", grade },
-      { passage, grade }
+      { passage, mode: "passage_summary" },
+      { passage }
     );
     return data.summary || "";
-  }, [passage, grade]);
+  }, [passage]);
 
   const regenSynonyms = useCallback(async (): Promise<SynAntItem[]> => {
     const data = await invokeRetry("analyze-synonyms", { passage });
