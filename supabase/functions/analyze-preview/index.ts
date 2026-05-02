@@ -690,6 +690,33 @@ serve(async (req) => {
 
     let parsed = safeParseJson(content);
 
+    // Option C: mode="all" 결과의 topic이 문장형이면 topic 전용 모드로 1회 재생성
+    if (mode === "all" && parsed?.exam_block?.topic && isSentenceLikeTopic(parsed.exam_block.topic)) {
+      const originalTopic = parsed.exam_block.topic;
+      console.log(`[analyze-preview] topic retry triggered: "${originalTopic}"`);
+      try {
+        const topicSystemPrompt = buildSystemPrompt("topic", grade);
+        const topicContent = await callAi(LOVABLE_API_KEY, [
+          { role: "system", content: topicSystemPrompt },
+          { role: "user", content: passage },
+        ]);
+        const topicParsed = safeParseJson(topicContent);
+        const newTopic = topicParsed?.exam_block?.topic;
+        const newTopicKo = topicParsed?.exam_block?.topic_ko;
+        if (newTopic && typeof newTopic === "string") {
+          parsed.exam_block.topic = newTopic;
+          if (newTopicKo && typeof newTopicKo === "string") {
+            parsed.exam_block.topic_ko = newTopicKo;
+          }
+          console.log(`[analyze-preview] topic retry succeeded: "${newTopic}"`);
+        } else {
+          console.log("[analyze-preview] topic retry returned invalid result, keeping original");
+        }
+      } catch (topicErr) {
+        console.warn("[analyze-preview] topic retry failed, keeping original:", topicErr);
+      }
+    }
+
     // 후처리 안전망: summary 줄 길이 검증 (45~58자) — "all" 또는 "passage_summary"에서만 적용
     const summaryEligibleForLengthCheck = mode === "all" || mode === "passage_summary";
     if (summaryEligibleForLengthCheck && summaryHasOutOfRangeLine(parsed?.summary)) {
