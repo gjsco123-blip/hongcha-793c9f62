@@ -341,6 +341,8 @@ const PROMPT_COMMON_RULES = `[Critical Korean Exam Rules]
 const PROMPT_TOPIC_RULES = `[topic 규칙]
 - Write a concise English noun phrase, NOT a full sentence.
 - Must follow Korean mock-exam topic-answer style.
+- Do not end the topic with a period.
+- Avoid overly long two-part phrases connected by "and"; prefer one focused topic phrase.
 - Do NOT write a sentence with subject + verb.
 - Prefer structures such as:
   importance of ~
