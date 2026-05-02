@@ -107,7 +107,7 @@ Step 4. Generate Output
 
 Generate the following as a JSON object:
 
-1. exam_block.topic (Core Thesis / 주제):
+1. exam_block.topic (Exam Topic Answer / 주제 선택지):
    - A concise English noun phrase, NOT a full sentence.
    - Must follow Korean mock-exam topic-answer style.
    - Do NOT write a sentence with subject + verb.
@@ -116,6 +116,10 @@ Generate the following as a JSON object:
    - Broader than specific examples, but not so abstract that the passage content disappears.
    - Preserve the author's evaluative direction. No exaggeration. No new concepts.
    - Avoid vague "about ~" expressions.
+   - Must be 7~13 words.
+   - Do NOT include concession clauses or contrast tails such as despite ~, although ~, while ~.
+   - Do NOT combine two topic candidates with "and".
+   - Do NOT end with a period.
 
 2. exam_block.topic_ko: Korean translation of topic.
 
