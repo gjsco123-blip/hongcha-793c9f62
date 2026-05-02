@@ -1,77 +1,53 @@
+# Option C: Topic 자동 재시도 (백엔드 내부)
+
 ## 목표
-지문 분석 시 LLM이 지문 자체를 보고 "이 정도 난이도네" 자동 판단하던 불안정한 방식을 제거하고, **학교명에서 학년(고1/고2/고3)을 추출해 명시적으로 LLM에 주입**한다. 적용 범위는 Preview의 **Topic / Title / Exam Summary** (Passage Summary, Vocab, Synonyms는 영향 없음).
+첫 생성(`mode="all"`) 결과의 `exam_block.topic`이 문장형(예: "Strategies must be evaluated...")으로 나올 경우, 백엔드 내부에서 `mode="topic"` 전용 프롬프트로 주제만 재생성하여 덮어쓴다. 사용자가 "재생성" 버튼을 누른 것과 동일한 품질을 첫 생성에서 보장한다.
 
-## 변경 지점
+## 변경 파일
+`supabase/functions/analyze-preview/index.ts` 단 한 곳.
 
-### 1. `src/lib/grade-utils.ts` (신규)
-학년 추출 유틸 한 곳에 모음.
-```ts
-export type Grade = 1 | 2 | 3;
-export function extractGradeFromSchoolName(name?: string): Grade {
-  const m = name?.match(/고\s*([1-3])/);
-  return (m ? Number(m[1]) : 2) as Grade; // 폴백: 고2
+## 구현 단계
+
+### 1. 문장형 판별 함수 추가
+파일 상단 헬퍼 영역(`safeParseJson` 근처)에 `isSentenceLikeTopic(topic: string): boolean` 추가.
+
+판별 기준 (하나라도 해당하면 문장형으로 간주):
+- 마침표(.)로 끝남
+- 조동사 포함: `must / should / can / could / may / might / will / would`
+- be동사/연결동사 포함: `\b(is|are|was|were|be|been|being)\b`
+- 평가/기능 동사 포함: `\b(serves?|fails?|requires?|provides?|enables?|reflects?|demonstrates?|shows?|proves?|leads?)\b`
+- 종속 접속사 포함: `\b(because|although|while|since|whereas)\b`
+- 단어 수 12개 초과
+
+### 2. 내부 재시도 로직 추가
+`mode === "all"` 분기 (Self-Critique 직후, line 668 이후)에 추가:
+
+```text
+parsed = safeParseJson(content) 직후
+↓
+if (mode === "all" && parsed?.exam_block?.topic && isSentenceLikeTopic(parsed.exam_block.topic)) {
+  console.log("[analyze-preview] topic looks sentence-like, retrying with topic-only mode");
+  topic 전용 systemPrompt 재구성 (buildSystemPrompt("topic", grade))
+  callAi 한 번 더 호출
+  결과 파싱 → exam_block.topic / topic_ko 만 덮어쓰기
+  실패 시 원본 유지
 }
 ```
 
-### 2. `src/pages/Index.tsx`
-Preview로 navigate할 때 학교명에서 학년 추출 후 state에 실어 전달.
-- 선택된 school 객체 찾기 → `extractGradeFromSchoolName(school.name)` → state에 `grade` 추가
-- 위치: line 978 navigate 호출
+### 3. 로깅
+어떤 케이스가 트리거됐는지 추적할 수 있도록:
+- `[analyze-preview] topic retry triggered: "<원본 topic>"`
+- `[analyze-preview] topic retry succeeded: "<새 topic>"`
+- 실패 시 `[analyze-preview] topic retry failed, keeping original`
 
-### 3. `src/pages/Preview.tsx`
-- `location.state?.grade`로 수신, sessionStorage 백업 저장 (새로고침 대비)
-- `handleGenerate`의 `analyze-preview` 호출 body에 `grade` 추가
-- `regenExamTopic` / `regenExamTitle` / `regenExamSummary` 호출 body에 `grade` 추가
-- (`regenSummary`는 손대지 않음 — passage_summary는 학년 영향 없는 영역)
+## 영향 범위
+- 프론트엔드 변경 없음
+- 다른 mode(`topic`/`title`/`exam_summary`/`passage_summary`)에는 영향 없음
+- Self-Critique 로직 그대로 유지 (그 뒤에 한 번 더 안전망으로 작동)
+- 첫 생성 시 호출이 1회 추가될 수 있음 (문장형으로 판정될 때만, 약 30~50% 케이스 예상)
 
-### 4. `supabase/functions/analyze-preview/index.ts`
-- 요청 body Zod 스키마에 `grade: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional()` 추가, 폴백 2
-- 모든 시스템 프롬프트 맨 앞에 학년 한 줄 prepend:
-  ```
-  Target audience: 한국 고등학교 ${grade}학년 (고${grade}).
-  Calibrate vocabulary range, sentence complexity, and abstraction level accordingly.
-  고1: 기초 어휘/단순 구조. 고2: 중급. 고3: 수능 수준 추상 어휘/복잡 구조.
-  ```
-- 적용 위치:
-  - `mode:"all"`: 기존 `SYSTEM_PROMPT` 앞에 prepend (본문 215줄은 그대로)
-  - `mode` 모듈 조립: `buildSystemPrompt(mode, grade)` 시그니처로 변경, 결과 앞에 prepend
-- `PROMPT_INTRO`의 "Internally analyze Difficulty..." 문장은 그대로 둠 (학년 + 자체 판단 보완 효과)
+## 추가 안전장치
+재시도 결과가 또 문장형이면 그대로 반환(무한 루프 방지). 1회 재시도까지만.
 
-### 5. `.lovable/memory/architecture/analyze-preview-modes.md` (업데이트)
-- "SYSTEM_PROMPT 절대 건드리지 말 것" 규칙에 **예외 추가**: 학년 주입은 본문 변경 아니라 prepend 한 줄이므로 허용
-- mode 호출 시 `grade` 파라미터가 표준임을 명시
-
-## 동작 시나리오
-
-```text
-[학교 생성] "시온고1" → DB에 그대로 저장 (스키마 변경 없음)
-       │
-       ▼
-[Index에서 Preview 진입]
-   school.name "시온고1" → extractGrade() → 1
-   navigate("/preview", { state: { ..., grade: 1 } })
-       │
-       ▼
-[Preview 첫 생성]
-   invoke("analyze-preview", { passage, grade: 1 })
-       │
-       ▼
-[Edge Function]
-   SYSTEM_PROMPT 앞에 "Target audience: 고1..." prepend → LLM 호출
-       │
-       ▼
-[재생성 (Topic만)]
-   invoke("analyze-preview", { passage, mode: "topic", grade: 1 })
-       → buildSystemPrompt("topic", 1) → 동일 프리픽스 + 모듈 → LLM
-```
-
-## 영향 없는 영역
-- DB 스키마 (schools 테이블 변경 없음)
-- analyze-vocab, analyze-synonyms (학년 무관)
-- passage_summary 모드 (사용자 명시 요청)
-- syntax / hongt 파이프라인 전체
-
-## 폴백 / 안전장치
-- 학교명에 "고N" 없음 → 고2
-- Index에서 직접 입력(학교 미지정) 진입 케이스 → grade 없으면 백엔드에서 고2 폴백
-- 기존 cache(grade 없는 sessionStorage) 호환 → undefined → 고2 폴백
+## 검증 방법
+배포 후 실제 지문으로 첫 생성 → 로그에서 `topic retry triggered/succeeded` 확인 → 결과 topic이 명사구 형태인지 확인.
