@@ -547,7 +547,7 @@ function buildSystemPrompt(mode: Mode, grade: Grade): string {
 
     case "all":
     default:
-      body = [topicExamplesByGrade(grade), PROMPT_TOPIC_RULES, SYSTEM_PROMPT].join("\n\n");
+      body = [SYSTEM_PROMPT, topicExamplesByGrade(grade), PROMPT_TOPIC_RULES].join("\n\n");
       break;
   }
 
