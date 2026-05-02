@@ -519,6 +519,7 @@ function topicExamplesByGrade(grade: Grade): string {
 function buildSystemPrompt(mode: Mode, grade: Grade): string {
   const prefix = gradePrefix(grade);
   let body: string;
+
   switch (mode) {
     case "topic":
       body = [
@@ -529,21 +530,27 @@ function buildSystemPrompt(mode: Mode, grade: Grade): string {
         PROMPT_OUTPUT_TOPIC,
       ].join("\n\n");
       break;
+
     case "title":
       body = [PROMPT_INTRO, PROMPT_TITLE_RULES, PROMPT_COMMON_RULES, PROMPT_OUTPUT_TITLE].join("\n\n");
       break;
+
     case "exam_summary":
       body = [PROMPT_INTRO, PROMPT_EXAM_SUMMARY_RULES, PROMPT_COMMON_RULES, PROMPT_OUTPUT_EXAM_SUMMARY].join("\n\n");
       break;
+
     case "passage_summary":
       body = [PROMPT_INTRO, PROMPT_PASSAGE_SUMMARY_RULES, PROMPT_COMMON_RULES, PROMPT_OUTPUT_PASSAGE_SUMMARY].join(
         "\n\n",
       );
       break;
-case "all":
-default:
-  body = [topicExamplesByGrade(grade), SYSTEM_PROMPT].join("\n\n");
-  break;
+
+    case "all":
+    default:
+      body = [topicExamplesByGrade(grade), SYSTEM_PROMPT].join("\n\n");
+      break;
+  }
+
   return `${prefix}\n\n${body}`;
 }
 
