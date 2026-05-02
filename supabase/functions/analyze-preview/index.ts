@@ -358,6 +358,27 @@ function summaryHasOutOfRangeLine(summary: unknown, minLen = 45, maxLen = 58): b
   return lines.some((line) => line.length < minLen || line.length > maxLen);
 }
 
+// 문장형 topic 판별 — Option C 자동 재시도 트리거
+function isSentenceLikeTopic(topic: unknown): boolean {
+  if (typeof topic !== "string") return false;
+  const t = topic.trim();
+  if (!t) return false;
+  // 마침표로 끝남
+  if (/[.!?]$/.test(t)) return true;
+  // 단어 수 12개 초과
+  const wordCount = t.split(/\s+/).filter(Boolean).length;
+  if (wordCount > 12) return true;
+  // 조동사
+  if (/\b(must|should|can|could|may|might|will|would|shall)\b/i.test(t)) return true;
+  // be동사/연결동사
+  if (/\b(is|are|was|were|be|been|being|am)\b/i.test(t)) return true;
+  // 평가/기능 동사 (3인칭 단수형 포함)
+  if (/\b(serves?|fails?|requires?|provides?|enables?|reflects?|demonstrates?|shows?|proves?|leads?|creates?|causes?|allows?|makes?|helps?|needs?)\b/i.test(t)) return true;
+  // 종속 접속사
+  if (/\b(because|although|while|since|whereas|though|if|when)\b/i.test(t)) return true;
+  return false;
+}
+
 // ============================================================
 // MODE-SPECIFIC PROMPT MODULES (재생성 전용 — 첫 생성은 SYSTEM_PROMPT 사용)
 // ============================================================
