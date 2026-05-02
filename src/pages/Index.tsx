@@ -975,7 +975,13 @@ export default function Index() {
                 </button>
               )}
               <button
-                onClick={() => navigate("/preview", { state: { passage, pdfTitle, passageId: categories.selectedPassageId } })}
+                onClick={() => {
+                  const school = categories.schools.find((s) => s.id === categories.selectedSchoolId);
+                  const grade = extractGradeFromSchoolName(school?.name);
+                  navigate("/preview", {
+                    state: { passage, pdfTitle, passageId: categories.selectedPassageId, grade },
+                  });
+                }}
                 disabled={!passage.trim()}
                 className="px-3 py-1 rounded-full border border-foreground text-foreground text-[11px] font-medium hover:bg-foreground hover:text-background transition-colors disabled:opacity-40"
               >
