@@ -14,6 +14,14 @@ function safeParseJson(raw: string): any {
   if (start !== -1 && end !== -1 && end > start) {
     cleaned = cleaned.substring(start, end + 1);
     try { return JSON.parse(cleaned); } catch { /* fallback */ }
+    // Try to repair truncated array by trimming trailing incomplete object
+    try {
+      const lastObjEnd = cleaned.lastIndexOf("}");
+      if (lastObjEnd !== -1) {
+        const repaired = cleaned.substring(0, lastObjEnd + 1).replace(/,\s*$/, "") + "]";
+        return JSON.parse(repaired);
+      }
+    } catch { /* fallback */ }
   }
   const objStart = cleaned.indexOf("{");
   const objEnd = cleaned.lastIndexOf("}");
@@ -21,6 +29,15 @@ function safeParseJson(raw: string): any {
     cleaned = cleaned.substring(objStart, objEnd + 1);
     try { return JSON.parse(`[${cleaned}]`); } catch { /* */ }
     try { const obj = JSON.parse(cleaned); return obj.vocab || [obj]; } catch { /* */ }
+  }
+  // Last resort: extract individual {...} objects via regex
+  const objMatches = raw.match(/\{[^{}]*"word"[^{}]*\}/g);
+  if (objMatches && objMatches.length > 0) {
+    const items: any[] = [];
+    for (const m of objMatches) {
+      try { items.push(JSON.parse(m)); } catch { /* skip */ }
+    }
+    if (items.length > 0) return items;
   }
   throw new Error("Failed to parse vocab JSON");
 }
