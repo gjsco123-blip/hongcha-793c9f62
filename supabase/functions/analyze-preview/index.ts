@@ -285,7 +285,10 @@ function topicExamplesByGrade(grade: Grade): string {
 - 고3처럼 지나치게 압축하거나 철학적으로 만들지 않는다.`;
 }
 
-function buildSystemPrompt(mode: Mode, grade: Grade): string {
+// 단일 영역 모드 전용 (topic | title | exam_summary | passage_summary).
+// mode="all"은 더 이상 이 함수를 사용하지 않음 — 4개 모듈 모드 병렬 호출로 처리.
+type SingleMode = Exclude<Mode, "all">;
+function buildSystemPrompt(mode: SingleMode, grade: Grade): string {
   const prefix = gradePrefix(grade);
   let body: string;
 
@@ -313,14 +316,60 @@ function buildSystemPrompt(mode: Mode, grade: Grade): string {
         "\n\n",
       );
       break;
-
-    case "all":
-    default:
-      body = [SYSTEM_PROMPT, topicExamplesByGrade(grade), PROMPT_TOPIC_RULES].join("\n\n");
-      break;
   }
 
   return `${prefix}\n\n${body}`;
+}
+
+// ── 단일 모드 1회 호출 + (passage_summary 한정) length-retry 재시도까지 책임 ──
+async function runSingleMode(
+  mode: SingleMode,
+  passage: string,
+  grade: Grade,
+  apiKey: string,
+): Promise<any> {
+  const systemPrompt = buildSystemPrompt(mode, grade);
+
+  const content = await callAi(apiKey, [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: passage },
+  ]);
+  let parsed = safeParseJson(content);
+
+  // passage_summary만 줄 길이 재시도 적용 (45~58자 범위 강제)
+  if (mode === "passage_summary" && summaryHasOutOfRangeLine(parsed?.summary)) {
+    console.log(
+      `[analyze-preview:${mode}] out-of-range line, retrying. lens:`,
+      String(parsed?.summary)
+        .split("\n")
+        .map((l: string) => `${l.length}자`)
+        .join(" / "),
+    );
+    try {
+      const retryContent = await callAi(apiKey, [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: passage },
+        { role: "assistant", content },
+        {
+          role: "user",
+          content:
+            "이전 응답의 summary 항목 중 일부가 목표 길이(한국어 48~55자) 범위를 벗어났음. 각 줄을 반드시 한국어 48~55자(공백·번호 포함)로 다시 작성할 것. 짧다면 [주체] + [원인/메커니즘] + [결과/결론 방향] 3요소 중 누락된 것을 추가해 늘릴 것 — 압축이 아니라 정보 추가로 길이를 맞출 것. 동일한 JSON 형식으로 모든 필드를 포함해 다시 출력할 것.",
+        },
+      ]);
+      const retryParsed = safeParseJson(retryContent);
+      if (!summaryHasOutOfRangeLine(retryParsed?.summary)) {
+        parsed = retryParsed;
+      } else {
+        const firstAvg = avgLineLen(parsed?.summary);
+        const retryAvg = avgLineLen(retryParsed?.summary);
+        if (Math.abs(retryAvg - 50) < Math.abs(firstAvg - 50)) parsed = retryParsed;
+      }
+    } catch (retryErr) {
+      console.error(`[analyze-preview:${mode}] retry failed:`, retryErr);
+    }
+  }
+
+  return parsed;
 }
 
 serve(async (req) => {
@@ -343,90 +392,77 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const systemPrompt = buildSystemPrompt(mode, grade);
-
-    // 1차 호출
-    let content: string;
-    try {
-      content = await callAi(LOVABLE_API_KEY, [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: passage },
-      ]);
-    } catch (e) {
-      const status = (e as { status?: number }).status;
-      if (status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-          status: 429,
+    // ───────── 단일 영역 모드: 그대로 1회 호출 ─────────
+    if (mode !== "all") {
+      try {
+        const parsed = await runSingleMode(mode, passage, grade, LOVABLE_API_KEY);
+        return new Response(JSON.stringify(parsed), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
-      }
-      throw e;
-    }
-
-    // 2차 호출 (Self-Critique): mode="all"에서만 적용 — 단일 필드 모드는 비용/오염 방지를 위해 생략
-    if (mode === "all") {
-      try {
-        const critiqueContent = await callAi(LOVABLE_API_KEY, [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: passage },
-          { role: "assistant", content },
-          { role: "user", content: SELF_CRITIQUE_PROMPT },
-        ]);
-        const critiqueParsed = safeParseJson(critiqueContent);
-        if (critiqueParsed?.summary && critiqueParsed?.exam_block) {
-          content = critiqueContent;
-          console.log("[analyze-preview] self-critique applied");
-        } else {
-          console.log("[analyze-preview] self-critique result invalid, using 1st response");
+      } catch (e) {
+        const status = (e as { status?: number }).status;
+        if (status === 429) {
+          return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
+            status: 429,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
         }
-      } catch (critiqueErr) {
-        console.warn("[analyze-preview] self-critique failed, using 1st response:", critiqueErr);
+        throw e;
       }
     }
 
-    let parsed = safeParseJson(content);
+    // ───────── mode="all": 4개 모듈 모드 병렬 호출 + 머지 ─────────
+    // stagger 50ms 간격으로 발사해 rate-limit 압박 완화
+    const stagger = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const launch = async (m: SingleMode, delay: number) => {
+      if (delay) await stagger(delay);
+      return runSingleMode(m, passage, grade, LOVABLE_API_KEY);
+    };
 
-    // 후처리 안전망: summary 줄 길이 검증 (45~58자) — "all" 또는 "passage_summary"에서만 적용
-    const summaryEligibleForLengthCheck = mode === "all" || mode === "passage_summary";
-    if (summaryEligibleForLengthCheck && summaryHasOutOfRangeLine(parsed?.summary)) {
-      console.log(
-        "[analyze-preview] out-of-range summary line detected (target 45~58), retrying once. lines:",
-        String(parsed?.summary)
-          .split("\n")
-          .map((l: string) => `${l.length}자`)
-          .join(" / "),
+    const [topicRes, titleRes, examSumRes, passageSumRes] = await Promise.allSettled([
+      launch("topic", 0),
+      launch("title", 50),
+      launch("exam_summary", 100),
+      launch("passage_summary", 150),
+    ]);
+
+    const pickExamBlock = (r: PromiseSettledResult<any>, label: string) => {
+      if (r.status === "fulfilled") return r.value?.exam_block ?? {};
+      console.error(`[analyze-preview] ${label} failed:`, r.reason);
+      return {};
+    };
+    const pickSummary = (r: PromiseSettledResult<any>) => {
+      if (r.status === "fulfilled") return r.value?.summary ?? "";
+      console.error("[analyze-preview] passage_summary failed:", r.reason);
+      return "";
+    };
+
+    const merged = {
+      summary: pickSummary(passageSumRes),
+      exam_block: {
+        ...pickExamBlock(topicRes, "topic"),
+        ...pickExamBlock(titleRes, "title"),
+        ...pickExamBlock(examSumRes, "exam_summary"),
+      },
+    };
+
+    // 모든 영역이 실패한 극단적 케이스 → 429 우선, 아니면 500
+    const allFailed =
+      topicRes.status === "rejected" &&
+      titleRes.status === "rejected" &&
+      examSumRes.status === "rejected" &&
+      passageSumRes.status === "rejected";
+    if (allFailed) {
+      const anyRateLimit = [topicRes, titleRes, examSumRes, passageSumRes].some(
+        (r) => r.status === "rejected" && (r.reason as { status?: number })?.status === 429,
       );
-      try {
-        const retryContent = await callAi(LOVABLE_API_KEY, [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: passage },
-          { role: "assistant", content },
-          {
-            role: "user",
-            content:
-              "이전 응답의 summary 항목 중 일부가 목표 길이(한국어 48~55자) 범위를 벗어났음. 각 줄을 반드시 한국어 48~55자(공백·번호 포함)로 다시 작성할 것. 짧다면 [주체] + [원인/메커니즘] + [결과/결론 방향] 3요소 중 누락된 것을 추가해 늘릴 것 — 압축이 아니라 정보 추가로 길이를 맞출 것. 동일한 JSON 형식으로 모든 필드를 포함해 다시 출력할 것.",
-          },
-        ]);
-        const retryParsed = safeParseJson(retryContent);
-        if (!summaryHasOutOfRangeLine(retryParsed?.summary)) {
-          parsed = retryParsed;
-          console.log("[analyze-preview] retry succeeded (all lines in 45~58)");
-        } else {
-          // 재시도해도 범위 밖 → 둘 중 평균 길이가 50자에 더 가까운 쪽 채택
-          const firstAvg = avgLineLen(parsed?.summary);
-          const retryAvg = avgLineLen(retryParsed?.summary);
-          const firstDist = Math.abs(firstAvg - 50);
-          const retryDist = Math.abs(retryAvg - 50);
-          if (retryDist < firstDist) parsed = retryParsed;
-          console.log(`[analyze-preview] retry still out-of-range (first avg=${firstAvg}, retry avg=${retryAvg})`);
-        }
-      } catch (retryErr) {
-        console.error("[analyze-preview] retry failed:", retryErr);
-        // 재시도 실패해도 1차 결과 반환
-      }
+      return new Response(
+        JSON.stringify({ error: anyRateLimit ? "Rate limit exceeded" : "All preview modes failed" }),
+        { status: anyRateLimit ? 429 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
-    return new Response(JSON.stringify(parsed), {
+    return new Response(JSON.stringify(merged), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
