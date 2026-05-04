@@ -123,7 +123,7 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
           <input
             value={formatSummaryKeywords(examBlock.summary_keywords)}
             onChange={(e) => update({ summary_keywords: normalizeSummaryKeywords(e.target.value) })}
-            placeholder="표현 : 뜻 / 표현 : 뜻"
+            placeholder="영단어 : 뜻 / 영단어 : 뜻"
             className="w-full text-xs text-muted-foreground/80 mt-1.5 bg-transparent border-none outline-none focus:bg-muted/20 rounded px-1 -mx-1"
           />
         </div>

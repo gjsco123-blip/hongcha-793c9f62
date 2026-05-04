@@ -209,6 +209,7 @@ const s = StyleSheet.create({
   summaryInlineLabel: { fontSize: 7.5, fontWeight: 800, color: T.g50, lineHeight: 1.6 },
   summaryInlineText: { flex: 1, fontSize: 8, color: T.black, lineHeight: 1.6 },
   summaryKeywordLine: { fontSize: 7, color: T.g70, lineHeight: 1.5, marginTop: 3 },
+  summaryBlock: { marginTop: 14 },
 });
 
 function VocabColumn({
@@ -317,11 +318,13 @@ export function PreviewPdf({ vocab, synonyms, summary, examBlock, title: titlePr
             <Text style={s.fieldLabel}>Title</Text>
             <Text style={s.fieldEn}>{examBlock.title}</Text>
             {examBlock.title_ko && <Text style={s.fieldKo}>{examBlock.title_ko}</Text>}
-            <View style={s.summaryRow}>
-              <Text style={s.summaryInlineLabel}>한줄요약 |</Text>
-              <Text style={s.summaryInlineText}>{summaryText}</Text>
+            <View style={s.summaryBlock}>
+              <View style={s.summaryRow}>
+                <Text style={s.summaryInlineLabel}>한줄요약 |</Text>
+                <Text style={s.summaryInlineText}>{summaryText}</Text>
+              </View>
+              {summaryKeywords && <Text style={s.summaryKeywordLine}>{summaryKeywords}</Text>}
             </View>
-            {summaryKeywords && <Text style={s.summaryKeywordLine}>{summaryKeywords}</Text>}
           </View>
         )}
       </Page>

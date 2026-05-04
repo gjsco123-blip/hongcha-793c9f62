@@ -4,15 +4,75 @@ export interface ExamBlockLike {
   summary_keywords?: unknown;
 }
 
-function keywordLooksRelevant(keyword: string, sourceText: string): boolean {
-  const englishPart = keyword.split(":")[0]?.trim().toLowerCase() || "";
-  if (!englishPart) return false;
+const EASY_WORDS = new Set([
+  "act",
+  "allow",
+  "before",
+  "belong",
+  "care",
+  "citizen",
+  "citizens",
+  "community",
+  "control",
+  "discover",
+  "everyone",
+  "gather",
+  "give",
+  "hold",
+  "immediate",
+  "information",
+  "internet",
+  "journalism",
+  "journalist",
+  "journalists",
+  "know",
+  "local",
+  "making",
+  "more",
+  "news",
+  "organization",
+  "organizations",
+  "people",
+  "place",
+  "places",
+  "power",
+  "problem",
+  "professional",
+  "relevant",
+  "responsibility",
+  "self",
+  "solve",
+  "take",
+  "technology",
+  "tell",
+  "traditional",
+  "up",
+]);
 
-  const words = englishPart.match(/[a-z][a-z-]*/g) || [];
-  if (words.length === 0) return false;
+function parseKeyword(keyword: string): { word: string; meaning: string } | null {
+  const [rawWord, ...rest] = keyword.split(":");
+  const word = rawWord?.trim().toLowerCase() || "";
+  const meaning = rest.join(":").trim();
+  if (!word || !meaning) return null;
+  return { word, meaning };
+}
+
+function isSingleVocabWord(word: string): boolean {
+  return /^[a-z][a-z-]*$/.test(word);
+}
+
+function isTooEasyWord(word: string): boolean {
+  return word.length <= 3 || EASY_WORDS.has(word);
+}
+
+function keywordLooksRelevant(keyword: string, sourceText: string): boolean {
+  const parsed = parseKeyword(keyword);
+  if (!parsed) return false;
+  if (!isSingleVocabWord(parsed.word)) return false;
+  if (isTooEasyWord(parsed.word)) return false;
 
   const source = sourceText.toLowerCase();
-  return words.every((word) => source.includes(word));
+  return source.includes(parsed.word);
 }
 
 export function normalizeSummaryKeywords(value: unknown): string[] {
@@ -39,7 +99,8 @@ export function formatSummaryKeywords(value: unknown): string {
 export function filterSummaryKeywordsBySource(value: unknown, sourceText: string): string[] {
   const normalized = normalizeSummaryKeywords(value);
   if (!sourceText.trim()) return normalized;
-  return normalized.filter((keyword) => keywordLooksRelevant(keyword, sourceText));
+  const filtered = normalized.filter((keyword) => keywordLooksRelevant(keyword, sourceText));
+  return Array.from(new Set(filtered)).slice(0, 5);
 }
 
 export function getDisplaySummary(block: ExamBlockLike | null | undefined): string {

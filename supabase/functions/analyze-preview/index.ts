@@ -170,23 +170,26 @@ const PROMPT_EXAM_SUMMARY_RULES = `[one_sentence_summary 규칙]
 - 종결은 "~한다 / ~이다 / ~된다" 같은 평서문으로 마무리.
 
 [summary_keywords 규칙]
-- 한줄요약을 영작 문제로 바꿀 때 필요한 핵심 영어 표현 4~5개를 고를 것.
-- 단일 단어보다 구/표현을 우선할 것. 예: "result in", "environmental change"
-- 각 항목은 반드시 "영어 표현 : 한국어 뜻" 형식일 것.
-- 영어 표현은 반드시 현재 passage에 실제로 등장하는 표현만 사용할 것.
-- 현재 passage에 없는 영어 표현, 예시 문구, 이전 대화에서 본 표현을 임의로 만들거나 재사용하면 안 됨.
+- 한줄요약을 영어로 다시 쓸 때 직접 필요한 핵심 영단어 4~5개를 고를 것.
+- 반드시 단어형만 허용. 구/표현/절/문장 형태는 금지.
+- 각 항목은 반드시 "영단어 : 한국어 뜻" 형식일 것.
+- 영단어는 반드시 현재 passage에 실제로 등장하는 단어만 사용할 것.
+- 현재 passage에 없는 단어, 예시 문구, 이전 대화에서 본 단어를 임의로 만들거나 재사용하면 안 됨.
+- 한줄요약에 직접 반영되지 않은 주변 단어는 제외할 것.
+- people, news, local, community, information, citizen 같이 너무 쉬운 기본 단어는 제외할 것.
+- 고1~고2 학생이 외울 가치가 있는 단어를 우선할 것.
 - 뜻은 짧고 명확한 한국어로 쓸 것.
 - 중복되거나 지나치게 사소한 표현 금지.
-- 배열 순서는 요약문 재구성에 중요한 순서 우선.
-- 출력 전 각 영어 표현이 passage 안에 실제로 있는지 다시 확인할 것.
+- 배열 순서는 한줄요약의 의미 흐름을 복원하기 좋은 순서 우선.
+- 출력 전 각 영단어가 passage 안에 실제로 있는지 다시 확인할 것.
 
 예시:
 one_sentence_summary: "즉각적 보상은 인간 두뇌의 진화적 편향을 이용해 장기적 의사결정을 왜곡한다."
 summary_keywords: [
-  "immediate rewards : 즉각적 보상",
-  "evolutionary biases : 진화적 편향",
-  "long-term decision-making : 장기적 의사결정",
-  "distort : 왜곡하다"
+  "distort : 왜곡하다",
+  "evolutionary : 진화의",
+  "biases : 편향",
+  "decision-making : 의사결정"
 ]`;
 
 const PROMPT_PASSAGE_SUMMARY_RULES = `[CRITICAL LENGTH RULE — 최우선]

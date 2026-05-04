@@ -187,6 +187,9 @@ const styles = StyleSheet.create({
     color: "#555",
     marginTop: 4,
   },
+  analysisSummaryBlock: {
+    marginTop: 8,
+  },
 });
 
 // Per-letter optical corrections (2-axis: normal + tangent).
@@ -420,8 +423,10 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
                   <View style={styles.analysisItem}>
                     <View style={styles.analysisContentWrap}>
                       <View style={styles.analysisBar} />
-                      <Text style={styles.analysisText}>{summary}</Text>
-                      {summaryKeywords ? <Text style={styles.analysisKeywordText}>{summaryKeywords}</Text> : null}
+                      <View style={styles.analysisSummaryBlock}>
+                        <Text style={styles.analysisText}>{summary}</Text>
+                        {summaryKeywords ? <Text style={styles.analysisKeywordText}>{summaryKeywords}</Text> : null}
+                      </View>
                     </View>
                   </View>
                 ) : null}
