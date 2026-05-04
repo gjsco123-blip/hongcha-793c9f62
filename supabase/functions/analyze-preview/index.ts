@@ -76,9 +76,10 @@ function summaryHasOutOfRangeLine(summary: unknown, minLen = 45, maxLen = 58): b
 }
 
 // ============================================================
-// MODE-SPECIFIC PROMPT MODULES (재생성 전용 — 첫 생성은 SYSTEM_PROMPT 사용)
+// MODE-SPECIFIC PROMPT MODULES — 첫 생성/재생성 양쪽 다 사용
 // ============================================================
-// 첫 생성(mode:"all")은 위의 기존 SYSTEM_PROMPT를 그대로 씀 → 회귀 위험 0.
+// mode="all" = 아래 4개 모듈 모드(topic/title/exam_summary/passage_summary)를 병렬 호출 후 머지.
+// → 첫 생성과 재생성이 100% 동일한 프롬프트를 사용. 톤 일관성 확보.
 // 아래 모듈은 개별 필드 재생성 시에만 사용.
 
 const PROMPT_INTRO = `You are a Korean high school English exam specialist for reading comprehension passages.
