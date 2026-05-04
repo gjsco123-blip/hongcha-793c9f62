@@ -122,6 +122,7 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
                 one_sentence_summary: e.target.value,
                 one_sentence_summary_ko: e.target.value,
                 one_sentence_summary_en_hidden: undefined,
+                summary_keywords: [],
               })}
               className="w-full text-sm leading-relaxed bg-transparent border-none outline-none focus:bg-muted/20 rounded px-1 -mx-1"
             />

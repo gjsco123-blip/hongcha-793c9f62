@@ -66,14 +66,51 @@ function isTooEasyWord(word: string): boolean {
   return word.length <= 3 || EASY_WORDS.has(word);
 }
 
-function keywordLooksRelevant(keyword: string, sourceText: string, allowEasyWords = false): boolean {
+function normalizeWordForm(word: string): string[] {
+  const lower = word.toLowerCase();
+  const forms = new Set<string>([lower]);
+
+  if (lower.endsWith("ies") && lower.length > 4) {
+    forms.add(`${lower.slice(0, -3)}y`);
+  }
+  if (lower.endsWith("es") && lower.length > 4) {
+    forms.add(lower.slice(0, -2));
+  }
+  if (lower.endsWith("s") && lower.length > 3) {
+    forms.add(lower.slice(0, -1));
+  }
+  if (lower.endsWith("ied") && lower.length > 4) {
+    forms.add(`${lower.slice(0, -3)}y`);
+  }
+  if (lower.endsWith("ed") && lower.length > 4) {
+    forms.add(lower.slice(0, -2));
+    forms.add(lower.slice(0, -1));
+  }
+  if (lower.endsWith("ing") && lower.length > 5) {
+    forms.add(lower.slice(0, -3));
+    forms.add(`${lower.slice(0, -3)}e`);
+  }
+
+  return Array.from(forms).filter(Boolean);
+}
+
+function buildSourceWordSet(sourceText: string): Set<string> {
+  const tokens = sourceText.toLowerCase().match(/[a-z]+(?:-[a-z]+)*/g) || [];
+  const words = new Set<string>();
+  for (const token of tokens) {
+    for (const form of normalizeWordForm(token)) {
+      words.add(form);
+    }
+  }
+  return words;
+}
+
+function keywordLooksRelevant(keyword: string, sourceWords: Set<string>, allowEasyWords = false): boolean {
   const parsed = parseKeyword(keyword);
   if (!parsed) return false;
   if (!isSingleVocabWord(parsed.word)) return false;
   if (!allowEasyWords && isTooEasyWord(parsed.word)) return false;
-
-  const source = sourceText.toLowerCase();
-  return source.includes(parsed.word);
+  return normalizeWordForm(parsed.word).some((form) => sourceWords.has(form));
 }
 
 export function normalizeSummaryKeywords(value: unknown): string[] {
@@ -100,15 +137,16 @@ export function formatSummaryKeywords(value: unknown): string {
 export function filterSummaryKeywordsBySource(value: unknown, sourceText: string): string[] {
   const normalized = normalizeSummaryKeywords(value);
   if (!sourceText.trim()) return normalized;
+  const sourceWords = buildSourceWordSet(sourceText);
   const unique = Array.from(new Set(normalized));
-  const preferred = unique.filter((keyword) => keywordLooksRelevant(keyword, sourceText));
+  const preferred = unique.filter((keyword) => keywordLooksRelevant(keyword, sourceWords));
 
   if (preferred.length >= 5) {
     return preferred.slice(0, Math.min(6, preferred.length));
   }
 
   const fallback = unique.filter(
-    (keyword) => !preferred.includes(keyword) && keywordLooksRelevant(keyword, sourceText, true),
+    (keyword) => !preferred.includes(keyword) && keywordLooksRelevant(keyword, sourceWords, true),
   );
 
   const merged = [...preferred, ...fallback];
@@ -130,10 +168,9 @@ function getKeywordSourceText(block: ExamBlockLike, fallbackText?: string): stri
 
 export function normalizeExamBlock<T extends ExamBlockLike | null | undefined>(
   block: T,
-  fallbackText?: string,
 ): T {
   if (!block) return block;
-  const keywordSource = getKeywordSourceText(block, fallbackText);
+  const keywordSource = getKeywordSourceText(block);
   return {
     ...block,
     summary_keywords: keywordSource
