@@ -29,292 +29,9 @@ function safeParseJson(raw: string): any {
   throw new Error("Failed to parse preview JSON");
 }
 
-const SYSTEM_PROMPT = `[CRITICAL LENGTH RULE — 최우선 규칙]
-summary의 각 줄(①②③④)은 반드시 한국어 48~55자 (공백·번호·구두점 포함). 허용 범위는 45~58자.
-- 45자 미만 = 무효. 58자 초과 = 무효. 출력 금지.
-- 출력 직전 각 줄 글자수를 직접 세어 검증할 것.
-- 짧으면 [주체] + [원인/메커니즘] + [결과/결론 방향] 3요소 중 누락된 것을 추가해 늘릴 것.
-- 길이를 맞추는 방식은 "압축"이 아니라 "정보 추가". 추상어를 더 끼워넣지 말고 구체 개념·주체·메커니즘을 명시할 것.
-- "간결하게"라는 본능을 누르고 정보를 채워 넣을 것.
-이 규칙은 다른 모든 스타일 규칙보다 우선한다.
-
-You are a Korean high school English exam specialist AND a preview engine for Korean high school reading comprehension passages.
-
-Below are sample correct answers from Korean mock exams.
-Follow their abstraction level, tone, and structure.
-
-[Sample Topic Answer Style]
-- role of sleep in the learning process
-- impact of reward immediacy on decision-making
-- influence of individual perspectives on meaning formation
-- effects of social pressure on behavior
-- necessity of various perspectives in scientific inquiry
-- limitations of intuitive judgment in complex situations
-- misconception about race as a biological construct
-- benefits of reduced domestic cooking duties through outsourcing
-
-I will provide an English passage.
-
-Your task is to generate:
-[1] Exam Topic Answer
-[2] Best Title
-[3] One-Sentence Summary
-
-IMPORTANT:
-exam_block.topic is NOT a thesis sentence.
-exam_block.topic must be a multiple-choice topic answer phrase.
-Never write exam_block.topic as a full sentence.
-
-────────────────────
-Step 1. Automatically Determine Difficulty Level (Do not show this analysis)
-────────────────────
-Evaluate the passage using the following criteria:
-- Density of abstract nouns (e.g., necessity, implication, distinction, impact, role, perspective, interaction).
-- Presence of evaluative language (e.g., problematic, misleading, crucial, inefficient).
-- Use of contrast or concession structure (however, although, rather than, on the other hand).
-- Presence of opposing viewpoints.
-- Logical complexity (multi-step reasoning, critique, conditional argument).
-If 3 or more apply → Treat as Grade 2+ level.
-Otherwise → Treat as Grade 1 level.
-
-────────────────────
-Step 2. Internal Analysis (Do not show this analysis)
-────────────────────
-- Identify the central claim.
-- Distinguish main reasoning from examples.
-- Identify background/context information.
-- Detect evaluative direction (positive, negative, critical, supportive).
-- Determine the dominant logical structure (cause-effect, contrast, concession, problem-solution, general-specific).
-- Determine which idea the conclusion ultimately supports.
-
-────────────────────
-Step 3. Adjust Abstraction Level Automatically
-────────────────────
-If Grade 1:
-- Use moderate abstraction.
-- Stay close to the explicitly stated main idea.
-- Focus on central concept + effect or function.
-- Keep the logical structure clear and direct.
-
-If Grade 2+:
-- Raise abstraction by one level.
-- Clearly reflect evaluative stance.
-- Explicitly preserve the dominant logical relationship.
-- Use more conceptual phrasing where appropriate.
-
-────────────────────
-Step 4. Generate Output
-────────────────────
-
-Generate the following as a JSON object:
-
-1. exam_block.topic (Exam Topic Answer / 주제 선택지):
-
-- This MUST be written as a Korean mock-exam topic choice, NOT an explanation.
-
-- Output a concise English noun phrase that functions as a multiple-choice answer.
-
-- Use ONLY one central conceptual axis. Do NOT combine multiple ideas.
-
-- Prefer standard exam structures:
-  → the role of ~ in ~
-  → the effect(s) of ~ on ~
-  → the influence of ~ on ~
-  → the importance of ~
-  → the necessity of ~
-  → the relationship between A and B
-  → the misconception about ~
-  → factors affecting ~
-
-- Strongly AVOID explanatory constructions:
-  ❌ construction of ~ due to ~
-  ❌ formation of ~ from ~
-  ❌ process of ~
-  ❌ how ~ happens
-  ❌ any "due to / because of / resulting from" chains
-
-- Do NOT include:
-  ❌ contrast tails (despite, although, while, even though)
-  ❌ multiple clauses
-  ❌ “and” connecting two ideas
-  ❌ verbs (no full sentence structure)
-  ❌ a period at the end
-
-- Invalid if the topic contains a finite verb such as is, are, has, have, does, makes, causes, ensures, shows, suggests, helps, uses, utilizes, creates, forms, changes.
-- Invalid if the topic starts with "The human brain + verb", "People + verb", "Humans + verb", or "A/An/The + noun + verb".
-- If a draft looks like "A does B by doing C", rewrite it as "the role/effect/influence of A in/on B".
-
-- Length: 6~11 words ONLY.
-
-- Style priority:
-  → clarity > abstraction
-  → exam usability > completeness
-
-- If multiple elements exist, choose ONE and center the phrase around it.
-
-- Rewrite aggressively into a clean test option.
-  (Even if information is lost, prioritize exam-style compression.)
-
-- The output should look like a clean answer choice, not a summary or explanation.
-
-2. exam_block.topic_ko: Korean translation of topic.
-
-3. exam_block.title (Best Title / 제목):
-   - Concise noun phrase in English, shorter and more compressed than the thesis.
-   - Academic and clear (not poetic). Sentence case (only first word capitalized).
-   - Question format allowed only if the passage clearly answers it.
-   - Prefer structure: abstract noun + of + key concept
-     (e.g., impact of ~, role of ~, necessity of ~, distinction between ~).
-   - 5~9 words.
-
-4. exam_block.title_ko: Korean translation of title.
-
-5. exam_block.one_sentence_summary (One-Sentence Summary):
-   - Exactly ONE sentence in English.
-   - Must clearly reflect the dominant logical relationship
-     (cause-effect, contrast, concession, problem-solution, etc.).
-   - Remove specific examples and detailed cases.
-   - Preserve evaluative direction if present.
-   - Suitable for Korean mock-exam summary style.
-   - Abstract but not overly philosophical.
-   - Do NOT split into multiple sentences.
-
-6. exam_block.one_sentence_summary_ko (한글 직역):
-   - 영문 one_sentence_summary의 직역(literal translation).
-   - 영문 어순·구조·핵심 명사를 최대한 보존할 것.
-   - 영문 단어가 한글에서 1:1로 추적 가능해야 함 (학생이 영문↔한글 짝지어 읽기 가능).
-   - 영문에 없는 부연·예시·평가어 추가 금지.
-   - 핵심 명사는 그대로 옮길 것 (예: "long-term decision-making" → "장기적 의사결정").
-   - 자연스러운 한국어 어순 조정은 허용하나, 의미 단위(주어/동사/목적어/수식구) 순서를 임의로 뒤집지 말 것.
-   - 종결: "~한다 / ~이다 / ~된다" 평서문 동사 종결 (명사형 종결 금지).
-   - 불필요하게 어려운 한자어는 피하되, 고등학교 독해에서 흔히 쓰는 개념어는 허용한다.
-   - 금지어: "~을 시사한다 / ~을 의미한다 / ~라고 볼 수 있다" 같은 해설성 표현 (영문에 그런 표현이 있을 때만 허용).
-
-   예시:
-   영문: "Immediate rewards systematically distort long-term decision-making by exploiting evolutionary biases in the human brain."
-   Good: "즉각적 보상은 인간 두뇌의 진화적 편향을 이용해 장기적 의사결정을 체계적으로 왜곡한다."
-   Bad: "사람들은 당장의 만족 때문에 미래를 제대로 못 본다는 점이 문제다."
-
-7. summary (Passage Logic / 지문 논리):
-   - 반드시 정확히 4개 항목, 줄바꿈 \\n으로 구분, 한국어로 작성.
-   - 각 항목 앞에 번호를 붙일 것: ① ② ③ ④
-   - **각 항목은 정확히 한 줄(single line)** — 항목 내부에 \\n, 줄바꿈, 또는 줄을 나누는 어떠한 문자도 절대 포함 금지.
-   - **각 줄 길이는 한국어 기준 45~58자** (번호·공백·구두점 포함).
-     - 40자 미만이면 무효. 핵심 정보(주체/원인/결과/조건)를 추가해 50자 안팎으로 늘릴 것.
-     - 60자를 초과하면 부수적 수식어를 제거해 길이를 줄일 것.
-   - 정보 밀도는 기존보다 소폭(+10~20%) 높이되, 추상어 나열은 금지. 원인/결과·주체·결론 중 핵심 요소를 각 줄에 분명히 포함할 것.
-   - ① 지문의 핵심 주장 또는 중심 아이디어를 진술.
-   - ② 그 아이디어를 뒷받침하는 핵심 이유나 메커니즘을 설명.
-   - ③ 지문에 나오는 중요한 예시, 개념, 또는 설명을 간략히 제시.
-   - ④ 최종 결론 또는 저자의 핵심 메시지를 진술.
-   - 원문의 표현과 논리에 충실할 것. 원문에 명시되지 않은 정보를 추가하지 말 것.
-   - 배경 정보보다 핵심 논증에 집중할 것.
-   - 대비 구조(A but B)가 있으면 반영할 것.
-   - 지문에서 여러 이유나 요인이 제시되면 그 중 핵심적인 하나 또는 공통된 방향을 요약에 반영할 것.
-   - 지문의 결론이 특정 평가나 판단을 포함하면 그 평가 방향을 ④ 문장에 반영할 것.
-   - 지문의 첫 문장은 단순 배경 설명일 수 있으므로 그대로 반복하지 말고 중심 주장으로 요약할 것.
-   - 지문에서 특정 개념이 정의되면 그 정의를 ① 문장에 반영할 것.
-   - 지문이 사례나 사건을 설명하면 상황 → 대응 → 결과의 흐름을 반영할 것.
-    - 한국 중학생이 쉽게 이해할 수 있는 명확하고 간결한 한국어를 사용할 것.
-
-────────────────────
-모범 예시 (Few-shot — 길이/밀도 감각용)
-────────────────────
-Good #1 (각 줄 정확히 48~55자, 한 줄 고정, 명사형 종결):
-① 즉각적 보상을 선호하는 인간 두뇌의 진화적 편향이 장기적 의사결정을 왜곡시키는 경향성
-② 현재 가치를 과대평가하도록 설계된 두뇌 회로가 미래 이익을 체계적으로 평가절하하는 메커니즘
-③ 마시멜로 실험에서 만족을 지연한 아동들이 학업·사회성 면에서 더 우수했다는 연구 결과
-④ 보상 즉각성이 합리적 판단을 구조적으로 왜곡한다는 점을 경계해야 한다는 저자의 비판적 결론
-
-Good #2 (각 줄 정확히 48~55자, 정보 밀도 충분):
-① 외부 보상에 의존한 동기 부여가 활동 자체에 대한 내재적 흥미를 점진적으로 약화시키는 구조
-② 보상이 주어질 때 학습자가 활동의 즐거움보다 결과에만 집중하게 되는 심리적 전환 메커니즘
-③ 독서에 금전적 보상을 제공한 학생들이 보상 종료 후 오히려 독서 빈도가 감소한 실험 사례
-④ 외적 보상의 무분별한 사용이 자율성과 흥미를 훼손할 수 있다는 저자의 핵심적 경고 메시지
-
-Bad (40자대 — 정보 부족, 절대 금지):
-① 즉각적 보상이 장기적 이익보다 우선시되는 의사결정 경향  ← 약 30자, 무효 (너무 짧음)
-② 인간 두뇌가 현재 가치를 과대평가하도록 진화한 메커니즘  ← 약 30자, 무효 (너무 짧음)
-③ 외부적 보상이 단기 동기 부여에 미치는 한계  ← 약 24자, 무효
-④ 인센티브와 처벌이 초래하는 비용과 스트레스  ← 약 22자, 무효
-→ 위 길이는 모두 무효. 반드시 [주체] + [원인/메커니즘] + [결과/결론 방향]
-   3요소 중 최소 2개를 명시해 48~55자로 만들 것.
-
-[줄 길이 강제 — 다시 강조]
-- 각 줄은 반드시 한국어 48~55자(공백·번호 포함). 45자 미만 또는 58자 초과 모두 무효.
-- 출력 직전 ①②③④ 각 줄 글자수를 정확히 세어 검증할 것.
-- 짧으면 [주체/원인/결과] 중 누락된 요소를 추가해 늘릴 것 — "압축"이 아니라 "정보 추가"로 길이를 맞출 것.
-
-Bad (한 항목이 줄바꿈 — 절대 금지):
-② 인간 두뇌가 현재 가치를\\n과대평가하는 메커니즘
-
-────────────────────
-종결 스타일 (summary 전용)
-────────────────────
-- 모든 문장은 반드시 명사형으로 마무리할 것.
-- 허용 패턴: ~라는 점, ~하는 구조, ~하는 흐름, ~라는 전제, ~경향, ~라는 의미, ~하는 방식, ~필요성, ~중요성, ~라는 주장
-- 금지 패턴: ~한다, ~된다, ~이다, ~있다, ~했다, ~합니다, ~됩니다, ~임, ~함
-- Good: "① 보상의 즉각성이 합리적 의사결정을 구조적으로 왜곡한다는 점을 드러내는 영향"
-- Good: "② 즉각적 보상이 장기적 이익보다 우선시되는 인간 두뇌의 진화적 편향 경향"
-- Bad: "① 보상의 즉각성이 의사결정에 영향을 미친다" (너무 짧고 동사 종결)
-- Bad: "② 즉각적 보상이 장기적 이익보다 선호됨" (음슴체 금지)
-
-────────────────────
-Critical Korean Exam Rules
-────────────────────
-- Do not reverse cause and effect.
-- Do not narrow the scope to a single example.
-- Do not overgeneralize beyond the passage.
-- Do not introduce concepts not central to the text.
-- Do not merely restate the first sentence.
-- Focus on the overall argumentative direction.
-
-────────────────────
-[OUTPUT SELF-CHECK]
-────────────────────
-출력 직전, summary의 각 줄 글자수(공백·번호 포함)를 세어
-45~58자 범위인지 확인할 것.
-범위 밖(특히 40자 미만)이면 다시 작성한 후 출력할 것.
-
-────────────────────
-절대 규칙
-────────────────────
-- JSON 객체만 출력. 다른 텍스트 금지.
-- summary는 반드시 \\n으로 구분된 4줄이어야 한다 (①②③④).
-- summary 각 항목 내부에는 \\n, 줄바꿈, 또는 줄을 나누는 어떠한 문자도 절대 포함 금지. 4개 항목 사이의 \\n만 허용.
-- summary 각 줄 길이는 한국어 기준 45~58자 범위 강제 (번호·공백·구두점 포함).
-- 40자 미만은 절대 금지.
-- 의미 왜곡 금지: 원문에 없는 주장, 평가, 비판, 예측을 추가하지 말 것.
-
-출력 형식:
-{"summary":"①...\\n②...\\n③...\\n④...","exam_block":{"topic":"...","topic_ko":"...","title":"...","title_ko":"...","one_sentence_summary":"...","one_sentence_summary_ko":"..."}}`;
-
-const SELF_CRITIQUE_PROMPT = `다음 체크리스트로 이전 응답을 평가하고, 하나라도 미달이면 수정 후 동일 JSON으로 다시 출력할 것.
-
-[Passage Logic 체크리스트]
-1. ①②③④ 각 줄 글자수가 한국어 45~58자(공백·번호 포함)인가?
-   → 짧으면 [주체]+[원인/메커니즘]+[결과/결론] 3요소 중 누락된 것을 추가해 늘릴 것.
-2. 각 줄이 명사형 종결(~점/구조/경향/방식 등)인가? 동사 종결·음슴체 금지.
-3. 원문의 논리 구조(대비/인과/양보/문제해결)가 ④번 결론 줄에 정확히 반영됐는가?
-4. 원문에 없는 평가·주장·예측이 추가되지 않았는가?
-
-[exam_block 체크리스트]
-5. topic이 평가원식 주제 명사구인가?
-   - 완전한 문장이나 요약문처럼 쓰지 않았는가?
-   - is, are, has, makes, causes, ensures, shows, suggests, helps, uses, utilizes, creates, forms, changes 같은 정동사가 들어가지 않았는가?
-   - "The human brain ensures..." / "People use..." / "A thing causes..." 같은 주어+동사 구조가 아닌가?
-   - 문장형이면 반드시 "the role/effect/influence/importance/necessity of ~" 형태의 명사구로 다시 쓸 것.
-6. title이 5~9 단어 명사구(abstract noun + of + key concept 권장)인가?
-7. one_sentence_summary가 정확히 한 문장이며 논리 구조를 반영하는가?
-8. one_sentence_summary_ko가 영문의 직역인가?
-   - 영문의 핵심 명사·동사가 한글에서 1:1 추적 가능한가?
-   - 영문에 없는 해설·평가·예시가 추가되지 않았는가?
-   - "~을 시사한다 / ~라고 볼 수 있다" 같은 임의 해설어가 들어가지 않았는가?
-   미달이면 직역 원칙으로 다시 작성할 것.
-
-평가 결과 모든 항목 충족이면 1차 응답을 그대로 다시 출력.
-하나라도 미달이면 수정한 결과를 동일 JSON 형식으로 출력.
-JSON 객체 외 다른 텍스트 출력 금지.`;
+// NOTE: 기존 SYSTEM_PROMPT(215줄)는 제거됨. 첫 생성(mode:"all")은 모듈 프롬프트 4개 병렬 호출로 처리.
+// 모든 규칙은 PROMPT_INTRO / PROMPT_TOPIC_RULES / PROMPT_TITLE_RULES / PROMPT_EXAM_SUMMARY_RULES /
+// PROMPT_PASSAGE_SUMMARY_RULES / PROMPT_COMMON_RULES + topicExamplesByGrade(grade) 로 이식 완료.
 
 const LOVABLE_API_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
@@ -359,9 +76,10 @@ function summaryHasOutOfRangeLine(summary: unknown, minLen = 45, maxLen = 58): b
 }
 
 // ============================================================
-// MODE-SPECIFIC PROMPT MODULES (재생성 전용 — 첫 생성은 SYSTEM_PROMPT 사용)
+// MODE-SPECIFIC PROMPT MODULES — 첫 생성/재생성 양쪽 다 사용
 // ============================================================
-// 첫 생성(mode:"all")은 위의 기존 SYSTEM_PROMPT를 그대로 씀 → 회귀 위험 0.
+// mode="all" = 아래 4개 모듈 모드(topic/title/exam_summary/passage_summary)를 병렬 호출 후 머지.
+// → 첫 생성과 재생성이 100% 동일한 프롬프트를 사용. 톤 일관성 확보.
 // 아래 모듈은 개별 필드 재생성 시에만 사용.
 
 const PROMPT_INTRO = `You are a Korean high school English exam specialist for reading comprehension passages.
@@ -568,7 +286,10 @@ function topicExamplesByGrade(grade: Grade): string {
 - 고3처럼 지나치게 압축하거나 철학적으로 만들지 않는다.`;
 }
 
-function buildSystemPrompt(mode: Mode, grade: Grade): string {
+// 단일 영역 모드 전용 (topic | title | exam_summary | passage_summary).
+// mode="all"은 더 이상 이 함수를 사용하지 않음 — 4개 모듈 모드 병렬 호출로 처리.
+type SingleMode = Exclude<Mode, "all">;
+function buildSystemPrompt(mode: SingleMode, grade: Grade): string {
   const prefix = gradePrefix(grade);
   let body: string;
 
@@ -596,14 +317,60 @@ function buildSystemPrompt(mode: Mode, grade: Grade): string {
         "\n\n",
       );
       break;
-
-    case "all":
-    default:
-      body = [SYSTEM_PROMPT, topicExamplesByGrade(grade), PROMPT_TOPIC_RULES].join("\n\n");
-      break;
   }
 
   return `${prefix}\n\n${body}`;
+}
+
+// ── 단일 모드 1회 호출 + (passage_summary 한정) length-retry 재시도까지 책임 ──
+async function runSingleMode(
+  mode: SingleMode,
+  passage: string,
+  grade: Grade,
+  apiKey: string,
+): Promise<any> {
+  const systemPrompt = buildSystemPrompt(mode, grade);
+
+  const content = await callAi(apiKey, [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: passage },
+  ]);
+  let parsed = safeParseJson(content);
+
+  // passage_summary만 줄 길이 재시도 적용 (45~58자 범위 강제)
+  if (mode === "passage_summary" && summaryHasOutOfRangeLine(parsed?.summary)) {
+    console.log(
+      `[analyze-preview:${mode}] out-of-range line, retrying. lens:`,
+      String(parsed?.summary)
+        .split("\n")
+        .map((l: string) => `${l.length}자`)
+        .join(" / "),
+    );
+    try {
+      const retryContent = await callAi(apiKey, [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: passage },
+        { role: "assistant", content },
+        {
+          role: "user",
+          content:
+            "이전 응답의 summary 항목 중 일부가 목표 길이(한국어 48~55자) 범위를 벗어났음. 각 줄을 반드시 한국어 48~55자(공백·번호 포함)로 다시 작성할 것. 짧다면 [주체] + [원인/메커니즘] + [결과/결론 방향] 3요소 중 누락된 것을 추가해 늘릴 것 — 압축이 아니라 정보 추가로 길이를 맞출 것. 동일한 JSON 형식으로 모든 필드를 포함해 다시 출력할 것.",
+        },
+      ]);
+      const retryParsed = safeParseJson(retryContent);
+      if (!summaryHasOutOfRangeLine(retryParsed?.summary)) {
+        parsed = retryParsed;
+      } else {
+        const firstAvg = avgLineLen(parsed?.summary);
+        const retryAvg = avgLineLen(retryParsed?.summary);
+        if (Math.abs(retryAvg - 50) < Math.abs(firstAvg - 50)) parsed = retryParsed;
+      }
+    } catch (retryErr) {
+      console.error(`[analyze-preview:${mode}] retry failed:`, retryErr);
+    }
+  }
+
+  return parsed;
 }
 
 serve(async (req) => {
@@ -626,90 +393,77 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const systemPrompt = buildSystemPrompt(mode, grade);
-
-    // 1차 호출
-    let content: string;
-    try {
-      content = await callAi(LOVABLE_API_KEY, [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: passage },
-      ]);
-    } catch (e) {
-      const status = (e as { status?: number }).status;
-      if (status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-          status: 429,
+    // ───────── 단일 영역 모드: 그대로 1회 호출 ─────────
+    if (mode !== "all") {
+      try {
+        const parsed = await runSingleMode(mode, passage, grade, LOVABLE_API_KEY);
+        return new Response(JSON.stringify(parsed), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
-      }
-      throw e;
-    }
-
-    // 2차 호출 (Self-Critique): mode="all"에서만 적용 — 단일 필드 모드는 비용/오염 방지를 위해 생략
-    if (mode === "all") {
-      try {
-        const critiqueContent = await callAi(LOVABLE_API_KEY, [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: passage },
-          { role: "assistant", content },
-          { role: "user", content: SELF_CRITIQUE_PROMPT },
-        ]);
-        const critiqueParsed = safeParseJson(critiqueContent);
-        if (critiqueParsed?.summary && critiqueParsed?.exam_block) {
-          content = critiqueContent;
-          console.log("[analyze-preview] self-critique applied");
-        } else {
-          console.log("[analyze-preview] self-critique result invalid, using 1st response");
+      } catch (e) {
+        const status = (e as { status?: number }).status;
+        if (status === 429) {
+          return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
+            status: 429,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
         }
-      } catch (critiqueErr) {
-        console.warn("[analyze-preview] self-critique failed, using 1st response:", critiqueErr);
+        throw e;
       }
     }
 
-    let parsed = safeParseJson(content);
+    // ───────── mode="all": 4개 모듈 모드 병렬 호출 + 머지 ─────────
+    // stagger 50ms 간격으로 발사해 rate-limit 압박 완화
+    const stagger = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const launch = async (m: SingleMode, delay: number) => {
+      if (delay) await stagger(delay);
+      return runSingleMode(m, passage, grade, LOVABLE_API_KEY);
+    };
 
-    // 후처리 안전망: summary 줄 길이 검증 (45~58자) — "all" 또는 "passage_summary"에서만 적용
-    const summaryEligibleForLengthCheck = mode === "all" || mode === "passage_summary";
-    if (summaryEligibleForLengthCheck && summaryHasOutOfRangeLine(parsed?.summary)) {
-      console.log(
-        "[analyze-preview] out-of-range summary line detected (target 45~58), retrying once. lines:",
-        String(parsed?.summary)
-          .split("\n")
-          .map((l: string) => `${l.length}자`)
-          .join(" / "),
+    const [topicRes, titleRes, examSumRes, passageSumRes] = await Promise.allSettled([
+      launch("topic", 0),
+      launch("title", 50),
+      launch("exam_summary", 100),
+      launch("passage_summary", 150),
+    ]);
+
+    const pickExamBlock = (r: PromiseSettledResult<any>, label: string) => {
+      if (r.status === "fulfilled") return r.value?.exam_block ?? {};
+      console.error(`[analyze-preview] ${label} failed:`, r.reason);
+      return {};
+    };
+    const pickSummary = (r: PromiseSettledResult<any>) => {
+      if (r.status === "fulfilled") return r.value?.summary ?? "";
+      console.error("[analyze-preview] passage_summary failed:", r.reason);
+      return "";
+    };
+
+    const merged = {
+      summary: pickSummary(passageSumRes),
+      exam_block: {
+        ...pickExamBlock(topicRes, "topic"),
+        ...pickExamBlock(titleRes, "title"),
+        ...pickExamBlock(examSumRes, "exam_summary"),
+      },
+    };
+
+    // 모든 영역이 실패한 극단적 케이스 → 429 우선, 아니면 500
+    const allFailed =
+      topicRes.status === "rejected" &&
+      titleRes.status === "rejected" &&
+      examSumRes.status === "rejected" &&
+      passageSumRes.status === "rejected";
+    if (allFailed) {
+      const anyRateLimit = [topicRes, titleRes, examSumRes, passageSumRes].some(
+        (r) => r.status === "rejected" && (r.reason as { status?: number })?.status === 429,
       );
-      try {
-        const retryContent = await callAi(LOVABLE_API_KEY, [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: passage },
-          { role: "assistant", content },
-          {
-            role: "user",
-            content:
-              "이전 응답의 summary 항목 중 일부가 목표 길이(한국어 48~55자) 범위를 벗어났음. 각 줄을 반드시 한국어 48~55자(공백·번호 포함)로 다시 작성할 것. 짧다면 [주체] + [원인/메커니즘] + [결과/결론 방향] 3요소 중 누락된 것을 추가해 늘릴 것 — 압축이 아니라 정보 추가로 길이를 맞출 것. 동일한 JSON 형식으로 모든 필드를 포함해 다시 출력할 것.",
-          },
-        ]);
-        const retryParsed = safeParseJson(retryContent);
-        if (!summaryHasOutOfRangeLine(retryParsed?.summary)) {
-          parsed = retryParsed;
-          console.log("[analyze-preview] retry succeeded (all lines in 45~58)");
-        } else {
-          // 재시도해도 범위 밖 → 둘 중 평균 길이가 50자에 더 가까운 쪽 채택
-          const firstAvg = avgLineLen(parsed?.summary);
-          const retryAvg = avgLineLen(retryParsed?.summary);
-          const firstDist = Math.abs(firstAvg - 50);
-          const retryDist = Math.abs(retryAvg - 50);
-          if (retryDist < firstDist) parsed = retryParsed;
-          console.log(`[analyze-preview] retry still out-of-range (first avg=${firstAvg}, retry avg=${retryAvg})`);
-        }
-      } catch (retryErr) {
-        console.error("[analyze-preview] retry failed:", retryErr);
-        // 재시도 실패해도 1차 결과 반환
-      }
+      return new Response(
+        JSON.stringify({ error: anyRateLimit ? "Rate limit exceeded" : "All preview modes failed" }),
+        { status: anyRateLimit ? 429 : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
-    return new Response(JSON.stringify(parsed), {
+    return new Response(JSON.stringify(merged), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

@@ -1,77 +1,115 @@
+# analyze-preview 병렬 리팩토링 (A안)
+
 ## 목표
-지문 분석 시 LLM이 지문 자체를 보고 "이 정도 난이도네" 자동 판단하던 불안정한 방식을 제거하고, **학교명에서 학년(고1/고2/고3)을 추출해 명시적으로 LLM에 주입**한다. 적용 범위는 Preview의 **Topic / Title / Exam Summary** (Passage Summary, Vocab, Synonyms는 영향 없음).
+첫 생성(`mode:"all"`)을 거대 SYSTEM_PROMPT 1회 호출에서 **모듈 프롬프트 4개 병렬 호출**로 전환. 첫 생성과 재생성이 **완전히 동일한 프롬프트**를 사용하게 만들어 톤/품질 일관성 확보. self-critique는 비용 절감을 위해 생략.
 
 ## 변경 지점
 
-### 1. `src/lib/grade-utils.ts` (신규)
-학년 추출 유틸 한 곳에 모음.
+### 1. `supabase/functions/analyze-preview/index.ts`
+
+**(a) topic 모드 조립에 학년별 예시 추가** (현재 누락된 핵심 보강 포인트)
 ```ts
-export type Grade = 1 | 2 | 3;
-export function extractGradeFromSchoolName(name?: string): Grade {
-  const m = name?.match(/고\s*([1-3])/);
-  return (m ? Number(m[1]) : 2) as Grade; // 폴백: 고2
+case "topic":
+  body = [
+    PROMPT_INTRO,
+    topicExamplesByGrade(grade),   // ← 추가 (현재 mode="all"에만 끼워져 있음)
+    PROMPT_TOPIC_RULES,
+    PROMPT_COMMON_RULES,
+    PROMPT_OUTPUT_TOPIC,
+  ].join("\n\n");
+  break;
+```
+
+**(b) `mode:"all"` 분기를 병렬 4호출로 교체**
+```ts
+if (mode === "all") {
+  const [topicRes, titleRes, examSumRes, passageSumRes] = await Promise.allSettled([
+    callMode("topic", passage, grade, apiKey),
+    callMode("title", passage, grade, apiKey),
+    callMode("exam_summary", passage, grade, apiKey),
+    callMode("passage_summary", passage, grade, apiKey),
+  ]);
+
+  // 부분 실패 허용: 성공한 것만 머지, 실패는 빈 값 + 경고 로그
+  const merged = {
+    summary: pickSummary(passageSumRes),
+    exam_block: {
+      ...pickExamBlock(topicRes),
+      ...pickExamBlock(titleRes),
+      ...pickExamBlock(examSumRes),
+    },
+  };
+  return jsonResponse(merged);
 }
 ```
 
-### 2. `src/pages/Index.tsx`
-Preview로 navigate할 때 학교명에서 학년 추출 후 state에 실어 전달.
-- 선택된 school 객체 찾기 → `extractGradeFromSchoolName(school.name)` → state에 `grade` 추가
-- 위치: line 978 navigate 호출
+**(c) 기존 `SYSTEM_PROMPT` 상수 제거 (215줄)**
+- 더 이상 어디서도 참조되지 않음
+- `SELF_CRITIQUE_PROMPT`도 제거 (A안에서 미사용)
+- `summaryHasOutOfRangeLine` length-retry 헬퍼는 `passage_summary` 모드 호출 내부에서 그대로 사용
 
-### 3. `src/pages/Preview.tsx`
-- `location.state?.grade`로 수신, sessionStorage 백업 저장 (새로고침 대비)
-- `handleGenerate`의 `analyze-preview` 호출 body에 `grade` 추가
-- `regenExamTopic` / `regenExamTitle` / `regenExamSummary` 호출 body에 `grade` 추가
-- (`regenSummary`는 손대지 않음 — passage_summary는 학년 영향 없는 영역)
+**(d) 호출 stagger (rate limit 보호)**
+- 4개 동시 발사 대신 50ms 간격으로 순차 발사 후 `Promise.allSettled`로 대기
+- 기존 `invokeWithFallback` 429/503 재시도 로직은 그대로 활용
 
-### 4. `supabase/functions/analyze-preview/index.ts`
-- 요청 body Zod 스키마에 `grade: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional()` 추가, 폴백 2
-- 모든 시스템 프롬프트 맨 앞에 학년 한 줄 prepend:
-  ```
-  Target audience: 한국 고등학교 ${grade}학년 (고${grade}).
-  Calibrate vocabulary range, sentence complexity, and abstraction level accordingly.
-  고1: 기초 어휘/단순 구조. 고2: 중급. 고3: 수능 수준 추상 어휘/복잡 구조.
-  ```
-- 적용 위치:
-  - `mode:"all"`: 기존 `SYSTEM_PROMPT` 앞에 prepend (본문 215줄은 그대로)
-  - `mode` 모듈 조립: `buildSystemPrompt(mode, grade)` 시그니처로 변경, 결과 앞에 prepend
-- `PROMPT_INTRO`의 "Internally analyze Difficulty..." 문장은 그대로 둠 (학년 + 자체 판단 보완 효과)
+### 2. 프론트엔드
+**변경 없음.** `Preview.tsx`의 `handleGenerate`는 여전히 `{ passage, grade }`만 보냄. 응답 형태 (`summary` + `exam_block`) 동일.
 
-### 5. `.lovable/memory/architecture/analyze-preview-modes.md` (업데이트)
-- "SYSTEM_PROMPT 절대 건드리지 말 것" 규칙에 **예외 추가**: 학년 주입은 본문 변경 아니라 prepend 한 줄이므로 허용
-- mode 호출 시 `grade` 파라미터가 표준임을 명시
+### 3. `.lovable/memory/architecture/analyze-preview-modes.md` 업데이트
+- "mode:'all' = SYSTEM_PROMPT 사용" 규칙 삭제
+- "mode:'all' = 4개 모듈 모드 병렬 호출 후 머지" 로 교체
+- "topic 모드 조립에 `topicExamplesByGrade(grade)` 포함" 명시
+- self-critique 정책: 전체 생략 (비용/속도 우선)
 
-## 동작 시나리오
+## 동작 흐름
 
 ```text
-[학교 생성] "시온고1" → DB에 그대로 저장 (스키마 변경 없음)
-       │
-       ▼
-[Index에서 Preview 진입]
-   school.name "시온고1" → extractGrade() → 1
-   navigate("/preview", { state: { ..., grade: 1 } })
-       │
-       ▼
 [Preview 첫 생성]
-   invoke("analyze-preview", { passage, grade: 1 })
+  invoke("analyze-preview", { passage, grade })
        │
        ▼
-[Edge Function]
-   SYSTEM_PROMPT 앞에 "Target audience: 고1..." prepend → LLM 호출
+[Edge Function: mode="all"]
        │
-       ▼
-[재생성 (Topic만)]
-   invoke("analyze-preview", { passage, mode: "topic", grade: 1 })
-       → buildSystemPrompt("topic", 1) → 동일 프리픽스 + 모듈 → LLM
+       ├─ callMode("topic", grade)         ┐
+       ├─ callMode("title", grade)         ├─ Promise.allSettled
+       ├─ callMode("exam_summary", grade)  │
+       └─ callMode("passage_summary")      ┘
+                       │
+                       ▼
+       머지 { summary, exam_block:{topic,title,one_sentence_summary,...} }
+                       │
+                       ▼
+              프론트로 반환 (응답 형태 변경 없음)
+
+[재생성 (영역 1개)]
+  invoke("analyze-preview", { passage, mode:"topic", grade })
+  → 첫 생성 시 호출된 callMode("topic")과 100% 동일 프롬프트 사용
 ```
 
-## 영향 없는 영역
-- DB 스키마 (schools 테이블 변경 없음)
-- analyze-vocab, analyze-synonyms (학년 무관)
-- passage_summary 모드 (사용자 명시 요청)
-- syntax / hongt 파이프라인 전체
+## 잃는 것 / 얻는 것
 
-## 폴백 / 안전장치
-- 학교명에 "고N" 없음 → 고2
-- Index에서 직접 입력(학교 미지정) 진입 케이스 → grade 없으면 백엔드에서 고2 폴백
-- 기존 cache(grade 없는 sessionStorage) 호환 → undefined → 고2 폴백
+**얻음**
+- 첫 생성 ↔ 재생성 톤 100% 일치
+- topic 규칙 수정 시 1곳만 수정 (PROMPT_TOPIC_RULES)
+- 부분 실패 허용 (1개 영역 실패해도 나머지 3개는 표시)
+- 4개 영역이 4개 모델 호출에 분산 → 각 영역에 대한 모델 attention 향상 가능성
+
+**잃음**
+- LLM 호출 4회 (비용 ≈ 1.5~2배). 단 각 호출 프롬프트 길이는 1/4로 짧아져 실제 비용 증가폭은 작음
+- Cross-field 일관성 (topic-title-summary가 같은 추론 컨텍스트 공유) — 단 현재도 재생성 시 깨지므로 실질 손실 0
+- self-critique pass 제거 → summary 길이/topic 정동사 등의 자체 검수 1회 누락. 단 `length-retry`는 passage_summary에 유지되어 길이 무효 케이스는 자동 재시도됨
+
+## 안전장치
+- `Promise.allSettled` → 1개 영역 실패해도 나머지 반환
+- `passage_summary`는 `length-retry` 유지 (45~58자 범위 강제)
+- 기존 `invokeWithFallback`의 429/503 재시도 그대로
+- 학년 prefix는 `gradePrefix(grade)`로 모든 모드 공통 prepend (이미 구현됨)
+
+## 영향 없는 영역
+- DB / 스키마 / RLS
+- analyze-vocab, analyze-synonyms, syntax, hongt
+- 프론트엔드 (Index, Preview, PreviewExamSection, PreviewSummarySection)
+- 응답 JSON 구조
+
+## 롤백 플랜
+SYSTEM_PROMPT 상수와 기존 mode="all" 분기를 git 되돌리기로 1커밋 복구 가능. 모듈 프롬프트는 그대로 두므로 재생성 기능에 영향 없음.
