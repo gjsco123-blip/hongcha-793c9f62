@@ -400,7 +400,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { passage, mode: rawMode, grade: rawGrade } = await req.json();
+    const { passage, mode: rawMode, grade: rawGrade, previous: rawPrevious } = await req.json();
     if (!passage) throw new Error("Missing passage");
 
     const mode: Mode = (VALID_MODES as string[]).includes(rawMode) ? (rawMode as Mode) : "all";
@@ -418,8 +418,19 @@ serve(async (req) => {
 
     // ───────── 단일 영역 모드: 그대로 1회 호출 ─────────
     if (mode !== "all") {
+      const prev = rawPrevious && typeof rawPrevious === "object"
+        ? mode === "topic"
+          ? (rawPrevious as { topic?: string }).topic
+          : mode === "title"
+            ? (rawPrevious as { title?: string }).title
+            : mode === "exam_summary"
+              ? (rawPrevious as { one_sentence_summary?: string }).one_sentence_summary
+              : undefined
+        : undefined;
+      const previous = typeof prev === "string" && prev.trim() ? prev.trim() : undefined;
+      const temperature = previous ? 0.85 : undefined;
       try {
-        const parsed = await runSingleMode(mode, passage, grade, LOVABLE_API_KEY);
+        const parsed = await runSingleMode(mode, passage, grade, LOVABLE_API_KEY, { previous, temperature });
         return new Response(JSON.stringify(parsed), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
