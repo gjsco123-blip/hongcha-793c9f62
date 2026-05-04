@@ -65,11 +65,11 @@ function isTooEasyWord(word: string): boolean {
   return word.length <= 3 || EASY_WORDS.has(word);
 }
 
-function keywordLooksRelevant(keyword: string, sourceText: string): boolean {
+function keywordLooksRelevant(keyword: string, sourceText: string, allowEasyWords = false): boolean {
   const parsed = parseKeyword(keyword);
   if (!parsed) return false;
   if (!isSingleVocabWord(parsed.word)) return false;
-  if (isTooEasyWord(parsed.word)) return false;
+  if (!allowEasyWords && isTooEasyWord(parsed.word)) return false;
 
   const source = sourceText.toLowerCase();
   return source.includes(parsed.word);
@@ -99,8 +99,19 @@ export function formatSummaryKeywords(value: unknown): string {
 export function filterSummaryKeywordsBySource(value: unknown, sourceText: string): string[] {
   const normalized = normalizeSummaryKeywords(value);
   if (!sourceText.trim()) return normalized;
-  const filtered = normalized.filter((keyword) => keywordLooksRelevant(keyword, sourceText));
-  return Array.from(new Set(filtered)).slice(0, 5);
+  const unique = Array.from(new Set(normalized));
+  const preferred = unique.filter((keyword) => keywordLooksRelevant(keyword, sourceText));
+
+  if (preferred.length >= 5) {
+    return preferred.slice(0, 5);
+  }
+
+  const fallback = unique.filter(
+    (keyword) => !preferred.includes(keyword) && keywordLooksRelevant(keyword, sourceText, true),
+  );
+
+  const merged = [...preferred, ...fallback];
+  return merged.slice(0, merged.length >= 5 ? 5 : 4);
 }
 
 export function getDisplaySummary(block: ExamBlockLike | null | undefined): string {
