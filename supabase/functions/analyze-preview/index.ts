@@ -35,7 +35,11 @@ function safeParseJson(raw: string): any {
 
 const LOVABLE_API_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-async function callAi(apiKey: string, messages: Array<{ role: string; content: string }>) {
+async function callAi(
+  apiKey: string,
+  messages: Array<{ role: string; content: string }>,
+  opts?: { temperature?: number },
+) {
   const response = await fetch(LOVABLE_API_URL, {
     method: "POST",
     headers: {
@@ -45,7 +49,7 @@ async function callAi(apiKey: string, messages: Array<{ role: string; content: s
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
       messages,
-      temperature: 0.25,
+      temperature: opts?.temperature ?? 0.25,
     }),
   });
 
@@ -328,13 +332,32 @@ function buildSystemPrompt(mode: SingleMode, grade: Grade): string {
 }
 
 // ── 단일 모드 1회 호출 + (passage_summary 한정) length-retry 재시도까지 책임 ──
-async function runSingleMode(mode: SingleMode, passage: string, grade: Grade, apiKey: string): Promise<any> {
-  const systemPrompt = buildSystemPrompt(mode, grade);
+async function runSingleMode(
+  mode: SingleMode,
+  passage: string,
+  grade: Grade,
+  apiKey: string,
+  opts?: { previous?: string; temperature?: number },
+): Promise<any> {
+  let systemPrompt = buildSystemPrompt(mode, grade);
 
-  const content = await callAi(apiKey, [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: passage },
-  ]);
+  // 재생성 다양화: 직전 답을 회피 신호로 주입
+  if (opts?.previous && opts.previous.trim()) {
+    systemPrompt += `\n\n[재생성 지시]
+- 직전에 제시한 답: "${opts.previous.trim()}"
+- 위 답과 **다른 각도/관점/명사 선택**으로 작성할 것.
+- 같은 핵심 명사·동일 표현의 단순 변형(어순만 바꾸기, 동의어 치환만 등) 금지.
+- 단, 위의 모든 규칙(톤/형식/학년 난이도)은 그대로 준수할 것.`;
+  }
+
+  const content = await callAi(
+    apiKey,
+    [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: passage },
+    ],
+    opts?.temperature !== undefined ? { temperature: opts.temperature } : undefined,
+  );
   let parsed = safeParseJson(content);
 
   // passage_summary만 줄 길이 재시도 적용 (45~58자 범위 강제)
@@ -377,7 +400,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { passage, mode: rawMode, grade: rawGrade } = await req.json();
+    const { passage, mode: rawMode, grade: rawGrade, previous: rawPrevious } = await req.json();
     if (!passage) throw new Error("Missing passage");
 
     const mode: Mode = (VALID_MODES as string[]).includes(rawMode) ? (rawMode as Mode) : "all";
@@ -395,8 +418,19 @@ serve(async (req) => {
 
     // ───────── 단일 영역 모드: 그대로 1회 호출 ─────────
     if (mode !== "all") {
+      const prev = rawPrevious && typeof rawPrevious === "object"
+        ? mode === "topic"
+          ? (rawPrevious as { topic?: string }).topic
+          : mode === "title"
+            ? (rawPrevious as { title?: string }).title
+            : mode === "exam_summary"
+              ? (rawPrevious as { one_sentence_summary?: string }).one_sentence_summary
+              : undefined
+        : undefined;
+      const previous = typeof prev === "string" && prev.trim() ? prev.trim() : undefined;
+      const temperature = previous ? 0.85 : undefined;
       try {
-        const parsed = await runSingleMode(mode, passage, grade, LOVABLE_API_KEY);
+        const parsed = await runSingleMode(mode, passage, grade, LOVABLE_API_KEY, { previous, temperature });
         return new Response(JSON.stringify(parsed), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
