@@ -28,6 +28,13 @@ type: feature
 - self-critique 패스는 **모든 모드에서 제거**됨 (비용·속도 우선).
 - length-retry는 `passage_summary` 모드 내부에서만 유지 (45~58자 범위 강제). `mode="all"`에서도 passage_summary 호출이 자체적으로 retry하므로 자동 적용됨.
 
+**재생성 다양화 정책**:
+- topic / title / exam_summary 재생성 시 프론트가 `previous: { topic|title|one_sentence_summary }`를 함께 전송.
+- 백엔드는 `previous`가 있으면 `runSingleMode`에 `temperature: 0.85` + system prompt 끝에 `[재생성 지시]` 블록(직전 답 + 다른 각도/명사 선택 요구)을 append.
+- `previous` 미동봉 시(첫 호출/fallback) 기존 `temperature 0.25` 유지 → 첫 생성 톤·품질 보존.
+- `mode="all"` 병렬 호출 경로는 손대지 않음 (항상 0.25, previous 없음).
+- `passage_summary`는 length 강제가 우선이라 재생성 다양화 대상에서 제외.
+
 **프론트 호출 매핑** (`src/pages/Preview.tsx`):
 - `handleGenerate` → `{ passage, grade }` (mode 미지정 → 백엔드 "all")
 - `regenExamTopic` → `{ mode: "topic", grade }`
