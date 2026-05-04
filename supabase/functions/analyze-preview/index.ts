@@ -197,6 +197,11 @@ summary의 각 줄(①②③④)은 반드시 한국어 48~55자 (공백·번호
 - 원문에 명시되지 않은 정보 추가 금지. 배경보다 핵심 논증에 집중.
 - 대비 구조(A but B) 반영. 결론의 평가 방향을 ④에 반영.
 - 첫 문장이 단순 배경이면 그대로 반복하지 말 것.
+- 지문에서 여러 이유나 요인이 제시되면 그중 핵심적인 하나 또는 공통된 방향을 반영할 것.
+- 지문의 결론이 특정 평가나 판단을 포함하면 그 평가 방향을 ④ 문장에 반영할 것.
+- 지문에서 특정 개념이 정의되면 그 정의를 ① 문장에 반영할 것.
+- 지문이 사례나 사건을 설명하면 상황 → 대응 → 결과의 흐름을 반영할 것.
+- 한국 중학생이 쉽게 이해할 수 있는 명확하고 간결한 한국어를 사용할 것.
 
 [종결 스타일 — 명사형만 허용]
 - 허용: ~라는 점, ~하는 구조, ~하는 흐름, ~라는 전제, ~경향, ~라는 의미, ~하는 방식, ~필요성, ~중요성, ~라는 주장
@@ -323,12 +328,7 @@ function buildSystemPrompt(mode: SingleMode, grade: Grade): string {
 }
 
 // ── 단일 모드 1회 호출 + (passage_summary 한정) length-retry 재시도까지 책임 ──
-async function runSingleMode(
-  mode: SingleMode,
-  passage: string,
-  grade: Grade,
-  apiKey: string,
-): Promise<any> {
+async function runSingleMode(mode: SingleMode, passage: string, grade: Grade, apiKey: string): Promise<any> {
   const systemPrompt = buildSystemPrompt(mode, grade);
 
   const content = await callAi(apiKey, [
