@@ -332,13 +332,32 @@ function buildSystemPrompt(mode: SingleMode, grade: Grade): string {
 }
 
 // ── 단일 모드 1회 호출 + (passage_summary 한정) length-retry 재시도까지 책임 ──
-async function runSingleMode(mode: SingleMode, passage: string, grade: Grade, apiKey: string): Promise<any> {
-  const systemPrompt = buildSystemPrompt(mode, grade);
+async function runSingleMode(
+  mode: SingleMode,
+  passage: string,
+  grade: Grade,
+  apiKey: string,
+  opts?: { previous?: string; temperature?: number },
+): Promise<any> {
+  let systemPrompt = buildSystemPrompt(mode, grade);
 
-  const content = await callAi(apiKey, [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: passage },
-  ]);
+  // 재생성 다양화: 직전 답을 회피 신호로 주입
+  if (opts?.previous && opts.previous.trim()) {
+    systemPrompt += `\n\n[재생성 지시]
+- 직전에 제시한 답: "${opts.previous.trim()}"
+- 위 답과 **다른 각도/관점/명사 선택**으로 작성할 것.
+- 같은 핵심 명사·동일 표현의 단순 변형(어순만 바꾸기, 동의어 치환만 등) 금지.
+- 단, 위의 모든 규칙(톤/형식/학년 난이도)은 그대로 준수할 것.`;
+  }
+
+  const content = await callAi(
+    apiKey,
+    [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: passage },
+    ],
+    opts?.temperature !== undefined ? { temperature: opts.temperature } : undefined,
+  );
   let parsed = safeParseJson(content);
 
   // passage_summary만 줄 길이 재시도 적용 (45~58자 범위 강제)
