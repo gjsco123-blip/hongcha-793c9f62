@@ -420,7 +420,6 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
                   <View style={styles.analysisItem}>
                     <View style={styles.analysisContentWrap}>
                       <View style={styles.analysisBar} />
-                      <Text style={styles.analysisLabel}>SUMMARY</Text>
                       <Text style={styles.analysisText}>{summary}</Text>
                       {summaryKeywords ? <Text style={styles.analysisKeywordText}>{summaryKeywords}</Text> : null}
                     </View>

@@ -317,7 +317,6 @@ export function PreviewPdf({ vocab, synonyms, summary, examBlock, title: titlePr
             <Text style={s.fieldLabel}>Title</Text>
             <Text style={s.fieldEn}>{examBlock.title}</Text>
             {examBlock.title_ko && <Text style={s.fieldKo}>{examBlock.title_ko}</Text>}
-            <Text style={s.fieldLabel}>Summary</Text>
             <View style={s.summaryRow}>
               <Text style={s.summaryInlineLabel}>한줄요약 |</Text>
               <Text style={s.summaryInlineText}>{summaryText}</Text>

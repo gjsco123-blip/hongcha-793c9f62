@@ -77,7 +77,7 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
   return (
     <section className="border-t border-border pt-5">
       <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-4 flex items-center gap-2">
-        Topic / Title / Summary
+        Topic / Title
         {status === "loading" && <span className="inline-block w-3.5 h-3.5 animate-spin border-2 border-muted-foreground border-t-transparent rounded-full" />}
       </h2>
       <div className="space-y-5">
@@ -109,8 +109,7 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
         </div>
         {/* Summary */}
         <div>
-          <div className="flex items-center mb-1.5">
-            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.08em]">Summary</p>
+          <div className="flex items-center justify-end mb-1.5">
             {status === "done" && <FieldRegenButton onClick={handleSummaryRegen} loading={regenField === "summary"} />}
           </div>
           <div className="flex items-start gap-3">
@@ -124,7 +123,7 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
           <input
             value={formatSummaryKeywords(examBlock.summary_keywords)}
             onChange={(e) => update({ summary_keywords: normalizeSummaryKeywords(e.target.value) })}
-            placeholder="accelerate : 가속화하다 / result in : 초래하다"
+            placeholder="표현 : 뜻 / 표현 : 뜻"
             className="w-full text-xs text-muted-foreground/80 mt-1.5 bg-transparent border-none outline-none focus:bg-muted/20 rounded px-1 -mx-1"
           />
         </div>
