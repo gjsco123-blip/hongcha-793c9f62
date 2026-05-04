@@ -124,10 +124,10 @@ export default function Preview() {
         const savedVocab = Array.isArray(store.preview.vocab) ? (store.preview.vocab as VocabItem[]) : [];
         const savedSynonyms = Array.isArray(store.preview.synonyms) ? (store.preview.synonyms as SynAntItem[]) : [];
         const savedSummary = typeof store.preview.summary === "string" ? store.preview.summary : "";
-        const savedExam = store.preview.examBlock ? normalizeExamBlock(store.preview.examBlock as ExamBlock, savedPassage) : null;
         const savedPassage = typeof store.preview.passage === "string" && store.preview.passage
           ? store.preview.passage
           : (typeof data.passage_text === "string" ? data.passage_text : "");
+        const savedExam = store.preview.examBlock ? normalizeExamBlock(store.preview.examBlock as ExamBlock, savedPassage) : null;
 
         setVocab(savedVocab);
         setSynonyms(sanitizeSynonymItems(savedSynonyms, savedPassage));
