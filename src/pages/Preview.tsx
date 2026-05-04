@@ -14,6 +14,7 @@ import { PreviewSynonymsSection } from "@/components/preview/PreviewSynonymsSect
 import { PreviewExamSection } from "@/components/preview/PreviewExamSection";
 import type { VocabItem, SynAntItem, ExamBlock, SectionStatus } from "@/components/preview/types";
 import { mergePassageStore, parsePassageStore } from "@/lib/passage-store";
+import { getDisplaySummary, normalizeExamBlock, normalizeSummaryKeywords } from "@/lib/exam-block";
 import { sanitizeSynonymItems } from "@/lib/synonym-sanitizer";
 import type { Grade } from "@/lib/grade-utils";
 
@@ -81,7 +82,9 @@ export default function Preview() {
   );
   const [synonymsStatus, setSynonymsStatus] = useState<SectionStatus>(isNewPassage ? "idle" : (cached?.synonyms?.length ? "done" : "idle"));
   const [summary, setSummary] = useState(isNewPassage ? "" : (cached?.summary || ""));
-  const [examBlock, setExamBlock] = useState<ExamBlock | null>(isNewPassage ? null : (cached?.examBlock || null));
+  const [examBlock, setExamBlock] = useState<ExamBlock | null>(
+    isNewPassage ? null : normalizeExamBlock(cached?.examBlock as ExamBlock | null)
+  );
   const [previewStatus, setPreviewStatus] = useState<SectionStatus>(isNewPassage ? "idle" : (cached?.summary || cached?.examBlock ? "done" : "idle"));
   const [addingWord, setAddingWord] = useState<string | null>(null);
   const [enrichingIdx, setEnrichingIdx] = useState<number | null>(null);
@@ -121,7 +124,7 @@ export default function Preview() {
         const savedVocab = Array.isArray(store.preview.vocab) ? (store.preview.vocab as VocabItem[]) : [];
         const savedSynonyms = Array.isArray(store.preview.synonyms) ? (store.preview.synonyms as SynAntItem[]) : [];
         const savedSummary = typeof store.preview.summary === "string" ? store.preview.summary : "";
-        const savedExam = store.preview.examBlock ? (store.preview.examBlock as ExamBlock) : null;
+        const savedExam = store.preview.examBlock ? normalizeExamBlock(store.preview.examBlock as ExamBlock) : null;
         const savedPassage = typeof store.preview.passage === "string" && store.preview.passage
           ? store.preview.passage
           : (typeof data.passage_text === "string" ? data.passage_text : "");
@@ -207,7 +210,7 @@ export default function Preview() {
     const previewPromise = invokeRetry("analyze-preview", { passage, grade })
       .then((d) => {
         setSummary(d.summary || "");
-        const eb = d.exam_block;
+        const eb = normalizeExamBlock(d.exam_block as ExamBlock | null);
         if (eb) eb.topic = capitalizeFirst(eb.topic);
         setExamBlock(eb || null);
         setPreviewStatus("done");
@@ -365,11 +368,14 @@ export default function Preview() {
   const regenExamSummary = useCallback(async () => {
     const data = await invokeWithFallback(
       "analyze-preview",
-      { passage, mode: "exam_summary", grade, previous: { one_sentence_summary: examBlock?.one_sentence_summary } },
+      { passage, mode: "exam_summary", grade, previous: { one_sentence_summary: getDisplaySummary(examBlock) } },
       { passage, grade }
     );
-    return { en: data.exam_block?.one_sentence_summary || "", ko: data.exam_block?.one_sentence_summary_ko };
-  }, [passage, grade, examBlock?.one_sentence_summary]);
+    return {
+      summary: getDisplaySummary(data.exam_block),
+      keywords: normalizeSummaryKeywords(data.exam_block?.summary_keywords),
+    };
+  }, [passage, grade, examBlock]);
 
   const handleExportPdf = async () => {
     try {
@@ -519,7 +525,7 @@ export default function Preview() {
         <PreviewExamSection
           examBlock={examBlock}
           status={previewStatus}
-          onExamChange={setExamBlock}
+          onExamChange={(next) => setExamBlock(normalizeExamBlock(next))}
           onRegenerateTopic={regenExamTopic}
           onRegenerateTitle={regenExamTitle}
           onRegenerateSummary={regenExamSummary}

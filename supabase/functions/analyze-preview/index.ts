@@ -160,28 +160,32 @@ const PROMPT_TITLE_RULES = `[title 규칙]
 - 불필요하게 어려운 한자어는 피하되, 고등학교 독해에서 흔히 쓰는 개념어는 허용한다.`;
 
 const PROMPT_EXAM_SUMMARY_RULES = `[one_sentence_summary 규칙]
-- Exactly ONE sentence in English.
-- Must clearly reflect the dominant logical relationship (cause-effect, contrast, concession, problem-solution, etc.).
-- Remove specific examples and detailed cases.
-- Preserve evaluative direction if present.
-- Suitable for Korean mock-exam summary style.
-- Abstract but not overly philosophical.
-- Do NOT split into multiple sentences.
+- 반드시 한국어 한 문장으로 작성.
+- 지문의 핵심 논리 관계(원인-결과, 대비, 양보, 문제-해결 등)가 드러나야 함.
+- 구체 예시와 세부 사례는 제거하고 핵심 내용만 남길 것.
+- 평가 방향이나 결론이 있으면 반드시 반영할 것.
+- 학생이 바로 이해할 수 있는 자연스러운 한국어 문장으로 작성.
+- 지나치게 추상적이거나 해설식 표현 금지.
+- 정확히 한 문장만 출력. 여러 문장으로 나누지 말 것.
+- 종결은 "~한다 / ~이다 / ~된다" 같은 평서문으로 마무리.
 
-[one_sentence_summary_ko 규칙 — 직역(literal translation)]
-- 영문 어순·구조·핵심 명사를 최대한 보존할 것.
-- 영문 단어가 한글에서 1:1로 추적 가능해야 함.
-- 영문에 없는 부연·예시·평가어 추가 금지.
-- 핵심 명사는 그대로 옮길 것 (예: "long-term decision-making" → "장기적 의사결정").
-- 자연스러운 한국어 어순 조정은 허용하나, 의미 단위 순서를 임의로 뒤집지 말 것.
-- 종결: "~한다 / ~이다 / ~된다" 평서문 동사 종결 (명사형 종결 금지).
-- 불필요하게 어려운 한자어는 피하되, 고등학교 독해에서 흔히 쓰는 개념어는 허용한다.
-- 금지어: "~을 시사한다 / ~을 의미한다 / ~라고 볼 수 있다" 같은 해설성 표현 (영문에 그런 표현이 있을 때만 허용).
+[summary_keywords 규칙]
+- 한줄요약을 영작 문제로 바꿀 때 필요한 핵심 영어 표현 4~5개를 고를 것.
+- 단일 단어보다 구/표현을 우선할 것. 예: "result in", "environmental change"
+- 각 항목은 반드시 "영어 표현 : 한국어 뜻" 형식일 것.
+- 영어 표현은 passage에 실제로 있거나 passage를 충실히 요약하는 핵심 표현이어야 함.
+- 뜻은 짧고 명확한 한국어로 쓸 것.
+- 중복되거나 지나치게 사소한 표현 금지.
+- 배열 순서는 요약문 재구성에 중요한 순서 우선.
 
 예시:
-영문: "Immediate rewards systematically distort long-term decision-making by exploiting evolutionary biases in the human brain."
-Good: "즉각적 보상은 인간 두뇌의 진화적 편향을 이용해 장기적 의사결정을 체계적으로 왜곡한다."
-Bad: "사람들은 당장의 만족 때문에 미래를 제대로 못 본다는 점이 문제다."`;
+one_sentence_summary: "즉각적 보상은 인간 두뇌의 진화적 편향을 이용해 장기적 의사결정을 왜곡한다."
+summary_keywords: [
+  "immediate rewards : 즉각적 보상",
+  "evolutionary biases : 진화적 편향",
+  "long-term decision-making : 장기적 의사결정",
+  "distort : 왜곡하다"
+]`;
 
 const PROMPT_PASSAGE_SUMMARY_RULES = `[CRITICAL LENGTH RULE — 최우선]
 summary의 각 줄(①②③④)은 반드시 한국어 48~55자 (공백·번호·구두점 포함). 허용 범위는 45~58자.
@@ -230,7 +234,7 @@ const PROMPT_OUTPUT_TITLE = `출력 형식 (JSON 객체만):
 {"exam_block":{"title":"...","title_ko":"..."}}`;
 
 const PROMPT_OUTPUT_EXAM_SUMMARY = `출력 형식 (JSON 객체만):
-{"exam_block":{"one_sentence_summary":"...","one_sentence_summary_ko":"..."}}`;
+{"exam_block":{"one_sentence_summary":"...","summary_keywords":["영어 표현 : 뜻","영어 표현 : 뜻"]}}`;
 
 const PROMPT_OUTPUT_PASSAGE_SUMMARY = `출력 형식 (JSON 객체만):
 {"summary":"①...\\n②...\\n③...\\n④..."}`;

@@ -1,5 +1,6 @@
 import { Document, Page, View, Text, StyleSheet, Font } from "@react-pdf/renderer";
 import { PdfHeader } from "@/components/pdf/PdfHeader";
+import { formatSummaryKeywords, getDisplaySummary } from "@/lib/exam-block";
 
 // ── Font Registration ──
 Font.register({
@@ -55,6 +56,7 @@ interface ExamBlock {
   title_ko?: string;
   one_sentence_summary: string;
   one_sentence_summary_ko?: string;
+  summary_keywords?: string[];
 }
 interface Props {
   vocab: VocabItem[];
@@ -203,6 +205,10 @@ const s = StyleSheet.create({
   },
   fieldEn: { fontFamily: T.en, fontSize: 8, color: T.black, lineHeight: 1.6 },
   fieldKo: { fontSize: 7, color: T.g70, lineHeight: 1.5, marginTop: 1.5 },
+  summaryRow: { flexDirection: "row" as const, alignItems: "flex-start" as const, gap: 6 },
+  summaryInlineLabel: { fontSize: 7.5, fontWeight: 800, color: T.g50, lineHeight: 1.6 },
+  summaryInlineText: { flex: 1, fontSize: 8, color: T.black, lineHeight: 1.6 },
+  summaryKeywordLine: { fontSize: 7, color: T.g70, lineHeight: 1.5, marginTop: 3 },
 });
 
 function VocabColumn({
@@ -247,6 +253,8 @@ export function PreviewPdf({ vocab, synonyms, summary, examBlock, title: titlePr
   const hasExam = !!examBlock;
   const summaryLines = summary ? summary.split("\n").filter(Boolean) : [];
   const title = titleProp || "Preview";
+  const summaryText = getDisplaySummary(examBlock);
+  const summaryKeywords = formatSummaryKeywords(examBlock?.summary_keywords);
 
   return (
     <Document>
@@ -310,8 +318,11 @@ export function PreviewPdf({ vocab, synonyms, summary, examBlock, title: titlePr
             <Text style={s.fieldEn}>{examBlock.title}</Text>
             {examBlock.title_ko && <Text style={s.fieldKo}>{examBlock.title_ko}</Text>}
             <Text style={s.fieldLabel}>Summary</Text>
-            <Text style={s.fieldEn}>{examBlock.one_sentence_summary}</Text>
-            {examBlock.one_sentence_summary_ko && <Text style={s.fieldKo}>{examBlock.one_sentence_summary_ko}</Text>}
+            <View style={s.summaryRow}>
+              <Text style={s.summaryInlineLabel}>한줄요약 |</Text>
+              <Text style={s.summaryInlineText}>{summaryText}</Text>
+            </View>
+            {summaryKeywords && <Text style={s.summaryKeywordLine}>{summaryKeywords}</Text>}
           </View>
         )}
       </Page>

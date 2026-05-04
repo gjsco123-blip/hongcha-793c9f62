@@ -46,6 +46,7 @@ interface ExamBlock {
   title_ko?: string;
   one_sentence_summary: string;
   one_sentence_summary_ko?: string;
+  summary_keywords?: string[];
 }
 
 interface PreviewPayload {

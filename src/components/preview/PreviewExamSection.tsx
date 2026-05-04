@@ -3,6 +3,7 @@ import { SectionHeader } from "./SectionHeader";
 import { CompareOverlay } from "./CompareOverlay";
 import { RefreshCw } from "lucide-react";
 import type { ExamBlock, SectionStatus } from "./types";
+import { formatSummaryKeywords, getDisplaySummary, normalizeSummaryKeywords } from "@/lib/exam-block";
 
 interface Props {
   examBlock: ExamBlock | null;
@@ -10,7 +11,7 @@ interface Props {
   onExamChange: (v: ExamBlock) => void;
   onRegenerateTopic: () => Promise<{ en: string; ko?: string }>;
   onRegenerateTitle: () => Promise<{ en: string; ko?: string }>;
-  onRegenerateSummary: () => Promise<{ en: string; ko?: string }>;
+  onRegenerateSummary: () => Promise<{ summary: string; keywords: string[] }>;
 }
 
 function FieldRegenButton({ onClick, loading }: { onClick: () => void; loading: boolean }) {
@@ -45,11 +46,31 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
     }
   };
 
+  const handleSummaryRegen = async () => {
+    setRegenField("summary");
+    try {
+      const result = await onRegenerateSummary();
+      setCandidate({
+        field: "summary",
+        oldVal: getDisplaySummary(examBlock),
+        oldKo: formatSummaryKeywords(examBlock.summary_keywords),
+        newVal: result.summary,
+        newKo: formatSummaryKeywords(result.keywords),
+      });
+    } finally {
+      setRegenField(null);
+    }
+  };
+
   const acceptCandidate = () => {
     if (!candidate) return;
     if (candidate.field === "topic") update({ topic: candidate.newVal, topic_ko: candidate.newKo });
     else if (candidate.field === "title") update({ title: candidate.newVal, title_ko: candidate.newKo });
-    else update({ one_sentence_summary: candidate.newVal, one_sentence_summary_ko: candidate.newKo });
+    else update({
+      one_sentence_summary: candidate.newVal,
+      one_sentence_summary_ko: candidate.newVal,
+      summary_keywords: normalizeSummaryKeywords(candidate.newKo),
+    });
     setCandidate(null);
   };
 
@@ -90,29 +111,37 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
         <div>
           <div className="flex items-center mb-1.5">
             <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.08em]">Summary</p>
-            {status === "done" && <FieldRegenButton onClick={() => handleRegen("summary", onRegenerateSummary)} loading={regenField === "summary"} />}
+            {status === "done" && <FieldRegenButton onClick={handleSummaryRegen} loading={regenField === "summary"} />}
           </div>
-          <input value={examBlock.one_sentence_summary} onChange={(e) => update({ one_sentence_summary: e.target.value })}
-            className="w-full text-sm font-english leading-relaxed bg-transparent border-none outline-none focus:bg-muted/20 rounded px-1 -mx-1" />
-          {examBlock.one_sentence_summary_ko !== undefined && (
-            <input value={examBlock.one_sentence_summary_ko || ""} onChange={(e) => update({ one_sentence_summary_ko: e.target.value })}
-              className="w-full text-xs text-muted-foreground/60 mt-0.5 bg-transparent border-none outline-none focus:bg-muted/20 rounded px-1 -mx-1" />
-          )}
+          <div className="flex items-start gap-3">
+            <span className="pt-0.5 text-[11px] font-bold text-muted-foreground whitespace-nowrap">한줄요약 |</span>
+            <input
+              value={getDisplaySummary(examBlock)}
+              onChange={(e) => update({ one_sentence_summary: e.target.value, one_sentence_summary_ko: e.target.value })}
+              className="w-full text-sm leading-relaxed bg-transparent border-none outline-none focus:bg-muted/20 rounded px-1 -mx-1"
+            />
+          </div>
+          <input
+            value={formatSummaryKeywords(examBlock.summary_keywords)}
+            onChange={(e) => update({ summary_keywords: normalizeSummaryKeywords(e.target.value) })}
+            placeholder="accelerate : 가속화하다 / result in : 초래하다"
+            className="w-full text-xs text-muted-foreground/80 mt-1.5 bg-transparent border-none outline-none focus:bg-muted/20 rounded px-1 -mx-1"
+          />
         </div>
       </div>
       {candidate && (
         <CompareOverlay
-          title={`${candidate.field.charAt(0).toUpperCase() + candidate.field.slice(1)}`}
+          title={candidate.field === "summary" ? "한줄요약" : `${candidate.field.charAt(0).toUpperCase() + candidate.field.slice(1)}`}
           oldContent={
             <div>
               <p className="text-sm leading-relaxed">{candidate.oldVal}</p>
-              {candidate.oldKo && <p className="text-xs text-muted-foreground/60 mt-0.5">{candidate.oldKo}</p>}
+              {candidate.oldKo && <p className="text-xs text-muted-foreground/60 mt-1">{candidate.oldKo}</p>}
             </div>
           }
           newContent={
             <div>
               <p className="text-sm leading-relaxed">{candidate.newVal}</p>
-              {candidate.newKo && <p className="text-xs text-muted-foreground/60 mt-0.5">{candidate.newKo}</p>}
+              {candidate.newKo && <p className="text-xs text-muted-foreground/60 mt-1">{candidate.newKo}</p>}
             </div>
           }
           onAccept={acceptCandidate}
