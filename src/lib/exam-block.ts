@@ -3,6 +3,7 @@ export interface ExamBlockLike {
   one_sentence_summary_ko?: string;
   one_sentence_summary_en_hidden?: string;
   summary_keywords?: unknown;
+  summary_keyword_basis?: unknown;
 }
 
 const EASY_WORDS = new Set([
@@ -130,24 +131,44 @@ export function normalizeSummaryKeywords(value: unknown): string[] {
   return [];
 }
 
+function normalizeSummaryKeywordBasis(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (typeof item === "string" ? item.trim() : ""))
+      .filter(Boolean);
+  }
+  return [];
+}
+
 export function formatSummaryKeywords(value: unknown): string {
   return normalizeSummaryKeywords(value).join(" / ");
 }
 
-export function filterSummaryKeywordsBySource(value: unknown, sourceText: string): string[] {
+export function filterSummaryKeywordsBySource(
+  value: unknown,
+  sourceText: string,
+  summaryText?: string,
+  basisValue?: unknown,
+): string[] {
   const normalized = normalizeSummaryKeywords(value);
   if (!sourceText.trim()) return normalized;
+  const basis = normalizeSummaryKeywordBasis(basisValue);
   const sourceWords = buildSourceWordSet(sourceText);
   const unique = Array.from(new Set(normalized));
-  const preferred = unique.filter((keyword) => keywordLooksRelevant(keyword, sourceWords));
+  const aligned = unique
+    .map((keyword, index) => ({ keyword, basis: basis[index] || "" }))
+    .filter(({ basis }) => !summaryText || !basis || summaryText.includes(basis));
+  const preferred = aligned
+    .filter(({ keyword }) => keywordLooksRelevant(keyword, sourceWords))
+    .map(({ keyword }) => keyword);
 
   if (preferred.length >= 5) {
     return preferred.slice(0, Math.min(6, preferred.length));
   }
 
-  const fallback = unique.filter(
-    (keyword) => !preferred.includes(keyword) && keywordLooksRelevant(keyword, sourceWords, true),
-  );
+  const fallback = aligned
+    .filter(({ keyword }) => !preferred.includes(keyword) && keywordLooksRelevant(keyword, sourceWords, true))
+    .map(({ keyword }) => keyword);
 
   const merged = [...preferred, ...fallback];
   if (merged.length >= 5) {
@@ -171,10 +192,12 @@ export function normalizeExamBlock<T extends ExamBlockLike | null | undefined>(
 ): T {
   if (!block) return block;
   const keywordSource = getKeywordSourceText(block);
+  const summaryText = getDisplaySummary(block);
   return {
     ...block,
+    summary_keyword_basis: normalizeSummaryKeywordBasis(block.summary_keyword_basis),
     summary_keywords: keywordSource
-      ? filterSummaryKeywordsBySource(block.summary_keywords, keywordSource)
+      ? filterSummaryKeywordsBySource(block.summary_keywords, keywordSource, summaryText, block.summary_keyword_basis)
       : normalizeSummaryKeywords(block.summary_keywords),
   } as T;
 }

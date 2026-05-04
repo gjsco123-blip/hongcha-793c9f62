@@ -58,6 +58,7 @@ interface ExamBlock {
   one_sentence_summary_ko?: string;
   one_sentence_summary_en_hidden?: string;
   summary_keywords?: string[];
+  summary_keyword_basis?: string[];
 }
 interface Props {
   vocab: VocabItem[];

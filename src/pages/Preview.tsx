@@ -127,11 +127,7 @@ export default function Preview() {
         const savedPassage = typeof store.preview.passage === "string" && store.preview.passage
           ? store.preview.passage
           : (typeof data.passage_text === "string" ? data.passage_text : "");
-<<<<<<< HEAD
         const savedExam = store.preview.examBlock ? normalizeExamBlock(store.preview.examBlock as ExamBlock) : null;
-=======
-        const savedExam = store.preview.examBlock ? normalizeExamBlock(store.preview.examBlock as ExamBlock) : null;
->>>>>>> a791ba8 (Fix summary vocab normalization flow)
 
         setVocab(savedVocab);
         setSynonyms(sanitizeSynonymItems(savedSynonyms, savedPassage));
@@ -380,6 +376,7 @@ export default function Preview() {
       summary: getDisplaySummary(normalized),
       keywords: normalized?.summary_keywords || [],
       hiddenEnglish: normalized?.one_sentence_summary_en_hidden,
+      keywordBasis: normalized?.summary_keyword_basis || [],
     };
   }, [passage, grade, examBlock]);
 

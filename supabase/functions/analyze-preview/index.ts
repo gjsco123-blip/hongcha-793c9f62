@@ -192,6 +192,12 @@ const PROMPT_EXAM_SUMMARY_RULES = `[one_sentence_summary 규칙]
 - 배열 순서는 영어 문장의 의미 흐름을 복원하기 좋은 순서 우선.
 - 출력 전 각 영단어가 one_sentence_summary_en_hidden 문장에 실제로 쓰였는지 다시 확인할 것.
 
+[summary_keyword_basis 규칙]
+- summary_keywords의 각 영단어가 한국어 한줄요약의 어느 부분에 대응하는지, 한국어 한줄요약에서 짧은 구를 그대로 복사해 제시할 것.
+- 각 basis 항목은 반드시 one_sentence_summary 안에 실제로 포함된 문자열이어야 함.
+- summary_keywords와 summary_keyword_basis의 개수와 순서는 반드시 1:1로 대응할 것.
+- 한줄요약에 직접 보이지 않는 개념을 임의로 basis로 만들지 말 것.
+
 예시:
 one_sentence_summary: "즉각적 보상은 인간 두뇌의 진화적 편향을 이용해 장기적 의사결정을 왜곡한다."
 one_sentence_summary_en_hidden: "Immediate rewards distort long-term decision-making by exploiting evolutionary biases in the human brain."
@@ -200,6 +206,12 @@ summary_keywords: [
   "evolutionary : 진화의",
   "biases : 편향",
   "decision-making : 의사결정"
+]
+summary_keyword_basis: [
+  "왜곡한다",
+  "진화적",
+  "편향",
+  "의사결정"
 ]`;
 
 const PROMPT_PASSAGE_SUMMARY_RULES = `[CRITICAL LENGTH RULE — 최우선]
@@ -249,7 +261,7 @@ const PROMPT_OUTPUT_TITLE = `출력 형식 (JSON 객체만):
 {"exam_block":{"title":"...","title_ko":"..."}}`;
 
 const PROMPT_OUTPUT_EXAM_SUMMARY = `출력 형식 (JSON 객체만):
-{"exam_block":{"one_sentence_summary":"...","one_sentence_summary_en_hidden":"...","summary_keywords":["영단어 : 뜻","영단어 : 뜻"]}}`;
+{"exam_block":{"one_sentence_summary":"...","one_sentence_summary_en_hidden":"...","summary_keywords":["영단어 : 뜻","영단어 : 뜻"],"summary_keyword_basis":["한국어 구","한국어 구"]}}`;
 
 const PROMPT_OUTPUT_PASSAGE_SUMMARY = `출력 형식 (JSON 객체만):
 {"summary":"①...\\n②...\\n③...\\n④..."}`;
