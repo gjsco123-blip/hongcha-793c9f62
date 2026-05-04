@@ -346,30 +346,30 @@ export default function Preview() {
   const regenExamTopic = useCallback(async () => {
     const data = await invokeWithFallback(
       "analyze-preview",
-      { passage, mode: "topic", grade },
+      { passage, mode: "topic", grade, previous: { topic: examBlock?.topic } },
       { passage, grade }
     );
     const t = data.exam_block?.topic || "";
     return { en: t ? t.charAt(0).toUpperCase() + t.slice(1) : t, ko: data.exam_block?.topic_ko };
-  }, [passage, grade]);
+  }, [passage, grade, examBlock?.topic]);
 
   const regenExamTitle = useCallback(async () => {
     const data = await invokeWithFallback(
       "analyze-preview",
-      { passage, mode: "title", grade },
+      { passage, mode: "title", grade, previous: { title: examBlock?.title } },
       { passage, grade }
     );
     return { en: data.exam_block?.title || "", ko: data.exam_block?.title_ko };
-  }, [passage, grade]);
+  }, [passage, grade, examBlock?.title]);
 
   const regenExamSummary = useCallback(async () => {
     const data = await invokeWithFallback(
       "analyze-preview",
-      { passage, mode: "exam_summary", grade },
+      { passage, mode: "exam_summary", grade, previous: { one_sentence_summary: examBlock?.one_sentence_summary } },
       { passage, grade }
     );
     return { en: data.exam_block?.one_sentence_summary || "", ko: data.exam_block?.one_sentence_summary_ko };
-  }, [passage, grade]);
+  }, [passage, grade, examBlock?.one_sentence_summary]);
 
   const handleExportPdf = async () => {
     try {
