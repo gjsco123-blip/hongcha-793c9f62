@@ -1,6 +1,7 @@
 export interface ExamBlockLike {
   one_sentence_summary?: string;
   one_sentence_summary_ko?: string;
+  one_sentence_summary_en_hidden?: string;
   summary_keywords?: unknown;
 }
 
@@ -103,7 +104,7 @@ export function filterSummaryKeywordsBySource(value: unknown, sourceText: string
   const preferred = unique.filter((keyword) => keywordLooksRelevant(keyword, sourceText));
 
   if (preferred.length >= 5) {
-    return preferred.slice(0, 5);
+    return preferred.slice(0, Math.min(6, preferred.length));
   }
 
   const fallback = unique.filter(
@@ -111,7 +112,11 @@ export function filterSummaryKeywordsBySource(value: unknown, sourceText: string
   );
 
   const merged = [...preferred, ...fallback];
-  return merged.slice(0, merged.length >= 5 ? 5 : 4);
+  if (merged.length >= 5) {
+    return merged.slice(0, Math.min(6, merged.length));
+  }
+
+  return merged.slice(0, Math.min(4, merged.length));
 }
 
 export function getDisplaySummary(block: ExamBlockLike | null | undefined): string {
@@ -119,15 +124,20 @@ export function getDisplaySummary(block: ExamBlockLike | null | undefined): stri
   return (block.one_sentence_summary_ko || block.one_sentence_summary || "").trim();
 }
 
+function getKeywordSourceText(block: ExamBlockLike, fallbackText?: string): string {
+  return (block.one_sentence_summary_en_hidden || fallbackText || "").trim();
+}
+
 export function normalizeExamBlock<T extends ExamBlockLike | null | undefined>(
   block: T,
-  sourceText?: string,
+  fallbackText?: string,
 ): T {
   if (!block) return block;
+  const keywordSource = getKeywordSourceText(block, fallbackText);
   return {
     ...block,
-    summary_keywords: sourceText
-      ? filterSummaryKeywordsBySource(block.summary_keywords, sourceText)
+    summary_keywords: keywordSource
+      ? filterSummaryKeywordsBySource(block.summary_keywords, keywordSource)
       : normalizeSummaryKeywords(block.summary_keywords),
   } as T;
 }

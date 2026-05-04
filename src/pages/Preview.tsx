@@ -371,9 +371,11 @@ export default function Preview() {
       { passage, mode: "exam_summary", grade, previous: { one_sentence_summary: getDisplaySummary(examBlock) } },
       { passage, grade }
     );
+    const normalized = normalizeExamBlock(data.exam_block, passage);
     return {
-      summary: getDisplaySummary(data.exam_block),
-      keywords: normalizeExamBlock(data.exam_block, passage)?.summary_keywords || [],
+      summary: getDisplaySummary(normalized),
+      keywords: normalized?.summary_keywords || [],
+      hiddenEnglish: normalized?.one_sentence_summary_en_hidden,
     };
   }, [passage, grade, examBlock]);
 

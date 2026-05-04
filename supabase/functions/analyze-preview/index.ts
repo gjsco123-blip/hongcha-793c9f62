@@ -169,23 +169,32 @@ const PROMPT_EXAM_SUMMARY_RULES = `[one_sentence_summary 규칙]
 - 정확히 한 문장만 출력. 여러 문장으로 나누지 말 것.
 - 종결은 "~한다 / ~이다 / ~된다" 같은 평서문으로 마무리.
 
+[one_sentence_summary_en_hidden 규칙]
+- 위에서 만든 한국어 한줄요약을 영어 한 문장으로 다시 쓸 것.
+- 이 영어 문장은 내부 처리용이며, 화면에 직접 노출되지 않는다고 가정하고 정확성을 우선할 것.
+- 한국어 한줄요약의 의미 구조를 최대한 충실히 복원할 것.
+- 자연스러운 영어 문장으로 쓰되, 뒤의 핵심 영단어들이 실제로 이 문장에서 추출될 수 있어야 함.
+
 [summary_keywords 규칙]
-- 한줄요약을 영어로 다시 쓸 때 직접 필요한 핵심 영단어를 5개 고를 것.
+- one_sentence_summary_en_hidden 문장을 영어로 다시 쓸 때 직접 필요한 핵심 영단어를 5개 고를 것.
 - 반드시 단어형만 허용. 구/표현/절/문장 형태는 금지.
+- 각 영단어는 가능하면 원형(lemma, 사전 표제어형)으로 쓸 것. 예: trumps -> trump, manipulations -> manipulation
 - 각 항목은 반드시 "영단어 : 한국어 뜻" 형식일 것.
-- 영단어는 반드시 현재 passage에 실제로 등장하는 단어만 사용할 것.
-- 현재 passage에 없는 단어, 예시 문구, 이전 대화에서 본 단어를 임의로 만들거나 재사용하면 안 됨.
-- 한줄요약에 직접 반영되지 않은 주변 단어는 제외할 것.
+- 영단어는 반드시 one_sentence_summary_en_hidden 문장에 실제로 쓰인 단어에서만 고를 것.
+- one_sentence_summary_en_hidden 에 없는 단어, 예시 문구, 이전 대화에서 본 단어를 임의로 만들거나 재사용하면 안 됨.
+- 한줄요약 영작에 직접 반영되지 않은 주변 단어는 제외할 것.
 - people, news, local, community, information, citizen 같이 너무 쉬운 기본 단어는 제외할 것.
 - 고1~고2 학생이 외울 가치가 있는 단어를 우선할 것.
 - 원칙적으로 5개를 채우되, 적절한 단어가 정말 부족한 경우에만 4개까지 허용할 것.
+- 요약 복원에 꼭 필요하면 6개까지 허용할 수 있다.
 - 뜻은 짧고 명확한 한국어로 쓸 것.
 - 중복되거나 지나치게 사소한 표현 금지.
-- 배열 순서는 한줄요약의 의미 흐름을 복원하기 좋은 순서 우선.
-- 출력 전 각 영단어가 passage 안에 실제로 있는지 다시 확인할 것.
+- 배열 순서는 영어 문장의 의미 흐름을 복원하기 좋은 순서 우선.
+- 출력 전 각 영단어가 one_sentence_summary_en_hidden 문장에 실제로 쓰였는지 다시 확인할 것.
 
 예시:
 one_sentence_summary: "즉각적 보상은 인간 두뇌의 진화적 편향을 이용해 장기적 의사결정을 왜곡한다."
+one_sentence_summary_en_hidden: "Immediate rewards distort long-term decision-making by exploiting evolutionary biases in the human brain."
 summary_keywords: [
   "distort : 왜곡하다",
   "evolutionary : 진화의",
@@ -240,7 +249,7 @@ const PROMPT_OUTPUT_TITLE = `출력 형식 (JSON 객체만):
 {"exam_block":{"title":"...","title_ko":"..."}}`;
 
 const PROMPT_OUTPUT_EXAM_SUMMARY = `출력 형식 (JSON 객체만):
-{"exam_block":{"one_sentence_summary":"...","summary_keywords":["영어 표현 : 뜻","영어 표현 : 뜻"]}}`;
+{"exam_block":{"one_sentence_summary":"...","one_sentence_summary_en_hidden":"...","summary_keywords":["영단어 : 뜻","영단어 : 뜻"]}}`;
 
 const PROMPT_OUTPUT_PASSAGE_SUMMARY = `출력 형식 (JSON 객체만):
 {"summary":"①...\\n②...\\n③...\\n④..."}`;
