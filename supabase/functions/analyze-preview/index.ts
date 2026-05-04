@@ -29,7 +29,9 @@ function safeParseJson(raw: string): any {
   throw new Error("Failed to parse preview JSON");
 }
 
-const SYSTEM_PROMPT = `[CRITICAL LENGTH RULE — 최우선 규칙]
+// NOTE: 기존 SYSTEM_PROMPT(215줄)는 제거됨. 첫 생성(mode:"all")은 모듈 프롬프트 4개 병렬 호출로 처리.
+// 모든 규칙은 PROMPT_INTRO / PROMPT_TOPIC_RULES / PROMPT_TITLE_RULES / PROMPT_EXAM_SUMMARY_RULES /
+// PROMPT_PASSAGE_SUMMARY_RULES / PROMPT_COMMON_RULES + topicExamplesByGrade(grade) 로 이식 완료.
 summary의 각 줄(①②③④)은 반드시 한국어 48~55자 (공백·번호·구두점 포함). 허용 범위는 45~58자.
 - 45자 미만 = 무효. 58자 초과 = 무효. 출력 금지.
 - 출력 직전 각 줄 글자수를 직접 세어 검증할 것.
