@@ -374,9 +374,6 @@ export default function Preview() {
     const normalized = normalizeExamBlock(data.exam_block);
     return {
       summary: getDisplaySummary(normalized),
-      keywords: normalized?.summary_keywords || [],
-      hiddenEnglish: normalized?.one_sentence_summary_en_hidden,
-      keywordBasis: normalized?.summary_keyword_basis || [],
     };
   }, [passage, grade, examBlock]);
 

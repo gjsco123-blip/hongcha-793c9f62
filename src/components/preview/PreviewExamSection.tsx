@@ -3,7 +3,7 @@ import { SectionHeader } from "./SectionHeader";
 import { CompareOverlay } from "./CompareOverlay";
 import { RefreshCw } from "lucide-react";
 import type { ExamBlock, SectionStatus } from "./types";
-import { formatSummaryKeywords, getDisplaySummary, normalizeSummaryKeywords } from "@/lib/exam-block";
+import { getDisplaySummary } from "@/lib/exam-block";
 
 interface Props {
   examBlock: ExamBlock | null;
@@ -11,7 +11,7 @@ interface Props {
   onExamChange: (v: ExamBlock) => void;
   onRegenerateTopic: () => Promise<{ en: string; ko?: string }>;
   onRegenerateTitle: () => Promise<{ en: string; ko?: string }>;
-  onRegenerateSummary: () => Promise<{ summary: string; keywords: string[]; hiddenEnglish?: string; keywordBasis?: string[] }>;
+  onRegenerateSummary: () => Promise<{ summary: string }>;
 }
 
 function FieldRegenButton({ onClick, loading }: { onClick: () => void; loading: boolean }) {
@@ -28,7 +28,7 @@ function FieldRegenButton({ onClick, loading }: { onClick: () => void; loading: 
 
 export function PreviewExamSection({ examBlock, status, onExamChange, onRegenerateTopic, onRegenerateTitle, onRegenerateSummary }: Props) {
   const [regenField, setRegenField] = useState<string | null>(null);
-  const [candidate, setCandidate] = useState<{ field: string; oldVal: string; oldKo?: string; newVal: string; newKo?: string; hiddenEnglish?: string; keywordBasis?: string[] } | null>(null);
+  const [candidate, setCandidate] = useState<{ field: string; oldVal: string; oldKo?: string; newVal: string; newKo?: string } | null>(null);
 
   if (status === "idle" || !examBlock) return null;
 
@@ -53,11 +53,7 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
       setCandidate({
         field: "summary",
         oldVal: getDisplaySummary(examBlock),
-        oldKo: formatSummaryKeywords(examBlock.summary_keywords),
         newVal: result.summary,
-        newKo: formatSummaryKeywords(result.keywords),
-        hiddenEnglish: result.hiddenEnglish,
-        keywordBasis: result.keywordBasis,
       });
     } finally {
       setRegenField(null);
@@ -71,9 +67,6 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
     else update({
       one_sentence_summary: candidate.newVal,
       one_sentence_summary_ko: candidate.newVal,
-      one_sentence_summary_en_hidden: candidate.hiddenEnglish,
-      summary_keyword_basis: candidate.keywordBasis,
-      summary_keywords: normalizeSummaryKeywords(candidate.newKo),
     });
     setCandidate(null);
   };
@@ -123,19 +116,10 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
               onChange={(e) => update({
                 one_sentence_summary: e.target.value,
                 one_sentence_summary_ko: e.target.value,
-                one_sentence_summary_en_hidden: undefined,
-                summary_keyword_basis: [],
-                summary_keywords: [],
               })}
               className="w-full text-sm leading-relaxed bg-transparent border-none outline-none focus:bg-muted/20 rounded px-1 -mx-1"
             />
           </div>
-          <input
-            value={formatSummaryKeywords(examBlock.summary_keywords)}
-            onChange={(e) => update({ summary_keywords: normalizeSummaryKeywords(e.target.value) })}
-            placeholder="영단어 : 뜻 / 영단어 : 뜻"
-            className="w-full text-xs text-muted-foreground/80 mt-1.5 bg-transparent border-none outline-none focus:bg-muted/20 rounded px-1 -mx-1"
-          />
         </div>
       </div>
       {candidate && (
@@ -144,13 +128,11 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
           oldContent={
             <div>
               <p className="text-sm leading-relaxed">{candidate.oldVal}</p>
-              {candidate.oldKo && <p className="text-xs text-muted-foreground/60 mt-1">{candidate.oldKo}</p>}
             </div>
           }
           newContent={
             <div>
               <p className="text-sm leading-relaxed">{candidate.newVal}</p>
-              {candidate.newKo && <p className="text-xs text-muted-foreground/60 mt-1">{candidate.newKo}</p>}
             </div>
           }
           onAccept={acceptCandidate}

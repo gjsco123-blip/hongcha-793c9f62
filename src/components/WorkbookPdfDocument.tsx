@@ -1,5 +1,5 @@
 import { Canvas, Document, Font, Line, Page, Svg, StyleSheet, Text, View } from "@react-pdf/renderer";
-import { formatSummaryKeywords, getDisplaySummary } from "@/lib/exam-block";
+import { getDisplaySummary } from "@/lib/exam-block";
 
 Font.register({
   family: "Pretendard",
@@ -31,9 +31,6 @@ interface ExamBlock {
   title?: string;
   one_sentence_summary?: string;
   one_sentence_summary_ko?: string;
-  one_sentence_summary_en_hidden?: string;
-  summary_keywords?: string[];
-  summary_keyword_basis?: string[];
 }
 
 interface WorkbookPdfDocumentProps {
@@ -183,12 +180,6 @@ const styles = StyleSheet.create({
     color: "#111",
     lineHeight: 1.6,
   },
-  analysisKeywordText: {
-    fontSize: 8.2,
-    lineHeight: 1.45,
-    color: "#555",
-    marginTop: 4,
-  },
   analysisSummaryBlock: {
     marginTop: 8,
   },
@@ -328,7 +319,6 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
   const topic = (examBlock?.topic || "").trim();
   const heading = (examBlock?.title || "").trim();
   const summary = getDisplaySummary(examBlock);
-  const summaryKeywords = formatSummaryKeywords(examBlock?.summary_keywords);
   const hasAnalysis = Boolean(topic || heading || summary);
   const totalChars = results.reduce((acc, cur) => acc + (cur.original?.length || 0), 0);
   const gridStep = 22;
@@ -427,7 +417,6 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
                       <View style={styles.analysisBar} />
                       <View style={styles.analysisSummaryBlock}>
                         <Text style={styles.analysisText}>{summary}</Text>
-                        {summaryKeywords ? <Text style={styles.analysisKeywordText}>{summaryKeywords}</Text> : null}
                       </View>
                     </View>
                   </View>

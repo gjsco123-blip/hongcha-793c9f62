@@ -1,6 +1,6 @@
 import { Document, Page, View, Text, StyleSheet, Font } from "@react-pdf/renderer";
 import { PdfHeader } from "@/components/pdf/PdfHeader";
-import { formatSummaryKeywords, getDisplaySummary } from "@/lib/exam-block";
+import { getDisplaySummary } from "@/lib/exam-block";
 
 // ── Font Registration ──
 Font.register({
@@ -56,9 +56,6 @@ interface ExamBlock {
   title_ko?: string;
   one_sentence_summary: string;
   one_sentence_summary_ko?: string;
-  one_sentence_summary_en_hidden?: string;
-  summary_keywords?: string[];
-  summary_keyword_basis?: string[];
 }
 interface Props {
   vocab: VocabItem[];
@@ -210,7 +207,6 @@ const s = StyleSheet.create({
   summaryRow: { flexDirection: "row" as const, alignItems: "flex-start" as const, gap: 6 },
   summaryInlineLabel: { fontSize: 7.5, fontWeight: 800, color: T.g50, lineHeight: 1.6 },
   summaryInlineText: { flex: 1, fontSize: 8, color: T.black, lineHeight: 1.6 },
-  summaryKeywordLine: { fontSize: 7, color: T.g70, lineHeight: 1.5, marginTop: 3 },
   summaryBlock: { marginTop: 14 },
 });
 
@@ -257,7 +253,6 @@ export function PreviewPdf({ vocab, synonyms, summary, examBlock, title: titlePr
   const summaryLines = summary ? summary.split("\n").filter(Boolean) : [];
   const title = titleProp || "Preview";
   const summaryText = getDisplaySummary(examBlock);
-  const summaryKeywords = formatSummaryKeywords(examBlock?.summary_keywords);
 
   return (
     <Document>
@@ -325,7 +320,6 @@ export function PreviewPdf({ vocab, synonyms, summary, examBlock, title: titlePr
                 <Text style={s.summaryInlineLabel}>한줄요약 |</Text>
                 <Text style={s.summaryInlineText}>{summaryText}</Text>
               </View>
-              {summaryKeywords && <Text style={s.summaryKeywordLine}>{summaryKeywords}</Text>}
             </View>
           </View>
         )}
