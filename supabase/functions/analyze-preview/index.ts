@@ -35,7 +35,11 @@ function safeParseJson(raw: string): any {
 
 const LOVABLE_API_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-async function callAi(apiKey: string, messages: Array<{ role: string; content: string }>) {
+async function callAi(
+  apiKey: string,
+  messages: Array<{ role: string; content: string }>,
+  opts?: { temperature?: number },
+) {
   const response = await fetch(LOVABLE_API_URL, {
     method: "POST",
     headers: {
@@ -45,7 +49,7 @@ async function callAi(apiKey: string, messages: Array<{ role: string; content: s
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
       messages,
-      temperature: 0.25,
+      temperature: opts?.temperature ?? 0.25,
     }),
   });
 
