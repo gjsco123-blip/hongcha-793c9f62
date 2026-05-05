@@ -25,8 +25,7 @@ function validatePassages(
     const hasSyntax = Array.isArray(store.syntaxResults) && store.syntaxResults.length > 0;
     const hasPreview =
       store.preview &&
-      ((Array.isArray(store.preview.vocab) && store.preview.vocab.length > 0) ||
-        (Array.isArray(store.preview.synonyms) && store.preview.synonyms.length > 0) ||
+      ((Array.isArray(store.preview.synonyms) && store.preview.synonyms.length > 0) ||
         (typeof store.preview.summary === "string" && store.preview.summary.length > 0));
 
     if (type === "syntax" && !hasSyntax) {
@@ -114,7 +113,6 @@ export function useBatchPdfExport() {
         const store = parsePassageStore(p.results_json);
         const prev = store.preview!;
         const doc = createElement(PreviewPdf, {
-          vocab: (prev.vocab || []) as any[],
           synonyms: (prev.synonyms || []) as any[],
           summary: (prev.summary || "") as string,
           examBlock: (prev.examBlock || null) as any,
@@ -149,7 +147,6 @@ export function useBatchPdfExport() {
         const title = p.pdf_title || "SYNTAX";
 
         const previewDoc = createElement(PreviewPdf, {
-          vocab: (prev.vocab || []) as any[],
           synonyms: (prev.synonyms || []) as any[],
           summary: (prev.summary || "") as string,
           examBlock: (prev.examBlock || null) as any,

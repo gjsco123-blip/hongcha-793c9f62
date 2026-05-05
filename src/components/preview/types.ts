@@ -1,10 +1,3 @@
-export interface VocabItem {
-  word: string;
-  pos: string;
-  meaning_ko: string;
-  in_context: string;
-}
-
 export interface SynAntItem {
   word: string;
   synonym: string;

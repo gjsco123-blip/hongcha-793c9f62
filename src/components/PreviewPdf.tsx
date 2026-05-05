@@ -41,13 +41,6 @@ Font.register({
 
 Font.registerHyphenationCallback((word) => [word]);
 
-// ── Types ──
-interface VocabItem {
-  word: string;
-  pos: string;
-  meaning_ko: string;
-  in_context: string;
-}
 interface SynAntItem {
   word: string;
   synonym: string;
@@ -62,7 +55,6 @@ interface ExamBlock {
   one_sentence_summary_ko?: string;
 }
 interface Props {
-  vocab: VocabItem[];
   synonyms: SynAntItem[];
   summary: string;
   examBlock: ExamBlock | null;
@@ -245,7 +237,7 @@ const s = StyleSheet.create({
   summaryBlock: { marginTop: 14 },
 });
 
-export function PreviewPdf({ vocab, synonyms, summary, examBlock, title: titleProp }: Props) {
+export function PreviewPdf({ synonyms, summary, examBlock, title: titleProp }: Props) {
   const hasSynonyms = synonyms.length > 0;
   const hasSummary = !!summary;
   const hasExam = !!examBlock;

@@ -26,13 +26,6 @@ interface SentenceResult {
   hideHongT?: boolean;
 }
 
-interface VocabItem {
-  word: string;
-  pos: string;
-  meaning_ko: string;
-  in_context: string;
-}
-
 interface SynAntItem {
   word: string;
   synonym: string;
@@ -49,7 +42,6 @@ interface ExamBlock {
 }
 
 interface PreviewPayload {
-  vocab: VocabItem[];
   synonyms: SynAntItem[];
   summary: string;
   examBlock: ExamBlock | null;
@@ -122,7 +114,6 @@ export function usePdfExport() {
       teacherLabel?: string
     ) => {
       const previewDocument = createElement(PreviewPdf, {
-        vocab: previewData.vocab,
         synonyms: previewData.synonyms,
         summary: previewData.summary,
         examBlock: previewData.examBlock,

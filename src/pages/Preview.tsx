@@ -12,7 +12,7 @@ import { PreviewNotepadSection } from "@/components/preview/PreviewNotepadSectio
 import { PreviewSummarySection } from "@/components/preview/PreviewSummarySection";
 import { PreviewSynonymsSection } from "@/components/preview/PreviewSynonymsSection";
 import { PreviewExamSection } from "@/components/preview/PreviewExamSection";
-import type { VocabItem, SynAntItem, ExamBlock, SectionStatus } from "@/components/preview/types";
+import type { SynAntItem, ExamBlock, SectionStatus } from "@/components/preview/types";
 import { mergePassageStore, parsePassageStore } from "@/lib/passage-store";
 import { getDisplaySummary, normalizeExamBlock } from "@/lib/exam-block";
 import { sanitizeSynonymItems } from "@/lib/synonym-sanitizer";
@@ -76,8 +76,6 @@ export default function Preview() {
   const initialPassage = isNewPassage ? incomingPassage : (cached?.passage || incomingPassage || "");
 
   const [passage, setPassage] = useState(initialPassage);
-  const [vocab, setVocab] = useState<VocabItem[]>(isNewPassage ? [] : (cached?.vocab || []));
-  const [vocabStatus, setVocabStatus] = useState<SectionStatus>(isNewPassage ? "idle" : (cached?.vocab?.length ? "done" : "idle"));
   const [synonyms, setSynonyms] = useState<SynAntItem[]>(
     isNewPassage ? [] : sanitizeSynonymItems(cached?.synonyms || [], initialPassage)
   );
@@ -87,7 +85,6 @@ export default function Preview() {
     isNewPassage ? null : normalizeExamBlock(cached?.examBlock as ExamBlock | null)
   );
   const [previewStatus, setPreviewStatus] = useState<SectionStatus>(isNewPassage ? "idle" : (cached?.summary || cached?.examBlock ? "done" : "idle"));
-  const [addingWord, setAddingWord] = useState<string | null>(null);
   const [enrichingIdx, setEnrichingIdx] = useState<number | null>(null);
   const [synonymSelectMode, setSynonymSelectMode] = useState(false);
   const [addingSynonymWord, setAddingSynonymWord] = useState<string | null>(null);
@@ -99,9 +96,9 @@ export default function Preview() {
 
   // Persist state to sessionStorage
   useEffect(() => {
-    const state = { passage, vocab, synonyms, summary, examBlock, pdfTitle, grade };
+    const state = { passage, synonyms, summary, examBlock, pdfTitle, grade };
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [passage, vocab, synonyms, summary, examBlock, pdfTitle, grade]);
+  }, [passage, synonyms, summary, examBlock, pdfTitle, grade]);
 
   useEffect(() => {
     if (!passageId) return;
@@ -122,7 +119,6 @@ export default function Preview() {
 
       if (store.preview) {
         if (typeof store.preview.passage === "string" && store.preview.passage) setPassage(store.preview.passage);
-        const savedVocab = Array.isArray(store.preview.vocab) ? (store.preview.vocab as VocabItem[]) : [];
         const savedSynonyms = Array.isArray(store.preview.synonyms) ? (store.preview.synonyms as SynAntItem[]) : [];
         const savedSummary = typeof store.preview.summary === "string" ? store.preview.summary : "";
         const savedPassage = typeof store.preview.passage === "string" && store.preview.passage
@@ -130,12 +126,10 @@ export default function Preview() {
           : (typeof data.passage_text === "string" ? data.passage_text : "");
         const savedExam = store.preview.examBlock ? normalizeExamBlock(store.preview.examBlock as ExamBlock) : null;
 
-        setVocab(savedVocab);
         setSynonyms(sanitizeSynonymItems(savedSynonyms, savedPassage));
         setSummary(savedSummary);
         setExamBlock(savedExam);
 
-        setVocabStatus(savedVocab.length > 0 ? "done" : "idle");
         setSynonymsStatus(savedSynonyms.length > 0 ? "done" : "idle");
         setPreviewStatus(savedSummary || savedExam ? "done" : "idle");
       } else if (typeof data.passage_text === "string" && data.passage_text) {
@@ -148,7 +142,7 @@ export default function Preview() {
     };
   }, [passageId]);
 
-  const isGenerating = vocabStatus === "loading" || synonymsStatus === "loading" || previewStatus === "loading";
+  const isGenerating = synonymsStatus === "loading" || previewStatus === "loading";
 
   // --- Auto-save (2s debounce) ---
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -169,7 +163,7 @@ export default function Preview() {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(async () => {
       const mergedStore = mergePassageStore(baseResultsJson, {
-        preview: { passage, pdfTitle, vocab, synonyms, summary, examBlock: examBlock || undefined },
+        preview: { passage, pdfTitle, synonyms, summary, examBlock: examBlock || undefined },
       });
       const { error } = await supabase
         .from("passages")
@@ -188,17 +182,12 @@ export default function Preview() {
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-  }, [passage, vocab, synonyms, summary, examBlock, passageId, isGenerating, loadingSavedState, pdfTitle]);
+  }, [passage, synonyms, summary, examBlock, passageId, isGenerating, loadingSavedState, pdfTitle]);
 
   const handleGenerate = async () => {
     if (!passage.trim() || isGenerating) return;
-    setVocabStatus("loading");
     setSynonymsStatus("loading");
     setPreviewStatus("loading");
-
-    const vocabPromise = invokeRetry("analyze-vocab", { passage, count: 30 })
-      .then((d) => { setVocab(d.vocab || []); setVocabStatus("done"); })
-      .catch((e) => { toast.error(`어휘 생성 실패: ${e.message}`); setVocabStatus("error"); });
 
     const synPromise = invokeRetry("analyze-synonyms", { passage })
       .then((d) => {
@@ -221,50 +210,8 @@ export default function Preview() {
       })
       .catch((e) => { toast.error(`요약 생성 실패: ${e.message}`); setPreviewStatus("error"); });
 
-    await Promise.allSettled([vocabPromise, synPromise, previewPromise]);
+    await Promise.allSettled([synPromise, previewPromise]);
   };
-
-  const handleWordClick = useCallback(async (word: string) => {
-    const lower = word.toLowerCase();
-    if (vocab.some((v) => v.word.toLowerCase() === lower)) {
-      toast.info("이미 추가된 단어입니다.");
-      return;
-    }
-    setAddingWord(lower);
-    try {
-      const data = await invokeRetry("analyze-single-vocab", { word, passage });
-      if (data.vocab) {
-        setVocab((prev) => [...prev, data.vocab]);
-        toast.success(`"${word}" 추가됨`);
-      }
-    } catch (e: any) {
-      toast.error(`단어 추가 실패: ${e.message}`);
-    } finally {
-      setAddingWord(null);
-    }
-  }, [vocab, passage]);
-
-  const handleVocabDelete = useCallback((index: number) => {
-    setVocab((prev) => prev.filter((_, i) => i !== index));
-  }, []);
-
-  const handleVocabEdit = useCallback((index: number, field: keyof VocabItem, value: string) => {
-    setVocab((prev) => prev.map((v, i) => i === index ? { ...v, [field]: value } : v));
-  }, []);
-
-  const handleVocabRegenItem = useCallback(async (index: number) => {
-    const item = vocab[index];
-    if (!item) return;
-    try {
-      const data = await invokeRetry("analyze-single-vocab", { word: item.word, passage });
-      if (data.vocab) {
-        setVocab((prev) => prev.map((v, i) => i === index ? data.vocab : v));
-        toast.success(`"${item.word}" 재생성 완료`);
-      }
-    } catch (e: any) {
-      toast.error(`재생성 실패: ${e.message}`);
-    }
-  }, [vocab, passage]);
 
   const regenSummary = useCallback(async (): Promise<string> => {
     const data = await invokeWithFallback(
@@ -388,7 +335,7 @@ export default function Preview() {
 
   const handleExportPdf = async () => {
     try {
-      const doc = createElement(PreviewPdf, { vocab, synonyms, summary, examBlock, title: pdfTitle }) as any;
+      const doc = createElement(PreviewPdf, { synonyms, summary, examBlock, title: pdfTitle }) as any;
       const blob = await pdf(doc).toBlob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -408,7 +355,7 @@ export default function Preview() {
     if (pdfGenerating) return;
     setPdfGenerating(true);
     try {
-      const doc = createElement(PreviewPdf, { vocab, synonyms, summary, examBlock, title: pdfTitle }) as any;
+      const doc = createElement(PreviewPdf, { synonyms, summary, examBlock, title: pdfTitle }) as any;
       const blob = await pdf(doc).toBlob();
       setPdfPreviewBlob(blob);
     } catch (err: any) {
@@ -430,7 +377,7 @@ export default function Preview() {
     const next = !previewCompleted;
     setPreviewCompleted(next);
     const mergedStore = mergePassageStore(baseResultsJson, {
-      preview: { passage, pdfTitle, vocab, synonyms, summary, examBlock: examBlock || null },
+      preview: { passage, pdfTitle, synonyms, summary, examBlock: examBlock || null },
       completion: {
         previewCompleted: next,
         previewCompletedAt: next ? new Date().toISOString() : null,
@@ -454,7 +401,7 @@ export default function Preview() {
     toast.success(next ? "프리뷰 완료로 표시됨" : "프리뷰 완료 표시 해제");
   };
 
-  const canExport = vocab.length > 0 || synonyms.length > 0 || summary;
+  const canExport = synonyms.length > 0 || !!summary || !!examBlock;
 
   return (
     <div className="min-h-screen bg-background">
@@ -495,9 +442,7 @@ export default function Preview() {
           setPassage={setPassage}
           isGenerating={isGenerating}
           onGenerate={handleGenerate}
-          vocabReady={vocabStatus === "done"}
-          onWordClick={handleWordClick}
-          addingWord={addingWord}
+          selectionReady={synonymsStatus === "done"}
           synonymSelectMode={synonymSelectMode}
           onSynonymWordClick={handleSynonymWordClick}
           addingSynonymWord={addingSynonymWord}
@@ -514,7 +459,6 @@ export default function Preview() {
 
         <PreviewSynonymsSection
           synonyms={synonyms}
-          vocab={vocab}
           status={synonymsStatus}
           onSynonymsChange={(next) => setSynonyms(sanitizeSynonymItems(next, passage))}
           onRegenerate={regenSynonyms}

@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { CompareOverlay } from "./CompareOverlay";
 import { Plus, Loader2, X, MousePointerClick, Check } from "lucide-react";
-import type { SynAntItem, SectionStatus, VocabItem } from "./types";
+import type { SynAntItem, SectionStatus } from "./types";
 
 interface Props {
   synonyms: SynAntItem[];
-  vocab: VocabItem[];
   status: SectionStatus;
   onSynonymsChange: (v: SynAntItem[]) => void;
   onRegenerate: () => Promise<SynAntItem[]>;
@@ -40,7 +39,7 @@ function ChipList({ chips, onDelete }: { chips: string[]; onDelete: (chipIdx: nu
 }
 
 export function PreviewSynonymsSection({
-  synonyms, vocab, status, onSynonymsChange, onRegenerate, onEnrichRow, enrichingIdx,
+  synonyms, status, onSynonymsChange, onRegenerate, onEnrichRow, enrichingIdx,
   onDeleteRow, onRequestAddFromPassage, synonymSelectMode,
 }: Props) {
   const [isRegen, setIsRegen] = useState(false);
@@ -61,28 +60,12 @@ export function PreviewSynonymsSection({
     setManualAntonym("");
   };
 
-  const normalizeWord = (text: string) =>
-    text
-      .toLowerCase()
-      .replace(/\s*\([^)]*\)\s*$/g, "")
-      .replace(/[^a-z0-9'\s-]/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-
-  const withAutoMeaning = (word: string) => {
-    if (/\([^)]*\)\s*$/.test(word)) return word;
-    const key = normalizeWord(word);
-    if (!key) return word;
-    const found = vocab.find((v) => normalizeWord(v.word) === key && v.meaning_ko?.trim());
-    return found ? `${word} (${found.meaning_ko.trim()})` : word;
-  };
-
   const addManualRow = () => {
     const word = manualWord.trim();
     if (!word) return;
     onSynonymsChange([
       ...synonyms,
-      { word: withAutoMeaning(word), synonym: manualSynonym.trim(), antonym: manualAntonym.trim() },
+      { word, synonym: manualSynonym.trim(), antonym: manualAntonym.trim() },
     ]);
     resetManual();
   };
@@ -121,8 +104,8 @@ export function PreviewSynonymsSection({
         <thead>
           <tr className="bg-muted/30 border-b-2 border-foreground/80">
             <th className="text-left px-3 py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[25%] border-r border-border">Word</th>
-            <th className="text-left px-3 py-2.5 text-[15px] font-extrabold text-muted-foreground tracking-wide w-[35%]">=</th>
-            <th className="text-left px-3 py-2.5 text-[15px] font-extrabold text-muted-foreground tracking-wide w-[35%]">≠</th>
+            <th className="text-center px-3 py-2.5 text-[15px] font-extrabold text-muted-foreground tracking-wide w-[35%]">=</th>
+            <th className="text-center px-3 py-2.5 text-[15px] font-extrabold text-muted-foreground tracking-wide w-[35%]">≠</th>
             {showActions && <th className="w-[5%]"></th>}
           </tr>
         </thead>

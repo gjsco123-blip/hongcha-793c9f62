@@ -796,7 +796,6 @@ export default function Index() {
 
       await exportCombinedPdf(
         {
-          vocab: Array.isArray(preview.vocab) ? (preview.vocab as any[]) : [],
           synonyms: Array.isArray(preview.synonyms) ? (preview.synonyms as any[]) : [],
           summary: typeof preview.summary === "string" ? preview.summary : "",
           examBlock: (preview.examBlock as any) || null,

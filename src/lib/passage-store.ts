@@ -8,7 +8,6 @@ export type PassageCompletionState = {
 export type PassagePreviewSnapshot = {
   passage?: string;
   pdfTitle?: string;
-  vocab?: unknown[];
   synonyms?: unknown[];
   summary?: string;
   examBlock?: unknown;
