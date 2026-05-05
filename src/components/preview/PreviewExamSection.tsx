@@ -42,10 +42,10 @@ function buildTopicPreview(block: Pick<ExamBlock, "topic_basic" | "topic_basic_k
     .trim();
 }
 
-const EXAM_LEAD_CLASS = "w-[56px] shrink-0 pt-0.5 whitespace-nowrap";
-const EXAM_LEAD_GRID_CLASS = "grid grid-cols-[32px_8px] items-start";
+const EXAM_LEAD_CLASS = "w-[60px] shrink-0 pt-0.5 whitespace-nowrap";
+const EXAM_LEAD_GRID_CLASS = "grid grid-cols-[40px] items-start";
 const EXAM_CHIP_CLASS =
-  "inline-flex items-center justify-center rounded-[6px] bg-black px-2 py-[2px] text-[10px] font-bold leading-none text-white";
+  "inline-flex items-center justify-center rounded-[6px] bg-black px-[9px] py-[4px] text-[11px] font-bold leading-none text-white";
 
 export function PreviewExamSection({ examBlock, status, onExamChange, onRegenerateTopic, onRegenerateSummary }: Props) {
   const [regenField, setRegenField] = useState<string | null>(null);
@@ -117,7 +117,6 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
               <div className={EXAM_LEAD_CLASS}>
                 <div className={EXAM_LEAD_GRID_CLASS}>
                   <span className={EXAM_CHIP_CLASS}>주제</span>
-                  <span className="text-center">|</span>
                 </div>
                 <div className="mt-1 flex items-center">
                   {status === "done" && <FieldRegenButton onClick={handleTopicRegen} loading={regenField === "topic"} />}
@@ -141,7 +140,6 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
             <div className="flex items-start gap-2.5">
               <div className={EXAM_LEAD_CLASS}>
                 <div className={EXAM_LEAD_GRID_CLASS}>
-                  <span />
                   <span />
                 </div>
               </div>
@@ -169,7 +167,6 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
             <div className={EXAM_LEAD_CLASS}>
               <div className={EXAM_LEAD_GRID_CLASS}>
                 <span className={EXAM_CHIP_CLASS}>요약</span>
-                <span className="text-center">|</span>
               </div>
             </div>
             <input

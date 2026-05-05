@@ -208,17 +208,16 @@ const s = StyleSheet.create({
   topicLead: { width: 40, flexDirection: "row" as const, alignItems: "flex-start" as const },
   topicLeadLabelWrap: { width: 32 },
   topicLeadLabel: {
-    fontSize: 6.8,
+    fontSize: 7.3,
     fontWeight: 800,
     color: "#ffffff",
     lineHeight: 1,
     backgroundColor: "#000000",
     borderRadius: 4,
-    paddingHorizontal: 5,
-    paddingVertical: 2.5,
+    paddingHorizontal: 6,
+    paddingVertical: 3.5,
     textAlign: "center" as const,
   },
-  topicLeadPipe: { width: 8, fontSize: 7.5, fontWeight: 800, color: T.g50, lineHeight: 1.6, textAlign: "center" as const },
   topicInlineStack: { flex: 1 },
   topicInlineEn: { fontFamily: T.en, fontSize: 8, color: T.black, lineHeight: 1.6 },
   topicInlineKo: { fontSize: 7, color: T.g70, lineHeight: 1.5, marginTop: 1.5 },
@@ -226,17 +225,16 @@ const s = StyleSheet.create({
   summaryLead: { width: 40, flexDirection: "row" as const, alignItems: "flex-start" as const },
   summaryLeadLabelWrap: { width: 32 },
   summaryLeadLabel: {
-    fontSize: 6.8,
+    fontSize: 7.3,
     fontWeight: 800,
     color: "#ffffff",
     lineHeight: 1,
     backgroundColor: "#000000",
     borderRadius: 4,
-    paddingHorizontal: 5,
-    paddingVertical: 2.5,
+    paddingHorizontal: 6,
+    paddingVertical: 3.5,
     textAlign: "center" as const,
   },
-  summaryLeadPipe: { width: 8, fontSize: 7.5, fontWeight: 800, color: T.g50, lineHeight: 1.6, textAlign: "center" as const },
   summaryInlineText: { flex: 1, fontSize: 8, color: T.black, lineHeight: 1.6 },
   summaryBlock: { marginTop: 14 },
 });
@@ -345,7 +343,6 @@ export function PreviewPdf({ vocab, synonyms, summary, examBlock, title: titlePr
                 <View style={s.topicLeadLabelWrap}>
                   <Text style={s.topicLeadLabel}>주제</Text>
                 </View>
-                <Text style={s.topicLeadPipe}>|</Text>
               </View>
               <View style={s.topicInlineStack}>
                 <Text style={s.topicInlineEn}>{examBlock.topic_basic}</Text>
@@ -355,7 +352,6 @@ export function PreviewPdf({ vocab, synonyms, summary, examBlock, title: titlePr
             <View style={[s.topicRow, { marginTop: 6 }]}>
               <View style={s.topicLead}>
                 <View style={s.topicLeadLabelWrap}></View>
-                <Text style={s.topicLeadPipe}></Text>
               </View>
               <View style={s.topicInlineStack}>
                 <Text style={s.topicInlineEn}>{examBlock.topic_advanced}</Text>
@@ -368,7 +364,6 @@ export function PreviewPdf({ vocab, synonyms, summary, examBlock, title: titlePr
                   <View style={s.summaryLeadLabelWrap}>
                     <Text style={s.summaryLeadLabel}>요약</Text>
                   </View>
-                  <Text style={s.summaryLeadPipe}>|</Text>
                 </View>
                 <Text style={s.summaryInlineText}>{summaryText}</Text>
               </View>
