@@ -18,6 +18,10 @@ Font.register({
       src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-Bold.otf",
       fontWeight: 700,
     },
+    {
+      src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/public/static/Pretendard-Bold.otf",
+      fontWeight: 800,
+    },
   ],
 });
 
@@ -208,8 +212,8 @@ const s = StyleSheet.create({
   topicLead: { width: 37, flexDirection: "row" as const, alignItems: "flex-start" as const },
   topicLeadLabelWrap: { width: 29 },
   topicLeadLabel: {
-    fontSize: 7.3,
-    fontWeight: 700,
+    fontSize: 8.5,
+    fontWeight: 800,
     color: "#ffffff",
     lineHeight: 1,
     backgroundColor: "#000000",
@@ -218,6 +222,7 @@ const s = StyleSheet.create({
     paddingTop: 3,
     paddingBottom: 4,
     textAlign: "center" as const,
+    letterSpacing: 0.25,
   },
   topicInlineStack: { flex: 1 },
   topicInlineEn: { fontFamily: T.en, fontSize: 8, color: T.black, lineHeight: 1.6 },
@@ -226,8 +231,8 @@ const s = StyleSheet.create({
   summaryLead: { width: 37, flexDirection: "row" as const, alignItems: "flex-start" as const },
   summaryLeadLabelWrap: { width: 29 },
   summaryLeadLabel: {
-    fontSize: 7.3,
-    fontWeight: 700,
+    fontSize: 8.5,
+    fontWeight: 800,
     color: "#ffffff",
     lineHeight: 1,
     backgroundColor: "#000000",
@@ -236,6 +241,7 @@ const s = StyleSheet.create({
     paddingTop: 3,
     paddingBottom: 4,
     textAlign: "center" as const,
+    letterSpacing: 0.25,
   },
   summaryInlineText: { flex: 1, fontSize: 8, color: T.black, lineHeight: 1.6 },
   summaryBlock: { marginTop: 14 },
