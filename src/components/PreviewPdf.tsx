@@ -98,25 +98,28 @@ const s = StyleSheet.create({
   },
   thinRule: { height: 0.5, backgroundColor: T.rule, marginVertical: 8 },
   notepadBox: {
-    minHeight: 214,
-    borderWidth: 1.5,
-    borderColor: T.black,
-    borderRadius: 4,
-    paddingTop: 8,
-    paddingBottom: 8,
-    paddingHorizontal: 10,
+    minHeight: 190,
+    paddingTop: 4,
+    paddingBottom: 4,
+    paddingHorizontal: 2,
   },
   notepadLabel: {
-    fontSize: 7.5,
+    fontSize: 7,
     fontWeight: 800,
     letterSpacing: 0.6,
     textTransform: "uppercase" as const,
-    color: T.black,
-    marginBottom: 8,
+    color: "#ffffff",
+    backgroundColor: "#000000",
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingTop: 3,
+    paddingBottom: 3,
+    alignSelf: "flex-start" as const,
+    marginBottom: 10,
   },
   notepadLine: {
-    height: 18,
-    borderBottomWidth: 0.6,
+    height: 24,
+    borderBottomWidth: 0.5,
     borderBottomColor: T.black,
   },
   summaryBox: { borderLeftWidth: 2, borderLeftColor: T.g30, paddingLeft: 10, paddingVertical: 3 },
@@ -253,7 +256,7 @@ export function PreviewPdf({ synonyms, summary, examBlock, title: titleProp }: P
         <View>
           <View style={s.notepadBox}>
             <Text style={s.notepadLabel}>Notepad</Text>
-            {Array.from({ length: 10 }).map((_, idx) => (
+            {Array.from({ length: 7 }).map((_, idx) => (
               <View key={idx} style={s.notepadLine} />
             ))}
           </View>
