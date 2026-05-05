@@ -79,6 +79,18 @@ function summaryHasOutOfRangeLine(summary: unknown, minLen = 45, maxLen = 58): b
   return lines.some((line) => line.length < minLen || line.length > maxLen);
 }
 
+function topicVariantsIncomplete(parsed: any): boolean {
+  const examBlock = parsed?.exam_block;
+  if (!examBlock || typeof examBlock !== "object") return true;
+
+  const basic = typeof examBlock.topic_basic === "string" ? examBlock.topic_basic.trim() : "";
+  const basicKo = typeof examBlock.topic_basic_ko === "string" ? examBlock.topic_basic_ko.trim() : "";
+  const advanced = typeof examBlock.topic_advanced === "string" ? examBlock.topic_advanced.trim() : "";
+  const advancedKo = typeof examBlock.topic_advanced_ko === "string" ? examBlock.topic_advanced_ko.trim() : "";
+
+  return !basic || !basicKo || !advanced || !advancedKo;
+}
+
 // ============================================================
 // MODE-SPECIFIC PROMPT MODULES — 첫 생성/재생성 양쪽 다 사용
 // ============================================================
@@ -410,6 +422,28 @@ async function runSingleMode(
     opts?.temperature !== undefined ? { temperature: opts.temperature } : undefined,
   );
   let parsed = safeParseJson(content);
+
+  if (mode === "topic" && topicVariantsIncomplete(parsed)) {
+    console.log("[analyze-preview:topic] incomplete topic variants, retrying");
+    try {
+      const retryContent = await callAi(apiKey, [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: passage },
+        { role: "assistant", content },
+        {
+          role: "user",
+          content:
+            "이전 응답은 topic_basic, topic_basic_ko, topic_advanced, topic_advanced_ko 중 일부가 비어 있거나 누락되었음. 네 필드를 모두 반드시 채울 것. basic/advanced는 같은 중심 주제를 가리키되, advanced는 basic과 다른 head noun 또는 framing을 사용해야 함. 동일한 JSON 형식으로 exam_block 전체를 다시 출력할 것.",
+        },
+      ]);
+      const retryParsed = safeParseJson(retryContent);
+      if (!topicVariantsIncomplete(retryParsed)) {
+        parsed = retryParsed;
+      }
+    } catch (retryErr) {
+      console.error("[analyze-preview:topic] retry failed:", retryErr);
+    }
+  }
 
   // passage_summary만 줄 길이 재시도 적용 (45~58자 범위 강제)
   if (mode === "passage_summary" && summaryHasOutOfRangeLine(parsed?.summary)) {
