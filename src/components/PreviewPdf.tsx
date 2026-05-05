@@ -98,29 +98,49 @@ const s = StyleSheet.create({
   },
   thinRule: { height: 0.5, backgroundColor: T.rule, marginVertical: 8 },
   notepadBox: {
-    minHeight: 190,
+    minHeight: 194,
     paddingTop: 4,
     paddingBottom: 4,
     paddingHorizontal: 2,
   },
   notepadLabel: {
-    fontSize: 7,
-    fontWeight: 800,
-    letterSpacing: 0.6,
+    fontSize: 11,
+    fontWeight: 900,
+    letterSpacing: 0.5,
     textTransform: "uppercase" as const,
     color: "#ffffff",
-    backgroundColor: "#000000",
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingTop: 3,
-    paddingBottom: 3,
+    backgroundColor: "#64748b",
+    paddingHorizontal: 10,
+    paddingTop: 6,
+    paddingBottom: 5,
     alignSelf: "flex-start" as const,
+    marginBottom: 8,
+  },
+  notepadMetaRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    borderBottomWidth: 0.6,
+    borderBottomColor: T.black,
+    paddingBottom: 5,
     marginBottom: 10,
   },
+  notepadMetaText: {
+    fontSize: 6.4,
+    fontWeight: 800,
+    letterSpacing: 0.45,
+    textTransform: "uppercase" as const,
+    color: "#111111",
+  },
+  notepadMetaRule: {
+    flexGrow: 1,
+    height: 0.5,
+    backgroundColor: "#6b7280",
+    marginLeft: 10,
+  },
   notepadLine: {
-    height: 24,
-    borderBottomWidth: 0.5,
-    borderBottomColor: T.black,
+    height: 25,
+    borderBottomWidth: 0.45,
+    borderBottomColor: "#333333",
   },
   summaryBox: { borderLeftWidth: 2, borderLeftColor: T.g30, paddingLeft: 10, paddingVertical: 3 },
   summaryText: { fontSize: 8, lineHeight: 1.7 },
@@ -255,7 +275,11 @@ export function PreviewPdf({ synonyms, summary, examBlock, title: titleProp }: P
 
         <View>
           <View style={s.notepadBox}>
-            <Text style={s.notepadLabel}>Notepad</Text>
+            <Text style={s.notepadLabel}>WIDE-NOTEPAD</Text>
+            <View style={s.notepadMetaRow}>
+              <Text style={s.notepadMetaText}>Subject / Title</Text>
+              <View style={s.notepadMetaRule} />
+            </View>
             {Array.from({ length: 7 }).map((_, idx) => (
               <View key={idx} style={s.notepadLine} />
             ))}
