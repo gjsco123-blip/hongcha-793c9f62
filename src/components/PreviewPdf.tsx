@@ -205,7 +205,9 @@ const s = StyleSheet.create({
   fieldEn: { fontFamily: T.en, fontSize: 8, color: T.black, lineHeight: 1.6 },
   fieldKo: { fontSize: 7, color: T.g70, lineHeight: 1.5, marginTop: 1.5 },
   topicRow: { flexDirection: "row" as const, alignItems: "flex-start" as const, gap: 6 },
-  topicInlineLabel: { fontSize: 7.5, fontWeight: 800, color: T.g50, lineHeight: 1.6 },
+  topicLead: { width: 34, flexDirection: "row" as const, alignItems: "flex-start" as const },
+  topicLeadLabel: { width: 24, fontSize: 7.5, fontWeight: 800, color: T.g50, lineHeight: 1.6 },
+  topicLeadPipe: { width: 10, fontSize: 7.5, fontWeight: 800, color: T.g50, lineHeight: 1.6 },
   topicInlineStack: { flex: 1 },
   topicInlineEn: { fontFamily: T.en, fontSize: 8, color: T.black, lineHeight: 1.6 },
   topicInlineKo: { fontSize: 7, color: T.g70, lineHeight: 1.5, marginTop: 1.5 },
@@ -315,14 +317,20 @@ export function PreviewPdf({ vocab, synonyms, summary, examBlock, title: titlePr
           <View>
             {(hasVocab || hasSummary || hasSynonyms) && <View style={s.thinRule} />}
             <View style={[s.topicRow, { marginTop: 4 }]}>
-              <Text style={s.topicInlineLabel}>주제 |</Text>
+              <View style={s.topicLead}>
+                <Text style={s.topicLeadLabel}>주제</Text>
+                <Text style={s.topicLeadPipe}>|</Text>
+              </View>
               <View style={s.topicInlineStack}>
                 <Text style={s.topicInlineEn}>{examBlock.topic_basic}</Text>
                 {examBlock.topic_basic_ko && <Text style={s.topicInlineKo}>{examBlock.topic_basic_ko}</Text>}
               </View>
             </View>
             <View style={[s.topicRow, { marginTop: 6 }]}>
-              <Text style={s.topicInlineLabel}>|</Text>
+              <View style={s.topicLead}>
+                <Text style={s.topicLeadLabel}></Text>
+                <Text style={s.topicLeadPipe}>|</Text>
+              </View>
               <View style={s.topicInlineStack}>
                 <Text style={s.topicInlineEn}>{examBlock.topic_advanced}</Text>
                 {examBlock.topic_advanced_ko && <Text style={s.topicInlineKo}>{examBlock.topic_advanced_ko}</Text>}

@@ -110,8 +110,11 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
           <div className="space-y-3">
             <div className="flex items-start gap-3">
               <div className="w-[68px] shrink-0 pt-0.5 text-[11px] font-bold text-muted-foreground whitespace-nowrap">
-                <div className="flex items-center">
-                  <span>주제 |</span>
+                <div className="grid grid-cols-[24px_10px] items-start">
+                  <span>주제</span>
+                  <span>|</span>
+                </div>
+                <div className="mt-1 flex items-center">
                   {status === "done" && <FieldRegenButton onClick={handleTopicRegen} loading={regenField === "topic"} />}
                   {status === "loading" && <span className="inline-block w-3.5 h-3.5 animate-spin border-2 border-muted-foreground border-t-transparent rounded-full ml-2" />}
                 </div>
@@ -132,7 +135,10 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
 
             <div className="flex items-start gap-3">
               <div className="w-[68px] shrink-0 pt-0.5 text-[11px] font-bold text-muted-foreground whitespace-nowrap">
-                <span className="pl-[19px]">|</span>
+                <div className="grid grid-cols-[24px_10px] items-start">
+                  <span />
+                  <span>|</span>
+                </div>
               </div>
               <div className="flex-1">
                 <input
