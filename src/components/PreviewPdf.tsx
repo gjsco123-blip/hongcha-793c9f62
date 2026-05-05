@@ -138,7 +138,7 @@ const s = StyleSheet.create({
   vMeaning: { flex: 1, fontSize: 6.5, lineHeight: 1 },
   vHdrText: { fontSize: 6, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.4 },
   summaryBox: { borderLeftWidth: 2, borderLeftColor: T.g30, paddingLeft: 10, paddingVertical: 3 },
-  summaryText: { fontSize: 7, lineHeight: 1.7 },
+  summaryText: { fontSize: 8, lineHeight: 1.7 },
   // Synonyms & Antonyms table
   synTable: { borderWidth: 0.5, borderColor: T.rule },
   synHdr: {
@@ -193,6 +193,14 @@ const s = StyleSheet.create({
     color: T.g50,
     textTransform: "uppercase" as const,
     letterSpacing: 0.6,
+    lineHeight: 1,
+    paddingTop: 0,
+    paddingBottom: 0,
+  },
+  synHdrSymbol: {
+    fontSize: 10.5,
+    fontWeight: 800,
+    color: T.g50,
     lineHeight: 1,
     paddingTop: 0,
     paddingBottom: 0,
@@ -329,8 +337,8 @@ export function PreviewPdf({ vocab, synonyms, summary, examBlock, title: titlePr
             <View style={s.synTable}>
               <View style={s.synHdr}>
                 <Text style={{ ...s.synWord, ...s.synHdrText }}>Word</Text>
-                <Text style={{ ...s.synSyn, ...s.synHdrText }}>=</Text>
-                <Text style={{ ...s.synAnt, ...s.synHdrText }}>≠</Text>
+                <Text style={{ ...s.synSyn, ...s.synHdrSymbol }}>=</Text>
+                <Text style={{ ...s.synAnt, ...s.synHdrSymbol }}>≠</Text>
               </View>
               {synonyms.map((item, idx) => (
                 <View key={idx} style={s.synRow}>
