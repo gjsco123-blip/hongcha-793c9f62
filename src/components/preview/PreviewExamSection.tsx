@@ -42,6 +42,9 @@ function buildTopicPreview(block: Pick<ExamBlock, "topic_basic" | "topic_basic_k
     .trim();
 }
 
+const EXAM_LEAD_CLASS = "w-[84px] shrink-0 pt-0.5 text-[11px] font-bold text-muted-foreground whitespace-nowrap";
+const EXAM_LEAD_GRID_CLASS = "grid grid-cols-[44px_10px] items-start";
+
 export function PreviewExamSection({ examBlock, status, onExamChange, onRegenerateTopic, onRegenerateSummary }: Props) {
   const [regenField, setRegenField] = useState<string | null>(null);
   const [candidate, setCandidate] = useState<{ field: "topic" | "summary"; oldVal: string; newVal: string } | null>(null);
@@ -108,9 +111,9 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
       <div className="space-y-5">
         <div>
           <div className="space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="w-[68px] shrink-0 pt-0.5 text-[11px] font-bold text-muted-foreground whitespace-nowrap">
-                <div className="grid grid-cols-[24px_10px] items-start">
+            <div className="flex items-start gap-2.5">
+              <div className={EXAM_LEAD_CLASS}>
+                <div className={EXAM_LEAD_GRID_CLASS}>
                   <span>주제</span>
                   <span>|</span>
                 </div>
@@ -133,9 +136,9 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
               </div>
             </div>
 
-            <div className="flex items-start gap-3">
-              <div className="w-[68px] shrink-0 pt-0.5 text-[11px] font-bold text-muted-foreground whitespace-nowrap">
-                <div className="grid grid-cols-[24px_10px] items-start">
+            <div className="flex items-start gap-2.5">
+              <div className={EXAM_LEAD_CLASS}>
+                <div className={EXAM_LEAD_GRID_CLASS}>
                   <span />
                   <span>|</span>
                 </div>
@@ -160,8 +163,13 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
           <div className="flex items-center justify-end mb-1.5">
             {status === "done" && <FieldRegenButton onClick={handleSummaryRegen} loading={regenField === "summary"} />}
           </div>
-          <div className="flex items-start gap-3">
-            <span className="pt-0.5 text-[11px] font-bold text-muted-foreground whitespace-nowrap">한줄요약 |</span>
+          <div className="flex items-start gap-2.5">
+            <div className={EXAM_LEAD_CLASS}>
+              <div className={EXAM_LEAD_GRID_CLASS}>
+                <span>한줄요약</span>
+                <span>|</span>
+              </div>
+            </div>
             <input
               value={getDisplaySummary(examBlock)}
               onChange={(e) =>
