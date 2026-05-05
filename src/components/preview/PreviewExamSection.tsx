@@ -109,10 +109,12 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
         <div>
           <div className="space-y-3">
             <div className="flex items-start gap-3">
-              <div className="pt-0.5 text-[11px] font-bold text-muted-foreground whitespace-nowrap flex items-center">
-                <span>기본형 |</span>
-                {status === "done" && <FieldRegenButton onClick={handleTopicRegen} loading={regenField === "topic"} />}
-                {status === "loading" && <span className="inline-block w-3.5 h-3.5 animate-spin border-2 border-muted-foreground border-t-transparent rounded-full ml-2" />}
+              <div className="w-[68px] shrink-0 pt-0.5 text-[11px] font-bold text-muted-foreground whitespace-nowrap">
+                <div className="flex items-center">
+                  <span>주제 |</span>
+                  {status === "done" && <FieldRegenButton onClick={handleTopicRegen} loading={regenField === "topic"} />}
+                  {status === "loading" && <span className="inline-block w-3.5 h-3.5 animate-spin border-2 border-muted-foreground border-t-transparent rounded-full ml-2" />}
+                </div>
               </div>
               <div className="flex-1">
                 <input
@@ -129,8 +131,8 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="pt-0.5 text-[11px] font-bold text-muted-foreground whitespace-nowrap">
-                <span>고급형 |</span>
+              <div className="w-[68px] shrink-0 pt-0.5 text-[11px] font-bold text-muted-foreground whitespace-nowrap">
+                <span className="pl-[19px]">|</span>
               </div>
               <div className="flex-1">
                 <input

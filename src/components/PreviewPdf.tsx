@@ -315,14 +315,14 @@ export function PreviewPdf({ vocab, synonyms, summary, examBlock, title: titlePr
           <View>
             {(hasVocab || hasSummary || hasSynonyms) && <View style={s.thinRule} />}
             <View style={[s.topicRow, { marginTop: 4 }]}>
-              <Text style={s.topicInlineLabel}>기본형 |</Text>
+              <Text style={s.topicInlineLabel}>주제 |</Text>
               <View style={s.topicInlineStack}>
                 <Text style={s.topicInlineEn}>{examBlock.topic_basic}</Text>
                 {examBlock.topic_basic_ko && <Text style={s.topicInlineKo}>{examBlock.topic_basic_ko}</Text>}
               </View>
             </View>
             <View style={[s.topicRow, { marginTop: 6 }]}>
-              <Text style={s.topicInlineLabel}>고급형 |</Text>
+              <Text style={s.topicInlineLabel}>|</Text>
               <View style={s.topicInlineStack}>
                 <Text style={s.topicInlineEn}>{examBlock.topic_advanced}</Text>
                 {examBlock.topic_advanced_ko && <Text style={s.topicInlineKo}>{examBlock.topic_advanced_ko}</Text>}
