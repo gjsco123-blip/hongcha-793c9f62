@@ -205,15 +205,15 @@ const s = StyleSheet.create({
   fieldEn: { fontFamily: T.en, fontSize: 8, color: T.black, lineHeight: 1.6 },
   fieldKo: { fontSize: 7, color: T.g70, lineHeight: 1.5, marginTop: 1.5 },
   topicRow: { flexDirection: "row" as const, alignItems: "flex-start" as const, gap: 5 },
-  topicLead: { width: 48, flexDirection: "row" as const, alignItems: "flex-start" as const },
-  topicLeadLabel: { width: 40, fontSize: 7.5, fontWeight: 800, color: T.g50, lineHeight: 1.6, textAlign: "right" as const },
+  topicLead: { width: 32, flexDirection: "row" as const, alignItems: "flex-start" as const },
+  topicLeadLabel: { width: 24, fontSize: 7.5, fontWeight: 800, color: T.g50, lineHeight: 1.6 },
   topicLeadPipe: { width: 8, fontSize: 7.5, fontWeight: 800, color: T.g50, lineHeight: 1.6, textAlign: "center" as const },
   topicInlineStack: { flex: 1 },
   topicInlineEn: { fontFamily: T.en, fontSize: 8, color: T.black, lineHeight: 1.6 },
   topicInlineKo: { fontSize: 7, color: T.g70, lineHeight: 1.5, marginTop: 1.5 },
   summaryRow: { flexDirection: "row" as const, alignItems: "flex-start" as const, gap: 5 },
-  summaryLead: { width: 48, flexDirection: "row" as const, alignItems: "flex-start" as const },
-  summaryLeadLabel: { width: 40, fontSize: 7.5, fontWeight: 800, color: T.g50, lineHeight: 1.6, textAlign: "right" as const },
+  summaryLead: { width: 32, flexDirection: "row" as const, alignItems: "flex-start" as const },
+  summaryLeadLabel: { width: 24, fontSize: 7.5, fontWeight: 800, color: T.g50, lineHeight: 1.6 },
   summaryLeadPipe: { width: 8, fontSize: 7.5, fontWeight: 800, color: T.g50, lineHeight: 1.6, textAlign: "center" as const },
   summaryInlineText: { flex: 1, fontSize: 8, color: T.black, lineHeight: 1.6 },
   summaryBlock: { marginTop: 14 },
@@ -341,7 +341,7 @@ export function PreviewPdf({ vocab, synonyms, summary, examBlock, title: titlePr
             <View style={s.summaryBlock}>
               <View style={s.summaryRow}>
                 <View style={s.summaryLead}>
-                  <Text style={s.summaryLeadLabel}>한줄요약</Text>
+                  <Text style={s.summaryLeadLabel}>요약</Text>
                   <Text style={s.summaryLeadPipe}>|</Text>
                 </View>
                 <Text style={s.summaryInlineText}>{summaryText}</Text>

@@ -42,8 +42,8 @@ function buildTopicPreview(block: Pick<ExamBlock, "topic_basic" | "topic_basic_k
     .trim();
 }
 
-const EXAM_LEAD_CLASS = "w-[76px] shrink-0 pt-0.5 text-[11px] font-bold text-muted-foreground whitespace-nowrap";
-const EXAM_LEAD_GRID_CLASS = "grid grid-cols-[40px_8px] items-start";
+const EXAM_LEAD_CLASS = "w-[48px] shrink-0 pt-0.5 text-[11px] font-bold text-muted-foreground whitespace-nowrap";
+const EXAM_LEAD_GRID_CLASS = "grid grid-cols-[24px_8px] items-start";
 
 export function PreviewExamSection({ examBlock, status, onExamChange, onRegenerateTopic, onRegenerateSummary }: Props) {
   const [regenField, setRegenField] = useState<string | null>(null);
@@ -114,7 +114,7 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
             <div className="flex items-start gap-2.5">
               <div className={EXAM_LEAD_CLASS}>
                 <div className={EXAM_LEAD_GRID_CLASS}>
-                  <span className="text-right">주제</span>
+                  <span>주제</span>
                   <span className="text-center">|</span>
                 </div>
                 <div className="mt-1 flex items-center">
@@ -166,7 +166,7 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
           <div className="flex items-start gap-2.5">
             <div className={EXAM_LEAD_CLASS}>
               <div className={EXAM_LEAD_GRID_CLASS}>
-                <span className="text-right">한줄요약</span>
+                <span>요약</span>
                 <span className="text-center">|</span>
               </div>
             </div>
@@ -185,7 +185,7 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
       </div>
       {candidate && (
         <CompareOverlay
-          title={candidate.field === "summary" ? "한줄요약" : "주제"}
+          title={candidate.field === "summary" ? "요약" : "주제"}
           oldContent={<p className="text-sm leading-relaxed whitespace-pre-wrap">{candidate.oldVal}</p>}
           newContent={<p className="text-sm leading-relaxed whitespace-pre-wrap">{candidate.newVal}</p>}
           onAccept={acceptCandidate}
