@@ -401,6 +401,84 @@ function buildSystemPrompt(mode: SingleMode, grade: Grade): string {
   return `${prefix}\n\n${body}`;
 }
 
+// ── topic 후처리 폴백: 4개 필드를 강제로 채움 ──
+async function ensureTopicVariants(
+  parsed: any,
+  passage: string,
+  grade: Grade,
+  apiKey: string,
+): Promise<any> {
+  const eb = (parsed && typeof parsed === "object" ? parsed.exam_block : null) || {};
+
+  // 옛 단수 스키마 → basic으로 승격
+  if (!eb.topic_basic && typeof eb.topic === "string" && eb.topic.trim()) {
+    eb.topic_basic = eb.topic.trim();
+  }
+  if (!eb.topic_basic_ko && typeof eb.topic_ko === "string" && eb.topic_ko.trim()) {
+    eb.topic_basic_ko = eb.topic_ko.trim();
+  }
+
+  const basicEn = typeof eb.topic_basic === "string" ? eb.topic_basic.trim() : "";
+  const basicKo = typeof eb.topic_basic_ko === "string" ? eb.topic_basic_ko.trim() : "";
+  const advEn = typeof eb.topic_advanced === "string" ? eb.topic_advanced.trim() : "";
+  const advKo = typeof eb.topic_advanced_ko === "string" ? eb.topic_advanced_ko.trim() : "";
+
+  if (basicEn && basicKo && advEn && advKo) {
+    return { ...parsed, exam_block: { ...eb, topic_basic: basicEn, topic_basic_ko: basicKo, topic_advanced: advEn, topic_advanced_ko: advKo } };
+  }
+  if (!basicEn) return parsed; // basic도 못 채우면 폴백 불가
+
+  // advanced 전용 보강 호출
+  try {
+    const sysPrompt = `${gradePrefix(grade)}
+
+${topicRulesByGrade(grade)}
+
+[작업]
+아래 지문에 대한 한국 수능형 topic 답안 중, 이미 정해진 basic 버전과 **다른 head noun / framing**을 사용한 advanced 버전 한 개만 생성하라.
+
+[제약]
+- basic과 동일한 중심 주제이되, 더 압축적·개념 중심·평가적 명사구.
+- 단순 동의어 치환·어순 변경 금지.
+- 6~11 단어 영문 명사구.
+- 마침표 금지, 문장 금지.
+- 한국어 번역도 자연스러운 명사구.
+
+[출력 형식 — JSON 객체만, 다른 텍스트 금지]
+{"topic_advanced":"...","topic_advanced_ko":"..."}`;
+
+    const userPrompt = `[지문]
+${passage}
+
+[이미 정해진 basic]
+- topic_basic: ${basicEn}
+- topic_basic_ko: ${basicKo || "(없음 — 자유롭게 번역)"}`;
+
+    const content = await callAi(
+      apiKey,
+      [
+        { role: "system", content: sysPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      { temperature: 0.6 },
+    );
+    const advParsed = safeParseJson(content);
+    const newAdvEn = typeof advParsed?.topic_advanced === "string" ? advParsed.topic_advanced.trim() : "";
+    const newAdvKo = typeof advParsed?.topic_advanced_ko === "string" ? advParsed.topic_advanced_ko.trim() : "";
+    if (newAdvEn) eb.topic_advanced = newAdvEn;
+    if (newAdvKo) eb.topic_advanced_ko = newAdvKo;
+  } catch (err) {
+    console.error("[analyze-preview:topic] advanced fallback failed:", err);
+  }
+
+  // 한국어가 비면 영문으로 폴백 (UI가 빈칸으로 보이는 것 방지)
+  if (!eb.topic_basic_ko && eb.topic_basic) eb.topic_basic_ko = eb.topic_basic;
+  if (!eb.topic_advanced_ko && eb.topic_advanced) eb.topic_advanced_ko = eb.topic_advanced;
+  if (!eb.topic_advanced && eb.topic_basic) eb.topic_advanced = eb.topic_basic;
+
+  return { ...parsed, exam_block: eb };
+}
+
 // ── 단일 모드 1회 호출 + (passage_summary 한정) length-retry 재시도까지 책임 ──
 async function runSingleMode(
   mode: SingleMode,
