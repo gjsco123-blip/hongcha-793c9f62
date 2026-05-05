@@ -202,6 +202,11 @@ const s = StyleSheet.create({
   },
   fieldEn: { fontFamily: T.en, fontSize: 8, color: T.black, lineHeight: 1.6 },
   fieldKo: { fontSize: 7, color: T.g70, lineHeight: 1.5, marginTop: 1.5 },
+  topicRow: { flexDirection: "row" as const, alignItems: "flex-start" as const, gap: 6 },
+  topicInlineLabel: { fontSize: 7.5, fontWeight: 800, color: T.g50, lineHeight: 1.6 },
+  topicInlineStack: { flex: 1 },
+  topicInlineEn: { fontFamily: T.en, fontSize: 8, color: T.black, lineHeight: 1.6 },
+  topicInlineKo: { fontSize: 7, color: T.g70, lineHeight: 1.5, marginTop: 1.5 },
   summaryRow: { flexDirection: "row" as const, alignItems: "flex-start" as const, gap: 6 },
   summaryInlineLabel: { fontSize: 7.5, fontWeight: 800, color: T.g50, lineHeight: 1.6 },
   summaryInlineText: { flex: 1, fontSize: 8, color: T.black, lineHeight: 1.6 },
@@ -307,9 +312,13 @@ export function PreviewPdf({ vocab, synonyms, summary, examBlock, title: titlePr
         {hasExam && (
           <View>
             {(hasVocab || hasSummary || hasSynonyms) && <View style={s.thinRule} />}
-            <Text style={[s.fieldLabel, { marginTop: 4 }]}>Topic</Text>
-            <Text style={s.fieldEn}>{examBlock.topic}</Text>
-            {examBlock.topic_ko && <Text style={s.fieldKo}>{examBlock.topic_ko}</Text>}
+            <View style={[s.topicRow, { marginTop: 4 }]}>
+              <Text style={s.topicInlineLabel}>주제 |</Text>
+              <View style={s.topicInlineStack}>
+                <Text style={s.topicInlineEn}>{examBlock.topic}</Text>
+                {examBlock.topic_ko && <Text style={s.topicInlineKo}>{examBlock.topic_ko}</Text>}
+              </View>
+            </View>
             <View style={s.summaryBlock}>
               <View style={s.summaryRow}>
                 <Text style={s.summaryInlineLabel}>한줄요약 |</Text>

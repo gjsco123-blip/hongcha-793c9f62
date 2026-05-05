@@ -71,23 +71,30 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
 
   return (
     <section className="border-t border-border pt-5">
-      <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-4 flex items-center gap-2">
-        Topic
-        {status === "loading" && <span className="inline-block w-3.5 h-3.5 animate-spin border-2 border-muted-foreground border-t-transparent rounded-full" />}
-      </h2>
       <div className="space-y-5">
         {/* Topic */}
         <div>
-          <div className="flex items-center mb-1.5">
-            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.08em]">Topic</p>
-            {status === "done" && <FieldRegenButton onClick={() => handleRegen("topic", onRegenerateTopic)} loading={regenField === "topic"} />}
+          <div className="flex items-start gap-3">
+            <div className="pt-0.5 text-[11px] font-bold text-muted-foreground whitespace-nowrap flex items-center">
+              <span>주제 |</span>
+              {status === "done" && <FieldRegenButton onClick={() => handleRegen("topic", onRegenerateTopic)} loading={regenField === "topic"} />}
+              {status === "loading" && <span className="inline-block w-3.5 h-3.5 animate-spin border-2 border-muted-foreground border-t-transparent rounded-full ml-2" />}
+            </div>
+            <div className="flex-1">
+              <input
+                value={examBlock.topic}
+                onChange={(e) => update({ topic: e.target.value })}
+                className="w-full text-sm font-english leading-relaxed bg-transparent border-none outline-none focus:bg-muted/20 rounded px-1 -mx-1"
+              />
+              {examBlock.topic_ko !== undefined && (
+                <input
+                  value={examBlock.topic_ko || ""}
+                  onChange={(e) => update({ topic_ko: e.target.value })}
+                  className="w-full text-xs text-muted-foreground/60 leading-relaxed mt-0.5 bg-transparent border-none outline-none focus:bg-muted/20 rounded px-1 -mx-1"
+                />
+              )}
+            </div>
           </div>
-          <input value={examBlock.topic} onChange={(e) => update({ topic: e.target.value })}
-            className="w-full text-sm font-english leading-relaxed bg-transparent border-none outline-none focus:bg-muted/20 rounded px-1 -mx-1" />
-          {examBlock.topic_ko !== undefined && (
-            <input value={examBlock.topic_ko || ""} onChange={(e) => update({ topic_ko: e.target.value })}
-              className="w-full text-xs text-muted-foreground/60 mt-0.5 bg-transparent border-none outline-none focus:bg-muted/20 rounded px-1 -mx-1" />
-          )}
         </div>
         {/* Summary */}
         <div>
