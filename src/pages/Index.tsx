@@ -21,7 +21,6 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { PdfPreviewDialog } from "@/components/pdf/PdfPreviewDialog";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { extractGradeFromSchoolName } from "@/lib/grade-utils";
 type Preset = "고1" | "고2" | "수능";
 
 async function invokeWithRetry(
@@ -977,10 +976,13 @@ export default function Index() {
               )}
               <button
                 onClick={() => {
-                  const school = categories.schools.find((s) => s.id === categories.selectedSchoolId);
-                  const grade = extractGradeFromSchoolName(school?.name);
                   navigate("/preview", {
-                    state: { passage, pdfTitle, passageId: categories.selectedPassageId, grade },
+                    state: {
+                      passage,
+                      pdfTitle,
+                      passageId: categories.selectedPassageId,
+                      grade: categories.selectedSchoolGrade ?? 2,
+                    },
                   });
                 }}
                 disabled={!passage.trim()}

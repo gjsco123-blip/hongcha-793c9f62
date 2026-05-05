@@ -16,7 +16,7 @@ import type { VocabItem, SynAntItem, ExamBlock, SectionStatus } from "@/componen
 import { mergePassageStore, parsePassageStore } from "@/lib/passage-store";
 import { getDisplaySummary, normalizeExamBlock } from "@/lib/exam-block";
 import { sanitizeSynonymItems } from "@/lib/synonym-sanitizer";
-import type { Grade } from "@/lib/grade-utils";
+import { coerceGrade, type Grade } from "@/lib/grade-utils";
 
 async function invokeRetry(fn: string, body: any, maxRetries = 3) {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -68,7 +68,8 @@ export default function Preview() {
   // 학년: state → sessionStorage 캐시 → 폴백 고2
   const incomingGrade = (location.state as any)?.grade as Grade | undefined;
   const cachedGrade = (cached?.grade as Grade | undefined);
-  const grade: Grade = (incomingGrade ?? cachedGrade ?? 2) as Grade;
+  const selectedSchoolGrade = coerceGrade(sessionStorage.getItem("selected-school-grade"));
+  const grade: Grade = (incomingGrade ?? cachedGrade ?? selectedSchoolGrade ?? 2) as Grade;
 
   // If navigated with a new passage, use it; otherwise restore cache
   const isNewPassage = !!incomingPassage && incomingPassage !== cached?.passage;

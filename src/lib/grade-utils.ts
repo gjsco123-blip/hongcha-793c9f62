@@ -9,3 +9,9 @@ export function extractGradeFromSchoolName(name?: string | null): Grade {
   const m = name.match(/고\s*([1-3])/);
   return (m ? Number(m[1]) : 2) as Grade;
 }
+
+export function coerceGrade(value: unknown): Grade | null {
+  if (value === 1 || value === 2 || value === 3) return value;
+  if (value === "1" || value === "2" || value === "3") return Number(value) as Grade;
+  return null;
+}

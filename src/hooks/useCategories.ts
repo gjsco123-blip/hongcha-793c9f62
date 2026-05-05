@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { coerceGrade, extractGradeFromSchoolName, type Grade } from "@/lib/grade-utils";
 
 export interface School {
   id: string;
@@ -28,11 +29,23 @@ export function useCategories() {
   const [passages, setPassages] = useState<Passage[]>([]);
   const [selectedSchoolId, _setSelectedSchoolId] = useState<string | null>(() => sessionStorage.getItem("selected-school-id"));
   const [selectedPassageId, _setSelectedPassageId] = useState<string | null>(() => sessionStorage.getItem("selected-passage-id"));
+  const [selectedSchoolGrade, setSelectedSchoolGrade] = useState<Grade | null>(() =>
+    coerceGrade(sessionStorage.getItem("selected-school-grade"))
+  );
   
   const setSelectedSchoolId = (id: string | null) => {
     _setSelectedSchoolId(id || null);
-    if (id) sessionStorage.setItem("selected-school-id", id);
-    else sessionStorage.removeItem("selected-school-id");
+    if (id) {
+      sessionStorage.setItem("selected-school-id", id);
+      const school = schools.find((s) => s.id === id);
+      const grade = extractGradeFromSchoolName(school?.name);
+      setSelectedSchoolGrade(grade);
+      sessionStorage.setItem("selected-school-grade", String(grade));
+    } else {
+      sessionStorage.removeItem("selected-school-id");
+      sessionStorage.removeItem("selected-school-grade");
+      setSelectedSchoolGrade(null);
+    }
   };
   const setSelectedPassageId = (id: string | null) => {
     _setSelectedPassageId(id || null);
@@ -92,6 +105,15 @@ export function useCategories() {
     }
     prevSchoolIdRef.current = selectedSchoolId;
   }, [selectedSchoolId, fetchPassages]);
+
+  useEffect(() => {
+    if (!selectedSchoolId) return;
+    const school = schools.find((s) => s.id === selectedSchoolId);
+    if (!school) return;
+    const grade = extractGradeFromSchoolName(school.name);
+    setSelectedSchoolGrade(grade);
+    sessionStorage.setItem("selected-school-grade", String(grade));
+  }, [schools, selectedSchoolId]);
 
   // CRUD
   const addSchool = async (name: string) => {
@@ -204,6 +226,7 @@ export function useCategories() {
     schools,
     passages,
     selectedSchoolId,
+    selectedSchoolGrade,
     selectedPassageId,
     selectedPassage,
     loadingSchools,
