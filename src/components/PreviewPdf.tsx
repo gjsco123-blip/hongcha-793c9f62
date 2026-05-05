@@ -104,41 +104,21 @@ const s = StyleSheet.create({
     paddingHorizontal: 2,
   },
   notepadLabel: {
-    fontSize: 11,
-    fontWeight: 900,
-    letterSpacing: 0.5,
-    textTransform: "uppercase" as const,
-    color: "#ffffff",
-    backgroundColor: "#64748b",
-    paddingHorizontal: 10,
-    paddingTop: 6,
-    paddingBottom: 5,
-    alignSelf: "flex-start" as const,
-    marginBottom: 8,
-  },
-  notepadMetaRow: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    borderBottomWidth: 0.6,
-    borderBottomColor: T.black,
-    paddingBottom: 5,
-    marginBottom: 10,
-  },
-  notepadMetaText: {
-    fontSize: 6.4,
+    fontSize: 6.8,
     fontWeight: 800,
     letterSpacing: 0.45,
     textTransform: "uppercase" as const,
     color: "#111111",
-  },
-  notepadMetaRule: {
-    flexGrow: 1,
-    height: 0.5,
-    backgroundColor: "#6b7280",
-    marginLeft: 10,
+    paddingTop: 5,
+    paddingBottom: 5,
+    marginBottom: 8,
+    borderTopWidth: 0.6,
+    borderTopColor: T.black,
+    borderBottomWidth: 0.6,
+    borderBottomColor: T.black,
   },
   notepadLine: {
-    height: 25,
+    height: 24,
     borderBottomWidth: 0.45,
     borderBottomColor: "#333333",
   },
@@ -276,10 +256,6 @@ export function PreviewPdf({ synonyms, summary, examBlock, title: titleProp }: P
         <View>
           <View style={s.notepadBox}>
             <Text style={s.notepadLabel}>WIDE-NOTEPAD</Text>
-            <View style={s.notepadMetaRow}>
-              <Text style={s.notepadMetaText}>Subject / Title</Text>
-              <View style={s.notepadMetaRule} />
-            </View>
             {Array.from({ length: 7 }).map((_, idx) => (
               <View key={idx} style={s.notepadLine} />
             ))}
