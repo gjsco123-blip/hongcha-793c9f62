@@ -104,7 +104,7 @@ const PROMPT_COMMON_RULES = `[Critical Korean Exam Rules]
 - 불필요하게 어려운 한자어는 피하되, 고등학교 독해에서 흔히 쓰는 개념어는 허용한다.
 - JSON 객체만 출력. 다른 텍스트 금지.`;
 
-const PROMPT_TOPIC_RULES = `[topic 규칙]
+const PROMPT_TOPIC_RULES_G12 = `[topic 규칙]
 - This MUST be written as a Korean mock-exam topic choice, NOT an explanation.
 - Output a concise English noun phrase that functions as a multiple-choice answer.
 - Use ONLY one central conceptual axis. Do NOT combine multiple ideas.
@@ -139,6 +139,59 @@ const PROMPT_TOPIC_RULES = `[topic 규칙]
 
 - Length: 6~11 words ONLY.
 - Style priority: clarity > abstraction; exam usability > completeness.
+- If multiple elements exist, choose ONE and center the phrase around it.
+- Rewrite aggressively into a clean test option.
+- The output should look like a clean answer choice, not a summary or explanation.
+
+[topic_ko 규칙]
+- topic의 한국어 번역.
+- 자연스러운 한국어 명사구로 번역한다.
+- 불필요하게 어려운 한자어는 피하되, 고등학교 독해에서 흔히 쓰는 개념어는 허용한다.`;
+
+const PROMPT_TOPIC_RULES_G3 = `[topic 규칙]
+- This MUST be written as a Korean CSAT-style topic choice, NOT an explanation.
+- Output a concise English noun phrase that functions as a multiple-choice answer.
+- Use ONLY one central conceptual axis. Do NOT combine multiple ideas.
+
+- Prefer evaluative or abstract head nouns:
+  significance of ~
+  consequence(s) of ~
+  limitation(s) of ~
+  implication(s) of ~
+  recognition of ~
+  interplay between A and B
+  functional aspect(s) of ~
+  outcome of ~
+  effect of ~ on ~
+
+- AVOID easy school-level frames unless the passage is genuinely simple:
+  the role of ~ in ~
+  the importance of ~
+  the necessity of ~
+  benefits of ~
+  factors affecting ~
+
+- Strongly AVOID explanatory constructions:
+  construction of ~ due to ~
+  formation of ~ from ~
+  process of ~
+  how ~ happens
+  any "due to / because of / resulting from" chains
+
+- Do NOT include:
+  contrast tails such as despite, although, while, even though
+  multiple clauses
+  "and" connecting two ideas
+  verbs as a full sentence structure
+  a period at the end
+
+- Invalid if the topic contains a finite verb such as is, are, has, have, does, makes, causes, ensures, shows, suggests, helps, uses, utilizes, creates, forms, changes.
+- Invalid if the topic starts with "The human brain + verb", "People + verb", "Humans + verb", or "A/An/The + noun + verb".
+- If a draft looks explanatory, causal, or too concrete, compress it into a more evaluative noun phrase.
+- The output should feel more abstract, compressed, and concept-driven than a typical high-school-1/2 topic.
+
+- Length: 6~11 words ONLY.
+- Style priority: abstraction with clarity > exam usability > completeness.
 - If multiple elements exist, choose ONE and center the phrase around it.
 - Rewrite aggressively into a clean test option.
 - The output should look like a clean answer choice, not a summary or explanation.
@@ -282,6 +335,10 @@ function topicExamplesByGrade(grade: Grade): string {
 - 고3처럼 지나치게 압축하거나 철학적으로 만들지 않는다.`;
 }
 
+function topicRulesByGrade(grade: Grade): string {
+  return grade === 3 ? PROMPT_TOPIC_RULES_G3 : PROMPT_TOPIC_RULES_G12;
+}
+
 // 단일 영역 모드 전용 (topic | title | exam_summary | passage_summary).
 // mode="all"은 더 이상 이 함수를 사용하지 않음 — 4개 모듈 모드 병렬 호출로 처리.
 type SingleMode = Exclude<Mode, "all">;
@@ -293,9 +350,9 @@ function buildSystemPrompt(mode: SingleMode, grade: Grade): string {
     case "topic":
       body = [
         PROMPT_INTRO,
-        topicExamplesByGrade(grade),
-        PROMPT_TOPIC_RULES,
+        topicRulesByGrade(grade),
         PROMPT_COMMON_RULES,
+        topicExamplesByGrade(grade),
         PROMPT_OUTPUT_TOPIC,
       ].join("\n\n");
       break;
@@ -442,7 +499,7 @@ serve(async (req) => {
     };
 
     const [topicRes, titleRes, examSumRes, passageSumRes] = await Promise.allSettled([
-      launch("topic", 0),
+      runSingleMode("topic", passage, grade, LOVABLE_API_KEY, { temperature: 0.5 }),
       launch("title", 50),
       launch("exam_summary", 100),
       launch("passage_summary", 150),
