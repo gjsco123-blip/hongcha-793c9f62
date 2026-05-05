@@ -303,7 +303,7 @@ function topicExamplesByGrade(grade: Grade): string {
 - significance of weighing forest resources’ non-market values
 - outcome of music radio businesses’ attempts to attract large audiences
 - consequences of profit-oriented management of museums
-- benefits of publicizing information to ensure free choices
+- implications of publicizing information for free choices
 - limitations of using empirical observations in farming
 - functional aspects of a paradigm in scientific research
 - issues of allocating unfit tasks to humans in automated systems
@@ -337,6 +337,10 @@ function topicExamplesByGrade(grade: Grade): string {
 
 function topicRulesByGrade(grade: Grade): string {
   return grade === 3 ? PROMPT_TOPIC_RULES_G3 : PROMPT_TOPIC_RULES_G12;
+}
+
+function initialTopicTemperatureByGrade(grade: Grade): number {
+  return grade === 3 ? 0.5 : 0.3;
 }
 
 // 단일 영역 모드 전용 (topic | title | exam_summary | passage_summary).
@@ -499,7 +503,7 @@ serve(async (req) => {
     };
 
     const [topicRes, titleRes, examSumRes, passageSumRes] = await Promise.allSettled([
-      runSingleMode("topic", passage, grade, LOVABLE_API_KEY, { temperature: 0.5 }),
+      runSingleMode("topic", passage, grade, LOVABLE_API_KEY, { temperature: initialTopicTemperatureByGrade(grade) }),
       launch("title", 50),
       launch("exam_summary", 100),
       launch("passage_summary", 150),
