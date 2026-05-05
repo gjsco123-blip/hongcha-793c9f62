@@ -222,10 +222,10 @@ const s = StyleSheet.create({
     paddingTop: 3,
     paddingBottom: 4,
     textAlign: "center" as const,
-    letterSpacing: 0.25,
+    letterSpacing: 0.35,
   },
   topicInlineStack: { flex: 1 },
-  topicInlineEn: { fontFamily: T.en, fontSize: 8, color: T.black, lineHeight: 1.6 },
+  topicInlineEn: { fontFamily: T.en, fontSize: 9, color: T.black, lineHeight: 1.6 },
   topicInlineKo: { fontSize: 7, color: T.g70, lineHeight: 1.5, marginTop: 1.5 },
   summaryRow: { flexDirection: "row" as const, alignItems: "flex-start" as const, gap: 5 },
   summaryLead: { width: 37, flexDirection: "row" as const, alignItems: "flex-start" as const },
@@ -241,7 +241,7 @@ const s = StyleSheet.create({
     paddingTop: 3,
     paddingBottom: 4,
     textAlign: "center" as const,
-    letterSpacing: 0.25,
+    letterSpacing: 0.35,
   },
   summaryInlineText: { flex: 1, fontSize: 8, color: T.black, lineHeight: 1.6 },
   summaryBlock: { marginTop: 14 },
@@ -329,8 +329,8 @@ export function PreviewPdf({ vocab, synonyms, summary, examBlock, title: titlePr
             <View style={s.synTable}>
               <View style={s.synHdr}>
                 <Text style={{ ...s.synWord, ...s.synHdrText }}>Word</Text>
-                <Text style={{ ...s.synSyn, ...s.synHdrText }}>Synonym</Text>
-                <Text style={{ ...s.synAnt, ...s.synHdrText }}>Antonym</Text>
+                <Text style={{ ...s.synSyn, ...s.synHdrText }}>=</Text>
+                <Text style={{ ...s.synAnt, ...s.synHdrText }}>≠</Text>
               </View>
               {synonyms.map((item, idx) => (
                 <View key={idx} style={s.synRow}>

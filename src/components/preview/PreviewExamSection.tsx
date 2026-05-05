@@ -45,7 +45,7 @@ function buildTopicPreview(block: Pick<ExamBlock, "topic_basic" | "topic_basic_k
 const EXAM_LEAD_CLASS = "w-[56px] shrink-0 pt-0.5 whitespace-nowrap";
 const EXAM_LEAD_GRID_CLASS = "grid grid-cols-[40px] items-start";
 const EXAM_CHIP_CLASS =
-  "inline-flex items-center justify-center rounded-[6px] bg-black px-[7px] pt-[3px] pb-[4px] text-[12px] font-extrabold leading-none tracking-[0.03em] text-white";
+  "inline-flex items-center justify-center rounded-[6px] bg-black px-[7px] pt-[3px] pb-[4px] text-[12px] font-extrabold leading-none tracking-[0.05em] text-white";
 
 export function PreviewExamSection({ examBlock, status, onExamChange, onRegenerateTopic, onRegenerateSummary }: Props) {
   const [regenField, setRegenField] = useState<string | null>(null);

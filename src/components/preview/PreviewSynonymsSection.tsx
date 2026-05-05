@@ -121,8 +121,8 @@ export function PreviewSynonymsSection({
         <thead>
           <tr className="bg-muted/30 border-b-2 border-foreground/80">
             <th className="text-left px-3 py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[25%] border-r border-border">Word</th>
-            <th className="text-left px-3 py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[35%]">Synonym</th>
-            <th className="text-left px-3 py-2.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[35%]">Antonym</th>
+            <th className="text-left px-3 py-2.5 text-[10px] font-bold text-muted-foreground tracking-wider w-[35%]">=</th>
+            <th className="text-left px-3 py-2.5 text-[10px] font-bold text-muted-foreground tracking-wider w-[35%]">≠</th>
             {showActions && <th className="w-[5%]"></th>}
           </tr>
         </thead>
