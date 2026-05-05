@@ -1,4 +1,4 @@
-import { Document, Page, View, Text, StyleSheet, Font } from "@react-pdf/renderer";
+import { Document, Page, View, Text, StyleSheet, Font, Svg, Line } from "@react-pdf/renderer";
 import { PdfHeader } from "@/components/pdf/PdfHeader";
 import { getDisplaySummary } from "@/lib/exam-block";
 
