@@ -212,7 +212,10 @@ export default function Preview() {
       .then((d) => {
         setSummary(d.summary || "");
         const eb = normalizeExamBlock(d.exam_block as ExamBlock | null);
-        if (eb) eb.topic = capitalizeFirst(eb.topic);
+        if (eb) {
+          eb.topic_basic = capitalizeFirst(eb.topic_basic);
+          eb.topic_advanced = capitalizeFirst(eb.topic_advanced);
+        }
         setExamBlock(eb || null);
         setPreviewStatus("done");
       })
@@ -350,12 +353,26 @@ export default function Preview() {
   const regenExamTopic = useCallback(async () => {
     const data = await invokeWithFallback(
       "analyze-preview",
-      { passage, mode: "topic", grade, previous: { topic: examBlock?.topic } },
+      {
+        passage,
+        mode: "topic",
+        grade,
+        previous: {
+          topic_basic: examBlock?.topic_basic,
+          topic_advanced: examBlock?.topic_advanced,
+        },
+      },
       { passage, grade }
     );
-    const t = data.exam_block?.topic || "";
-    return { en: t ? t.charAt(0).toUpperCase() + t.slice(1) : t, ko: data.exam_block?.topic_ko };
-  }, [passage, grade, examBlock?.topic]);
+    const basic = data.exam_block?.topic_basic || data.exam_block?.topic || "";
+    const advanced = data.exam_block?.topic_advanced || "";
+    return {
+      basicEn: basic ? basic.charAt(0).toUpperCase() + basic.slice(1) : basic,
+      basicKo: data.exam_block?.topic_basic_ko || data.exam_block?.topic_ko,
+      advancedEn: advanced ? advanced.charAt(0).toUpperCase() + advanced.slice(1) : advanced,
+      advancedKo: data.exam_block?.topic_advanced_ko,
+    };
+  }, [passage, grade, examBlock?.topic_basic, examBlock?.topic_advanced]);
 
   const regenExamSummary = useCallback(async () => {
     const data = await invokeWithFallback(

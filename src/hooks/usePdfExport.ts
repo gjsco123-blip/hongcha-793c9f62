@@ -40,8 +40,10 @@ interface SynAntItem {
 }
 
 interface ExamBlock {
-  topic: string;
-  topic_ko?: string;
+  topic_basic: string;
+  topic_basic_ko?: string;
+  topic_advanced: string;
+  topic_advanced_ko?: string;
   one_sentence_summary: string;
   one_sentence_summary_ko?: string;
 }

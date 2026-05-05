@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { SectionHeader } from "./SectionHeader";
 import { CompareOverlay } from "./CompareOverlay";
 import { RefreshCw } from "lucide-react";
 import type { ExamBlock, SectionStatus } from "./types";
@@ -9,7 +8,12 @@ interface Props {
   examBlock: ExamBlock | null;
   status: SectionStatus;
   onExamChange: (v: ExamBlock) => void;
-  onRegenerateTopic: () => Promise<{ en: string; ko?: string }>;
+  onRegenerateTopic: () => Promise<{
+    basicEn: string;
+    basicKo?: string;
+    advancedEn: string;
+    advancedKo?: string;
+  }>;
   onRegenerateSummary: () => Promise<{ summary: string }>;
 }
 
@@ -25,21 +29,42 @@ function FieldRegenButton({ onClick, loading }: { onClick: () => void; loading: 
   );
 }
 
+function buildTopicPreview(block: Pick<ExamBlock, "topic_basic" | "topic_basic_ko" | "topic_advanced" | "topic_advanced_ko">) {
+  return [
+    `기본형 | ${block.topic_basic || ""}`,
+    block.topic_basic_ko || "",
+    "",
+    `고급형 | ${block.topic_advanced || ""}`,
+    block.topic_advanced_ko || "",
+  ]
+    .filter((line, idx, arr) => !(line === "" && arr[idx - 1] === ""))
+    .join("\n")
+    .trim();
+}
+
 export function PreviewExamSection({ examBlock, status, onExamChange, onRegenerateTopic, onRegenerateSummary }: Props) {
   const [regenField, setRegenField] = useState<string | null>(null);
-  const [candidate, setCandidate] = useState<{ field: string; oldVal: string; oldKo?: string; newVal: string; newKo?: string } | null>(null);
+  const [candidate, setCandidate] = useState<{ field: "topic" | "summary"; oldVal: string; newVal: string } | null>(null);
 
   if (status === "idle" || !examBlock) return null;
 
   const update = (patch: Partial<ExamBlock>) => onExamChange({ ...examBlock, ...patch });
 
-  const handleRegen = async (field: string, fn: () => Promise<{ en: string; ko?: string }>) => {
-    setRegenField(field);
+  const handleTopicRegen = async () => {
+    setRegenField("topic");
     try {
-      const result = await fn();
-      const oldVal = field === "topic" ? examBlock.topic : examBlock.one_sentence_summary;
-      const oldKo = field === "topic" ? examBlock.topic_ko : examBlock.one_sentence_summary_ko;
-      setCandidate({ field, oldVal, oldKo, newVal: result.en, newKo: result.ko });
+      const result = await onRegenerateTopic();
+      setCandidate({
+        field: "topic",
+        oldVal: buildTopicPreview(examBlock),
+        newVal: buildTopicPreview({
+          topic_basic: result.basicEn,
+          topic_basic_ko: result.basicKo,
+          topic_advanced: result.advancedEn,
+          topic_advanced_ko: result.advancedKo,
+          one_sentence_summary: "",
+        } as ExamBlock),
+      });
     } finally {
       setRegenField(null);
     }
@@ -61,42 +86,68 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
 
   const acceptCandidate = () => {
     if (!candidate) return;
-    if (candidate.field === "topic") update({ topic: candidate.newVal, topic_ko: candidate.newKo });
-    else update({
-      one_sentence_summary: candidate.newVal,
-      one_sentence_summary_ko: candidate.newVal,
-    });
+    if (candidate.field === "topic") {
+      const [basicLine = "", basicKo = "", , advancedLine = "", advancedKo = ""] = candidate.newVal.split("\n");
+      update({
+        topic_basic: basicLine.replace(/^기본형\s*\|\s*/, "").trim(),
+        topic_basic_ko: basicKo.trim() || undefined,
+        topic_advanced: advancedLine.replace(/^고급형\s*\|\s*/, "").trim(),
+        topic_advanced_ko: advancedKo.trim() || undefined,
+      });
+    } else {
+      update({
+        one_sentence_summary: candidate.newVal,
+        one_sentence_summary_ko: candidate.newVal,
+      });
+    }
     setCandidate(null);
   };
 
   return (
     <section className="border-t border-border pt-5">
       <div className="space-y-5">
-        {/* Topic */}
         <div>
-          <div className="flex items-start gap-3">
-            <div className="pt-0.5 text-[11px] font-bold text-muted-foreground whitespace-nowrap flex items-center">
-              <span>주제 |</span>
-              {status === "done" && <FieldRegenButton onClick={() => handleRegen("topic", onRegenerateTopic)} loading={regenField === "topic"} />}
-              {status === "loading" && <span className="inline-block w-3.5 h-3.5 animate-spin border-2 border-muted-foreground border-t-transparent rounded-full ml-2" />}
-            </div>
-            <div className="flex-1">
-              <input
-                value={examBlock.topic}
-                onChange={(e) => update({ topic: e.target.value })}
-                className="w-full text-sm font-english leading-relaxed bg-transparent border-none outline-none focus:bg-muted/20 rounded px-1 -mx-1"
-              />
-              {examBlock.topic_ko !== undefined && (
+          <div className="space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="pt-0.5 text-[11px] font-bold text-muted-foreground whitespace-nowrap flex items-center">
+                <span>기본형 |</span>
+                {status === "done" && <FieldRegenButton onClick={handleTopicRegen} loading={regenField === "topic"} />}
+                {status === "loading" && <span className="inline-block w-3.5 h-3.5 animate-spin border-2 border-muted-foreground border-t-transparent rounded-full ml-2" />}
+              </div>
+              <div className="flex-1">
                 <input
-                  value={examBlock.topic_ko || ""}
-                  onChange={(e) => update({ topic_ko: e.target.value })}
+                  value={examBlock.topic_basic}
+                  onChange={(e) => update({ topic_basic: e.target.value })}
+                  className="w-full text-sm font-english leading-relaxed bg-transparent border-none outline-none focus:bg-muted/20 rounded px-1 -mx-1"
+                />
+                <input
+                  value={examBlock.topic_basic_ko || ""}
+                  onChange={(e) => update({ topic_basic_ko: e.target.value || undefined })}
                   className="w-full text-xs text-muted-foreground/60 leading-relaxed mt-0.5 bg-transparent border-none outline-none focus:bg-muted/20 rounded px-1 -mx-1"
                 />
-              )}
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="pt-0.5 text-[11px] font-bold text-muted-foreground whitespace-nowrap">
+                <span>고급형 |</span>
+              </div>
+              <div className="flex-1">
+                <input
+                  value={examBlock.topic_advanced}
+                  onChange={(e) => update({ topic_advanced: e.target.value })}
+                  className="w-full text-sm font-english leading-relaxed bg-transparent border-none outline-none focus:bg-muted/20 rounded px-1 -mx-1"
+                />
+                <input
+                  value={examBlock.topic_advanced_ko || ""}
+                  onChange={(e) => update({ topic_advanced_ko: e.target.value || undefined })}
+                  className="w-full text-xs text-muted-foreground/60 leading-relaxed mt-0.5 bg-transparent border-none outline-none focus:bg-muted/20 rounded px-1 -mx-1"
+                />
+              </div>
             </div>
           </div>
         </div>
-        {/* Summary */}
+
         <div>
           <div className="flex items-center justify-end mb-1.5">
             {status === "done" && <FieldRegenButton onClick={handleSummaryRegen} loading={regenField === "summary"} />}
@@ -105,10 +156,12 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
             <span className="pt-0.5 text-[11px] font-bold text-muted-foreground whitespace-nowrap">한줄요약 |</span>
             <input
               value={getDisplaySummary(examBlock)}
-              onChange={(e) => update({
-                one_sentence_summary: e.target.value,
-                one_sentence_summary_ko: e.target.value,
-              })}
+              onChange={(e) =>
+                update({
+                  one_sentence_summary: e.target.value,
+                  one_sentence_summary_ko: e.target.value,
+                })
+              }
               className="w-full text-sm leading-relaxed bg-transparent border-none outline-none focus:bg-muted/20 rounded px-1 -mx-1"
             />
           </div>
@@ -116,17 +169,9 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
       </div>
       {candidate && (
         <CompareOverlay
-          title={candidate.field === "summary" ? "한줄요약" : `${candidate.field.charAt(0).toUpperCase() + candidate.field.slice(1)}`}
-          oldContent={
-            <div>
-              <p className="text-sm leading-relaxed">{candidate.oldVal}</p>
-            </div>
-          }
-          newContent={
-            <div>
-              <p className="text-sm leading-relaxed">{candidate.newVal}</p>
-            </div>
-          }
+          title={candidate.field === "summary" ? "한줄요약" : "주제"}
+          oldContent={<p className="text-sm leading-relaxed whitespace-pre-wrap">{candidate.oldVal}</p>}
+          newContent={<p className="text-sm leading-relaxed whitespace-pre-wrap">{candidate.newVal}</p>}
           onAccept={acceptCandidate}
           onReject={() => setCandidate(null)}
         />

@@ -28,7 +28,11 @@ interface SentenceResult {
 
 interface ExamBlock {
   topic?: string;
-  title?: string;
+  topic_ko?: string;
+  topic_basic?: string;
+  topic_basic_ko?: string;
+  topic_advanced?: string;
+  topic_advanced_ko?: string;
   one_sentence_summary?: string;
   one_sentence_summary_ko?: string;
 }
@@ -180,6 +184,14 @@ const styles = StyleSheet.create({
     color: "#111",
     lineHeight: 1.6,
   },
+  analysisSubText: {
+    fontFamily: "Pretendard",
+    fontSize: 7.5,
+    fontWeight: 400,
+    color: "#444",
+    lineHeight: 1.45,
+    marginTop: 2,
+  },
   analysisSummaryBlock: {
     marginTop: 8,
   },
@@ -316,9 +328,12 @@ function getArcPoints(): ArcPoint[] {
 }
 
 export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDocumentProps) {
-  const topic = (examBlock?.topic || "").trim();
+  const topicBasic = (examBlock?.topic_basic || examBlock?.topic || "").trim();
+  const topicBasicKo = (examBlock?.topic_basic_ko || examBlock?.topic_ko || "").trim();
+  const topicAdvanced = (examBlock?.topic_advanced || "").trim();
+  const topicAdvancedKo = (examBlock?.topic_advanced_ko || "").trim();
   const summary = getDisplaySummary(examBlock);
-  const hasAnalysis = Boolean(topic || summary);
+  const hasAnalysis = Boolean(topicBasic || topicAdvanced || summary);
   const totalChars = results.reduce((acc, cur) => acc + (cur.original?.length || 0), 0);
   const gridStep = 22;
   const gridStart = -22;
@@ -392,21 +407,23 @@ export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDo
 
             {hasAnalysis && (
               <View style={styles.analysisSection}>
-                {topic ? (
+                {topicBasic ? (
                   <View style={styles.analysisItem}>
                     <View style={styles.analysisContentWrap}>
                       <View style={styles.analysisBar} />
-                      <Text style={styles.analysisLabel}>TOPIC</Text>
-                      <Text style={styles.analysisText}>{topic}</Text>
+                      <Text style={styles.analysisLabel}>기본형</Text>
+                      <Text style={styles.analysisText}>{topicBasic}</Text>
+                      {topicBasicKo ? <Text style={styles.analysisSubText}>{topicBasicKo}</Text> : null}
                     </View>
                   </View>
                 ) : null}
-                {heading ? (
+                {topicAdvanced ? (
                   <View style={styles.analysisItem}>
                     <View style={styles.analysisContentWrap}>
                       <View style={styles.analysisBar} />
-                      <Text style={styles.analysisLabel}>TITLE</Text>
-                      <Text style={styles.analysisText}>{heading}</Text>
+                      <Text style={styles.analysisLabel}>고급형</Text>
+                      <Text style={styles.analysisText}>{topicAdvanced}</Text>
+                      {topicAdvancedKo ? <Text style={styles.analysisSubText}>{topicAdvancedKo}</Text> : null}
                     </View>
                   </View>
                 ) : null}

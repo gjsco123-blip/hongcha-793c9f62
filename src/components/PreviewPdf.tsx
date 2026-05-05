@@ -50,8 +50,10 @@ interface SynAntItem {
   antonym: string;
 }
 interface ExamBlock {
-  topic: string;
-  topic_ko?: string;
+  topic_basic: string;
+  topic_basic_ko?: string;
+  topic_advanced: string;
+  topic_advanced_ko?: string;
   one_sentence_summary: string;
   one_sentence_summary_ko?: string;
 }
@@ -313,10 +315,17 @@ export function PreviewPdf({ vocab, synonyms, summary, examBlock, title: titlePr
           <View>
             {(hasVocab || hasSummary || hasSynonyms) && <View style={s.thinRule} />}
             <View style={[s.topicRow, { marginTop: 4 }]}>
-              <Text style={s.topicInlineLabel}>주제 |</Text>
+              <Text style={s.topicInlineLabel}>기본형 |</Text>
               <View style={s.topicInlineStack}>
-                <Text style={s.topicInlineEn}>{examBlock.topic}</Text>
-                {examBlock.topic_ko && <Text style={s.topicInlineKo}>{examBlock.topic_ko}</Text>}
+                <Text style={s.topicInlineEn}>{examBlock.topic_basic}</Text>
+                {examBlock.topic_basic_ko && <Text style={s.topicInlineKo}>{examBlock.topic_basic_ko}</Text>}
+              </View>
+            </View>
+            <View style={[s.topicRow, { marginTop: 6 }]}>
+              <Text style={s.topicInlineLabel}>고급형 |</Text>
+              <View style={s.topicInlineStack}>
+                <Text style={s.topicInlineEn}>{examBlock.topic_advanced}</Text>
+                {examBlock.topic_advanced_ko && <Text style={s.topicInlineKo}>{examBlock.topic_advanced_ko}</Text>}
               </View>
             </View>
             <View style={s.summaryBlock}>

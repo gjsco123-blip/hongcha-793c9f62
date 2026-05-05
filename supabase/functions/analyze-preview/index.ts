@@ -201,6 +201,26 @@ const PROMPT_TOPIC_RULES_G3 = `[topic 규칙]
 - 자연스러운 한국어 명사구로 번역한다.
 - 불필요하게 어려운 한자어는 피하되, 고등학교 독해에서 흔히 쓰는 개념어는 허용한다.`;
 
+const PROMPT_TOPIC_VARIANT_RULES = `[topic variant rules]
+- Generate TWO topic versions for the same passage: a basic version and an advanced version.
+- Both versions must point to the SAME central topic and must remain valid answer choices for the passage.
+- Both versions must be noun phrases, not sentences.
+- The advanced version must NOT be a trivial synonym swap of the basic version.
+
+[topic_basic rules]
+- clearer, more direct, and immediately understandable.
+- choose a more transparent noun phrase.
+- easier to read than the advanced version, but still exam-style.
+
+[topic_advanced rules]
+- more compressed, more concept-driven, and more refined.
+- should feel one step more advanced than the basic version within the same grade band.
+- use a different head noun or framing when possible.
+
+[topic_basic_ko / topic_advanced_ko rules]
+- translate each English topic naturally into Korean noun phrases.
+- keep the Korean aligned with its corresponding English version.`;
+
 const PROMPT_EXAM_SUMMARY_RULES = `[one_sentence_summary 규칙]
 - 반드시 한국어 한 문장으로 작성.
 - 지문의 핵심 논리 관계(원인-결과, 대비, 양보, 문제-해결 등)가 드러나야 함.
@@ -253,7 +273,7 @@ Bad (40자대 금지): "① 즉각적 보상이 장기적 이익보다 우선시
 출력 직전, 각 줄 글자수(공백·번호 포함)를 세어 45~58자 범위인지 확인. 범위 밖이면 다시 작성 후 출력.`;
 
 const PROMPT_OUTPUT_TOPIC = `출력 형식 (JSON 객체만):
-{"exam_block":{"topic":"...","topic_ko":"..."}}`;
+{"exam_block":{"topic_basic":"...","topic_basic_ko":"...","topic_advanced":"...","topic_advanced_ko":"..."}}`;
 
 const PROMPT_OUTPUT_EXAM_SUMMARY = `출력 형식 (JSON 객체만):
 {"exam_block":{"one_sentence_summary":"..."}}`;
@@ -341,6 +361,7 @@ function buildSystemPrompt(mode: SingleMode, grade: Grade): string {
       body = [
         PROMPT_INTRO,
         topicRulesByGrade(grade),
+        PROMPT_TOPIC_VARIANT_RULES,
         PROMPT_COMMON_RULES,
         topicExamplesByGrade(grade),
         PROMPT_OUTPUT_TOPIC,
@@ -450,7 +471,12 @@ serve(async (req) => {
     if (mode !== "all") {
       const prev = rawPrevious && typeof rawPrevious === "object"
         ? mode === "topic"
-          ? (rawPrevious as { topic?: string }).topic
+          ? [
+              (rawPrevious as { topic_basic?: string }).topic_basic,
+              (rawPrevious as { topic_advanced?: string }).topic_advanced,
+            ]
+              .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+              .join(" / ")
           : mode === "exam_summary"
               ? (rawPrevious as { one_sentence_summary?: string }).one_sentence_summary
               : undefined
