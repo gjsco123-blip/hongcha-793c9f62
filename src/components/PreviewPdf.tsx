@@ -105,38 +105,28 @@ const s = StyleSheet.create({
     marginBottom: 6,
   },
   thinRule: { height: 0.5, backgroundColor: T.rule, marginVertical: 8 },
-  vocabEmptyRow: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    paddingVertical: 5,
-    paddingHorizontal: 4,
-    borderBottomWidth: 0.3,
-    borderBottomColor: "#e4e4e4",
-    minHeight: 14,
+  notepadBox: {
+    minHeight: 214,
+    borderWidth: 1.5,
+    borderColor: T.black,
+    borderRadius: 4,
+    paddingTop: 8,
+    paddingBottom: 8,
+    paddingHorizontal: 10,
   },
-  vocabRow2Col: { flexDirection: "row" as const, gap: 12 },
-  vocabCol: { flex: 1 },
-  vocabTable: { borderWidth: 0.5, borderColor: T.rule },
-  vocabHdr: {
-    flexDirection: "row" as const,
-    paddingVertical: 4,
-    paddingHorizontal: 4,
-    borderBottomWidth: 0.5,
-    borderBottomColor: T.rule,
+  notepadLabel: {
+    fontSize: 7.5,
+    fontWeight: 800,
+    letterSpacing: 0.6,
+    textTransform: "uppercase" as const,
+    color: T.black,
+    marginBottom: 8,
   },
-  vocabRow: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    paddingVertical: 5,
-    paddingHorizontal: 4,
-    borderBottomWidth: 0.3,
-    borderBottomColor: "#e4e4e4",
+  notepadLine: {
+    height: 18,
+    borderBottomWidth: 0.6,
+    borderBottomColor: T.black,
   },
-  vNum: { width: 14, marginRight: 4, fontSize: 6.5, color: T.g30text, textAlign: "center" as const, lineHeight: 1 },
-  vWord: { width: 56, fontSize: 7, fontWeight: 600, lineHeight: 1 },
-  vPos: { width: 18, fontSize: 6, color: T.g50, textAlign: "center" as const, lineHeight: 1, marginRight: 4 },
-  vMeaning: { flex: 1, fontSize: 6.5, lineHeight: 1 },
-  vHdrText: { fontSize: 6, fontWeight: 700, color: T.g50, textTransform: "uppercase" as const, letterSpacing: 0.4 },
   summaryBox: { borderLeftWidth: 2, borderLeftColor: T.g30, paddingLeft: 10, paddingVertical: 3 },
   summaryText: { fontSize: 8, lineHeight: 1.7 },
   // Synonyms & Antonyms table
@@ -255,45 +245,9 @@ const s = StyleSheet.create({
   summaryBlock: { marginTop: 14 },
 });
 
-function VocabColumn({
-  items,
-  startNum,
-  totalSlots = 10,
-}: {
-  items: VocabItem[];
-  startNum: number;
-  totalSlots?: number;
-}) {
-  const rows = Array.from({ length: totalSlots }, (_, i) => items[i] || null);
-  return (
-    <View style={s.vocabCol}>
-      <View style={s.vocabTable}>
-        {rows.map((v, i) =>
-          v ? (
-            <View key={i} style={s.vocabRow}>
-              <Text style={s.vNum}>{startNum + i}</Text>
-              <Text style={s.vWord}>{v.word}</Text>
-              <Text style={s.vPos}>{v.pos}</Text>
-              <Text style={s.vMeaning}>{v.meaning_ko}</Text>
-            </View>
-          ) : (
-            <View key={i} style={s.vocabEmptyRow}>
-              <Text style={s.vNum}>{startNum + i}</Text>
-              <Text style={s.vWord}> </Text>
-              <Text style={s.vPos}> </Text>
-              <Text style={s.vMeaning}> </Text>
-            </View>
-          ),
-        )}
-      </View>
-    </View>
-  );
-}
-
 export function PreviewPdf({ vocab, synonyms, summary, examBlock, title: titleProp }: Props) {
   const hasSynonyms = synonyms.length > 0;
   const hasSummary = !!summary;
-  const hasVocab = vocab.length > 0;
   const hasExam = !!examBlock;
   const summaryLines = summary ? summary.split("\n").filter(Boolean) : [];
   const title = titleProp || "Preview";
@@ -304,25 +258,18 @@ export function PreviewPdf({ vocab, synonyms, summary, examBlock, title: titlePr
       <Page size="A4" style={s.page}>
         <PdfHeader title={title} titleColor="#222" ruleColor="#000" />
 
-        {hasVocab && (
-          <View>
-            <Text style={s.secTitle}>Vocabulary</Text>
-            <View style={s.vocabRow2Col}>
-              {[0, 1, 2].map((colIdx) => (
-                <VocabColumn
-                  key={colIdx}
-                  items={vocab.slice(colIdx * 10, colIdx * 10 + 10)}
-                  startNum={colIdx * 10 + 1}
-                  totalSlots={10}
-                />
-              ))}
-            </View>
+        <View>
+          <View style={s.notepadBox}>
+            <Text style={s.notepadLabel}>Notepad</Text>
+            {Array.from({ length: 10 }).map((_, idx) => (
+              <View key={idx} style={s.notepadLine} />
+            ))}
           </View>
-        )}
+        </View>
 
         {hasSummary && (
           <View>
-            {hasVocab && <View style={s.thinRule} />}
+            <View style={s.thinRule} />
             <Text style={s.secTitle}>Passage Logic</Text>
             <View style={s.summaryBox}>
               <Text style={s.summaryText}>{summaryLines.join("\n")}</Text>
@@ -332,13 +279,13 @@ export function PreviewPdf({ vocab, synonyms, summary, examBlock, title: titlePr
 
         {hasSynonyms && (
           <View>
-            {(hasVocab || hasSummary) && <View style={s.thinRule} />}
+            <View style={s.thinRule} />
 
             <View style={s.synTable}>
               <View style={s.synHdr}>
                 <Text style={{ ...s.synWord, ...s.synHdrText }}>Word</Text>
-                <Text style={{ ...s.synSyn, ...s.synHdrSymbol }}>=</Text>
-                <Text style={{ ...s.synAnt, ...s.synHdrSymbol }}>≠</Text>
+                <Text style={{ ...s.synSyn, ...s.synHdrSymbol, paddingLeft: 0, paddingRight: 0, textAlign: "center" }}>=</Text>
+                <Text style={{ ...s.synAnt, ...s.synHdrSymbol, paddingLeft: 0, textAlign: "center" }}>≠</Text>
               </View>
               {synonyms.map((item, idx) => (
                 <View key={idx} style={s.synRow}>
@@ -353,7 +300,7 @@ export function PreviewPdf({ vocab, synonyms, summary, examBlock, title: titlePr
 
         {hasExam && (
           <View>
-            {(hasVocab || hasSummary || hasSynonyms) && <View style={s.thinRule} />}
+            <View style={s.thinRule} />
             <View style={[s.topicRow, { marginTop: 4 }]}>
               <View style={s.topicLead}>
                 <View style={s.topicLeadLabelWrap}>

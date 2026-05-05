@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { PreviewPdf } from "@/components/PreviewPdf";
 import { PdfPreviewDialog } from "@/components/pdf/PdfPreviewDialog";
 import { PreviewPassageInput } from "@/components/preview/PreviewPassageInput";
-import { PreviewVocabSection } from "@/components/preview/PreviewVocabSection";
+import { PreviewNotepadSection } from "@/components/preview/PreviewNotepadSection";
 import { PreviewSummarySection } from "@/components/preview/PreviewSummarySection";
 import { PreviewSynonymsSection } from "@/components/preview/PreviewSynonymsSection";
 import { PreviewExamSection } from "@/components/preview/PreviewExamSection";
@@ -503,13 +503,7 @@ export default function Preview() {
           addingSynonymWord={addingSynonymWord}
         />
 
-        <PreviewVocabSection
-          vocab={vocab}
-          status={vocabStatus}
-          onDelete={handleVocabDelete}
-          onEdit={handleVocabEdit}
-          onRegenItem={handleVocabRegenItem}
-        />
+        <PreviewNotepadSection />
 
         <PreviewSummarySection
           summary={summary}
