@@ -260,15 +260,16 @@ export function PreviewPdf({ synonyms, summary, examBlock, title: titleProp }: P
   const title = titleProp || "Preview";
   const summaryText = getDisplaySummary(examBlock);
   const noteGridStep = 22;
+  const noteGridStart = -22;
   const noteGridWidth = 450;
   const noteGridHeight = 194;
   const noteVerticals = Array.from(
-    { length: Math.floor(noteGridWidth / noteGridStep) + 2 },
-    (_, i) => i * noteGridStep,
+    { length: Math.floor((noteGridWidth - noteGridStart) / noteGridStep) + 2 },
+    (_, i) => noteGridStart + i * noteGridStep,
   );
   const noteHorizontals = Array.from(
-    { length: Math.floor(noteGridHeight / noteGridStep) + 2 },
-    (_, i) => i * noteGridStep,
+    { length: Math.floor((noteGridHeight - noteGridStart) / noteGridStep) + 2 },
+    (_, i) => noteGridStart + i * noteGridStep,
   );
 
   return (
@@ -291,8 +292,9 @@ export function PreviewPdf({ synonyms, summary, examBlock, title: titleProp }: P
                       y1={y}
                       x2={noteGridWidth}
                       y2={y}
-                      stroke="#c5ccd5"
-                      strokeWidth={0.45}
+                      stroke="#cfcfcf"
+                      strokeWidth={0.4}
+                      strokeDasharray="3.2 5.2"
                     />
                   ))}
                   {noteVerticals.map((x) => (
@@ -302,8 +304,9 @@ export function PreviewPdf({ synonyms, summary, examBlock, title: titleProp }: P
                       y1={0}
                       x2={x}
                       y2={noteGridHeight}
-                      stroke="#c5ccd5"
-                      strokeWidth={0.45}
+                      stroke="#cfcfcf"
+                      strokeWidth={0.4}
+                      strokeDasharray="3.2 5.2"
                     />
                   ))}
                 </Svg>

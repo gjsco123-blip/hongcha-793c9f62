@@ -10,7 +10,9 @@ export function PreviewNotepadSection() {
             className="absolute inset-0"
             style={{
               backgroundImage:
-                "repeating-linear-gradient(to right, rgba(107,114,128,0.22) 0, rgba(107,114,128,0.22) 1px, transparent 1px, transparent 22px), repeating-linear-gradient(to bottom, rgba(107,114,128,0.22) 0, rgba(107,114,128,0.22) 1px, transparent 1px, transparent 22px)",
+                "repeating-linear-gradient(to right, rgba(207,207,207,0.85) 0 4px, transparent 4px 10px), repeating-linear-gradient(to bottom, rgba(207,207,207,0.85) 0 4px, transparent 4px 10px)",
+              backgroundSize: "22px 22px",
+              backgroundPosition: "-22px -22px",
             }}
           />
         </div>
