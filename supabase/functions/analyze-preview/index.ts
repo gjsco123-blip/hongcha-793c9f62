@@ -29,8 +29,8 @@ function safeParseJson(raw: string): any {
   throw new Error("Failed to parse preview JSON");
 }
 
-// NOTE: 기존 SYSTEM_PROMPT(215줄)는 제거됨. 첫 생성(mode:"all")은 모듈 프롬프트 4개 병렬 호출로 처리.
-// 모든 규칙은 PROMPT_INTRO / PROMPT_TOPIC_RULES / PROMPT_TITLE_RULES / PROMPT_EXAM_SUMMARY_RULES /
+// NOTE: 기존 SYSTEM_PROMPT(215줄)는 제거됨. 첫 생성(mode:"all")은 모듈 프롬프트 3개 병렬 호출로 처리.
+// 모든 규칙은 PROMPT_INTRO / PROMPT_TOPIC_RULES / PROMPT_EXAM_SUMMARY_RULES /
 // PROMPT_PASSAGE_SUMMARY_RULES / PROMPT_COMMON_RULES + topicExamplesByGrade(grade) 로 이식 완료.
 
 const LOVABLE_API_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -82,7 +82,7 @@ function summaryHasOutOfRangeLine(summary: unknown, minLen = 45, maxLen = 58): b
 // ============================================================
 // MODE-SPECIFIC PROMPT MODULES — 첫 생성/재생성 양쪽 다 사용
 // ============================================================
-// mode="all" = 아래 4개 모듈 모드(topic/title/exam_summary/passage_summary)를 병렬 호출 후 머지.
+// mode="all" = 아래 3개 모듈 모드(topic/exam_summary/passage_summary)를 병렬 호출 후 머지.
 // → 첫 생성과 재생성이 100% 동일한 프롬프트를 사용. 톤 일관성 확보.
 // 아래 모듈은 개별 필드 재생성 시에만 사용.
 
@@ -201,17 +201,6 @@ const PROMPT_TOPIC_RULES_G3 = `[topic 규칙]
 - 자연스러운 한국어 명사구로 번역한다.
 - 불필요하게 어려운 한자어는 피하되, 고등학교 독해에서 흔히 쓰는 개념어는 허용한다.`;
 
-const PROMPT_TITLE_RULES = `[title 규칙]
-- Concise noun phrase in English, shorter and more compressed than the thesis.
-- Academic and clear (not poetic). Sentence case (only first word capitalized).
-- Question format allowed only if the passage clearly answers it.
-- Prefer structure: abstract noun + of + key concept (e.g., impact of ~, role of ~, necessity of ~, distinction between ~).
-- 5~9 words.
-
-[title_ko 규칙]
-- title의 한국어 번역.
-- 불필요하게 어려운 한자어는 피하되, 고등학교 독해에서 흔히 쓰는 개념어는 허용한다.`;
-
 const PROMPT_EXAM_SUMMARY_RULES = `[one_sentence_summary 규칙]
 - 반드시 한국어 한 문장으로 작성.
 - 지문의 핵심 논리 관계(원인-결과, 대비, 양보, 문제-해결 등)가 드러나야 함.
@@ -266,17 +255,14 @@ Bad (40자대 금지): "① 즉각적 보상이 장기적 이익보다 우선시
 const PROMPT_OUTPUT_TOPIC = `출력 형식 (JSON 객체만):
 {"exam_block":{"topic":"...","topic_ko":"..."}}`;
 
-const PROMPT_OUTPUT_TITLE = `출력 형식 (JSON 객체만):
-{"exam_block":{"title":"...","title_ko":"..."}}`;
-
 const PROMPT_OUTPUT_EXAM_SUMMARY = `출력 형식 (JSON 객체만):
 {"exam_block":{"one_sentence_summary":"..."}}`;
 
 const PROMPT_OUTPUT_PASSAGE_SUMMARY = `출력 형식 (JSON 객체만):
 {"summary":"①...\\n②...\\n③...\\n④..."}`;
 
-type Mode = "all" | "topic" | "title" | "exam_summary" | "passage_summary";
-const VALID_MODES: Mode[] = ["all", "topic", "title", "exam_summary", "passage_summary"];
+type Mode = "all" | "topic" | "exam_summary" | "passage_summary";
+const VALID_MODES: Mode[] = ["all", "topic", "exam_summary", "passage_summary"];
 
 type Grade = 1 | 2 | 3;
 
@@ -343,7 +329,7 @@ function initialTopicTemperatureByGrade(grade: Grade): number {
   return grade === 3 ? 0.5 : 0.3;
 }
 
-// 단일 영역 모드 전용 (topic | title | exam_summary | passage_summary).
+// 단일 영역 모드 전용 (topic | exam_summary | passage_summary).
 // mode="all"은 더 이상 이 함수를 사용하지 않음 — 4개 모듈 모드 병렬 호출로 처리.
 type SingleMode = Exclude<Mode, "all">;
 function buildSystemPrompt(mode: SingleMode, grade: Grade): string {
@@ -359,10 +345,6 @@ function buildSystemPrompt(mode: SingleMode, grade: Grade): string {
         topicExamplesByGrade(grade),
         PROMPT_OUTPUT_TOPIC,
       ].join("\n\n");
-      break;
-
-    case "title":
-      body = [PROMPT_INTRO, PROMPT_TITLE_RULES, PROMPT_COMMON_RULES, PROMPT_OUTPUT_TITLE].join("\n\n");
       break;
 
     case "exam_summary":
@@ -469,9 +451,7 @@ serve(async (req) => {
       const prev = rawPrevious && typeof rawPrevious === "object"
         ? mode === "topic"
           ? (rawPrevious as { topic?: string }).topic
-          : mode === "title"
-            ? (rawPrevious as { title?: string }).title
-            : mode === "exam_summary"
+          : mode === "exam_summary"
               ? (rawPrevious as { one_sentence_summary?: string }).one_sentence_summary
               : undefined
         : undefined;
@@ -494,7 +474,7 @@ serve(async (req) => {
       }
     }
 
-    // ───────── mode="all": 4개 모듈 모드 병렬 호출 + 머지 ─────────
+    // ───────── mode="all": 3개 모듈 모드 병렬 호출 + 머지 ─────────
     // stagger 50ms 간격으로 발사해 rate-limit 압박 완화
     const stagger = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const launch = async (m: SingleMode, delay: number) => {
@@ -502,11 +482,10 @@ serve(async (req) => {
       return runSingleMode(m, passage, grade, LOVABLE_API_KEY);
     };
 
-    const [topicRes, titleRes, examSumRes, passageSumRes] = await Promise.allSettled([
+    const [topicRes, examSumRes, passageSumRes] = await Promise.allSettled([
       runSingleMode("topic", passage, grade, LOVABLE_API_KEY, { temperature: initialTopicTemperatureByGrade(grade) }),
-      launch("title", 50),
-      launch("exam_summary", 100),
-      launch("passage_summary", 150),
+      launch("exam_summary", 50),
+      launch("passage_summary", 100),
     ]);
 
     const pickExamBlock = (r: PromiseSettledResult<any>, label: string) => {
@@ -524,7 +503,6 @@ serve(async (req) => {
       summary: pickSummary(passageSumRes),
       exam_block: {
         ...pickExamBlock(topicRes, "topic"),
-        ...pickExamBlock(titleRes, "title"),
         ...pickExamBlock(examSumRes, "exam_summary"),
       },
     };
@@ -532,11 +510,10 @@ serve(async (req) => {
     // 모든 영역이 실패한 극단적 케이스 → 429 우선, 아니면 500
     const allFailed =
       topicRes.status === "rejected" &&
-      titleRes.status === "rejected" &&
       examSumRes.status === "rejected" &&
       passageSumRes.status === "rejected";
     if (allFailed) {
-      const anyRateLimit = [topicRes, titleRes, examSumRes, passageSumRes].some(
+      const anyRateLimit = [topicRes, examSumRes, passageSumRes].some(
         (r) => r.status === "rejected" && (r.reason as { status?: number })?.status === 429,
       );
       return new Response(

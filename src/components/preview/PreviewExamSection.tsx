@@ -10,7 +10,6 @@ interface Props {
   status: SectionStatus;
   onExamChange: (v: ExamBlock) => void;
   onRegenerateTopic: () => Promise<{ en: string; ko?: string }>;
-  onRegenerateTitle: () => Promise<{ en: string; ko?: string }>;
   onRegenerateSummary: () => Promise<{ summary: string }>;
 }
 
@@ -26,7 +25,7 @@ function FieldRegenButton({ onClick, loading }: { onClick: () => void; loading: 
   );
 }
 
-export function PreviewExamSection({ examBlock, status, onExamChange, onRegenerateTopic, onRegenerateTitle, onRegenerateSummary }: Props) {
+export function PreviewExamSection({ examBlock, status, onExamChange, onRegenerateTopic, onRegenerateSummary }: Props) {
   const [regenField, setRegenField] = useState<string | null>(null);
   const [candidate, setCandidate] = useState<{ field: string; oldVal: string; oldKo?: string; newVal: string; newKo?: string } | null>(null);
 
@@ -38,8 +37,8 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
     setRegenField(field);
     try {
       const result = await fn();
-      const oldVal = field === "topic" ? examBlock.topic : field === "title" ? examBlock.title : examBlock.one_sentence_summary;
-      const oldKo = field === "topic" ? examBlock.topic_ko : field === "title" ? examBlock.title_ko : examBlock.one_sentence_summary_ko;
+      const oldVal = field === "topic" ? examBlock.topic : examBlock.one_sentence_summary;
+      const oldKo = field === "topic" ? examBlock.topic_ko : examBlock.one_sentence_summary_ko;
       setCandidate({ field, oldVal, oldKo, newVal: result.en, newKo: result.ko });
     } finally {
       setRegenField(null);
@@ -63,7 +62,6 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
   const acceptCandidate = () => {
     if (!candidate) return;
     if (candidate.field === "topic") update({ topic: candidate.newVal, topic_ko: candidate.newKo });
-    else if (candidate.field === "title") update({ title: candidate.newVal, title_ko: candidate.newKo });
     else update({
       one_sentence_summary: candidate.newVal,
       one_sentence_summary_ko: candidate.newVal,
@@ -74,7 +72,7 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
   return (
     <section className="border-t border-border pt-5">
       <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground mb-4 flex items-center gap-2">
-        Topic / Title
+        Topic
         {status === "loading" && <span className="inline-block w-3.5 h-3.5 animate-spin border-2 border-muted-foreground border-t-transparent rounded-full" />}
       </h2>
       <div className="space-y-5">
@@ -88,19 +86,6 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
             className="w-full text-sm font-english leading-relaxed bg-transparent border-none outline-none focus:bg-muted/20 rounded px-1 -mx-1" />
           {examBlock.topic_ko !== undefined && (
             <input value={examBlock.topic_ko || ""} onChange={(e) => update({ topic_ko: e.target.value })}
-              className="w-full text-xs text-muted-foreground/60 mt-0.5 bg-transparent border-none outline-none focus:bg-muted/20 rounded px-1 -mx-1" />
-          )}
-        </div>
-        {/* Title */}
-        <div>
-          <div className="flex items-center mb-1.5">
-            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.08em]">Title</p>
-            {status === "done" && <FieldRegenButton onClick={() => handleRegen("title", onRegenerateTitle)} loading={regenField === "title"} />}
-          </div>
-          <input value={examBlock.title} onChange={(e) => update({ title: e.target.value })}
-            className="w-full text-sm font-english leading-relaxed bg-transparent border-none outline-none focus:bg-muted/20 rounded px-1 -mx-1" />
-          {examBlock.title_ko !== undefined && (
-            <input value={examBlock.title_ko || ""} onChange={(e) => update({ title_ko: e.target.value })}
               className="w-full text-xs text-muted-foreground/60 mt-0.5 bg-transparent border-none outline-none focus:bg-muted/20 rounded px-1 -mx-1" />
           )}
         </div>

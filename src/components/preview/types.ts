@@ -14,8 +14,6 @@ export interface SynAntItem {
 export interface ExamBlock {
   topic: string;
   topic_ko?: string;
-  title: string;
-  title_ko?: string;
   one_sentence_summary: string;
   one_sentence_summary_ko?: string;
 }

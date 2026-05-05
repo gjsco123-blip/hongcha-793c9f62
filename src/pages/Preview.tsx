@@ -357,15 +357,6 @@ export default function Preview() {
     return { en: t ? t.charAt(0).toUpperCase() + t.slice(1) : t, ko: data.exam_block?.topic_ko };
   }, [passage, grade, examBlock?.topic]);
 
-  const regenExamTitle = useCallback(async () => {
-    const data = await invokeWithFallback(
-      "analyze-preview",
-      { passage, mode: "title", grade, previous: { title: examBlock?.title } },
-      { passage, grade }
-    );
-    return { en: data.exam_block?.title || "", ko: data.exam_block?.title_ko };
-  }, [passage, grade, examBlock?.title]);
-
   const regenExamSummary = useCallback(async () => {
     const data = await invokeWithFallback(
       "analyze-preview",
@@ -528,7 +519,6 @@ export default function Preview() {
           status={previewStatus}
           onExamChange={(next) => setExamBlock(normalizeExamBlock(next))}
           onRegenerateTopic={regenExamTopic}
-          onRegenerateTitle={regenExamTitle}
           onRegenerateSummary={regenExamSummary}
         />
       </main>

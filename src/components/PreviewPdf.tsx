@@ -52,8 +52,6 @@ interface SynAntItem {
 interface ExamBlock {
   topic: string;
   topic_ko?: string;
-  title: string;
-  title_ko?: string;
   one_sentence_summary: string;
   one_sentence_summary_ko?: string;
 }
@@ -312,9 +310,6 @@ export function PreviewPdf({ vocab, synonyms, summary, examBlock, title: titlePr
             <Text style={[s.fieldLabel, { marginTop: 4 }]}>Topic</Text>
             <Text style={s.fieldEn}>{examBlock.topic}</Text>
             {examBlock.topic_ko && <Text style={s.fieldKo}>{examBlock.topic_ko}</Text>}
-            <Text style={s.fieldLabel}>Title</Text>
-            <Text style={s.fieldEn}>{examBlock.title}</Text>
-            {examBlock.title_ko && <Text style={s.fieldKo}>{examBlock.title_ko}</Text>}
             <View style={s.summaryBlock}>
               <View style={s.summaryRow}>
                 <Text style={s.summaryInlineLabel}>한줄요약 |</Text>

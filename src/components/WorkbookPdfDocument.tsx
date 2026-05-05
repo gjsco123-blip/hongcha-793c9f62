@@ -317,9 +317,8 @@ function getArcPoints(): ArcPoint[] {
 
 export function WorkbookPdfDocument({ results, title, examBlock }: WorkbookPdfDocumentProps) {
   const topic = (examBlock?.topic || "").trim();
-  const heading = (examBlock?.title || "").trim();
   const summary = getDisplaySummary(examBlock);
-  const hasAnalysis = Boolean(topic || heading || summary);
+  const hasAnalysis = Boolean(topic || summary);
   const totalChars = results.reduce((acc, cur) => acc + (cur.original?.length || 0), 0);
   const gridStep = 22;
   const gridStart = -22;
