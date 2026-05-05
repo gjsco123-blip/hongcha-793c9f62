@@ -97,11 +97,24 @@ const s = StyleSheet.create({
     marginBottom: 6,
   },
   thinRule: { height: 0.5, backgroundColor: T.rule, marginVertical: 8 },
+  notepadRow: {
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+  },
+  notepadLabelWrap: {
+    width: 78,
+    paddingTop: 20,
+    paddingRight: 10,
+  },
   notepadBox: {
+    flex: 1,
     minHeight: 194,
-    paddingTop: 4,
-    paddingBottom: 4,
-    paddingHorizontal: 2,
+    position: "relative" as const,
+    overflow: "hidden",
+    borderWidth: 0.6,
+    borderColor: "#222",
+    borderRadius: 18,
+    backgroundColor: "#fff",
   },
   notepadLabel: {
     fontSize: 6.8,
@@ -109,18 +122,17 @@ const s = StyleSheet.create({
     letterSpacing: 0.45,
     textTransform: "uppercase" as const,
     color: "#111111",
-    paddingTop: 5,
-    paddingBottom: 5,
-    marginBottom: 8,
-    borderTopWidth: 0.6,
-    borderTopColor: T.black,
-    borderBottomWidth: 0.6,
-    borderBottomColor: T.black,
   },
-  notepadLine: {
-    height: 24,
-    borderBottomWidth: 0.45,
-    borderBottomColor: "#333333",
+  notepadGridLayer: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
+  notepadGridSvg: {
+    width: "100%",
+    height: "100%",
   },
   summaryBox: { borderLeftWidth: 2, borderLeftColor: T.g30, paddingLeft: 10, paddingVertical: 3 },
   summaryText: { fontSize: 8, lineHeight: 1.7 },
@@ -247,6 +259,17 @@ export function PreviewPdf({ synonyms, summary, examBlock, title: titleProp }: P
   const summaryLines = summary ? summary.split("\n").filter(Boolean) : [];
   const title = titleProp || "Preview";
   const summaryText = getDisplaySummary(examBlock);
+  const noteGridStep = 22;
+  const noteGridWidth = 450;
+  const noteGridHeight = 194;
+  const noteVerticals = Array.from(
+    { length: Math.floor(noteGridWidth / noteGridStep) + 2 },
+    (_, i) => i * noteGridStep,
+  );
+  const noteHorizontals = Array.from(
+    { length: Math.floor(noteGridHeight / noteGridStep) + 2 },
+    (_, i) => i * noteGridStep,
+  );
 
   return (
     <Document>
@@ -254,11 +277,38 @@ export function PreviewPdf({ synonyms, summary, examBlock, title: titleProp }: P
         <PdfHeader title={title} titleColor="#222" ruleColor="#000" />
 
         <View>
-          <View style={s.notepadBox}>
-            <Text style={s.notepadLabel}>WIDE-NOTEPAD</Text>
-            {Array.from({ length: 7 }).map((_, idx) => (
-              <View key={idx} style={s.notepadLine} />
-            ))}
+          <View style={s.notepadRow}>
+            <View style={s.notepadLabelWrap}>
+              <Text style={s.notepadLabel}>WIDE-NOTEPAD</Text>
+            </View>
+            <View style={s.notepadBox}>
+              <View style={s.notepadGridLayer}>
+                <Svg style={s.notepadGridSvg} viewBox={`0 0 ${noteGridWidth} ${noteGridHeight}`} preserveAspectRatio="none">
+                  {noteHorizontals.map((y) => (
+                    <Line
+                      key={`nh-${y}`}
+                      x1={0}
+                      y1={y}
+                      x2={noteGridWidth}
+                      y2={y}
+                      stroke="#c5ccd5"
+                      strokeWidth={0.45}
+                    />
+                  ))}
+                  {noteVerticals.map((x) => (
+                    <Line
+                      key={`nv-${x}`}
+                      x1={x}
+                      y1={0}
+                      x2={x}
+                      y2={noteGridHeight}
+                      stroke="#c5ccd5"
+                      strokeWidth={0.45}
+                    />
+                  ))}
+                </Svg>
+              </View>
+            </View>
           </View>
         </View>
 
