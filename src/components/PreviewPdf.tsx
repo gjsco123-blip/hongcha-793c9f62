@@ -97,17 +97,7 @@ const s = StyleSheet.create({
     marginBottom: 6,
   },
   thinRule: { height: 0.5, backgroundColor: T.rule, marginVertical: 8 },
-  notepadRow: {
-    flexDirection: "row" as const,
-    alignItems: "flex-start" as const,
-  },
-  notepadLabelWrap: {
-    width: 78,
-    paddingTop: 20,
-    paddingRight: 10,
-  },
   notepadBox: {
-    flex: 1,
     minHeight: 194,
     position: "relative" as const,
     overflow: "hidden",
@@ -117,11 +107,18 @@ const s = StyleSheet.create({
     backgroundColor: "#fff",
   },
   notepadLabel: {
-    fontSize: 6.8,
+    position: "absolute" as const,
+    top: 12,
+    left: 14,
+    zIndex: 2,
+    fontSize: 7.2,
     fontWeight: 800,
     letterSpacing: 0.45,
     textTransform: "uppercase" as const,
     color: "#111111",
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 3,
+    paddingVertical: 1,
   },
   notepadGridLayer: {
     position: "absolute",
@@ -278,39 +275,35 @@ export function PreviewPdf({ synonyms, summary, examBlock, title: titleProp }: P
         <PdfHeader title={title} titleColor="#222" ruleColor="#000" />
 
         <View>
-          <View style={s.notepadRow}>
-            <View style={s.notepadLabelWrap}>
-              <Text style={s.notepadLabel}>WIDE-NOTEPAD</Text>
-            </View>
-            <View style={s.notepadBox}>
-              <View style={s.notepadGridLayer}>
-                <Svg style={s.notepadGridSvg} viewBox={`0 0 ${noteGridWidth} ${noteGridHeight}`} preserveAspectRatio="none">
-                  {noteHorizontals.map((y) => (
-                    <Line
-                      key={`nh-${y}`}
-                      x1={0}
-                      y1={y}
-                      x2={noteGridWidth}
-                      y2={y}
-                      stroke="#cfcfcf"
-                      strokeWidth={0.4}
-                      strokeDasharray="3.2 5.2"
-                    />
-                  ))}
-                  {noteVerticals.map((x) => (
-                    <Line
-                      key={`nv-${x}`}
-                      x1={x}
-                      y1={0}
-                      x2={x}
-                      y2={noteGridHeight}
-                      stroke="#cfcfcf"
-                      strokeWidth={0.4}
-                      strokeDasharray="3.2 5.2"
-                    />
-                  ))}
-                </Svg>
-              </View>
+          <View style={s.notepadBox}>
+            <Text style={s.notepadLabel}>NOTE</Text>
+            <View style={s.notepadGridLayer}>
+              <Svg style={s.notepadGridSvg} viewBox={`0 0 ${noteGridWidth} ${noteGridHeight}`} preserveAspectRatio="none">
+                {noteHorizontals.map((y) => (
+                  <Line
+                    key={`nh-${y}`}
+                    x1={0}
+                    y1={y}
+                    x2={noteGridWidth}
+                    y2={y}
+                    stroke="#cfcfcf"
+                    strokeWidth={0.4}
+                    strokeDasharray="3.2 5.2"
+                  />
+                ))}
+                {noteVerticals.map((x) => (
+                  <Line
+                    key={`nv-${x}`}
+                    x1={x}
+                    y1={0}
+                    x2={x}
+                    y2={noteGridHeight}
+                    stroke="#cfcfcf"
+                    strokeWidth={0.4}
+                    strokeDasharray="3.2 5.2"
+                  />
+                ))}
+              </Svg>
             </View>
           </View>
         </View>
