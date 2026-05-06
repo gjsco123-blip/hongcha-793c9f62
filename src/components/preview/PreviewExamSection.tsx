@@ -44,8 +44,10 @@ function buildTopicPreview(block: Pick<ExamBlock, "topic_basic" | "topic_basic_k
 
 const EXAM_LEAD_CLASS = "w-[56px] shrink-0 pt-0.5 whitespace-nowrap";
 const EXAM_LEAD_GRID_CLASS = "grid grid-cols-[40px] items-start";
-const EXAM_CHIP_CLASS =
-  "inline-flex items-center justify-center rounded-[6px] bg-black px-[7px] pt-[3px] pb-[4px] text-[12px] font-extrabold leading-none tracking-[0.05em] text-white";
+const EXAM_LABEL_CLASS =
+  "inline-flex items-center text-[12px] font-extrabold leading-none tracking-[0.01em] text-black";
+const EXAM_BAR_CLASS = "inline-block text-black";
+const EXAM_LABEL_TEXT_CLASS = "inline-block px-[4px]";
 
 export function PreviewExamSection({ examBlock, status, onExamChange, onRegenerateTopic, onRegenerateSummary }: Props) {
   const [regenField, setRegenField] = useState<string | null>(null);
@@ -116,7 +118,11 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
             <div className="flex items-start gap-2.5">
               <div className={EXAM_LEAD_CLASS}>
                 <div className={EXAM_LEAD_GRID_CLASS}>
-                  <span className={EXAM_CHIP_CLASS}>주제</span>
+                  <span className={EXAM_LABEL_CLASS}>
+                    <span className={EXAM_BAR_CLASS}>|</span>
+                    <span className={EXAM_LABEL_TEXT_CLASS}>주제</span>
+                    <span className={EXAM_BAR_CLASS}>|</span>
+                  </span>
                 </div>
                 <div className="mt-1 flex items-center">
                   {status === "done" && <FieldRegenButton onClick={handleTopicRegen} loading={regenField === "topic"} />}
@@ -164,11 +170,15 @@ export function PreviewExamSection({ examBlock, status, onExamChange, onRegenera
             {status === "done" && <FieldRegenButton onClick={handleSummaryRegen} loading={regenField === "summary"} />}
           </div>
           <div className="flex items-start gap-2.5">
-            <div className={EXAM_LEAD_CLASS}>
-              <div className={EXAM_LEAD_GRID_CLASS}>
-                <span className={EXAM_CHIP_CLASS}>요약</span>
+              <div className={EXAM_LEAD_CLASS}>
+                <div className={EXAM_LEAD_GRID_CLASS}>
+                  <span className={EXAM_LABEL_CLASS}>
+                    <span className={EXAM_BAR_CLASS}>|</span>
+                    <span className={EXAM_LABEL_TEXT_CLASS}>요약</span>
+                    <span className={EXAM_BAR_CLASS}>|</span>
+                  </span>
+                </div>
               </div>
-            </div>
             <input
               value={getDisplaySummary(examBlock)}
               onChange={(e) =>

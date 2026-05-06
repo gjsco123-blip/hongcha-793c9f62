@@ -108,7 +108,7 @@ const s = StyleSheet.create({
   },
   notepadLabel: {
     position: "absolute" as const,
-    top: 12,
+    top: 7,
     left: 14,
     zIndex: 2,
     fontSize: 7.2,
@@ -212,38 +212,28 @@ const s = StyleSheet.create({
   fieldKo: { fontSize: 7, color: T.g70, lineHeight: 1.5, marginTop: 1.5 },
   topicRow: { flexDirection: "row" as const, alignItems: "flex-start" as const, gap: 5 },
   topicLead: { width: 37, flexDirection: "row" as const, alignItems: "flex-start" as const },
-  topicLeadLabelWrap: { width: 29 },
+  topicLeadLabelWrap: { width: 36 },
   topicLeadLabel: {
     fontSize: 8.5,
     fontWeight: 800,
-    color: "#ffffff",
+    color: "#000000",
     lineHeight: 1,
-    backgroundColor: "#000000",
-    borderRadius: 4,
-    paddingHorizontal: 5,
-    paddingTop: 3,
-    paddingBottom: 4,
-    textAlign: "center" as const,
-    letterSpacing: 0.35,
+    textAlign: "left" as const,
+    letterSpacing: 0.1,
   },
   topicInlineStack: { flex: 1 },
   topicInlineEn: { fontFamily: T.en, fontSize: 9, color: T.black, lineHeight: 1.6 },
   topicInlineKo: { fontSize: 7, color: T.g70, lineHeight: 1.5, marginTop: 1.5 },
   summaryRow: { flexDirection: "row" as const, alignItems: "flex-start" as const, gap: 5 },
   summaryLead: { width: 37, flexDirection: "row" as const, alignItems: "flex-start" as const },
-  summaryLeadLabelWrap: { width: 29 },
+  summaryLeadLabelWrap: { width: 36 },
   summaryLeadLabel: {
     fontSize: 8.5,
     fontWeight: 800,
-    color: "#ffffff",
+    color: "#000000",
     lineHeight: 1,
-    backgroundColor: "#000000",
-    borderRadius: 4,
-    paddingHorizontal: 5,
-    paddingTop: 3,
-    paddingBottom: 4,
-    textAlign: "center" as const,
-    letterSpacing: 0.35,
+    textAlign: "left" as const,
+    letterSpacing: 0.1,
   },
   summaryInlineText: { flex: 1, fontSize: 8, color: T.black, lineHeight: 1.6 },
   summaryBlock: { marginTop: 14 },
@@ -345,7 +335,7 @@ export function PreviewPdf({ synonyms, summary, examBlock, title: titleProp }: P
             <View style={[s.topicRow, { marginTop: 4 }]}>
               <View style={s.topicLead}>
                 <View style={s.topicLeadLabelWrap}>
-                  <Text style={s.topicLeadLabel}>주제</Text>
+                    <Text style={s.topicLeadLabel}>| 주제 |</Text>
                 </View>
               </View>
               <View style={s.topicInlineStack}>
@@ -366,7 +356,7 @@ export function PreviewPdf({ synonyms, summary, examBlock, title: titleProp }: P
               <View style={s.summaryRow}>
                 <View style={s.summaryLead}>
                   <View style={s.summaryLeadLabelWrap}>
-                    <Text style={s.summaryLeadLabel}>요약</Text>
+                    <Text style={s.summaryLeadLabel}>| 요약 |</Text>
                   </View>
                 </View>
                 <Text style={s.summaryInlineText}>{summaryText}</Text>
