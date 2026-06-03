@@ -23,14 +23,56 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 type Preset = "고1" | "고2" | "수능";
 
+function stripUnmatchedQuotes(text: string): string {
+  let normalized = String(text ?? "");
+
+  const removeExtra = (char: string, fromEnd: boolean, count: number) => {
+    for (let i = 0; i < count; i++) {
+      const idx = fromEnd ? normalized.lastIndexOf(char) : normalized.indexOf(char);
+      if (idx === -1) break;
+      normalized = normalized.slice(0, idx) + normalized.slice(idx + char.length);
+    }
+  };
+
+  const pairedQuotes: Array<{ open: string; close: string }> = [
+    { open: "\u201C", close: "\u201D" },
+    { open: "\u2018", close: "\u2019" },
+  ];
+
+  for (const { open, close } of pairedQuotes) {
+    const openCount = normalized.split(open).length - 1;
+    const closeCount = normalized.split(close).length - 1;
+    if (openCount > closeCount) removeExtra(open, false, openCount - closeCount);
+    if (closeCount > openCount) removeExtra(close, true, closeCount - openCount);
+  }
+
+  const straightDoubleCount = normalized.split("\"").length - 1;
+  if (straightDoubleCount % 2 === 1) {
+    const firstIdx = normalized.indexOf("\"");
+    const lastIdx = normalized.lastIndexOf("\"");
+    if (firstIdx !== -1) {
+      const removeIdx = normalized.trimEnd().endsWith("\"") ? lastIdx : firstIdx;
+      normalized = normalized.slice(0, removeIdx) + normalized.slice(removeIdx + 1);
+    }
+  }
+
+  return normalized.trim();
+}
+
+function normalizeSentenceForEngine(sentence: string): string {
+  return stripUnmatchedQuotes(sentence);
+}
+
 async function invokeWithRetry(
   sentence: string,
   preset: string,
   maxRetries = 3
 ): Promise<{ data: any; error: any }> {
+  const normalizedSentence = normalizeSentenceForEngine(sentence);
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const { data, error } = await supabase.functions.invoke("engine", {
-      body: { sentence, preset },
+      body: { sentence: normalizedSentence, preset },
     });
 
     if (!error && data && !data.error) return { data, error: null };
@@ -622,7 +664,7 @@ export default function Index() {
 
     try {
       const { data, error } = await supabase.functions.invoke("engine", {
-        body: { sentence: target.original, preset },
+        body: { sentence: normalizeSentenceForEngine(target.original), preset },
       });
 
       if (error) throw error;
